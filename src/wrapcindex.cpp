@@ -98,15 +98,26 @@ void wci_getCLCursor(char* cuout, CursorList* cl, int cuid)
   wci_save_CXCursor((*cl)[cuid], cuout);
 }
 
-unsigned int wci_size_CXType() { return sizeof(CXType); }
-unsigned int wci_size_CXCursor() { return sizeof(CXCursor); }
-unsigned int wci_size_CXString() { return sizeof(CXString); }
-
 void wci_getTUCursor(void* tu, char* cuout)
 {
   CXCursor cu = clang_getTranslationUnitCursor((CXTranslationUnit)tu);
   wci_save_CXCursor(cu, cuout);
 }
-  
+
+unsigned int wci_size_CXType() { return sizeof(CXType); }
+unsigned int wci_size_CXCursor() { return sizeof(CXCursor); }
+unsigned int wci_size_CXString() { return sizeof(CXString); }
+
+const char* wci_getCString(char* csin )
+{
+  CXString cxstr = wci_get_CXString(csin);
+  return clang_getCString(cxstr);
+}
+
+void wci_disposeString(char* csin)
+{
+  CXString cxstr = wci_get_CXString(csin);
+  clang_disposeString(cxstr);
+}
 
 } // extern

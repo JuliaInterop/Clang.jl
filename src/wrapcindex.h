@@ -80,10 +80,6 @@ void  wci_getCanonicalCursor(char* a1,char* a2) {
   CXCursor rx = clang_getCanonicalCursor(l1);
   wci_save_CXCursor(rx,a2);
 }
-unsigned int wci_CXXMethod_isVirtual(char* a1) {
-  CXCursor l1 = wci_get_CXCursor(a1);
-  return clang_CXXMethod_isVirtual(l1);
-}
 unsigned int wci_getTemplateCursorKind(char* a1) {
   CXCursor l1 = wci_get_CXCursor(a1);
   return clang_getTemplateCursorKind(l1);
@@ -92,4 +88,9 @@ void  wci_getSpecializedCursorTemplate(char* a1,char* a2) {
   CXCursor l1 = wci_get_CXCursor(a1);
   CXCursor rx = clang_getSpecializedCursorTemplate(l1);
   wci_save_CXCursor(rx,a2);
+}
+void  wci_getResultType(char* a1,char* a2) {
+  CXType l1 = wci_get_CXType(a1);
+  CXType rx = clang_getResultType(l1);
+  wci_save_CXType(rx,a2);
 }

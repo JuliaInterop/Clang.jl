@@ -75,14 +75,16 @@ function getCanonicalCursor(a1::CXCursor,)
   ccall( (:wci_getCanonicalCursor, libwci), Void, (Ptr{Void},Ptr{Void}), a1.data, c.data,)
   return c
 end
-function CXXMethod_isVirtual(a1::CXCursor,)
-  ccall( (:wci_CXXMethod_isVirtual, libwci), Uint32, (Ptr{Void},), a1.data, )
-end
 function getTemplateCursorKind(a1::CXCursor,)
   ccall( (:wci_getTemplateCursorKind, libwci), Uint32, (Ptr{Void},), a1.data, )
 end
 function getSpecializedCursorTemplate(a1::CXCursor,)
   c = CXCursor()
   ccall( (:wci_getSpecializedCursorTemplate, libwci), Void, (Ptr{Void},Ptr{Void}), a1.data, c.data,)
+  return c
+end
+function getResultType(a1::CXType,)
+  c = CXType()
+  ccall( (:wci_getResultType, libwci), Void, (Ptr{Void},Ptr{Void}), a1.data, c.data,)
   return c
 end

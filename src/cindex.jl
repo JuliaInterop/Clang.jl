@@ -3,7 +3,7 @@ using Base
 import Base.ref
 
 libclang = dlopen("libclang")
-const libwci = "./libwrapcindex"
+const libwci = "../src/libwrapcindex"
 const CXCursor_size = ccall( (:wci_size_CXCursor, libwci), Int, ())
 const CXType_size = ccall( (:wci_size_CXType, libwci), Int, ())
 const CXString_size = ccall( (:wci_size_CXString, libwci), Int, ())
@@ -42,8 +42,8 @@ function get_string(cx::CXString)
   cx.str
 end
 
-load("cindex_base.jl")
-load("cindex_h.jl")
+load("../src/cindex_base.jl")
+load("../src/cindex_h.jl")
 
 anymatch(first, args...) = any({==(first, a) for a in args})
 

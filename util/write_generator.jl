@@ -149,8 +149,8 @@ end
 @cx CXCursor getCursorDefinition {CXCursor}
 @cx Uint32 isCursorDefinition {CXCursor}
 @cx CXCursor getCanonicalCursor {CXCursor}
-@cx Uint32 CXXMethod_isVirtual {CXCursor}
 @cx Uint32 getTemplateCursorKind {CXCursor}
 @cx CXCursor getSpecializedCursorTemplate {CXCursor}
+@cx CXType getResultType {CXType}
 
 write_output()

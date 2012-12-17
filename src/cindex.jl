@@ -2,13 +2,23 @@ module cindex
 using Base
 import Base.ref
 
+export cu_type, kind, name, spelling, is_function, is_null,
+  value, children, cu_file
+export resolve_type, return_type
+export tu_init, tu_cursor
+export CXType, CXCursor, CXString, CXTypeKind, CursorList
+
 libclang = dlopen("libclang")
+
 const libwci = "../src/libwrapcindex"
 const CXCursor_size = ccall( (:wci_size_CXCursor, libwci), Int, ())
 const CXType_size = ccall( (:wci_size_CXType, libwci), Int, ())
 const CXString_size = ccall( (:wci_size_CXString, libwci), Int, ())
 
+# Type definitions for wrapped types
+
 typealias CXTypeKind Int32
+
 type CXCursor
   data::Array{Uint8, 1}
   CXCursor() = new(Array(Uint8, CXCursor_size))
@@ -42,19 +52,45 @@ function get_string(cx::CXString)
   cx.str
 end
 
+# These loads need to follow the type defs above because the types are not
+# defined herein.
 load("../src/cindex_base.jl")
 load("../src/cindex_h.jl")
 
+# TODO: macro version should be more efficient.
 anymatch(first, args...) = any({==(first, a) for a in args})
 
-cxtype(c::CXCursor) = getCursorType(c)
+cu_type(c::CXCursor) = getCursorType(c)
 kind(c::CXCursor) = getCursorKind(c)
 kind(c::CXType) = reinterpret(Int32, c.data[1:4])[1]
 name(c::CXCursor) = getCursorDisplayName(c)
-spelling(c::CXType) = getTypeKindSpelling(typekind(c))
+spelling(c::CXType) = getTypeKindSpelling(kind(c))
 spelling(c::CXCursor) = getCursorSpelling(c)
+is_function(c::CXCursor) = (kind(c) == CurKind.FUNCTIONDECL)
+is_function(t::CXType) = (kind(t) == TypKind.FUNCTIONPROTO)
+is_null(c::CXCursor) = (Cursor_isNull(c) != 0)
 
-value(c::CXCursor) = begin 
+
+function resolve_type(rt::CXType)
+  # This helper attempts to work around some limitations of the
+  # current libclang API.
+  if kind(rt) == cindex.TypKind.UNEXPOSED
+    # try to resolve Unexposed type to cursor definition.
+    rtdef_cu = cindex.getTypeDeclaration(rt)
+    if (!is_null(rtdef_cu) && kind(rtdef_cu) != CurKind.NODECLFOUND)
+      return cu_type(rtdef_cu)
+    end
+  end
+  # otherwise, this will either be a builtin or unexposed
+  # client needs to sort out.
+  return rt
+end
+function return_type(c::CXCursor)
+  is_function(c) ? resolve_type( getCursorResultType(c) ) : 
+    error("return_type Cursor argument must be a function")
+end
+
+function value(c::CXCursor)
   if kind(c) != CurKind.ENUMCONSTANTDECL
     error("Not a value cursor.")
   end
@@ -69,8 +105,8 @@ value(c::CXCursor) = begin
   end
 end
 
-init_tu(hdrfile::Any) = init_tu(hdrfile, 0,0)
-init_tu(hdrfile::Any, exclPCHDecl::Int, dispDiag::Int) = 
+tu_init(hdrfile::Any) = tu_init(hdrfile, 0,0)
+tu_init(hdrfile::Any, exclPCHDecl::Int, dispDiag::Int) = 
   ccall( (:wci_initIndex, libwci),
       Ptr{Void}, 
       (Ptr{Uint8}, Uint8, Uint8),

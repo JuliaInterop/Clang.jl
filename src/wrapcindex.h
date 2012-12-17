@@ -94,3 +94,17 @@ void  wci_getResultType(char* a1,char* a2) {
   CXType rx = clang_getResultType(l1);
   wci_save_CXType(rx,a2);
 }
+void  wci_getCursorResultType(char* a1,char* a2) {
+  CXCursor l1 = wci_get_CXCursor(a1);
+  CXType rx = clang_getCursorResultType(l1);
+  wci_save_CXType(rx,a2);
+}
+void  wci_getTypeDeclaration(char* a1,char* a2) {
+  CXType l1 = wci_get_CXType(a1);
+  CXCursor rx = clang_getTypeDeclaration(l1);
+  wci_save_CXCursor(rx,a2);
+}
+int wci_Cursor_isNull(char* a1) {
+  CXCursor l1 = wci_get_CXCursor(a1);
+  return clang_Cursor_isNull(l1);
+}

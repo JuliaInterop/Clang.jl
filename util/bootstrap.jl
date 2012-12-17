@@ -152,5 +152,7 @@ end
 @cx Uint32 getTemplateCursorKind {CXCursor}
 @cx CXCursor getSpecializedCursorTemplate {CXCursor}
 @cx CXType getResultType {CXType}
-
+@cx CXType getCursorResultType {CXCursor}
+@cx CXCursor getTypeDeclaration {CXType}
+@cx Int32 Cursor_isNull {CXCursor}
 write_output()

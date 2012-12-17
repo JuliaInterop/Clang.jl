@@ -1,32 +1,32 @@
 # Generated from Index.h
-module Availability
+baremodule Availability
   const Available = 0
   const Deprecated = 1
   const NotAvailable = 2
   const NotAccessible = 3
 end
 # Typedef: GlobalOptFlags
-module GlobalOptFlags
+baremodule GlobalOptFlags
   const None = 0
   const ThreadBackgroundPriorityForIndexing = 1
   const ThreadBackgroundPriorityForEditing = 2
   const ThreadBackgroundPriorityForAll = 3
 end
 # Typedef: CXDiagnostic
-module DiagnosticSeverity
+baremodule DiagnosticSeverity
   const Ignored = 0
   const Note = 1
   const Warning = 2
   const Error = 3
   const Fatal = 4
 end
-module LoadDiag_Error
+baremodule LoadDiag_Error
   const None = 0
   const Unknown = 1
   const CannotLoad = 2
   const InvalidFile = 3
 end
-module DiagnosticDisplay
+baremodule DiagnosticDisplay
   const DisplaySourceLocation = 1
   const DisplayColumn = 2
   const DisplaySourceRanges = 4
@@ -34,7 +34,7 @@ module DiagnosticDisplay
   const DisplayCategoryId = 16
   const DisplayCategoryName = 32
 end
-module TranslationUnit_Flags
+baremodule TranslationUnit_Flags
   const None = 0
   const DetailedPreprocessingRecord = 1
   const Incomplete = 2
@@ -44,19 +44,19 @@ module TranslationUnit_Flags
   const CXXChainedPCH = 32
   const SkipFunctionBodies = 64
 end
-module SaveTranslationUnit_Flags
+baremodule SaveTranslationUnit_Flags
   const None = 0
 end
-module SaveError
+baremodule SaveError
   const CXSaveError_None = 0
   const CXSaveError_Unknown = 1
   const CXSaveError_TranslationErrors = 2
   const CXSaveError_InvalidTU = 3
 end
-module Reparse_Flags
+baremodule Reparse_Flags
   const None = 0
 end
-module TUResourceUsage
+baremodule TUResourceUsage
   const AST = 1
   const Identifiers = 2
   const Selectors = 3
@@ -76,7 +76,7 @@ module TUResourceUsage
   const First = 1
   const Last = 14
 end
-module CurKind
+baremodule CurKind
   const UNEXPOSEDDECL = 1
   const STRUCTDECL = 2
   const UNIONDECL = 3
@@ -237,20 +237,20 @@ module CurKind
   const FIRSTPREPROCESSING = 500
   const LASTPREPROCESSING = 503
 end
-module LinkageKind
+baremodule LinkageKind
   const Invalid = 0
   const NoLinkage = 1
   const Internal = 2
   const UniqueExternal = 3
   const External = 4
 end
-module LanguageKind
+baremodule LanguageKind
   const Invalid = 0
   const C = 1
   const ObjC = 2
   const CPlusPlus = 3
 end
-module TypKind
+baremodule TypKind
   const INVALID = 0
   const UNEXPOSED = 1
   const VOID = 2
@@ -298,7 +298,7 @@ module TypKind
   const CONSTANTARRAY = 112
   const VECTOR = 113
 end
-module CallingConv
+baremodule CallingConv
   const Default = 0
   const C = 1
   const X86StdCall = 2
@@ -310,30 +310,30 @@ module CallingConv
   const Invalid = 100
   const Unexposed = 200
 end
-module CXXAccessSpecifier
+baremodule CXXAccessSpecifier
   const InvalidAccessSpecifier = 0
   const Public = 1
   const Protected = 2
   const Private = 3
 end
-module CursorVisitorResult
+baremodule CursorVisitorResult
   const Break = 0
   const Continue = 1
   const Recurse = 2
 end
-module NameRefFlags
+baremodule NameRefFlags
   const WantQualifier = 1
   const WantTemplateArgs = 2
   const WantSinglePiece = 4
 end
-module TokenKind
+baremodule TokenKind
   const Punctuation = 0
   const Keyword = 1
   const Identifier = 2
   const Literal = 3
   const Comment = 4
 end
-module CompletionChunkKind
+baremodule CompletionChunkKind
   const Optional = 0
   const TypedText = 1
   const Text = 2
@@ -356,7 +356,7 @@ module CompletionChunkKind
   const HorizontalSpace = 19
   const VerticalSpace = 20
 end
-module CodeComplete_Flags
+baremodule CodeComplete_Flags
   const IncludeMacros = 1
   const IncludeCodePatterns = 2
   const Unexposed = 0
@@ -384,11 +384,11 @@ module CodeComplete_Flags
   const NaturalLanguage = 2097152
   const Unknown = 4194303
 end
-module VisitorResult
+baremodule VisitorResult
   const Break = 0
   const Continue = 1
 end
-module EntityKind
+baremodule EntityKind
   const Unexposed = 0
   const Typedef = 1
   const Function = 2
@@ -416,34 +416,34 @@ module EntityKind
   const CXXConversionFunction = 24
   const CXXTypeAlias = 25
 end
-module EntityLanguage
+baremodule EntityLanguage
   const None = 0
   const C = 1
   const ObjC = 2
   const CXX = 3
 end
-module EntityCXXTemplateKind
+baremodule EntityCXXTemplateKind
   const NonTemplate = 0
   const Template = 1
   const TemplatePartialSpecialization = 2
   const TemplateSpecialization = 3
 end
-module AttrKind
+baremodule AttrKind
   const Unexposed = 0
   const IBAction = 1
   const IBOutlet = 2
   const IBOutletCollection = 3
 end
-module ObjCContainerKind
+baremodule ObjCContainerKind
   const ForwardRef = 0
   const Interface = 1
   const Implementation = 2
 end
-module EntityRefKind
+baremodule EntityRefKind
   const Direct = 1
   const Implicit = 2
 end
-module IndexOptFlags
+baremodule IndexOptFlags
   const None = 0
   const SuppressRedundantRefs = 1
   const IndexFunctionLocalSymbols = 2

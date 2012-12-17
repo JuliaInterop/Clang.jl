@@ -88,3 +88,16 @@ function getResultType(a1::CXType,)
   ccall( (:wci_getResultType, libwci), Void, (Ptr{Void},Ptr{Void}), a1.data, c.data,)
   return c
 end
+function getCursorResultType(a1::CXCursor,)
+  c = CXType()
+  ccall( (:wci_getCursorResultType, libwci), Void, (Ptr{Void},Ptr{Void}), a1.data, c.data,)
+  return c
+end
+function getTypeDeclaration(a1::CXType,)
+  c = CXCursor()
+  ccall( (:wci_getTypeDeclaration, libwci), Void, (Ptr{Void},Ptr{Void}), a1.data, c.data,)
+  return c
+end
+function Cursor_isNull(a1::CXCursor,)
+  ccall( (:wci_Cursor_isNull, libwci), Int32, (Ptr{Void},), a1.data, )
+end

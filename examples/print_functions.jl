@@ -1,11 +1,7 @@
-load("cindex")
+load("../src/cindex")
 using cindex
 import cindex.CurKind
 import cindex.TypKind
-
-tu = tu_init("Index.h")
-topcu = tu_cursor(tu)
-topcl = children(topcu)
 
 function full_name(t::CXType)
   fn = {}
@@ -31,5 +27,11 @@ function dump_functions(cl::CursorList, restrict_hdr::Any)
       println(i, " ", full_name(rt), " ", name(cu))
     end
   end
+end
+function dump_functions(hdr::String)
+  tu = tu_init(hdr)
+  topcu = tu_cursor(tu)
+  topcl = children(topcu)
+  dump_functions(topcl, hdr)
 end
 dump_functions(cl::CursorList) = dump_functions(cl, None)

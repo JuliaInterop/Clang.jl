@@ -101,3 +101,8 @@ end
 function Cursor_isNull(a1::CXCursor,)
   ccall( (:wci_Cursor_isNull, libwci), Int32, (Ptr{Void},), a1.data, )
 end
+function getPointeeType(a1::CXType,)
+  c = CXType()
+  ccall( (:wci_getPointeeType, libwci), Void, (Ptr{Void},Ptr{Void}), a1.data, c.data,)
+  return c
+end

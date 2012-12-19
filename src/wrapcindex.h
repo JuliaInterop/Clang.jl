@@ -108,3 +108,8 @@ int wci_Cursor_isNull(char* a1) {
   CXCursor l1 = wci_get_CXCursor(a1);
   return clang_Cursor_isNull(l1);
 }
+void  wci_getPointeeType(char* a1,char* a2) {
+  CXType l1 = wci_get_CXType(a1);
+  CXType rx = clang_getPointeeType(l1);
+  wci_save_CXType(rx,a2);
+}

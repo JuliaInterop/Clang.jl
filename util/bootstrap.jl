@@ -155,4 +155,6 @@ end
 @cx CXType getCursorResultType {CXCursor}
 @cx CXCursor getTypeDeclaration {CXType}
 @cx Int32 Cursor_isNull {CXCursor}
+@cx CXType getPointeeType {CXType}
+
 write_output()

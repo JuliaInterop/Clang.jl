@@ -12,6 +12,16 @@ function full_name(t::CXType)
     td = cindex.getTypedefDeclUnderlyingType(tdecl)
     if (kind(td) == TypKind.UNEXPOSED) td=resolve_type(td) end
     push(fn, string(spelling(td), " ", name(tdecl)))
+  elseif kind(t) == TypKind.POINTER
+    pt = cindex.getPointeeType(t)
+    push(fn, string( spelling(pt) ))
+    if kind(pt) == TypKind.TYPEDEF
+      tdecl = cindex.getTypeDeclaration(pt)
+      td = cindex.getTypedefDeclUnderlyingType(tdecl)
+      if (kind(td) == TypKind.UNEXPOSED) td=resolve_type(td) end
+      push(fn, full_name(td) )
+      push(fn, spelling(tdecl) )
+    end
   end
   return string( spelling(t), (length(fn) > 0 ? fn : "") )
 end

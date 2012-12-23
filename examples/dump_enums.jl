@@ -1,4 +1,6 @@
-load("cindex.jl")
+#error("Running this file will overwrite existing cindex_h.jl")
+# Uncomment below to run
+#require("cindex.jl")
 
 const ENUM_DECL = 5
 const TYPEDEF_DECL = 20
@@ -38,7 +40,7 @@ function wrap_enums(io::IOStream, cu::cindex.CXCursor, typedef::Any)
 end
 
 index_fn = "Index.h"
-tu = cindex.init_tu(index_fn)
+tu = cindex.tu_init(index_fn)
 topcu = cindex.tu_cursor(tu)
 topcl = cindex.children(topcu)
 f_out = open("test_enums.jl", "w")
@@ -49,9 +51,9 @@ for i = 1:topcl.size
   fn = cindex.cu_file(cu)
   fn = "Index.h"
   if (fn != index_fn) continue end
-  if (cindex.kind(cu) == ENUM_DECL)
+  if (cindex.cu_kind(cu) == ENUM_DECL)
     tdcu = cindex.ref(topcl,i+1)
-    tdcu = ((cindex.kind(tdcu) == TYPEDEF_DECL) ? tdcu : None)
+    tdcu = ((cindex.cu_kind(tdcu) == TYPEDEF_DECL) ? tdcu : None)
     wrap_enums(f_out, cu, tdcu)
   end
 end

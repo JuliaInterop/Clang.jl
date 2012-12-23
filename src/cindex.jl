@@ -59,10 +59,9 @@ function get_string(cx::CXString)
   cx.str
 end
 
-# These loads need to follow the type defs above because the types are not
-# defined herein.
-load("../src/cindex_base.jl")
-load("../src/cindex_h.jl")
+# These require statements must follow type definitions above.
+require("../src/cindex_base.jl")
+require("../src/cindex_h.jl")
 
 # TODO: macro version should be more efficient.
 anymatch(first, args...) = any({==(first, a) for a in args})

@@ -18,12 +18,14 @@ All testing and development so far has been on Ubuntu 12.04.1 (64-bit)
 
 ## Usage
   ```julia
-  load("cindex")
+  require("cindex")
   using cindex
 
   julia> tu = tu_init("Index.h")   # Initialize and parse Index.h
   julia> topcu = tu_cursor(tu)     # get TU top cursor
   julia> topcl = children(topcu)
+  julia> topcl.size
+  595
 
   julia> cu = topcl[350]
   julia> cu_kind(cu) == cindex.CurKind.FUNCTIONDECL
@@ -31,7 +33,9 @@ All testing and development so far has been on Ubuntu 12.04.1 (64-bit)
   julia> name(topcl[350])
   "clang_parseTranslationUnit(CXIndex, const char *, const char *const *, int, struct CXUnsavedFile *, unsigned int, unsigned int)"
   ```
-  See the examples folder for further usage scenarios.
+  See the examples/ and util/ folders for further usage 
+  scenarios. CINDEX.jl is partially self-generating,
+  including parsing of the enums (util/gencindex_h.jl)
 
   There is a small convenience API exported by cindex:
   

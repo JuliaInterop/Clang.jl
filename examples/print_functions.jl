@@ -1,4 +1,4 @@
-load("../src/cindex")
+require("../src/cindex")
 using cindex
 import cindex.CurKind
 import cindex.TypKind

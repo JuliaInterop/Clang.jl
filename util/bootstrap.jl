@@ -139,6 +139,7 @@ end
 @cx CXCursor Cursor_getArgument {CXCursor, Int32}
 @cx CXType getTypedefDeclUnderlyingType {CXCursor}
 @cx CXCursor getCursorLexicalParent {CXCursor}
+@cx CXCursor getCursorSemanticParent {CXCursor}
 @cx CXType getEnumDeclIntegerType {CXCursor}
 @cx Int64 getEnumConstantDeclValue {CXCursor}
 @cx Uint64 getEnumConstantDeclUnsignedValue {CXCursor}

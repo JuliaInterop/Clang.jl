@@ -3,37 +3,32 @@
 #include <vector>
 #include <set>
 
-#define DEBUG 0
+#define wci_st(rtype) \
+  static inline rtype wci_save_##rtype(rtype i, char* o) \
+    { memcpy(o, &i, sizeof(rtype)); } \
+  static inline rtype wci_get_##rtype(char* b) \
+    { rtype c; memcpy(&c, b, sizeof(rtype)); return c; } \
+  extern "C" unsigned int wci_size_##rtype() { return sizeof(rtype); }
 
-#define CXType_s sizeof(CXType)
-#define CXCursor_s sizeof(CXCursor)
-#define CXString_s sizeof(CXString)
-
-#define wci_saver(rtype) \
-static inline rtype wci_save_##rtype(rtype i, char* o) \
-  { memcpy(o, &i, rtype## _ ##s); }
-
-wci_saver(CXCursor)
-wci_saver(CXType)
-wci_saver(CXString)
-
-#define wci_getter(rtype) \
-static inline rtype wci_get_##rtype(char* b) \
-  { rtype c; memcpy(&c, b, rtype## _ ##s); return c; }
-
-wci_getter(CXCursor)
-wci_getter(CXType)
-wci_getter(CXString)
+// Struct helpers: memcpy shenanigans due to no structs byval
+wci_st(CXUnsavedFile)
+wci_st(CXSourceLocation)
+wci_st(CXSourceRange)
+wci_st(CXTUResourceUsageEntry)
+wci_st(CXTUResourceUsage)
+wci_st(CXCursor)
+wci_st(CXType)
+wci_st(CXToken)
+wci_st(CXString)
 
 typedef std::vector<CXCursor> CursorList;
 typedef std::set<CursorList*> allcl_t;
 allcl_t allCursorLists;
 
 // to traverse AST with cursor visitor
+// TODO: replace this with a C container
 CXChildVisitResult wci_visitCB(CXCursor cur, CXCursor par, CXClientData data)
 {
-  if (DEBUG) printf("visiting: %s\n", 
-    clang_getCString(clang_getCursorDisplayName(cur)));
   CursorList* cl = (CursorList*)data;
   cl->push_back(cur);
   return CXChildVisit_Continue;
@@ -57,11 +52,6 @@ void* wci_initIndex(char* hdrFile, int excludePch, int displayDiag)
 unsigned int wci_getChildren(char* cuin, CursorList* cl)
 {
   CXCursor cu = wci_get_CXCursor(cuin);
-  if (DEBUG) printf("getChildren display: %s\n", 
-    clang_getCString(clang_getCursorDisplayName(cu)));
-  if (DEBUG) printf("getChildren spelling: %s\n",
-    clang_getCString(clang_getCursorSpelling(cu)));
-  if (DEBUG) printf("getChildren cukind: %d\n", clang_getCursorKind(cu));
   clang_visitChildren(cu, wci_visitCB, cl);
   return 0;
 }
@@ -103,10 +93,6 @@ void wci_getTUCursor(void* tu, char* cuout)
   CXCursor cu = clang_getTranslationUnitCursor((CXTranslationUnit)tu);
   wci_save_CXCursor(cu, cuout);
 }
-
-unsigned int wci_size_CXType() { return sizeof(CXType); }
-unsigned int wci_size_CXCursor() { return sizeof(CXCursor); }
-unsigned int wci_size_CXString() { return sizeof(CXString); }
 
 const char* wci_getCString(char* csin )
 {

@@ -34,6 +34,11 @@ void  wci_getCursorLexicalParent(char* a1,char* a2) {
   CXCursor rx = clang_getCursorLexicalParent(l1);
   wci_save_CXCursor(rx,a2);
 }
+void  wci_getCursorSemanticParent(char* a1,char* a2) {
+  CXCursor l1 = wci_get_CXCursor(a1);
+  CXCursor rx = clang_getCursorSemanticParent(l1);
+  wci_save_CXCursor(rx,a2);
+}
 void  wci_getEnumDeclIntegerType(char* a1,char* a2) {
   CXCursor l1 = wci_get_CXCursor(a1);
   CXType rx = clang_getEnumDeclIntegerType(l1);

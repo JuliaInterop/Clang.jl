@@ -37,9 +37,8 @@ see cindex.jl and wrapcindex.cpp
 ### Todo
 
 * Generate wrappers for remaining functions
-* Get rid of C++ dependency. The only place this is a problem
-is in the cursor child_visit implementation. Maybe this can
-be handled with the new Julia callback mechanism...
+* Get rid of C++ dependency by replacing std::vector with 
+  pure C container.
 
 ### License
 

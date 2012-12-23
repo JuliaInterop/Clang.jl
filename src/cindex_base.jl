@@ -33,6 +33,11 @@ function getCursorLexicalParent(a1::CXCursor,)
   ccall( (:wci_getCursorLexicalParent, libwci), Void, (Ptr{Void},Ptr{Void}), a1.data, c.data,)
   return c
 end
+function getCursorSemanticParent(a1::CXCursor,)
+  c = CXCursor()
+  ccall( (:wci_getCursorSemanticParent, libwci), Void, (Ptr{Void},Ptr{Void}), a1.data, c.data,)
+  return c
+end
 function getEnumDeclIntegerType(a1::CXCursor,)
   c = CXType()
   ccall( (:wci_getEnumDeclIntegerType, libwci), Void, (Ptr{Void},Ptr{Void}), a1.data, c.data,)

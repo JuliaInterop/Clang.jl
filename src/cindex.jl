@@ -2,31 +2,36 @@ module cindex
 using Base
 import Base.ref
 
-export cu_type, kind, name, spelling, is_function, is_null,
+export cu_type, cu_kind, ty_kind, name, spelling, is_function, is_null,
   value, children, cu_file
 export resolve_type, return_type
 export tu_init, tu_cursor
 export CXType, CXCursor, CXString, CXTypeKind, CursorList
 
 libclang = dlopen("libclang")
-
 const libwci = "../src/libwrapcindex"
-const CXCursor_size = ccall( (:wci_size_CXCursor, libwci), Int, ())
-const CXType_size = ccall( (:wci_size_CXType, libwci), Int, ())
-const CXString_size = ccall( (:wci_size_CXString, libwci), Int, ())
 
 # Type definitions for wrapped types
 
 typealias CXTypeKind Int32
+const CXString_size = ccall( ("wci_size_CXString", libwci), Int, ())
 
-type CXCursor
-  data::Array{Uint8, 1}
-  CXCursor() = new(Array(Uint8, CXCursor_size))
-end
+# work-around: ccall followed by composite_type in @eval gives error.
+get_sz(sym) = @eval ccall( ($(strcat("wci_size_", sym)), $libwci), Int, ())
 
-type CXType
-  data::Array{Uint8,1}
-  CXType() = new(Array(Uint8, CXType_size))
+for st in Any[
+    :CXUnsavedFile, :CXSourceLocation, :CXSourceRange,
+    :CXTUResourceUsageEntry, :CXTUResourceUsage, :CXCursor, :CXType,
+    :CXToken ]
+  # Generate container types from the above list
+  sz_name = symbol(strcat(st,"_size"))
+  @eval begin
+    const $sz_name = get_sz($("$st"))
+    type $(st)
+      data::Array{Uint8,1}
+      $st() = new(Array(Uint8, $sz_name))
+    end
+  end
 end
 
 type CXString
@@ -61,15 +66,14 @@ load("../src/cindex_h.jl")
 anymatch(first, args...) = any({==(first, a) for a in args})
 
 cu_type(c::CXCursor) = getCursorType(c)
-kind(c::CXCursor) = getCursorKind(c)
-kind(c::CXType) = reinterpret(Int32, c.data[1:4])[1]
+cu_kind(c::CXCursor) = getCursorKind(c)
+ty_kind(c::CXType) = reinterpret(Int32, c.data[1:4])[1]
 name(c::CXCursor) = getCursorDisplayName(c)
 spelling(c::CXType) = getTypeKindSpelling(kind(c))
 spelling(c::CXCursor) = getCursorSpelling(c)
 is_function(c::CXCursor) = (kind(c) == CurKind.FUNCTIONDECL)
 is_function(t::CXType) = (kind(t) == TypKind.FUNCTIONPROTO)
 is_null(c::CXCursor) = (Cursor_isNull(c) != 0)
-
 
 function resolve_type(rt::CXType)
   # This helper attempts to work around some limitations of the
@@ -167,7 +171,7 @@ function cu_file(cu::CXCursor)
   ccall( (:wci_getCursorFile, libwci),
     Void,
       (Ptr{Void}, Ptr{Void}), cu.data, str.data)
-   return get_string(str)
+  return get_string(str)
 end
 
 end # module

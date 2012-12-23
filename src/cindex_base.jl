@@ -1,4 +1,3 @@
-libwci = "./libwrapcindex.so"
 function getFileName(a1::CXFile,)
   c = CXString()
   ccall( (:wci_getFileName, libwci), Void, (CXFile,Ptr{Void},), a1, c.data,)

@@ -1,5 +1,7 @@
 CINDEX.jl provides a wrapping of libclang for the 
-Julia language (http://julialang.org)
+Julia language (http://julialang.org). The goal of
+CINDEX.jl is to faciliate access to C and C++ source
+code from Julia.
 
 libclang is a C interface to the Clang compiler from
 the LLVM project. libclang provides access to a subset

@@ -126,7 +126,6 @@ function write_output()
   # Write Julia wrapper functions
   f_base = open("../src/cindex_base.jl", "w")
   
-  println(f_base, "libwci = \"./libwrapcindex.so\"")
   for line in EachLine(jl_bfr)
     print(f_base, line)
   end

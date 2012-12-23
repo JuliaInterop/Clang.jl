@@ -70,19 +70,19 @@ cu_type(c::CXCursor) = getCursorType(c)
 cu_kind(c::CXCursor) = getCursorKind(c)
 ty_kind(c::CXType) = reinterpret(Int32, c.data[1:4])[1]
 name(c::CXCursor) = getCursorDisplayName(c)
-spelling(c::CXType) = getTypeKindSpelling(kind(c))
+spelling(c::CXType) = getTypeKindSpelling(ty_kind(c))
 spelling(c::CXCursor) = getCursorSpelling(c)
-is_function(c::CXCursor) = (kind(c) == CurKind.FUNCTIONDECL)
-is_function(t::CXType) = (kind(t) == TypKind.FUNCTIONPROTO)
+is_function(c::CXCursor) = (cu_kind(c) == CurKind.FUNCTIONDECL)
+is_function(t::CXType) = (ty_kind(t) == TypKind.FUNCTIONPROTO)
 is_null(c::CXCursor) = (Cursor_isNull(c) != 0)
 
 function resolve_type(rt::CXType)
   # This helper attempts to work around some limitations of the
   # current libclang API.
-  if kind(rt) == cindex.TypKind.UNEXPOSED
+  if cu_kind(rt) == cindex.TypKind.UNEXPOSED
     # try to resolve Unexposed type to cursor definition.
     rtdef_cu = cindex.getTypeDeclaration(rt)
-    if (!is_null(rtdef_cu) && kind(rtdef_cu) != CurKind.NODECLFOUND)
+    if (!is_null(rtdef_cu) && cu_kind(rtdef_cu) != CurKind.NODECLFOUND)
       return cu_type(rtdef_cu)
     end
   end
@@ -96,15 +96,15 @@ function return_type(c::CXCursor)
 end
 
 function value(c::CXCursor)
-  if kind(c) != CurKind.ENUMCONSTANTDECL
+  if cu_kind(c) != CurKind.ENUMCONSTANTDECL
     error("Not a value cursor.")
   end
-  t = cxtype(c)
-  if anymatch(kind(t), 
+  t = cu_type(c)
+  if anymatch(ty_kind(t), 
     TypKind.INT, TypKind.LONG, TypKind.LONGLONG)
       return getEnumConstantDeclValue(c)
   end
-  if anymatch(kind(t),
+  if anymatch(ty_kind(t),
     TypKind.UINT, TypKind.ULONG, TypKind.ULONGLONG)
       return getEnumConstantDeclUnsignedValue(c)
   end

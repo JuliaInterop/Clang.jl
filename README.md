@@ -11,10 +11,20 @@ AST parsing.
 ## Status
 
 Preliminary. Most CXType, CXCursor, and C++ related 
-functions are wrapped, providing AST traversing,
-referencing, and type information.
+functions are wrapped, and a few convenience functions
+are provided.
 
 All testing and development so far has been on Ubuntu 12.04.1 (64-bit)
+
+## Installation
+
+Clone this repository, and do the following (sh syntax):
+  
+  ```sh
+  export JULIAHOME=/path/to/julia
+  cd /location/of/CINDEX.jl/lib
+  make
+  ```
 
 ## Usage
   ```julia

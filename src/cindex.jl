@@ -9,7 +9,7 @@ export tu_init, tu_cursor
 export CXType, CXCursor, CXString, CXTypeKind, CursorList
 
 libclang = dlopen("libclang")
-const libwci = "../src/libwrapcindex"
+const libwci = "../lib/libwrapcindex"
 
 # Type definitions for wrapped types
 

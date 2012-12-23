@@ -34,12 +34,6 @@ implementation, or to provide a more Julia-friendly API.
 
 see cindex.jl and wrapcindex.cpp
 
-### Todo
-
-* Generate wrappers for remaining functions
-* Get rid of C++ dependency by replacing std::vector with 
-  pure C container.
-
 ### License
 
 CINDEX.jl is licensed under the MIT license.

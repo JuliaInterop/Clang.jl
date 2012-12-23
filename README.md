@@ -1,12 +1,14 @@
-CINDEX.jl provides a wrapping of libclang for the 
+CIndex.jl provides a wrapping of libclang for the 
 Julia language (http://julialang.org). The goal of
-CINDEX.jl is to faciliate access to C and C++ source
-code from Julia.
+CIndex.jl is to faciliate access to C and C++ source
+parse trees from Julia.
 
-libclang is a C interface to the Clang compiler from
-the LLVM project. libclang provides access to a subset
-of the Clang functionality, primarily geared to C/C++/ObjC
-AST parsing.
+libclang is the stable interface to the Clang compiler 
+from the LLVM project. libclang provides a C interface
+to a subset of Clang functionality, with a primary focus 
+on exposing the C/C++/ObjC parser AST.
+
+libclang API docs: http://clang.llvm.org/doxygen/group__CINDEX.html
 
 ## Status
 
@@ -22,7 +24,7 @@ Clone this repository, and do the following (sh syntax):
   
   ```sh
   export JULIAHOME=/path/to/julia
-  cd /location/of/CINDEX.jl/lib
+  cd /location/of/CIndex.jl/lib
   make
   ```
 
@@ -44,7 +46,7 @@ Clone this repository, and do the following (sh syntax):
   "clang_parseTranslationUnit(CXIndex, const char *, const char *const *, int, struct CXUnsavedFile *, unsigned int, unsigned int)"
   ```
   See the examples/ and util/ folders for further usage 
-  scenarios. CINDEX.jl is partially self-generating,
+  scenarios. CIndex.jl is partially self-generating,
   including parsing of the enums (util/gencindex_h.jl)
 
   There is a small convenience API exported by cindex:
@@ -80,7 +82,7 @@ BUILD_LLVM_CLANG=1 in julia/deps/Makefile.
 
 Most libclang functions pass and return small 
 structs by value. As Julia does not (yet) have full struct 
-support, the current CINDEX.jl implementation includes a 
+support, the current CIndex.jl implementation includes a 
 C++ wrapper. clang functions are wrapped by a C++ function
 that memcpys data to/from a Julia-owned memory array 
 (passed by pointer)
@@ -94,4 +96,4 @@ see src/cindex.jl and src/wrapcindex.cpp
 
 ### License
 
-CINDEX.jl is licensed under the MIT license.
+CIndex.jl is licensed under the MIT license.

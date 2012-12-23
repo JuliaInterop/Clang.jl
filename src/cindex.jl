@@ -14,6 +14,8 @@ const libwci = "../src/libwrapcindex"
 # Type definitions for wrapped types
 
 typealias CXTypeKind Int32
+typealias CXCursorKind Int32
+typealias CXTranslationUnit Ptr{Void}
 const CXString_size = ccall( ("wci_size_CXString", libwci), Int, ())
 
 # work-around: ccall followed by composite_type in @eval gives error.
@@ -22,7 +24,7 @@ get_sz(sym) = @eval ccall( ($(strcat("wci_size_", sym)), $libwci), Int, ())
 for st in Any[
     :CXUnsavedFile, :CXSourceLocation, :CXSourceRange,
     :CXTUResourceUsageEntry, :CXTUResourceUsage, :CXCursor, :CXType,
-    :CXToken ]
+    :CXToken, :CXFile ]
   # Generate container types from the above list
   sz_name = symbol(strcat(st,"_size"))
   @eval begin

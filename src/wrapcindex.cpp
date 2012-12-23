@@ -19,6 +19,7 @@ wci_st(CXTUResourceUsage)
 wci_st(CXCursor)
 wci_st(CXType)
 wci_st(CXToken)
+wci_st(CXFile)
 wci_st(CXString)
 
 typedef std::vector<CXCursor> CursorList;

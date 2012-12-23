@@ -9,5 +9,4 @@ FLAGS = -Wall -Wno-strict-aliasing -fno-omit-frame-pointer -fPIC\
 INC=-I/cmn/git/julia/deps/llvm-3.1/tools/clang/include/clang-c
 
 all:
-	$(CC) wrapcindex.cpp -shared -o libwrapcindex.so $(INC) -L$(USRLIB) $(FLAGS) -ljulia-debug -lev -lclang -g
-#$(CC) jlclang_callback.cpp -shared -o jlclang_callback.so $(INC) -L$(USRLIB) $(FLAGS) -ljulia-debug -lev -lclang -g
+	$(CC) wrapcindex.cpp -shared -o libwrapcindex.so $(INC) -L$(USRLIB) $(FLAGS) -ljulia-release -lev -lclang -g

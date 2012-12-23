@@ -8,7 +8,6 @@ export resolve_type, return_type
 export tu_init, tu_cursor
 export CXType, CXCursor, CXString, CXTypeKind, CursorList
 
-libclang = dlopen("libclang")
 const libwci = "../lib/libwrapcindex"
 
 # Type definitions for wrapped types
@@ -79,7 +78,7 @@ is_null(c::CXCursor) = (Cursor_isNull(c) != 0)
 function resolve_type(rt::CXType)
   # This helper attempts to work around some limitations of the
   # current libclang API.
-  if cu_kind(rt) == cindex.TypKind.UNEXPOSED
+  if ty_kind(rt) == cindex.TypKind.UNEXPOSED
     # try to resolve Unexposed type to cursor definition.
     rtdef_cu = cindex.getTypeDeclaration(rt)
     if (!is_null(rtdef_cu) && cu_kind(rtdef_cu) != CurKind.NODECLFOUND)

@@ -13,6 +13,9 @@ abstract StructArg
 abstract EnumArg
   abstract CXTypeKind <: EnumArg
   abstract CXCursorKind <: EnumArg
+  abstract CXLinkageKind <: EnumArg
+  abstract CXAvailabilityKind <: EnumArg
+  abstract CXLanguageKind <: EnumArg
 
 abstract PointerArg
   abstract CXTranslationUnit <: PointerArg
@@ -34,6 +37,9 @@ c_types = {
   Void => "void",
   CXTypeKind => "CXTypeKind",
   CXCursorKind => "CXCursorKind",
+  CXLinkageKind => "CXLinkageKind",
+  CXAvailabilityKind => "CXAvailabilityKind",
+  CXLanguageKind => "CXLanguageKind",
   CXTranslationUnit => "CXTranslationUnit"
   }
 
@@ -245,33 +251,53 @@ end
 @cx Uint32 isDeclaration {CXCursorKind}
 #377 UInt clang_isReference(enum CXCursorKind)
 @cx Uint32 isReference {CXCursorKind}
-#378 UInt clang_isExpression(enum CXCursorKind)
-#379 UInt clang_isStatement(enum CXCursorKind)
-#380 UInt clang_isAttribute(enum CXCursorKind)
-#381 UInt clang_isInvalid(enum CXCursorKind)
-#382 UInt clang_isTranslationUnit(enum CXCursorKind)
-#383 UInt clang_isPreprocessing(enum CXCursorKind)
-#384 UInt clang_isUnexposed(enum CXCursorKind)
+    
+    # these should be called directly...
+    #378 UInt clang_isExpression(enum CXCursorKind)
+    #379 UInt clang_isStatement(enum CXCursorKind)
+    #380 UInt clang_isAttribute(enum CXCursorKind)
+    #381 UInt clang_isInvalid(enum CXCursorKind)
+    #382 UInt clang_isTranslationUnit(enum CXCursorKind)
+    #383 UInt clang_isPreprocessing(enum CXCursorKind)
+    #384 UInt clang_isUnexposed(enum CXCursorKind)
+
 #386 Enum{"CXLinkageKind"} clang_getCursorLinkage(CXCursor)
+@cx CXLinkageKind getCursorLinkage {CXCursor}
 #387 Enum{"CXAvailabilityKind"} clang_getCursorAvailability(CXCursor)
+@cx CXAvailabilityKind getCursorAvailability {CXCursor}
 #389 Enum{"CXLanguageKind"} clang_getCursorLanguage(CXCursor)
-#390 Typedef{"Pointer CXTranslationUnit"} clang_Cursor_getTranslationUnit(CXCursor)
-#393 Typedef{"Pointer CXCursorSet"} clang_createCXCursorSet()
-#394 Void clang_disposeCXCursorSet(CXCursorSet)
-#395 UInt clang_CXCursorSet_contains(CXCursorSet, CXCursor)
-#396 UInt clang_CXCursorSet_insert(CXCursorSet, CXCursor)
+@cx CXLanguageKind getCursorLanguage {CXCursor}
+  # TODO: enable
+  #390 Typedef{"Pointer CXTranslationUnit"} clang_Cursor_getTranslationUnit(CXCursor)
+  #393 Typedef{"Pointer CXCursorSet"} clang_createCXCursorSet()
+  #394 Void clang_disposeCXCursorSet(CXCursorSet)
+    
+    # don't think this is useful...
+    #395 UInt clang_CXCursorSet_contains(CXCursorSet, CXCursor)
+    #396 UInt clang_CXCursorSet_insert(CXCursorSet, CXCursor)
+
 #397 Typedef{"Record CXCursor"} clang_getCursorSemanticParent(CXCursor)
+@cx CXCursor getCursorSemanticParent {CXCursor}
 #398 Typedef{"Record CXCursor"} clang_getCursorLexicalParent(CXCursor)
-#399 Void clang_getOverriddenCursors(CXCursor, CXCursor **, unsigned int *)
-#400 Void clang_disposeOverriddenCursors(CXCursor *)
-#401 Typedef{"Pointer CXFile"} clang_getIncludedFile(CXCursor)
-#402 Typedef{"Record CXCursor"} clang_getCursor(CXTranslationUnit, CXSourceLocation)
-#403 Typedef{"Record CXSourceLocation"} clang_getCursorLocation(CXCursor)
-#404 Typedef{"Record CXSourceRange"} clang_getCursorExtent(CXCursor)
+@cx CXCursor getCursorLexicalParent {CXCursor}
+
+  #TODO: wrap this manually
+  #399 Void clang_getOverriddenCursors(CXCursor, CXCursor **, unsigned int *)
+  #400 Void clang_disposeOverriddenCursors(CXCursor *)
+  # maybes..
+  #401 Typedef{"Pointer CXFile"} clang_getIncludedFile(CXCursor)
+  #402 Typedef{"Record CXCursor"} clang_getCursor(CXTranslationUnit, CXSourceLocation)
+    
+    # probably not
+    #403 Typedef{"Record CXSourceLocation"} clang_getCursorLocation(CXCursor)
+    #404 Typedef{"Record CXSourceRange"} clang_getCursorExtent(CXCursor)
+
 #409 Typedef{"Record CXType"} clang_getCursorType(CXCursor)
+@cx CXType getCursorType {CXCursor}
 #410 Typedef{"Record CXType"} clang_getTypedefDeclUnderlyingType(CXCursor)
 @cx CXType getTypedefDeclUnderlyingType {CXCursor}
 #411 Typedef{"Record CXType"} clang_getEnumDeclIntegerType(CXCursor)
+@cx CXType getEnumDeclIntegerType {CXCursor}
 #412 LongLong clang_getEnumConstantDeclValue(CXCursor)
 @cx Int64 getEnumConstantDeclValue {CXCursor}
 #413 ULongLong clang_getEnumConstantDeclUnsignedValue(CXCursor)

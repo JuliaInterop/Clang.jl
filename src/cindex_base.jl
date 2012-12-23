@@ -50,9 +50,38 @@ end
 function isReference(a1::CXCursorKind,)
   ccall( (:wci_isReference, libwci), Uint32, (CXCursorKind,), a1, )
 end
+function getCursorLinkage(a1::CXCursor,)
+  ccall( (:wci_getCursorLinkage, libwci), CXLinkageKind, (Ptr{Void},), a1.data, )
+end
+function getCursorAvailability(a1::CXCursor,)
+  ccall( (:wci_getCursorAvailability, libwci), CXAvailabilityKind, (Ptr{Void},), a1.data, )
+end
+function getCursorLanguage(a1::CXCursor,)
+  ccall( (:wci_getCursorLanguage, libwci), CXLanguageKind, (Ptr{Void},), a1.data, )
+end
+function getCursorSemanticParent(a1::CXCursor,)
+  c = CXCursor()
+  ccall( (:wci_getCursorSemanticParent, libwci), Void, (Ptr{Void},Ptr{Void},), a1.data, c.data,)
+  return c
+end
+function getCursorLexicalParent(a1::CXCursor,)
+  c = CXCursor()
+  ccall( (:wci_getCursorLexicalParent, libwci), Void, (Ptr{Void},Ptr{Void},), a1.data, c.data,)
+  return c
+end
+function getCursorType(a1::CXCursor,)
+  c = CXType()
+  ccall( (:wci_getCursorType, libwci), Void, (Ptr{Void},Ptr{Void},), a1.data, c.data,)
+  return c
+end
 function getTypedefDeclUnderlyingType(a1::CXCursor,)
   c = CXType()
   ccall( (:wci_getTypedefDeclUnderlyingType, libwci), Void, (Ptr{Void},Ptr{Void},), a1.data, c.data,)
+  return c
+end
+function getEnumDeclIntegerType(a1::CXCursor,)
+  c = CXType()
+  ccall( (:wci_getEnumDeclIntegerType, libwci), Void, (Ptr{Void},Ptr{Void},), a1.data, c.data,)
   return c
 end
 function getEnumConstantDeclValue(a1::CXCursor,)

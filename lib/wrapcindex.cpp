@@ -4,7 +4,7 @@
 #include <set>
 
 #define wci_st(rtype) \
-  static inline rtype wci_save_##rtype(rtype i, char* o) \
+  static inline void wci_save_##rtype(rtype i, char* o) \
     { memcpy(o, &i, sizeof(rtype)); } \
   static inline rtype wci_get_##rtype(char* b) \
     { rtype c; memcpy(&c, b, sizeof(rtype)); return c; } \

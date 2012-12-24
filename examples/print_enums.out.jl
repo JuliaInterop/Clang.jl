@@ -1,34 +1,45 @@
 # Automatically generated from Index.h
 #   using dumpenums.jl
-const __codecvt_ok = 0
-const __codecvt_partial = 1
-const __codecvt_error = 2
-const __codecvt_noconv = 3
+# enum ENUM_CXAvailabilityKind
 const CXAvailability_Available = 0
 const CXAvailability_Deprecated = 1
 const CXAvailability_NotAvailable = 2
 const CXAvailability_NotAccessible = 3
-# Typedef: CXGlobalOptFlags
+# end
+
+# enum CXGlobalOptFlags
 const CXGlobalOpt_None = 0
 const CXGlobalOpt_ThreadBackgroundPriorityForIndexing = 1
 const CXGlobalOpt_ThreadBackgroundPriorityForEditing = 2
 const CXGlobalOpt_ThreadBackgroundPriorityForAll = 3
-# Typedef: CXDiagnostic
+# end
+
+# enum ENUM_CXDiagnosticSeverity
 const CXDiagnostic_Ignored = 0
 const CXDiagnostic_Note = 1
 const CXDiagnostic_Warning = 2
 const CXDiagnostic_Error = 3
 const CXDiagnostic_Fatal = 4
+# end
+# const CXDiagnostic == ENUM_CXDiagnosticSeverity
+
+# enum ENUM_CXLoadDiag_Error
 const CXLoadDiag_None = 0
 const CXLoadDiag_Unknown = 1
 const CXLoadDiag_CannotLoad = 2
 const CXLoadDiag_InvalidFile = 3
+# end
+
+# enum ENUM_CXDiagnosticDisplayOptions
 const CXDiagnostic_DisplaySourceLocation = 1
 const CXDiagnostic_DisplayColumn = 2
 const CXDiagnostic_DisplaySourceRanges = 4
 const CXDiagnostic_DisplayOption = 8
 const CXDiagnostic_DisplayCategoryId = 16
 const CXDiagnostic_DisplayCategoryName = 32
+# end
+
+# enum ENUM_CXTranslationUnit_Flags
 const CXTranslationUnit_None = 0
 const CXTranslationUnit_DetailedPreprocessingRecord = 1
 const CXTranslationUnit_Incomplete = 2
@@ -37,12 +48,24 @@ const CXTranslationUnit_CacheCompletionResults = 8
 const CXTranslationUnit_CXXPrecompiledPreamble = 16
 const CXTranslationUnit_CXXChainedPCH = 32
 const CXTranslationUnit_SkipFunctionBodies = 64
+# end
+
+# enum ENUM_CXSaveTranslationUnit_Flags
 const CXSaveTranslationUnit_None = 0
+# end
+
+# enum ENUM_CXSaveError
 const CXSaveError_None = 0
 const CXSaveError_Unknown = 1
 const CXSaveError_TranslationErrors = 2
 const CXSaveError_InvalidTU = 3
+# end
+
+# enum ENUM_CXReparse_Flags
 const CXReparse_None = 0
+# end
+
+# enum ENUM_CXTUResourceUsageKind
 const CXTUResourceUsage_AST = 1
 const CXTUResourceUsage_Identifiers = 2
 const CXTUResourceUsage_Selectors = 3
@@ -61,6 +84,9 @@ const CXTUResourceUsage_MEMORY_IN_BYTES_BEGIN = 1
 const CXTUResourceUsage_MEMORY_IN_BYTES_END = 14
 const CXTUResourceUsage_First = 1
 const CXTUResourceUsage_Last = 14
+# end
+
+# enum ENUM_CXCursorKind
 const UNEXPOSEDDECL = 1
 const STRUCTDECL = 2
 const UNIONDECL = 3
@@ -220,15 +246,24 @@ const MACROINSTANTIATION = 502
 const INCLUSIONDIRECTIVE = 503
 const FIRSTPREPROCESSING = 500
 const LASTPREPROCESSING = 503
+# end
+
+# enum ENUM_CXLinkageKind
 const CXLinkage_Invalid = 0
 const CXLinkage_NoLinkage = 1
 const CXLinkage_Internal = 2
 const CXLinkage_UniqueExternal = 3
 const CXLinkage_External = 4
+# end
+
+# enum ENUM_CXLanguageKind
 const CXLanguage_Invalid = 0
 const CXLanguage_C = 1
 const CXLanguage_ObjC = 2
 const CXLanguage_CPlusPlus = 3
+# end
+
+# enum ENUM_CXTypeKind
 const INVALID = 0
 const UNEXPOSED = 1
 const VOID = 2
@@ -275,6 +310,9 @@ const FUNCTIONNOPROTO = 110
 const FUNCTIONPROTO = 111
 const CONSTANTARRAY = 112
 const VECTOR = 113
+# end
+
+# enum ENUM_CXCallingConv
 const CXCallingConv_Default = 0
 const CXCallingConv_C = 1
 const CXCallingConv_X86StdCall = 2
@@ -285,23 +323,38 @@ const CXCallingConv_AAPCS = 6
 const CXCallingConv_AAPCS_VFP = 7
 const CXCallingConv_Invalid = 100
 const CXCallingConv_Unexposed = 200
+# end
+
+# enum ENUM_CX_CXXAccessSpecifier
 const CX_CXXInvalidAccessSpecifier = 0
 const CX_CXXPublic = 1
 const CX_CXXProtected = 2
 const CX_CXXPrivate = 3
-# Typedef: CXCursorVisitor
+# end
+
+# enum ENUM_CXChildVisitResult
 const CXChildVisit_Break = 0
 const CXChildVisit_Continue = 1
 const CXChildVisit_Recurse = 2
+# end
+# const CXCursorVisitor == ENUM_CXChildVisitResult
+
+# enum ENUM_CXNameRefFlags
 const CXNameRange_WantQualifier = 1
 const CXNameRange_WantTemplateArgs = 2
 const CXNameRange_WantSinglePiece = 4
-# Typedef: CXTokenKind
+# end
+
+# enum ENUM_CXTokenKind
 const CXToken_Punctuation = 0
 const CXToken_Keyword = 1
 const CXToken_Identifier = 2
 const CXToken_Literal = 3
 const CXToken_Comment = 4
+# end
+# const CXTokenKind == ENUM_CXTokenKind
+
+# enum ENUM_CXCompletionChunkKind
 const CXCompletionChunk_Optional = 0
 const CXCompletionChunk_TypedText = 1
 const CXCompletionChunk_Text = 2
@@ -323,8 +376,14 @@ const CXCompletionChunk_SemiColon = 17
 const CXCompletionChunk_Equal = 18
 const CXCompletionChunk_HorizontalSpace = 19
 const CXCompletionChunk_VerticalSpace = 20
+# end
+
+# enum ENUM_CXCodeComplete_Flags
 const CXCodeComplete_IncludeMacros = 1
 const CXCodeComplete_IncludeCodePatterns = 2
+# end
+
+# enum ENUM_CXCompletionContext
 const CXCompletionContext_Unexposed = 0
 const CXCompletionContext_AnyType = 1
 const CXCompletionContext_AnyValue = 2
@@ -349,9 +408,14 @@ const CXCompletionContext_ObjCSelectorName = 524288
 const CXCompletionContext_MacroName = 1048576
 const CXCompletionContext_NaturalLanguage = 2097152
 const CXCompletionContext_Unknown = 4194303
+# end
+
+# enum ENUM_CXVisitorResult
 const CXVisit_Break = 0
 const CXVisit_Continue = 1
-# Typedef: CXIdxEntityKind
+# end
+
+# enum CXIdxEntityKind
 const CXIdxEntity_Unexposed = 0
 const CXIdxEntity_Typedef = 1
 const CXIdxEntity_Function = 2
@@ -378,31 +442,45 @@ const CXIdxEntity_CXXConstructor = 22
 const CXIdxEntity_CXXDestructor = 23
 const CXIdxEntity_CXXConversionFunction = 24
 const CXIdxEntity_CXXTypeAlias = 25
-# Typedef: CXIdxEntityLanguage
+# end
+
+# enum CXIdxEntityLanguage
 const CXIdxEntityLang_None = 0
 const CXIdxEntityLang_C = 1
 const CXIdxEntityLang_ObjC = 2
 const CXIdxEntityLang_CXX = 3
-# Typedef: CXIdxEntityCXXTemplateKind
+# end
+
+# enum CXIdxEntityCXXTemplateKind
 const CXIdxEntity_NonTemplate = 0
 const CXIdxEntity_Template = 1
 const CXIdxEntity_TemplatePartialSpecialization = 2
 const CXIdxEntity_TemplateSpecialization = 3
-# Typedef: CXIdxAttrKind
+# end
+
+# enum CXIdxAttrKind
 const CXIdxAttr_Unexposed = 0
 const CXIdxAttr_IBAction = 1
 const CXIdxAttr_IBOutlet = 2
 const CXIdxAttr_IBOutletCollection = 3
-# Typedef: CXIdxObjCContainerKind
+# end
+
+# enum CXIdxObjCContainerKind
 const CXIdxObjCContainer_ForwardRef = 0
 const CXIdxObjCContainer_Interface = 1
 const CXIdxObjCContainer_Implementation = 2
-# Typedef: CXIdxEntityRefKind
+# end
+
+# enum CXIdxEntityRefKind
 const CXIdxEntityRef_Direct = 1
 const CXIdxEntityRef_Implicit = 2
-# Typedef: CXIndexOptFlags
+# end
+
+# enum CXIndexOptFlags
 const CXIndexOpt_None = 0
 const CXIndexOpt_SuppressRedundantRefs = 1
 const CXIndexOpt_IndexFunctionLocalSymbols = 2
 const CXIndexOpt_IndexImplicitTemplateInstantiations = 4
 const CXIndexOpt_SuppressWarnings = 8
+# end
+

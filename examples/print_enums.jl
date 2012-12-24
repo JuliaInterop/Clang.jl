@@ -1,6 +1,6 @@
 #error("Running this file will overwrite existing cindex_h.jl")
 # Uncomment below to run
-#require("cindex.jl")
+require("cindex.jl")
 
 const ENUM_DECL = 5
 const TYPEDEF_DECL = 20
@@ -12,9 +12,18 @@ enum_remaps = {
 
 
 function wrap_enums(io::IOStream, cu::cindex.CXCursor, typedef::Any)
-  if (typeof(typedef) == cindex.CXCursor)
-    enum_basename = cindex.name(typedef)
-    println(io, "# Typedef: ", enum_basename)
+  enum = cindex.name(cu)
+  enum_typedef = if (typeof(typedef) == cindex.CXCursor)
+    cindex.name(typedef)
+  else
+    ""
+  end
+  if enum != ""
+    println(io, "# enum ENUM_", enum)
+  elseif enum_typedef != ""
+    println(io, "# enum ", enum_typedef)
+  else
+    println(io, "# enum (ANONYMOUS)")
   end
   
   cl = cindex.children(cu)
@@ -37,6 +46,11 @@ function wrap_enums(io::IOStream, cu::cindex.CXCursor, typedef::Any)
     println(io, "const ", name, " = ", cindex.value(cur_cu))
   end
   cindex.cl_dispose(cl)
+  println(io, "# end")
+  if enum != "" && enum_typedef != ""
+      println(io, "# const $(enum_typedef) == ENUM_$(enum)")
+  end
+  println(io)
 end
 
 index_fn = "Index.h"

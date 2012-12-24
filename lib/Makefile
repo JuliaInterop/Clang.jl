@@ -1,4 +1,5 @@
 all: check-env default
+include $(JULIAHOME)/Make.inc
 
 .PHONY: all clean check-env default
 
@@ -7,20 +8,18 @@ ifndef JULIAHOME
 	$(error Environment variable JULIAHOME is not set.)
 endif
 
-CXX=g++
-INC=-I"$(JULIAHOME)/deps/llvm-3.1/tools/clang/include/clang-c"
-FLAGS = -Wall -Wno-strict-aliasing -fno-omit-frame-pointer -fPIC\
-	-I"$(JULIAHOME)/src" -I"$(JULIAHOME)/src/support" -I"$(USR)/include"
+CXX = g++
+INC = -I"$(JULIAHOME)/deps/llvm-3.1/tools/clang/include/clang-c"
 
 OBJS = wrapcindex.o
 
 default: libwrapcindex.$(SHLIB_EXT)
 
-%.o: %.c
-	$(CXX) $< -fPIC -c -o $@ $(INC) $(CXXFLAGS) $(FLAGS) -g
+%.o: %.cpp
+	$(CXX) $< -fPIC -c -o $@ $(INC) $(CXXFLAGS) -g
 
 libwrapcindex.$(SHLIB_EXT): $(OBJS)
-       $(CXX) $(OBJS) -shared -o $@ -L"$(USRLIB)" -L"$(JULIAHOME)/usr/lib" $(LDFLAGS) -lclang $(LIBS)
+	$(CXX) $(OBJS) -shared -o $@ -L"$(JULIAHOME)/usr/lib" $(LDFLAGS) $(LIBS) -lclang
 
 clean:
-       rm -f *.o *.$(SHLIB_EXT)
+	rm -f *.o *.$(SHLIB_EXT)

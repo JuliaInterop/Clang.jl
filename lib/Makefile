@@ -8,8 +8,7 @@ ifndef JULIAHOME
 endif
 
 CXX = g++
-INC = -I"$(JULIAHOME)/usr/include/clang-c" \
-      -I"$(JULIAHOME)/src" -I"$(JULIAHOME)/src/support" -I"$(JULIAHOME)/src/include"
+INC = -I"$(JULIAHOME)/usr/include/clang-c" 
 FLAGS = -Wall -Wno-strict-aliasing -fno-omit-frame-pointer -fPIC
 CXXFLAGS = -g
 OBJS = wrapcindex.cpp.o

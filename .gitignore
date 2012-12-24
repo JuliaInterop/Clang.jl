@@ -1,1 +1,4 @@
 *.so
+*.dylib
+*.o
+*.swp

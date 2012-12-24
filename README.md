@@ -1,6 +1,6 @@
 CIndex.jl provides a wrapping of libclang for the 
 Julia language (http://julialang.org). The goal of
-CIndex.jl is to faciliate access to C and C++ source
+CIndex.jl is to facilitate access to C and C++ source
 parse trees from Julia.
 
 libclang is the stable interface to the Clang compiler 

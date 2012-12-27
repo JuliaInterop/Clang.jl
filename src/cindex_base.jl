@@ -32,6 +32,11 @@ function getNullCursor()
   ccall( (:wci_getNullCursor, libwci), Void, (Ptr{Void},),  c.data,)
   return c
 end
+function getTranslationUnitCursor(a1::CXTranslationUnit,)
+  c = CXCursor()
+  ccall( (:wci_getTranslationUnitCursor, libwci), Void, (CXTranslationUnit,Ptr{Void},), a1, c.data,)
+  return c
+end
 function equalCursors(a1::CXCursor,a2::CXCursor,)
   ccall( (:wci_equalCursors, libwci), Uint32, (Ptr{Void},Ptr{Void},), a1.data,a2.data, )
 end

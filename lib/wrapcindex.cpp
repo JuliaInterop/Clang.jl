@@ -11,7 +11,6 @@
   extern "C" unsigned int wci_size_##rtype() { return sizeof(rtype); }
 
 // Struct helpers: memcpy shenanigans due to no structs byval
-wci_st(CXUnsavedFile)
 wci_st(CXSourceLocation)
 wci_st(CXSourceRange)
 wci_st(CXTUResourceUsageEntry)
@@ -19,7 +18,6 @@ wci_st(CXTUResourceUsage)
 wci_st(CXCursor)
 wci_st(CXType)
 wci_st(CXToken)
-wci_st(CXFile)
 wci_st(CXString)
 
 typedef std::vector<CXCursor> CursorList;
@@ -37,18 +35,6 @@ CXChildVisitResult wci_visitCB(CXCursor cur, CXCursor par, CXClientData data)
 
 extern "C" {
 #include "wrapcindex.h"
-
-void* wci_initIndex(char* hdrFile, int excludePch, int displayDiag)
-{
-  // TODO: error message
-  CXIndex wci_index = clang_createIndex(excludePch, displayDiag);
-  if (wci_index == NULL)
-    return NULL;
-  CXTranslationUnit wci_basetu = clang_parseTranslationUnit( wci_index, hdrFile, NULL, 0, 0, 0, 0);
-  if (wci_basetu == NULL)
-    return NULL;
-  return (void*) wci_basetu;
-}
 
 unsigned int wci_getChildren(char* cuin, CursorList* cl)
 {
@@ -87,12 +73,6 @@ unsigned int wci_sizeofCursorList(CursorList* cl)
 void wci_getCLCursor(char* cuout, CursorList* cl, int cuid)
 {
   wci_save_CXCursor((*cl)[cuid], cuout);
-}
-
-void wci_getTUCursor(void* tu, char* cuout)
-{
-  CXCursor cu = clang_getTranslationUnitCursor((CXTranslationUnit)tu);
-  wci_save_CXCursor(cu, cuout);
 }
 
 const char* wci_getCString(char* csin )

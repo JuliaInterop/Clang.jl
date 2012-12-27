@@ -34,6 +34,10 @@ void  wci_getNullCursor(char* a1) {
   CXCursor rx = clang_getNullCursor();
   wci_save_CXCursor(rx,a1);
 }
+void  wci_getTranslationUnitCursor(CXTranslationUnit a1,char* a2) {
+  CXCursor rx = clang_getTranslationUnitCursor(a1);
+  wci_save_CXCursor(rx,a2);
+}
 unsigned int wci_equalCursors(char* a1,char* a2) {
   CXCursor l1 = wci_get_CXCursor(a1);
   CXCursor l2 = wci_get_CXCursor(a2);

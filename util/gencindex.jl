@@ -40,7 +40,7 @@ c_types = {
   CXLinkageKind => "CXLinkageKind",
   CXAvailabilityKind => "CXAvailabilityKind",
   CXLanguageKind => "CXLanguageKind",
-  CXTranslationUnit => "CXTranslationUnit"
+  CXTranslationUnit => "CXTranslationUnit",
   }
 
 symbols = {}
@@ -137,7 +137,7 @@ function write_output()
   end
 
   # Write C wrapper functions
-  f_hdr = open("../src/wrapcindex.h", "w")
+  f_hdr = open("../lib/wrapcindex.h", "w")
   for line in EachLine(c_bfr)
     print(f_hdr, line)
   end
@@ -235,9 +235,8 @@ end
 
 #370 Typedef{"Record CXCursor"} clang_getNullCursor()
 @cx CXCursor getNullCursor {}
-#TODO: enable
-  #371 Typedef{"Record CXCursor"} clang_getTranslationUnitCursor(CXTranslationUnit)
-  #@cx CXCursor {Ptr{Void}}
+#371 Typedef{"Record CXCursor"} clang_getTranslationUnitCursor(CXTranslationUnit)
+@cx CXCursor getTranslationUnitCursor {CXTranslationUnit}
 
 #372 UInt clang_equalCursors(CXCursor, CXCursor)
 @cx Uint32 equalCursors {CXCursor, CXCursor}

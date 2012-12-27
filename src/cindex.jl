@@ -12,6 +12,9 @@ const libwci = "../lib/libwrapcindex"
 
 # Type definitions for wrapped types
 
+typealias CXIndex Ptr{Void}
+typealias CXUnsavedFile Ptr{Void}
+typealias CXFile Ptr{Void}
 typealias CXTypeKind Int32
 typealias CXCursorKind Int32
 typealias CXTranslationUnit Ptr{Void}
@@ -21,9 +24,9 @@ const CXString_size = ccall( ("wci_size_CXString", libwci), Int, ())
 get_sz(sym) = @eval ccall( ($(strcat("wci_size_", sym)), $libwci), Int, ())
 
 for st in Any[
-    :CXUnsavedFile, :CXSourceLocation, :CXSourceRange,
+    :CXSourceLocation, :CXSourceRange,
     :CXTUResourceUsageEntry, :CXTUResourceUsage, :CXCursor, :CXType,
-    :CXToken, :CXFile ]
+    :CXToken ]
   # Generate container types from the above list
   sz_name = symbol(strcat(st,"_size"))
   @eval begin
@@ -109,22 +112,41 @@ function value(c::CXCursor)
   end
 end
 
-tu_init(hdrfile::Any) = tu_init(hdrfile, 0,0)
-tu_init(hdrfile::Any, exclPCHDecl::Int, dispDiag::Int) = 
-  ccall( (:wci_initIndex, libwci),
-      Ptr{Void}, 
-      (Ptr{Uint8}, Uint8, Uint8),
-      convert(Ptr{Uint8}, hdrfile), exclPCHDecl, dispDiag)
-
-dispose_tu() = ""
-
-function tu_cursor(tu::Ptr{Void})
-  cuout = CXCursor()
-  ccall( (:wci_getTUCursor, libwci),
-    Void,
-    (Ptr{Void}, Ptr{Uint8}), tu, cuout.data)
-  return cuout
+tu_init(hdrfile::Any) = tu_init(hdrfile, 0, false)
+function tu_init(hdrfile::Any, diagnostics, cpp::Bool)
+  idx = idx_create(0,diagnostics)
+  tu = tu_parse(idx, hdrfile, (cpp ? ["-x", "c++"] : [""]))
+  return tu
 end
+
+tu_cursor(tu::CXTranslationUnit) = getTranslationUnitCursor(tu)
+
+tu_parse(CXIndex, source_filename::ASCIIString) = tu_parse(CXIndex, source_filename, [""])
+tu_parse(CXIndex, source_filename::ASCIIString, cl_args::Array{ASCIIString,1}) =
+  tu_parse(CXIndex, source_filename, cl_args, length(cl_args), C_NULL, 0, 0)
+tu_parse(CXIndex, source_filename::ASCIIString, 
+         cl_args::Array{ASCIIString,1}, num_clargs,
+         unsaved_files::CXUnsavedFile, num_unsaved_files,
+         options) =
+  ccall( (:clang_parseTranslationUnit, "libclang"),
+    CXTranslationUnit,
+    (Ptr{Void}, Ptr{Uint8}, Ptr{Ptr{Uint8}}, Uint32, Ptr{Void}, Uint32, Uint32), 
+      CXIndex, convert(Ptr{Uint8}, source_filename),
+      cl_args, num_clargs,
+      unsaved_files, num_unsaved_files, options)
+
+idx_create() = idx_create(0,0)
+idx_create(excludeDeclsFromPCH::Int, displayDiagnostics::Int) =
+  ccall( (:clang_createIndex, "libclang"),
+    CXTranslationUnit,
+    (Int32, Int32),
+    excludeDeclsFromPCH, displayDiagnostics)
+
+#Typedef{"Pointer CXFile"} clang_getFile(CXTranslationUnit, const char *)
+getFile(tu::CXTranslationUnit, file::ASCIIString) = 
+  ccall( (:clang_getFile, "libclang"),
+    CXFile,
+    (Ptr{Void}, Ptr{Uint8}), tu, file)
 
 function cl_create()
   cl = CursorList(C_NULL,0)

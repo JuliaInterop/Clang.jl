@@ -62,8 +62,8 @@ function get_string(cx::CXString)
 end
 
 # These require statements must follow type definitions above.
-require("../src/cindex_base.jl")
-require("../src/cindex_h.jl")
+include("../src/cindex_base.jl")
+include("../src/cindex_h.jl")
 
 # TODO: macro version should be more efficient.
 anymatch(first, args...) = any({==(first, a) for a in args})
@@ -131,7 +131,7 @@ tu_parse(CXIndex, source_filename::ASCIIString,
   ccall( (:clang_parseTranslationUnit, "libclang"),
     CXTranslationUnit,
     (Ptr{Void}, Ptr{Uint8}, Ptr{Ptr{Uint8}}, Uint32, Ptr{Void}, Uint32, Uint32), 
-      CXIndex, convert(Ptr{Uint8}, source_filename),
+      CXIndex, source_filename,
       cl_args, num_clargs,
       unsaved_files, num_unsaved_files, options)
 

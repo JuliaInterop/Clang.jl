@@ -330,7 +330,7 @@ end
 #427 Int clang_getNumArgTypes(CXType)
 @cx Int32 getNumArgTypes {CXType}
 #428 Typedef{"Record CXType"} clang_getArgType(CXType, unsigned int)
-@cx CXType getArgType {CXType, Uint32}
+@cx CXType getArgType {CXType, Uint}
 #429 UInt clang_isFunctionTypeVariadic(CXType)
 @cx Uint32 isFunctionTypeVariadic {CXType}
 #430 Typedef{"Record CXType"} clang_getCursorResultType(CXCursor)

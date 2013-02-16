@@ -1,4 +1,4 @@
-#include "Index.h"
+#include "clang-c/Index.h"
 #include <cstring>
 #include <vector>
 #include <set>

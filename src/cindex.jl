@@ -21,14 +21,14 @@ typealias CXTranslationUnit Ptr{Void}
 const CXString_size = ccall( ("wci_size_CXString", libwci), Int, ())
 
 # work-around: ccall followed by composite_type in @eval gives error.
-get_sz(sym) = @eval ccall( ($(strcat("wci_size_", sym)), $libwci), Int, ())
+get_sz(sym) = @eval ccall( ($(string("wci_size_", sym)), $libwci), Int, ())
 
 for st in Any[
     :CXSourceLocation, :CXSourceRange,
     :CXTUResourceUsageEntry, :CXTUResourceUsage, :CXCursor, :CXType,
     :CXToken ]
   # Generate container types from the above list
-  sz_name = symbol(strcat(st,"_size"))
+  sz_name = symbol(string(st,"_size"))
   @eval begin
     const $sz_name = get_sz($("$st"))
     type $(st)
@@ -61,7 +61,7 @@ function get_string(cx::CXString)
   cx.str
 end
 
-# These require statements must follow type definitions above.
+# These include statements must follow type definitions above.
 include("../src/cindex_base.jl")
 include("../src/cindex_h.jl")
 

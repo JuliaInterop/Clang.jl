@@ -1,32 +1,19 @@
-JULIAHOME = EnvHash()["JULIAHOME"]
-libLLVM_path = joinpath(JULIAHOME, "deps/llvm-3.2/include/llvm-c")
-wrap_hdrs = map(x->joinpath(libLLVM_path, x), 
-  {
-  "BitWriter.h",
-  "Target.h",
-  "Initialization.h",
-  "Disassembler.h",
-  "Core.h",
-  "TargetMachine.h",
-  "Analysis.h",
-  "ExecutionEngine.h",
-  "Transforms/Vectorize.h",
-  "Transforms/PassManagerBuilder.h",
-  "Transforms/Scalar.h",
-  "Transforms/IPO.h",
-  "LinkTimeOptimizer.h",
-  "Object.h",
-  "EnhancedDisassembly.h",
-  "BitReader.h"
-  })
-
 module wrap_c
 
 using cindex
 import cindex.CurKind, cindex.TypKind
 
+c_macro = L"macro c(ret_type, func, arg_types, lib)
+  ret_type = eval(ret_type)
+  args_in = Any[ symbol(string('a',x)) for x in 1:length(arg_types.args) ]
+  quote
+    $(esc(func))($(args_in...)) = ccall( ($(string(func)), $lib), $ret_type, $(arg_types), $(args_in...) )
+  end
+end"
+
+
 c_jl = {
-  TypKind.VOID        => :Void,
+  TypKind.VOID        => Void,
   TypKind.BOOL        => Bool,
   TypKind.CHAR_U      => Uint8,
   TypKind.UCHAR       => Uint8,
@@ -46,6 +33,7 @@ c_jl = {
   TypKind.FLOAT       => Float32,
   TypKind.DOUBLE      => Float64,
   TypKind.LONGDOUBLE  => Float64,   # todo detect?
+  TypKind.ENUM        => Int32,     # todo arch check?
   TypKind.NULLPTR     => C_NULL
                                     # TypKind.UINT128 => todo
   }
@@ -56,12 +44,19 @@ function ctype_to_julia(cutype::CXType)
   if (typkind == TypKind.POINTER)
     ptr_ctype = cindex.getPointeeType(cutype)
     ptr_jltype = ctype_to_julia(ptr_ctype)
-    return Ptr{ptr_jltype}
+    return :(Ptr{$ptr_jltype})
   elseif (typkind == TypKind.TYPEDEF)
     return symbol( string( spelling( cindex.getTypeDeclaration(cutype) ) ) )
   else
     return symbol( string( get(c_jl, typkind, :Void) ) )
   end
+end
+
+type WrapContext
+  cxindex::cindex.CXIndex
+  typedef_prefix::ASCIIString
+  clang_includes::Array{ASCIIString, 1}
+  clang_args::Array{ASCIIString, 1}
 end
 
 function build_clang_args(includes, extras)
@@ -76,52 +71,57 @@ function cursor_args(cursor::CXCursor)
   [cindex.getArgType(cursor_type, uint32(arg_i)) for arg_i in 0:cindex.getNumArgTypes(cursor_type)-1]
 end
 
-end # Module wrap_c
+function wrap_function(strm, cursor)
+  arg_types = cursor_args(cursor)
+  arg_list = tuple( [ctype_to_julia(x) for x in arg_types]... )
+  ret_type = ctype_to_julia(cindex.return_type(cursor))
+  println(strm, "@c ", ret_type, " ", symbol(spelling(cursor)), " ", arg_list, " shlib")
+end
 
-module F ##############################
+__cache_typedefs = Set{ASCIIString}()
+function wrap_typedef(strm, cursor)
+  @assert cu_kind(cursor) == CurKind.TYPEDEFDECL
 
-require("cindex")
-using cindex
-using wrap_c
+  typedef_spelling = spelling(cursor)
+  if (has(__cache_typedefs, typedef_spelling))
+    # pass
+  else
+    cursor_type = cindex.cu_type(cursor)
+    td_type = cindex.resolve_type(cindex.getTypedefDeclUnderlyingType(cursor))
+    println(strm, "typealias ",  typedef_spelling, " ", ctype_to_julia(td_type))
+    add!(__cache_typedefs, typedef_spelling)
+  end
+end
 
-import cindex.CurKind, cindex.TypKind
-
-JULIAHOME=EnvHash()["JULIAHOME"]
-out_path = "/cmn/git/libLLVM.jl"
-libLLVM_path = joinpath(JULIAHOME, "deps/llvm-3.2/include")
-clanginc_path = joinpath(JULIAHOME, "deps/llvm-3.2/Release/lib/clang/3.2/include")
-
-clang_includes = map(x->joinpath(JULIAHOME, x), [
-  "deps/llvm-3.2/build/Release/lib/clang/3.2/include",
-  "deps/llvm-3.2/include",
-  "deps/llvm-3.2/include",
-  "deps/llvm-3.2/build/include/",
-  "deps/llvm-3.2/include/"
-  ])
-clang_extraargs = ["-D", "__STDC_LIMIT_MACROS", "-D", "__STDC_CONSTANT_MACROS"]
-
-function pf(hdr, strm)
-  
-  clang_args = wrap_c.build_clang_args(clang_includes, clang_extraargs)
-  idx = cindex.idx_create(1,1)
-  tunit = cindex.tu_parse(idx, hdr, clang_args)
+function wrap_header(hfile, tunit, ostrm)
   topcu = cindex.getTranslationUnitCursor(tunit)
   tcl = children(topcu)
   
   for i=1:tcl.size
     cursor = tcl[i]
-    
-    if (cu_kind(cursor) != CurKind.FUNCTIONDECL || cu_file(cursor) != hdr) continue end
-    
-    arg_types = wrap_c.cursor_args(cursor)
-    arg_list = tuple( [wrap_c.ctype_to_julia(x) for x in arg_types]... )
-    ret_type = wrap_c.ctype_to_julia(cindex.return_type(cursor))
+    kind = cu_kind(cursor)
 
-    println(arg_list) 
-    println(strm, "@c ", ret_type, " ", symbol(spelling(cursor)), " ", arg_list, " \"libLLVM\"")
+    if (kind == CurKind.TYPEDEFDECL)
+      wrap_c.wrap_typedef(ostrm, cursor)
+    elseif (cu_kind(cursor) == CurKind.FUNCTIONDECL && cu_file(cursor) == hfile)
+      wrap_c.wrap_function(ostrm, cursor)
+    end
   end
-
+  cindex.cl_dispose(tcl)
 end
 
+function wrap_c_headers(headers, clang_includes, clang_extra_args, out_file)
+  clang_args = build_clang_args(clang_includes, clang_extra_args)
+  idx = cindex.idx_create(1,1)
 
-end # module
+  begin ostrm = open(out_file, "w")
+    println(ostrm, c_macro, "\n")
+    for hfile in headers
+      tunit = cindex.tu_parse(idx, hfile, clang_args)
+      wrap_header(hfile, tunit, ostrm)
+    end
+    close(ostrm)
+  end
+end
+
+end # Module wrap_c

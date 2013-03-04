@@ -1,7 +1,7 @@
-require("../src/cindex")
-using cindex
-import cindex.CurKind
-import cindex.TypKind
+require("../src/CIndex")
+using CIndex
+import CIndex.CurKind
+import CIndex.TypKind
 
 function full_name(t::CXType)
   
@@ -11,19 +11,19 @@ function full_name(t::CXType)
   # some extra steps are needed.
 
   fn = {}
-  tdecl = cindex.getTypeDeclaration(t)
+  tdecl = CIndex.getTypeDeclaration(t)
   if ty_kind(t) == TypKind.ENUM
     push!(fn, string(spelling(tdecl)) )
   elseif ty_kind(t) == TypKind.TYPEDEF
-    td = cindex.getTypedefDeclUnderlyingType(tdecl)
+    td = CIndex.getTypedefDeclUnderlyingType(tdecl)
     if (ty_kind(td) == TypKind.UNEXPOSED) td=resolve_type(td) end
     push!(fn, string(spelling(td), " ", name(tdecl)))
   elseif ty_kind(t) == TypKind.POINTER
-    pt = cindex.getPointeeType(t)
+    pt = CIndex.getPointeeType(t)
     push!(fn, string( spelling(pt) ))
     if ty_kind(pt) == TypKind.TYPEDEF
-      tdecl = cindex.getTypeDeclaration(pt)
-      td = cindex.getTypedefDeclUnderlyingType(tdecl)
+      tdecl = CIndex.getTypeDeclaration(pt)
+      td = CIndex.getTypedefDeclUnderlyingType(tdecl)
       if (ty_kind(td) == TypKind.UNEXPOSED) td=resolve_type(td) end
       push!(fn, full_name(td) )
       push!(fn, spelling(tdecl) )

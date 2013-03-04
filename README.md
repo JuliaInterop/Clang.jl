@@ -30,8 +30,8 @@ Clone this repository, and do the following (sh syntax):
 
 ## Usage
   ```julia
-  require("cindex")
-  using cindex
+  require("CIndex")
+  using CIndex
 
   julia> tu = tu_init("Index.h")   # Initialize and parse Index.h
   julia> topcu = tu_cursor(tu)     # get TU top cursor
@@ -40,22 +40,22 @@ Clone this repository, and do the following (sh syntax):
   595
 
   julia> cu = topcl[350]
-  julia> cu_kind(cu) == cindex.CurKind.FUNCTIONDECL
+  julia> cu_kind(cu) == CIndex.CurKind.FUNCTIONDECL
   true
   julia> name(topcl[350])
   "clang_parseTranslationUnit(CXIndex, const char *, const char *const *, int, struct CXUnsavedFile *, unsigned int, unsigned int)"
   ```
   See the examples/ and util/ folders for further usage 
   scenarios. CIndex.jl is partially self-generating,
-  including parsing of the enums (util/gencindex_h.jl)
+  including parsing of the enums (util/genCIndex_h.jl)
 
-  There is a small convenience API exported by cindex:
+  There is a small convenience API exported by CIndex:
   
     tu_init     # init and parse file to TranslationUnit
     tu_cursor   # get top cursor from TranslationUnit
     children    # gets CXCursor children; accessed by ref.
-    cu_kind     # cindex.CurKind enum
-    ty_kind     # cindex.TypKind enum
+    cu_kind     # CIndex.CurKind enum
+    ty_kind     # CIndex.TypKind enum
     name        # get the DisplayName of a CXCursor
     spelling    # get spelling of a CXCursor or CXType
     cu_file     # file in which cursor was declared
@@ -87,12 +87,12 @@ C++ wrapper. clang functions are wrapped by a C++ function
 that memcpys data to/from a Julia-owned memory array 
 (passed by pointer)
 
-see src/cindex_base.jl and src/wrapcindex.h for generated wrappers.
+see src/cindex_base.jl and deps/src/wrapcindex.h for generated wrappers.
 
 Some functions are manually wrapped for convenience and ease of
 implementation, or to provide a more Julia-friendly API.
 
-see src/cindex.jl and src/wrapcindex.cpp
+see src/CIndex.jl and deps/src/wrapcindex.cpp
 
 ### License
 

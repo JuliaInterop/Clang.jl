@@ -22,8 +22,8 @@ wrap_hdrs = map(x->joinpath(libLLVM_path, x),
 
 module wrap_c
 
-using cindex
-import cindex.CurKind, cindex.TypKind
+using CIndex
+import CIndex.CurKind, CIndex.TypKind
 
 c_jl = {
   TypKind.VOID => :Void,
@@ -54,11 +54,11 @@ function ctype_to_julia(cutype::CXType)
   typkind = ty_kind(cxtype)
   # Special cases: TYPEDEF, POINTER
   if (typkind == TypKind.POINTER)
-    ptr_ctype = cindex.getPointeeType(cutype)
+    ptr_ctype = CIndex.getPointeeType(cutype)
     ptr_jltype = ctype_to_jl(ptr_ctype)
     return "Ptr{$ptr_jltype}"
   elseif (typkind == TypKind.TYPEDEF)
-    return spelling( cindex.getTypeDeclaration(cutype) )
+    return spelling( CIndex.getTypeDeclaration(cutype) )
   else
     return get(c_jl, typkind, None)
   end
@@ -80,11 +80,11 @@ type CursorArgs
 function cursor_args(cursor::CXCursor)
   @assert isa(cu_kind(cursor), CurKind.FUNCTIONDECL)
 
-  cursor_type = cindex.cu_type(cursor)
+  cursor_type = CIndex.cu_type(cursor)
   rtypes = []
 
-  for arg_j = 0:cindex.getNumArgTypes(cursor_type)
-        push!(rtypes,cindex.getArgType(cursor_type, uint32(arg_j)) )
+  for arg_j = 0:CIndex.getNumArgTypes(cursor_type)
+        push!(rtypes,CIndex.getArgType(cursor_type, uint32(arg_j)) )
   end
   return rtypes
 end
@@ -92,10 +92,10 @@ end
 end # Module wrap_c
 
 module F ##############################
-require("cindex")
-using cindex
+require("CIndex")
+using CIndex
 using wrap_c
-import cindex.CurKind, cindex.TypKind
+import CIndex.CurKind, CIndex.TypKind
 JULIAHOME=EnvHash()["JULIAHOME"]
 
 out_path = "/cmn/git/libLLVM.jl"
@@ -125,15 +125,15 @@ function pf(hdr)
   clang_args = wrap_c.clang_args(clang_includes, clang_extraargs)
   println(clang_args)
 
-  idx = cindex.idx_create(1,1)
-  tu = cindex.tu_parse(idx, hdr, clang_args)
-  topcu = cindex.getTranslationUnitCursor(tu)
+  idx = CIndex.idx_create(1,1)
+  tu = CIndex.tu_parse(idx, hdr, clang_args)
+  topcu = CIndex.getTranslationUnitCursor(tu)
   tcl = children(topcu)
   for i=1:tcl.size
     cu = tcl[i]
     if (cu_kind(cu) != CurKind.FUNCTIONDECL || cu_file(cu) != hdr) continue end
     arg_types = cursor_wrapping(tcl[i])
-    ret_type = wrap_c.ctype_to_jl(cindex.return_type(cu))
+    ret_type = wrap_c.ctype_to_jl(CIndex.return_type(cu))
 
     println(strm, "ccall( (:",spelling(cu), ",\"libLLVM\"),", ret_type, "(",
       [string(x,",") for x in arg_types], "),", ["a$x" for x in 1:length(arg_types)], ")")

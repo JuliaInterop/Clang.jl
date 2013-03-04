@@ -5,9 +5,9 @@ julia> dump_functions("Index.h")
 287 Pointer{"Char_S"} clang_getCString(CXString)
 288 Void clang_disposeString(CXString)
 in full_name: kind not defined
- in full_name at /cmn/git/cindex.jl/examples/print_functions.jl:19
- in dump_functions at /cmn/git/cindex.jl/examples/print_functions.jl:43
- in dump_functions at /cmn/git/cindex.jl/examples/print_functions.jl:52
+ in full_name at /cmn/git/CIndex.jl/examples/print_functions.jl:19
+ in dump_functions at /cmn/git/CIndex.jl/examples/print_functions.jl:43
+ in dump_functions at /cmn/git/CIndex.jl/examples/print_functions.jl:52
 
 julia> load("../examples/print_functions.jl")
 

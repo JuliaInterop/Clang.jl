@@ -1,7 +1,7 @@
-require("../src/cindex")
-using cindex
-import cindex.CurKind
-import cindex.TypKind
+require("../src/CIndex")
+using CIndex
+import CIndex.CurKind
+import CIndex.TypKind
 
 is_struct(cu::CXCursor) = (cu_kind(cu) == CurKind.STRUCTDECL)
 is_struct(ct::CXType) = (ty_kind(cu) == TypKind.RECORD)
@@ -15,8 +15,8 @@ function get_struct(cu::CXCursor)
     # to determine whether a declaration is anonymous.
     if name(cu) != "" return cu end
   elseif cu_kind(cu) == CurKind.TYPEDEFDECL
-    td = cindex.getTypedefDeclUnderlyingType(cu)
-    tdcu = cindex.getTypeDeclaration(td)
+    td = CIndex.getTypedefDeclUnderlyingType(cu)
+    tdcu = CIndex.getTypeDeclaration(td)
     if cu_kind(tdcu) == CurKind.STRUCTDECL
       return cu
     end

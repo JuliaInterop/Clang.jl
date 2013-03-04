@@ -1,11 +1,11 @@
 ```julia
-julia> loadcindex(); using cindex
+julia> using CIndex
 
-julia> idx = cindex.idx_create(0,1)
+julia> idx = CIndex.idx_create(0,1)
 
-julia> tu = cindex.tu_parse(idx, "vtkPolyData.h", ["-x", "c++","-I/cmn/git/VTK-include", "-I/cmn/git/julia/deps/llvm-3.1/Release/lib/clang/3.1/include", "-v", "-c"])
+julia> tu = CIndex.tu_parse(idx, "vtkPolyData.h", ["-x", "c++","-I/cmn/git/VTK-include", "-I/cmn/git/julia/deps/llvm-3.1/Release/lib/clang/3.1/include", "-v", "-c"])
 
-julia> topcu = cindex.getTranslationUnitCursor(tu); topcl = children(topcu)
+julia> topcu = CIndex.getTranslationUnitCursor(tu); topcl = children(topcu)
 
 julia> for i=1:462                                                                  cu = topcl[i]
          println(i, " ", cu_kind(cu), "  ", name(cu), " ", cu_file(cu))

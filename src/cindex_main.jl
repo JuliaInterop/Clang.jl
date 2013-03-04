@@ -1,3 +1,5 @@
+include(joinpath(Pkg.dir(), "CIndex", "deps", "ext.jl"))
+
 module cindex
 using Base
 import Base.ref
@@ -8,7 +10,7 @@ export resolve_type, return_type
 export tu_init, tu_cursor
 export CXType, CXCursor, CXString, CXTypeKind, CursorList
 
-const libwci = "../lib/libwrapcindex"
+const libwci = :libwrapcindex #"libwrapcindex"
 
 # Type definitions for wrapped types
 

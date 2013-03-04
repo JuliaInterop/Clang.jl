@@ -3,13 +3,19 @@ module wrap_c
 using cindex
 import cindex.CurKind, cindex.TypKind
 
-c_macro = L"macro c(ret_type, func, arg_types, lib)
+helper_macros = L"macro c(ret_type, func, arg_types, lib)
   ret_type = eval(ret_type)
   args_in = Any[ symbol(string('a',x)) for x in 1:length(arg_types.args) ]
   quote
     $(esc(func))($(args_in...)) = ccall( ($(string(func)), $lib), $ret_type, $(arg_types), $(args_in...) )
   end
-end"
+end
+
+macro typedef(alias, real)
+  real = eval(real)
+  :( typealias alias eval(real) )
+end
+"
 
 
 c_jl = {
@@ -44,7 +50,7 @@ function ctype_to_julia(cutype::CXType)
   if (typkind == TypKind.POINTER)
     ptr_ctype = cindex.getPointeeType(cutype)
     ptr_jltype = ctype_to_julia(ptr_ctype)
-    return :(Ptr{$ptr_jltype})
+    return Ptr{ptr_jltype}
   elseif (typkind == TypKind.TYPEDEF)
     return symbol( string( spelling( cindex.getTypeDeclaration(cutype) ) ) )
   else
@@ -78,7 +84,9 @@ function wrap_function(strm, cursor)
   println(strm, "@c ", ret_type, " ", symbol(spelling(cursor)), " ", arg_list, " shlib")
 end
 
+# Avoid regenerating typedefs from earlier translation unit includes.
 __cache_typedefs = Set{ASCIIString}()
+
 function wrap_typedef(strm, cursor)
   @assert cu_kind(cursor) == CurKind.TYPEDEFDECL
 
@@ -88,7 +96,8 @@ function wrap_typedef(strm, cursor)
   else
     cursor_type = cindex.cu_type(cursor)
     td_type = cindex.resolve_type(cindex.getTypedefDeclUnderlyingType(cursor))
-    println(strm, "typealias ",  typedef_spelling, " ", ctype_to_julia(td_type))
+    :(typealias $typedef_spelling ctype_to_julia($td_type))
+    println(strm, "typealias ",  typedef_spelling, " ", ctype_to_julia(td_type) )
     add!(__cache_typedefs, typedef_spelling)
   end
 end
@@ -112,16 +121,18 @@ end
 
 function wrap_c_headers(headers, clang_includes, clang_extra_args, out_file)
   clang_args = build_clang_args(clang_includes, clang_extra_args)
+  println("clang args: ", clang_args)
   idx = cindex.idx_create(1,1)
 
   begin ostrm = open(out_file, "w")
-    println(ostrm, c_macro, "\n")
+    println(ostrm, helper_macros, "\n")
     for hfile in headers
       tunit = cindex.tu_parse(idx, hfile, clang_args)
+      println("tunit: ", tunit)
       wrap_header(hfile, tunit, ostrm)
     end
     close(ostrm)
   end
 end
 
-end # Module wrap_c
+end # module wrap_c

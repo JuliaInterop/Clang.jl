@@ -1,4 +1,3 @@
-require("../src/CIndex")
 using CIndex
 import CIndex.CurKind
 import CIndex.TypKind
@@ -33,15 +32,19 @@ function full_name(t::CXType)
 end
 
 function dump_functions(cl::CursorList, restrict_hdr::Any)
+  println("num: ", cl.size)
   for i=1:cl.size
     cu = cl[i]
     if (restrict_hdr != None && cu_file(cu) != restrict_hdr)
+      println(i, " skip: ", restrict_hdr, " ", cu_file(cu), " ", cu_file(cu) == restrict_hdr)
       continue
     end
     if cu_kind(cu) == CurKind.FUNCTIONDECL
+      println("keep: ", name(cu))
       rt = return_type(cu)
       println(i, " ", full_name(rt), " ", name(cu))
     end
+  println("end: ", i, " cu_kind: ", cu_kind(cu), " name: ", name(cu))
   end
 end
 

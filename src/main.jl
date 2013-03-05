@@ -1,5 +1,3 @@
-include(joinpath(Pkg.dir(), "CIndex", "deps", "ext.jl"))
-
 module CIndex
 using Base
 import Base.ref
@@ -10,7 +8,7 @@ export resolve_type, return_type
 export tu_init, tu_cursor
 export CXType, CXCursor, CXString, CXTypeKind, CursorList
 
-const libwci = :libwrapCIndex #"libwrapCIndex"
+const libwci = :libwrapcindex
 
 # Type definitions for wrapped types
 
@@ -64,8 +62,8 @@ function get_string(cx::CXString)
 end
 
 # These include statements must follow type definitions above.
-include("../src/CIndex_base.jl")
-include("../src/CIndex_h.jl")
+include("base.jl")
+include("index_h.jl")
 
 # TODO: macro version should be more efficient.
 anymatch(first, args...) = any({==(first, a) for a in args})

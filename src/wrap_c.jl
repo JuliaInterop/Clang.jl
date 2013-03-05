@@ -1,7 +1,7 @@
 module wrap_c
 
-using cindex
-import cindex.CurKind, cindex.TypKind
+using CIndex
+import CIndex.TypKind, CIndex.CurKind
 
 helper_macros = L"macro c(ret_type, func, arg_types, lib)
   ret_type = eval(ret_type)
@@ -59,7 +59,7 @@ function ctype_to_julia(cutype::CXType)
 end
 
 type WrapContext
-  cxindex::cindex.CXIndex
+  cxindex::CIndex.CXIndex
   typedef_prefix::ASCIIString
   clang_includes::Array{ASCIIString, 1}
   clang_args::Array{ASCIIString, 1}

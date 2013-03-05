@@ -1,145 +1,138 @@
-JULIAHOME = EnvHash()["JULIAHOME"]
-libLLVM_path = joinpath(JULIAHOME, "deps/llvm-3.2/include/llvm-c")
-wrap_hdrs = map(x->joinpath(libLLVM_path, x), 
-  {
-  "BitWriter.h",
-  "Target.h",
-  "Initialization.h",
-  "Disassembler.h",
-  "Core.h",
-  "TargetMachine.h",
-  "Analysis.h",
-  "ExecutionEngine.h",
-  "Transforms/Vectorize.h",
-  "Transforms/PassManagerBuilder.h",
-  "Transforms/Scalar.h",
-  "Transforms/IPO.h",
-  "LinkTimeOptimizer.h",
-  "Object.h",
-  "EnhancedDisassembly.h",
-  "BitReader.h"
-  })
-
 module wrap_c
 
-using CIndex
-import CIndex.CurKind, CIndex.TypKind
+using cindex
+import cindex.CurKind, cindex.TypKind
+
+helper_macros = L"macro c(ret_type, func, arg_types, lib)
+  ret_type = eval(ret_type)
+  args_in = Any[ symbol(string('a',x)) for x in 1:length(arg_types.args) ]
+  quote
+    $(esc(func))($(args_in...)) = ccall( ($(string(func)), $lib), $ret_type, $(arg_types), $(args_in...) )
+  end
+end
+
+macro typedef(alias, real)
+  real = eval(real)
+  :( typealias alias eval(real) )
+end
+"
+
 
 c_jl = {
-  TypKind.VOID => :Void,
-  TypKind.BOOL => Bool,
-  TypKind.CHAR_U => Uint8,
-  TypKind.UCHAR => Uint8,
-      #  TypKind.CHAR16 => TODO
-      #  TypKind.CHAR32 => TODO
-  TypKind.USHORT => Uint16,
-  TypKind.UINT => Uint32,
-  TypKind.ULONG => Uint,
-  TypKind.ULONGLONG => Uint64,
-      #  TypKind.UINT128 => bah
-  TypKind.CHAR_S => Int8,
-  TypKind.SCHAR => Int8,
-  TypKind.WCHAR => Char,
-  TypKind.SHORT => Int16,
-  TypKind.INT => Int32,
-  TypKind.LONG => Int,
-  TypKind.LONGLONG => Int64,
-  TypKind.FLOAT => Float32,
-  TypKind.DOUBLE => Float64,
-  TypKind.LONGDOUBLE => Float64, # TODO
-  TypKind.NULLPTR => C_NULL
-}
+  TypKind.VOID        => Void,
+  TypKind.BOOL        => Bool,
+  TypKind.CHAR_U      => Uint8,
+  TypKind.UCHAR       => Uint8,
+  TypKind.CHAR16      => Uint16,
+  TypKind.CHAR32      => Uint32,
+  TypKind.USHORT      => Uint16,
+  TypKind.UINT        => Uint32,
+  TypKind.ULONG       => Uint,
+  TypKind.ULONGLONG   => Uint64,
+  TypKind.CHAR_S      => Uint8,     # todo check
+  TypKind.SCHAR       => Uint8,     # todo check
+  TypKind.WCHAR       => Char,
+  TypKind.SHORT       => Int16,
+  TypKind.INT         => Int32,
+  TypKind.LONG        => Int,
+  TypKind.LONGLONG    => Int64,
+  TypKind.FLOAT       => Float32,
+  TypKind.DOUBLE      => Float64,
+  TypKind.LONGDOUBLE  => Float64,   # todo detect?
+  TypKind.ENUM        => Int32,     # todo arch check?
+  TypKind.NULLPTR     => C_NULL
+                                    # TypKind.UINT128 => todo
+  }
 
 function ctype_to_julia(cutype::CXType)
-  typkind = ty_kind(cxtype)
+  typkind = ty_kind(cutype)
   # Special cases: TYPEDEF, POINTER
   if (typkind == TypKind.POINTER)
-    ptr_ctype = CIndex.getPointeeType(cutype)
-    ptr_jltype = ctype_to_jl(ptr_ctype)
-    return "Ptr{$ptr_jltype}"
+    ptr_ctype = cindex.getPointeeType(cutype)
+    ptr_jltype = ctype_to_julia(ptr_ctype)
+    return Ptr{ptr_jltype}
   elseif (typkind == TypKind.TYPEDEF)
-    return spelling( CIndex.getTypeDeclaration(cutype) )
+    return symbol( string( spelling( cindex.getTypeDeclaration(cutype) ) ) )
   else
-    return get(c_jl, typkind, None)
+    return symbol( string( get(c_jl, typkind, :Void) ) )
   end
+end
+
+type WrapContext
+  cxindex::cindex.CXIndex
+  typedef_prefix::ASCIIString
+  clang_includes::Array{ASCIIString, 1}
+  clang_args::Array{ASCIIString, 1}
 end
 
 function build_clang_args(includes, extras)
-  # Build array of include definitions: [...,"-I", "incpath",...]
-  args = ASCIIString[]
-
-  for hdr in includes
-    push!(args, "-I")
-    push!(args, hdr)
-  end
-  vcat(args, extras)
+  # Build array of include definitions: ["-I", "incpath",...] plus extra args
+  reduce(vcat, [], vcat([["-I",x] for x in includes], extras))
 end
-
-type CursorArgs
 
 function cursor_args(cursor::CXCursor)
-  @assert isa(cu_kind(cursor), CurKind.FUNCTIONDECL)
+  @assert cu_kind(cursor) == CurKind.FUNCTIONDECL
 
-  cursor_type = CIndex.cu_type(cursor)
-  rtypes = []
+  cursor_type = cindex.cu_type(cursor)
+  [cindex.getArgType(cursor_type, uint32(arg_i)) for arg_i in 0:cindex.getNumArgTypes(cursor_type)-1]
+end
 
-  for arg_j = 0:CIndex.getNumArgTypes(cursor_type)
-        push!(rtypes,CIndex.getArgType(cursor_type, uint32(arg_j)) )
+function wrap_function(strm, cursor)
+  arg_types = cursor_args(cursor)
+  arg_list = tuple( [ctype_to_julia(x) for x in arg_types]... )
+  ret_type = ctype_to_julia(cindex.return_type(cursor))
+  println(strm, "@c ", ret_type, " ", symbol(spelling(cursor)), " ", arg_list, " shlib")
+end
+
+# Avoid regenerating typedefs from earlier translation unit includes.
+__cache_typedefs = Set{ASCIIString}()
+
+function wrap_typedef(strm, cursor)
+  @assert cu_kind(cursor) == CurKind.TYPEDEFDECL
+
+  typedef_spelling = spelling(cursor)
+  if (has(__cache_typedefs, typedef_spelling))
+    # pass
+  else
+    cursor_type = cindex.cu_type(cursor)
+    td_type = cindex.resolve_type(cindex.getTypedefDeclUnderlyingType(cursor))
+    :(typealias $typedef_spelling ctype_to_julia($td_type))
+    println(strm, "typealias ",  typedef_spelling, " ", ctype_to_julia(td_type) )
+    add!(__cache_typedefs, typedef_spelling)
   end
-  return rtypes
 end
 
-end # Module wrap_c
-
-module F ##############################
-require("CIndex")
-using CIndex
-using wrap_c
-import CIndex.CurKind, CIndex.TypKind
-JULIAHOME=EnvHash()["JULIAHOME"]
-
-out_path = "/cmn/git/libLLVM.jl"
-libLLVM_path = joinpath(JULIAHOME, "deps/llvm-3.2/include")
-clanginc_path = joinpath(JULIAHOME, "deps/llvm-3.2/Release/lib/clang/3.2/include")
-
-clang_includes = map(x->joinpath(JULIAHOME, x), [
-  "deps/llvm-3.2/build/Release/lib/clang/3.2/include",
-  "deps/llvm-3.2/include",
-  "deps/llvm-3.2/include",
-  "deps/llvm-3.2/build/include/",
-  "deps/llvm-3.2/include/"
-  ])
-
-clang_extraargs = ["-D", "__STDC_LIMIT_MACROS", "-D", "__STDC_CONSTANT_MACROS"]
-
-function cursor_wrapping(cu::CXCursor)
-    rtypes = Array(Any,0)
-end
-
-
-function pf(hdr)
-  strm = open("out.txt", "w")
-  #strm = STDOUT
-  println(strm,"\n")
-
-  clang_args = wrap_c.clang_args(clang_includes, clang_extraargs)
-  println(clang_args)
-
-  idx = CIndex.idx_create(1,1)
-  tu = CIndex.tu_parse(idx, hdr, clang_args)
-  topcu = CIndex.getTranslationUnitCursor(tu)
+function wrap_header(hfile, tunit, ostrm)
+  topcu = cindex.getTranslationUnitCursor(tunit)
   tcl = children(topcu)
+  
   for i=1:tcl.size
-    cu = tcl[i]
-    if (cu_kind(cu) != CurKind.FUNCTIONDECL || cu_file(cu) != hdr) continue end
-    arg_types = cursor_wrapping(tcl[i])
-    ret_type = wrap_c.ctype_to_jl(CIndex.return_type(cu))
+    cursor = tcl[i]
+    kind = cu_kind(cursor)
 
-    println(strm, "ccall( (:",spelling(cu), ",\"libLLVM\"),", ret_type, "(",
-      [string(x,",") for x in arg_types], "),", ["a$x" for x in 1:length(arg_types)], ")")
+    if (kind == CurKind.TYPEDEFDECL)
+      wrap_c.wrap_typedef(ostrm, cursor)
+    elseif (cu_kind(cursor) == CurKind.FUNCTIONDECL && cu_file(cursor) == hfile)
+      wrap_c.wrap_function(ostrm, cursor)
+    end
   end
-  close(strm)
+  cindex.cl_dispose(tcl)
 end
 
+function wrap_c_headers(headers, clang_includes, clang_extra_args, out_file)
+  clang_args = build_clang_args(clang_includes, clang_extra_args)
+  println("clang args: ", clang_args)
+  idx = cindex.idx_create(1,1)
 
-end # module
+  begin ostrm = open(out_file, "w")
+    println(ostrm, helper_macros, "\n")
+    for hfile in headers
+      tunit = cindex.tu_parse(idx, hfile, clang_args)
+      println("tunit: ", tunit)
+      wrap_header(hfile, tunit, ostrm)
+    end
+    close(ostrm)
+  end
+end
+
+end # module wrap_c

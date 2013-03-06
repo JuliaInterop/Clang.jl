@@ -31,8 +31,8 @@ clang_includes = map(x->joinpath(JULIAHOME, x), [
   ])
 clang_extraargs = ["-D", "__STDC_LIMIT_MACROS", "-D", "__STDC_CONSTANT_MACROS"]
 
-using CIndex
-using wrap_c
+using Clang.cindex
+using Clang.wrap_c
 function wrap_libLLVM()
   wrap_c.wrap_c_headers(wrap_hdrs, clang_includes, clang_extraargs, "libLLVM_h.jl")
 end

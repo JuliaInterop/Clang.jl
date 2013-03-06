@@ -34,7 +34,7 @@ CXChildVisitResult wci_visitCB(CXCursor cur, CXCursor par, CXClientData data)
 }
 
 extern "C" {
-#include "wrapcindex.h"
+#include "wrapclang.h"
 
 unsigned int wci_getChildren(char* cuin, CursorList* cl)
 {

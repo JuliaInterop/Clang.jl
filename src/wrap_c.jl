@@ -1,7 +1,7 @@
 module wrap_c
 
-using CIndex
-import CIndex.TypKind, CIndex.CurKind
+using Clang.cindex
+import cindex.TypKind, cindex.CurKind
 
 helper_macros = L"macro c(ret_type, func, arg_types, lib)
   ret_type = eval(ret_type)
@@ -48,18 +48,18 @@ function ctype_to_julia(cutype::CXType)
   typkind = ty_kind(cutype)
   # Special cases: TYPEDEF, POINTER
   if (typkind == TypKind.POINTER)
-    ptr_ctype = CIndex.getPointeeType(cutype)
+    ptr_ctype = cindex.getPointeeType(cutype)
     ptr_jltype = ctype_to_julia(ptr_ctype)
     return Ptr{ptr_jltype}
   elseif (typkind == TypKind.TYPEDEF)
-    return symbol( string( spelling( CIndex.getTypeDeclaration(cutype) ) ) )
+    return symbol( string( spelling( cindex.getTypeDeclaration(cutype) ) ) )
   else
     return symbol( string( get(c_jl, typkind, :Void) ) )
   end
 end
 
 type WrapContext
-  cxindex::CIndex.CXIndex
+  cxindex::cindex.CXIndex
   typedef_prefix::ASCIIString
   clang_includes::Array{ASCIIString, 1}
   clang_args::Array{ASCIIString, 1}
@@ -73,14 +73,14 @@ end
 function cursor_args(cursor::CXCursor)
   @assert cu_kind(cursor) == CurKind.FUNCTIONDECL
 
-  cursor_type = CIndex.cu_type(cursor)
-  [CIndex.getArgType(cursor_type, uint32(arg_i)) for arg_i in 0:CIndex.getNumArgTypes(cursor_type)-1]
+  cursor_type = cindex.cu_type(cursor)
+  [cindex.getArgType(cursor_type, uint32(arg_i)) for arg_i in 0:cindex.getNumArgTypes(cursor_type)-1]
 end
 
 function wrap_function(strm, cursor)
   arg_types = cursor_args(cursor)
   arg_list = tuple( [ctype_to_julia(x) for x in arg_types]... )
-  ret_type = ctype_to_julia(CIndex.return_type(cursor))
+  ret_type = ctype_to_julia(cindex.return_type(cursor))
   println(strm, "@c ", ret_type, " ", symbol(spelling(cursor)), " ", arg_list, " shlib")
 end
 
@@ -94,8 +94,8 @@ function wrap_typedef(strm, cursor)
   if (has(__cache_typedefs, typedef_spelling))
     # pass
   else
-    cursor_type = CIndex.cu_type(cursor)
-    td_type = CIndex.resolve_type(CIndex.getTypedefDeclUnderlyingType(cursor))
+    cursor_type = cindex.cu_type(cursor)
+    td_type = cindex.resolve_type(cindex.getTypedefDeclUnderlyingType(cursor))
     :(typealias $typedef_spelling ctype_to_julia($td_type))
     println(strm, "typealias ",  typedef_spelling, " ", ctype_to_julia(td_type) )
     add!(__cache_typedefs, typedef_spelling)
@@ -103,7 +103,7 @@ function wrap_typedef(strm, cursor)
 end
 
 function wrap_header(hfile, tunit, ostrm)
-  topcu = CIndex.getTranslationUnitCursor(tunit)
+  topcu = cindex.getTranslationUnitCursor(tunit)
   tcl = children(topcu)
   
   for i=1:tcl.size
@@ -116,18 +116,18 @@ function wrap_header(hfile, tunit, ostrm)
       wrap_c.wrap_function(ostrm, cursor)
     end
   end
-  CIndex.cl_dispose(tcl)
+  cindex.cl_dispose(tcl)
 end
 
 function wrap_c_headers(headers, clang_includes, clang_extra_args, out_file)
   clang_args = build_clang_args(clang_includes, clang_extra_args)
   println("clang args: ", clang_args)
-  idx = CIndex.idx_create(1,1)
+  idx = cindex.idx_create(1,1)
 
   begin ostrm = open(out_file, "w")
     println(ostrm, helper_macros, "\n")
     for hfile in headers
-      tunit = CIndex.tu_parse(idx, hfile, clang_args)
+      tunit = cindex.tu_parse(idx, hfile, clang_args)
       wrap_header(hfile, tunit, ostrm)
     end
     close(ostrm)

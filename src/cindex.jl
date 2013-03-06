@@ -1,5 +1,5 @@
-module CIndex
-using Base
+module cindex
+
 import Base.ref
 
 export cu_type, cu_kind, ty_kind, name, spelling, is_function, is_null,
@@ -8,10 +8,9 @@ export resolve_type, return_type
 export tu_init, tu_cursor
 export CXType, CXCursor, CXString, CXTypeKind, CursorList
 
-const libwci = :libwrapcindex
+const libwci = :libwrapclang
 
 # Type definitions for wrapped types
-
 typealias CXIndex Ptr{Void}
 typealias CXUnsavedFile Ptr{Void}
 typealias CXFile Ptr{Void}
@@ -20,14 +19,14 @@ typealias CXCursorKind Int32
 typealias CXTranslationUnit Ptr{Void}
 const CXString_size = ccall( ("wci_size_CXString", libwci), Int, ())
 
-# work-around: ccall followed by composite_type in @eval gives error.
+# Work-around: ccall followed by composite_type in @eval gives error.
 get_sz(sym) = @eval ccall( ($(string("wci_size_", sym)), :($(libwci))), Int, ())
 
+# Generate container types
 for st in Any[
     :CXSourceLocation, :CXSourceRange,
     :CXTUResourceUsageEntry, :CXTUResourceUsage, :CXCursor, :CXType,
     :CXToken ]
-  # Generate container types from the above list
   sz_name = symbol(string(st,"_size"))
   @eval begin
     const $sz_name = get_sz($("$st"))
@@ -62,8 +61,8 @@ function get_string(cx::CXString)
 end
 
 # These include statements must follow type definitions above.
-include("base.jl")
-include("index_h.jl")
+include("cindex_base.jl")
+include("cindex_h.jl")
 
 # TODO: macro version should be more efficient.
 anymatch(first, args...) = any({==(first, a) for a in args})
@@ -81,9 +80,9 @@ is_null(c::CXCursor) = (Cursor_isNull(c) != 0)
 function resolve_type(rt::CXType)
   # This helper attempts to work around some limitations of the
   # current libclang API.
-  if ty_kind(rt) == CIndex.TypKind.UNEXPOSED
+  if ty_kind(rt) == cindex.TypKind.UNEXPOSED
     # try to resolve Unexposed type to cursor definition.
-    rtdef_cu = CIndex.getTypeDeclaration(rt)
+    rtdef_cu = cindex.getTypeDeclaration(rt)
     if (!is_null(rtdef_cu) && cu_kind(rtdef_cu) != CurKind.NODECLFOUND)
       return cu_type(rtdef_cu)
     end

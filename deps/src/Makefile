@@ -11,7 +11,7 @@ CXX = g++
 INC = -I"$(JULIAHOME)/usr/include" 
 FLAGS = -Wall -Wno-strict-aliasing -fno-omit-frame-pointer -fPIC
 CXXFLAGS = -g
-OBJS = wrapcindex.cpp.o
+OBJS = wrapclang.cpp.o
 
 # Figure out OS and architecture
 OS = $(shell uname)
@@ -28,7 +28,7 @@ else
   SHLIB_EXT = so
 endif
 
-default: libwrapcindex.$(SHLIB_EXT)
+default: libwrapclang.$(SHLIB_EXT)
 
 %.c.o: %.c
 	$(CC) $< -fPIC -c -o $@ $(INC) $(CFLAGS) $(FLAGS)
@@ -36,7 +36,7 @@ default: libwrapcindex.$(SHLIB_EXT)
 %.cpp.o: %.cpp
 	$(CXX) $< -fPIC -c -o $@ $(INC) $(CXXFLAGS) $(FLAGS)
 
-libwrapcindex.$(SHLIB_EXT): $(OBJS)
+libwrapclang.$(SHLIB_EXT): $(OBJS)
 	$(CXX) $(OBJS) -shared -o $@ -L"$(JULIAHOME)/usr/lib" $(LDFLAGS) $(LIBS) -lclang
 
 clean:

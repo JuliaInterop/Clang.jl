@@ -1,7 +1,7 @@
 let 
     function find_library(libname,filename)
         try 
-            dl = dlopen(joinpath(Pkg.dir(),"CIndex","deps","usr","lib",filename))
+            dl = dlopen(joinpath(Pkg.dir(),"Clang","deps","usr","lib",filename))
             ccall(:add_library_mapping,Int32,(Ptr{Uint8},Ptr{Uint8}),libname,dl)
         catch
             try 
@@ -12,5 +12,5 @@ let
             end
         end
     end
-    find_library("libwrapcindex","libwrapcindex")
+    find_library("libwrapclang","libwrapclang")
 end

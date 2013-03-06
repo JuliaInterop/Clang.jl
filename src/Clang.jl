@@ -1,4 +1,6 @@
-include(joinpath(Pkg.dir(), "CIndex", "deps", "ext.jl"))
+include(joinpath(Pkg.dir(), "Clang", "deps", "ext.jl"))
 
-include("main.jl")
-include("wrap_c.jl")
+module Clang
+  include("cindex.jl")
+  include("wrap_c.jl")
+end

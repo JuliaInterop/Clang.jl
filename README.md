@@ -20,13 +20,7 @@ All testing and development so far has been on Ubuntu 12.04.1 (64-bit)
 
 ## Installation
 
-Clone this repository, and do the following (sh syntax):
-  
-  ```sh
-  export JULIAHOME=/path/to/julia
-  cd /location/of/Clang.jl/lib
-  make
-  ```
+Pkg.add("Clang")
 
 ## Usage
   ```julia

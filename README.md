@@ -1,6 +1,6 @@
-CIndex.jl provides a wrapping of libclang for the 
+Clang.jl provides a wrapping of libclang for the 
 Julia language (http://julialang.org). The goal of
-CIndex.jl is to facilitate access to C and C++ source
+Clang.jl is to facilitate access to C and C++ source
 parse trees from Julia.
 
 libclang is the stable interface to the Clang compiler 
@@ -24,14 +24,13 @@ Clone this repository, and do the following (sh syntax):
   
   ```sh
   export JULIAHOME=/path/to/julia
-  cd /location/of/CIndex.jl/lib
+  cd /location/of/Clang.jl/lib
   make
   ```
 
 ## Usage
   ```julia
-  require("CIndex")
-  using CIndex
+  using Clang.cindex
 
   julia> tu = tu_init("Index.h")   # Initialize and parse Index.h
   julia> topcu = tu_cursor(tu)     # get TU top cursor
@@ -46,7 +45,7 @@ Clone this repository, and do the following (sh syntax):
   "clang_parseTranslationUnit(CXIndex, const char *, const char *const *, int, struct CXUnsavedFile *, unsigned int, unsigned int)"
   ```
   See the examples/ and util/ folders for further usage 
-  scenarios. CIndex.jl is partially self-generating,
+  scenarios. Clang.jl is partially self-generating,
   including parsing of the enums (util/genCIndex_h.jl)
 
   There is a small convenience API exported by CIndex:
@@ -82,18 +81,18 @@ BUILD_LLVM_CLANG=1 in julia/deps/Makefile.
 
 Most libclang functions pass and return small 
 structs by value. As Julia does not (yet) have full struct 
-support, the current CIndex.jl implementation includes a 
+support, the current Clang.jl implementation includes a 
 C++ wrapper. clang functions are wrapped by a C++ function
 that memcpys data to/from a Julia-owned memory array 
 (passed by pointer)
 
-see src/cindex_base.jl and deps/src/wrapcindex.h for generated wrappers.
+see src/cindex_base.jl and deps/src/wrapclang.h for generated wrappers.
 
 Some functions are manually wrapped for convenience and ease of
 implementation, or to provide a more Julia-friendly API.
 
-see src/CIndex.jl and deps/src/wrapcindex.cpp
+see src/Clang.jl and deps/src/wrapclang.cpp
 
 ### License
 
-CIndex.jl is licensed under the MIT license.
+Clang.jl is licensed under the MIT license.

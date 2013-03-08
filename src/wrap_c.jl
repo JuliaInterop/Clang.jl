@@ -3,17 +3,27 @@ module wrap_c
 using Clang.cindex
 import cindex.TypKind, cindex.CurKind
 
-helper_macros = L"macro c(ret_type, func, arg_types, lib)
-  ret_type = eval(ret_type)
-  args_in = Any[ symbol(string('a',x)) for x in 1:length(arg_types.args) ]
-  quote
-    $(esc(func))($(args_in...)) = ccall( ($(string(func)), $lib), $ret_type, $(arg_types), $(args_in...) )
-  end
+abstract CArg
+  abstract IntrinsicArg <: CArg
+  abstract TypedefArg <: CArg
+  abstract PtrArg <: CArg
+  abstract StructArg <: CArg
+
+type WrapContext
+  cindex::cindex.CXIndex
+  typedef_prefix::ASCIIString
+  clang_includes::Array{ASCIIString, 1}
+  clang_args::Array{ASCIIString, 1}
+  check_to_wrap::Function
 end
 
-macro typedef(alias, real)
-  real = eval(real)
-  :( typealias alias eval(real) )
+helper_macros = L"macro c(ret_type, func, arg_types, lib)
+  local _ret_type = eval(ret_type)
+  local _args_in = Any[ symbol(string('a',x)) for x in 1:length(arg_types.args) ]
+  local _lib = @eval $lib
+  quote
+    $(esc(func))($(_args_in...)) = ccall( ($(string(func)), $(Expr(:quote, _lib)) ), $(_ret_type), $(arg_types), $(_args_in...) )
+  end
 end
 "
 
@@ -54,15 +64,8 @@ function ctype_to_julia(cutype::CXType)
   elseif (typkind == TypKind.TYPEDEF)
     return symbol( string( spelling( cindex.getTypeDeclaration(cutype) ) ) )
   else
-    return symbol( string( get(c_jl, typkind, :Void) ) )
+    return symbol( string( get(c_jl, typkind, :Void) ))
   end
-end
-
-type WrapContext
-  cxindex::cindex.CXIndex
-  typedef_prefix::ASCIIString
-  clang_includes::Array{ASCIIString, 1}
-  clang_args::Array{ASCIIString, 1}
 end
 
 function build_clang_args(includes, extras)
@@ -77,11 +80,21 @@ function cursor_args(cursor::CXCursor)
   [cindex.getArgType(cursor_type, uint32(arg_i)) for arg_i in 0:cindex.getNumArgTypes(cursor_type)-1]
 end
 
+# Avoid regenerating functions from earlier translation unit includes
+__cache_functions = Set{ASCIIString}()
+
 function wrap_function(strm, cursor)
-  arg_types = cursor_args(cursor)
-  arg_list = tuple( [ctype_to_julia(x) for x in arg_types]... )
-  ret_type = ctype_to_julia(cindex.return_type(cursor))
-  println(strm, "@c ", ret_type, " ", symbol(spelling(cursor)), " ", arg_list, " shlib")
+  cu_spelling = spelling(cursor)
+  if (has(__cache_functions, cu_spelling))
+    #pass
+  else
+    add!(__cache_functions, cu_spelling)
+
+    arg_types = cursor_args(cursor)
+    arg_list = tuple( [ctype_to_julia(x) for x in arg_types]... )
+    ret_type = ctype_to_julia(cindex.return_type(cursor))
+    println(strm, "@c ", ret_type, " ", symbol(spelling(cursor)), " ", arg_list, " shlib")
+  end
 end
 
 # Avoid regenerating typedefs from earlier translation unit includes.
@@ -96,13 +109,15 @@ function wrap_typedef(strm, cursor)
   else
     cursor_type = cindex.cu_type(cursor)
     td_type = cindex.resolve_type(cindex.getTypedefDeclUnderlyingType(cursor))
+    # initialize typealias in current context to avoid error
     :(typealias $typedef_spelling ctype_to_julia($td_type))
+    
     println(strm, "typealias ",  typedef_spelling, " ", ctype_to_julia(td_type) )
     add!(__cache_typedefs, typedef_spelling)
   end
 end
 
-function wrap_header(hfile, tunit, ostrm)
+function wrap_header(hfile, tunit, check_incl::Function, ostrm)
   topcu = cindex.getTranslationUnitCursor(tunit)
   tcl = children(topcu)
   
@@ -110,16 +125,19 @@ function wrap_header(hfile, tunit, ostrm)
     cursor = tcl[i]
     kind = cu_kind(cursor)
 
+    # Skip wrapping based on function supplied by client
+    if (!check_incl(cu_file(cursor))) continue end
+
     if (kind == CurKind.TYPEDEFDECL)
       wrap_c.wrap_typedef(ostrm, cursor)
-    elseif (cu_kind(cursor) == CurKind.FUNCTIONDECL && cu_file(cursor) == hfile)
+    elseif (cu_kind(cursor) == CurKind.FUNCTIONDECL)
       wrap_c.wrap_function(ostrm, cursor)
     end
   end
   cindex.cl_dispose(tcl)
 end
 
-function wrap_c_headers(headers, clang_includes, clang_extra_args, out_file)
+function wrap_c_headers(headers, clang_includes, clang_extra_args, check_func, out_file)
   clang_args = build_clang_args(clang_includes, clang_extra_args)
   println("clang args: ", clang_args)
   idx = cindex.idx_create(1,1)
@@ -128,7 +146,7 @@ function wrap_c_headers(headers, clang_includes, clang_extra_args, out_file)
     println(ostrm, helper_macros, "\n")
     for hfile in headers
       tunit = cindex.tu_parse(idx, hfile, clang_args)
-      wrap_header(hfile, tunit, ostrm)
+      wrap_header(hfile, tunit, check_func, ostrm)
     end
     close(ostrm)
   end

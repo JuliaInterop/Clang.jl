@@ -73,7 +73,7 @@ Pkg.add("Clang")
 
 ## Implementation
 
-Most libclang functions pass and return small 
+Most libclang functions accept and return small 
 structs by value. As Julia does not (yet) have full struct 
 support, the current Clang.jl implementation includes a 
 C++ wrapper. clang functions are wrapped by a C++ function

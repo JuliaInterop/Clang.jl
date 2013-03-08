@@ -18,6 +18,12 @@ are provided.
 
 All testing and development so far has been on Ubuntu 12.04.1 (64-bit)
 
+## Prerequisites
+
+libclang >= 3.1 must be available as a shared library. libclang can
+optionally be built by the Julia build system by setting 
+BUILD_LLVM_CLANG=1 in julia/deps/Makefile.
+
 ## Installation
 
 Pkg.add("Clang")
@@ -64,12 +70,6 @@ Pkg.add("Clang")
   see this post:
 
   http://eli.thegreenplace.net/2011/07/03/parsing-c-in-python-with-clang/
-
-## Prerequisites
-
-libclang must be available as a shared library. libclang can
-optionally be built by the Julia build system by setting 
-BUILD_LLVM_CLANG=1 in julia/deps/Makefile.
 
 ## Implementation
 

@@ -15,7 +15,7 @@ end
 
 type EnumArg <: CArg
   cu_decl::cindex.CXCursor
-  cu_typedef::cindex.CXCursor
+  cu_typedef::Any
 end
 
 type WrapContext

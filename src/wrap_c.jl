@@ -101,7 +101,14 @@ function wrap(argt::EnumArg, ostrm)
     elseif (enum_typedef != "") enum_typedef
     else "ANONYMOUS"
     end
-  
+
+  if (has(__cache_wrapped, enum_name))
+    return
+  else
+    add!(__cache_wrapped, enum_name)
+  end
+
+  println(ostrm, "# enum $enum_name")
   cl = cindex.children(argt.cu_decl)
 
   for i=1:cl.size
@@ -151,8 +158,7 @@ function wrap_header(hfile, tunit, check_incl::Function, ostrm)
     # Skip wrapping based on function supplied by client
     if (!check_incl(cu_file(cursor))) continue end
 
-    cuhash = cindex.hashCursor(cursor)
-    if has(__cursor_cache, cuhash) continue end
+    if (has(__cache_wrapped, cursor_name)) continue end
 
     if (kind == CurKind.TYPEDEFDECL)
       wrap_c.wrap_typedef(ostrm, cursor)
@@ -172,7 +178,6 @@ function wrap_header(hfile, tunit, check_incl::Function, ostrm)
     end
     # Should only get here after match in if() above
     # we cache the cursor hash to avoid re-wrapping
-    add!(__cursor_cache, cuhash)
   end
   cindex.cl_dispose(topcl)
 end

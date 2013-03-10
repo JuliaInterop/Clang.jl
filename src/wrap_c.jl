@@ -231,6 +231,17 @@ function wrap_c_headers(
     check_include::Function,        # called to determing inclusion status
     output_file::ASCIIString)       # eponymous
 
+  for h in headers
+    if !isfile(h)
+      error(h, " cannot be found")
+    end
+  end
+  for d in clang_includes
+    if !isdir(d)
+      error(d, " cannot be found")
+    end
+  end
+
   clang_args = build_clang_args(clang_includes, clang_extra_args)
   idx = cindex.idx_create(1,1)
 

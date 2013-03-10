@@ -2,3 +2,5 @@
 *.dylib
 *.o
 *.swp
+*~
+*.kate-swp

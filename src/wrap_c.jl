@@ -1,15 +1,33 @@
+###############################################################################
+# Julia wrapper generator using libclang from the LLVM project                #
+###############################################################################
+
 module wrap_c
 
 using Clang.cindex
 import cindex.TypKind, cindex.CurKind
 
+### Wrappable type hierarchy
+
 abstract CArg
-  abstract TypedefArg <: CArg
-  abstract PtrArg <: CArg
-  abstract StructArg <: CArg
-  abstract FunctionArg <: CArg
 
 type IntrinsicArg <: CArg
+  cursor::cindex.CXCursor
+end
+
+type TypedefArg <: CArg
+  cursor::cindex.CXCursor
+end
+
+type PtrArg <: CArg
+  cursor::cindex.CXCursor
+end
+
+type StructArg <: CArg
+  cursor::cindex.CXCursor
+end
+
+type FunctionArg <: CArg
   cursor::cindex.CXCursor
 end
 
@@ -18,24 +36,52 @@ type EnumArg <: CArg
   cu_typedef::Any
 end
 
+### Execution context for wrap_c
+
 type WrapContext
   cindex::cindex.CXIndex
   typedef_prefix::ASCIIString
   clang_includes::Array{ASCIIString, 1}
   clang_args::Array{ASCIIString, 1}
   check_to_wrap::Function
+#  wrap_cached::Set{ASCIIString}()
 end
 
-helper_macros = "macro c(ret_type, func, arg_types, lib)
-  local _ret_type = eval(ret_type)
-  local _args_in = Any[ symbol(string('a',x)) for x in 1:length(arg_types.args) ]
-  local _lib = @eval \$lib
+### This helper will be written to the generated file
+#helper_macros = "macro c(ret_type, func, arg_types, lib)
+#  f(ex::Union(Expr,Symbol)) = (typeof(ex)==Symbol || length(ex.args)==1) ? eval(ex) : Expr(ex.head, ex.args[1], f(ex.args[2]))
+#  local _arg_types = [f(a) for a in arg_types.args]
+#  local _ret_type = f(ret_type)
+#  local _args_in = Any[ symbol(string('a',x)) for x in 1:length(_arg_types) ]
+#  local _lib = eval(lib)
+#  quote
+#    \$(esc(func))(\$(_args_in...)) = ccall( (\$(string(func)), \$(Expr(:quote, _lib)) ), \$(_ret_type), \$(arg_types), \$(_args_in...) )
+#  end
+#end"
+
+helper_macros = "
+recurs_sym_type(ex::Any) = 
+  (ex==None || typeof(ex)==Symbol || length(ex.args)==1) ? eval(ex) : Expr(ex.head, ex.args[1], recurs_sym_type(ex.args[2]))
+macro c(ret_type, func, arg_types, lib)
+  local _arg_types = Expr(:tuple, [recurs_sym_type(a) for a in arg_types.args]...)
+  local _ret_type = recurs_sym_type(ret_type)
+  local _args_in = Any[ symbol(string('a',x)) for x in 1:length(_arg_types.args) ]
+  local _lib = eval(lib)
   quote
-    \$(esc(func))(\$(_args_in...)) = ccall( (\$(string(func)), \$(Expr(:quote, _lib)) ), \$(_ret_type), \$(arg_types), \$(_args_in...) )
+    \$(esc(func))(\$(_args_in...)) = ccall( (\$(string(func)), \$(Expr(:quote, _lib)) ), \$_ret_type, \$_arg_types, \$(_args_in...) )
+  end
+end
+
+macro ctypedef(fake_t,real_t)
+  real_t = recurs_sym_type(real_t)
+  quote
+    typealias \$fake_t \$real_t
   end
 end"
 
 __cache_wrapped = Set{ASCIIString}()
+
+### libclang types to Julia types
 
 c_jl = {
   TypKind.VOID        => Void,
@@ -48,8 +94,8 @@ c_jl = {
   TypKind.UINT        => Uint32,
   TypKind.ULONG       => Uint,
   TypKind.ULONGLONG   => Uint64,
-  TypKind.CHAR_S      => Uint8,     # todo check
-  TypKind.SCHAR       => Uint8,     # todo check
+  TypKind.CHAR_S      => Uint8,     # TODO check
+  TypKind.SCHAR       => Uint8,     # TODO check
   TypKind.WCHAR       => Char,
   TypKind.SHORT       => Int16,
   TypKind.INT         => Int32,
@@ -57,10 +103,10 @@ c_jl = {
   TypKind.LONGLONG    => Int64,
   TypKind.FLOAT       => Float32,
   TypKind.DOUBLE      => Float64,
-  TypKind.LONGDOUBLE  => Float64,   # todo detect?
-  TypKind.ENUM        => Int32,     # todo arch check?
+  TypKind.LONGDOUBLE  => Float64,   # TODO detect?
+  TypKind.ENUM        => Int32,     # TODO arch check?
   TypKind.NULLPTR     => C_NULL
-                                    # TypKind.UINT128 => todo
+                                    # TypKind.UINT128 => TODO
   }
 
 function ctype_to_julia(cutype::CXType)
@@ -73,12 +119,13 @@ function ctype_to_julia(cutype::CXType)
   elseif (typkind == TypKind.TYPEDEF)
     return symbol( string( spelling( cindex.getTypeDeclaration(cutype) ) ) )
   else
+    # TODO: missing mappings should generate a warning
     return symbol( string( get(c_jl, typkind, :Void) ))
   end
 end
 
+### Build array of include definitions: ["-I", "incpath",...] plus extra args
 function build_clang_args(includes, extras)
-  # Build array of include definitions: ["-I", "incpath",...] plus extra args
   reduce(vcat, [], vcat([["-I",x] for x in includes], extras))
 end
 
@@ -109,6 +156,7 @@ function wrap(argt::EnumArg, ostrm)
   end
 
   println(ostrm, "# enum $enum_name")
+  println(ostrm, "@ctypedef $enum_name Uint32")
   cl = cindex.children(argt.cu_decl)
 
   for i=1:cl.size
@@ -120,30 +168,32 @@ function wrap(argt::EnumArg, ostrm)
   end
   cindex.cl_dispose(cl)
   println(ostrm, "# end")
-  if enum != "" && enum_typedef != ""
-      println(ostrm, "# const $(enum_typedef) == ENUM_$(enum)")
-  end
-  println(ostrm)
 end
 
-function wrap_function(strm, cursor)
-  cu_spelling = spelling(cursor)
-  arg_types = function_args(cursor)
-  arg_list = tuple( [ctype_to_julia(x) for x in arg_types]... )
-  ret_type = ctype_to_julia(cindex.return_type(cursor))
-  println(strm, "@c ", ret_type, " ", symbol(spelling(cursor)), " ", arg_list, " shlib")
-end
+function wrap(arg::FunctionArg, strm)
+  @assert cu_kind(arg.cursor) == CurKind.FUNCTIONDECL
 
-function wrap_typedef(strm, cursor)
-  @assert cu_kind(cursor) == CurKind.TYPEDEFDECL
-
-  typedef_spelling = spelling(cursor)
-  cursor_type = cindex.cu_type(cursor)
-  td_type = cindex.resolve_type(cindex.getTypedefDeclUnderlyingType(cursor))
-  # initialize typealias in current context to avoid error
-  :(typealias $typedef_spelling ctype_to_julia($td_type))
+  cu_spelling = spelling(arg.cursor)
+  add!(__cache_wrapped, name(arg.cursor))
   
-  println(strm, "typealias ",  typedef_spelling, " ", ctype_to_julia(td_type) )
+  arg_types = function_args(arg.cursor)
+  arg_list = tuple( [ctype_to_julia(x) for x in arg_types]... )
+  ret_type = ctype_to_julia(cindex.return_type(arg.cursor))
+  println(strm, "@c ", ret_type, " ", symbol(spelling(arg.cursor)), " ", arg_list, " shlib")
+end
+
+function wrap(arg::TypedefArg, strm)
+  @assert cu_kind(arg.cursor) == CurKind.TYPEDEFDECL
+
+  typedef_spelling = spelling(arg.cursor)
+  add!(__cache_wrapped, typedef_spelling)
+
+  cursor_type = cindex.cu_type(arg.cursor)
+  td_type = cindex.resolve_type(cindex.getTypedefDeclUnderlyingType(arg.cursor))
+  # initialize typealias in current context to avoid error TODO delete
+  #:(typealias $typedef_spelling ctype_to_julia($td_type))
+  
+  println(strm, "@ctypedef ",  typedef_spelling, " ", ctype_to_julia(td_type) )
 end
 
 function wrap_header(hfile, tunit, check_incl::Function, ostrm)
@@ -157,42 +207,51 @@ function wrap_header(hfile, tunit, check_incl::Function, ostrm)
 
     # Skip wrapping based on function supplied by client
     if (!check_incl(cu_file(cursor))) continue end
-
+    # Skip wrapping cached item
     if (has(__cache_wrapped, cursor_name)) continue end
 
+    towrap = None
     if (kind == CurKind.TYPEDEFDECL)
-      wrap_c.wrap_typedef(ostrm, cursor)
-      add!(__cache_wrapped, cursor_name)
+      towrap = TypedefArg(cursor)
     elseif (cu_kind(cursor) == CurKind.FUNCTIONDECL)
-      wrap_c.wrap_function(ostrm, cursor)
-      add!(__cache_wrapped, cursor_name)
+      towrap = FunctionArg(cursor)
     elseif (cu_kind(cursor) == CurKind.ENUMDECL)
-      # todo: need a better solution for this
-      #  right now, if a typedef follows enum then assume it is
-      #  for the enum declation.
+      # TODO: need a better solution for this
+      #  libclang does not provide xref between enum/typedef
+      #  right now, if a typedef follows enum then we just assume it is
+      #  for the enum declaration. this might not be true for anonymous enums.
       tdcu = topcl[i+1]
       tdcu = ((cindex.cu_kind(tdcu) == CurKind.TYPEDEFDECL) ? tdcu : None)
-      wrap(EnumArg(cursor, tdcu), ostrm)
+      towrap = EnumArg(cursor, tdcu)
     else
       continue
     end
-    # Should only get here after match in if() above
-    # we cache the cursor hash to avoid re-wrapping
+    wrap(towrap, ostrm)
   end
   cindex.cl_dispose(topcl)
 end
 
-# todo: use dict for mapping from h file to wrapper file (or module?)
-function wrap_c_headers(headers, clang_includes, clang_extra_args, check_incl::Function, out_file)
+typealias StringsArray Array{ASCIIString,1}
+
+### wrap_c_headers: main entry point
+#   TODO: use dict for mapping from h file to wrapper file (or module?)
+function wrap_c_headers(
+    headers::StringsArray,          # header files to wrap
+    clang_includes::StringsArray,   # clang include paths
+    clang_extra_args::StringsArray, # additional {"-Arg", "value"} pairs for clang
+    check_include::Function,        # called to determing inclusion status
+    output_file::ASCIIString)       # eponymous
+
   clang_args = build_clang_args(clang_includes, clang_extra_args)
-  println("clang args: ", clang_args)
   idx = cindex.idx_create(1,1)
 
-  begin ostrm = open(out_file, "w")
+  begin ostrm = open(output_file, "w")
     println(ostrm, helper_macros, "\n")
     for hfile in headers
+      println(ostrm, "# header: $hfile")
       tunit = cindex.tu_parse(idx, hfile, clang_args)
-      wrap_header(hfile, tunit, check_incl, ostrm)
+      wrap_header(hfile, tunit, check_include, ostrm)
+      println(ostrm)
     end
     close(ostrm)
   end

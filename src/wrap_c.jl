@@ -47,18 +47,7 @@ type WrapContext
 #  wrap_cached::Set{ASCIIString}()
 end
 
-### This helper will be written to the generated file
-#helper_macros = "macro c(ret_type, func, arg_types, lib)
-#  f(ex::Union(Expr,Symbol)) = (typeof(ex)==Symbol || length(ex.args)==1) ? eval(ex) : Expr(ex.head, ex.args[1], f(ex.args[2]))
-#  local _arg_types = [f(a) for a in arg_types.args]
-#  local _ret_type = f(ret_type)
-#  local _args_in = Any[ symbol(string('a',x)) for x in 1:length(_arg_types) ]
-#  local _lib = eval(lib)
-#  quote
-#    \$(esc(func))(\$(_args_in...)) = ccall( (\$(string(func)), \$(Expr(:quote, _lib)) ), \$(_ret_type), \$(arg_types), \$(_args_in...) )
-#  end
-#end"
-
+### These helpers will be written to the generated file
 helper_macros = "
 recurs_sym_type(ex::Any) = 
   (ex==None || typeof(ex)==Symbol || length(ex.args)==1) ? eval(ex) : Expr(ex.head, ex.args[1], recurs_sym_type(ex.args[2]))

@@ -98,6 +98,7 @@ c_jl = {
                                     # TypKind.UINT128 => TODO
   }
 
+# Convert clang type to julia type
 function ctype_to_julia(cutype::CXType)
   typkind = ty_kind(cutype)
   # Special cases: TYPEDEF, POINTER
@@ -118,6 +119,7 @@ function build_clang_args(includes, extras)
   reduce(vcat, [], vcat([["-I",x] for x in includes], extras))
 end
 
+### Retrieve function arguments for a given cursor
 function function_args(cursor::CXCursor)
   @assert cu_kind(cursor) == CurKind.FUNCTIONDECL
 

@@ -3,6 +3,7 @@
 ###############################################################################
 
 module wrap_c
+  version = v"0.0.0"
 
 using Clang.cindex
 import cindex.TypKind, cindex.CurKind
@@ -37,15 +38,27 @@ type EnumArg <: CArg
 end
 
 ### Execution context for wrap_c
+typealias StringsArray Array{ASCIIString,1}
 
+# WrapContext object stores shared information about the wrapping session
 type WrapContext
-  cindex::cindex.CXIndex
-  typedef_prefix::ASCIIString
-  clang_includes::Array{ASCIIString, 1}
-  clang_args::Array{ASCIIString, 1}
-  check_to_wrap::Function
-#  wrap_cached::Set{ASCIIString}()
+  out_path::ASCIIString
+  common_file::ASCIIString
+  clang_includes::StringsArray       # clang include paths
+  clang_extra_args::StringsArray     # additional {"-Arg", "value"} pairs for clang
+  header_wrapped::Function           # called to determine cursor inclusion status
+  header_library::Function           # called to determine shared library for given header
+  header_outfile::Function           # called to determine output file group for given header
+  index::cindex.CXIndex
+  common_stream
+  cache_wrapped::Set{ASCIIString}
+  output_streams::Dict{ASCIIString, IOStream}
 end
+WrapContext(op,cmn,incl,extra,hwrap,hlib,hout) = WrapContext(op,cmn,incl,extra,hwrap,hlib,hout,
+                                              cindex.idx_create(1,1),None,Set{ASCIIString}(),
+                                              Dict{ASCIIString,IOStream}())
+
+
 
 ### These helpers will be written to the generated file
 helper_macros = "
@@ -67,8 +80,6 @@ macro ctypedef(fake_t,real_t)
     typealias \$fake_t \$real_t
   end
 end"
-
-__cache_wrapped = Set{ASCIIString}()
 
 ### libclang types to Julia types
 
@@ -127,7 +138,8 @@ function function_args(cursor::CXCursor)
   [cindex.getArgType(cursor_type, uint32(arg_i)) for arg_i in 0:cindex.getNumArgTypes(cursor_type)-1]
 end
 
-function wrap(argt::EnumArg, ostrm)
+### Wrap enum. NOTE: we write this to wc.common_stream
+function wrap(wc::WrapContext, argt::EnumArg, strm::IOStream)
   enum = cindex.name(argt.cu_decl)
   enum_typedef = if (typeof(argt.cu_typedef) == cindex.CXCursor)
       cindex.name(argt.cu_typedef)
@@ -140,14 +152,14 @@ function wrap(argt::EnumArg, ostrm)
     else "ANONYMOUS"
     end
 
-  if (has(__cache_wrapped, enum_name))
+  if (has(wc.cache_wrapped, enum_name))
     return
   else
-    add!(__cache_wrapped, enum_name)
+    add!(wc.cache_wrapped, enum_name)
   end
 
-  println(ostrm, "# enum $enum_name")
-  println(ostrm, "@ctypedef $enum_name Uint32")
+  println(wc.common_stream, "# enum $enum_name")
+#  println(wc.common_stream, "@ctypedef $enum_name Int32")
   cl = cindex.children(argt.cu_decl)
 
   for i=1:cl.size
@@ -155,17 +167,17 @@ function wrap(argt::EnumArg, ostrm)
     cur_name = cindex.spelling(cur_cu)
     if (length(cur_name) < 1) continue end
 
-    println(ostrm, "const ", cur_name, " = ", cindex.value(cur_cu))
+    println(wc.common_stream, "const ", cur_name, " = ", cindex.value(cur_cu))
   end
   cindex.cl_dispose(cl)
-  println(ostrm, "# end")
+  println(wc.common_stream, "# end")
 end
 
-function wrap(arg::FunctionArg, strm)
+function wrap(wc::WrapContext, arg::FunctionArg, strm::IOStream)
   @assert cu_kind(arg.cursor) == CurKind.FUNCTIONDECL
 
   cu_spelling = spelling(arg.cursor)
-  add!(__cache_wrapped, name(arg.cursor))
+  add!(wc.cache_wrapped, name(arg.cursor))
   
   arg_types = function_args(arg.cursor)
   arg_list = tuple( [ctype_to_julia(x) for x in arg_types]... )
@@ -173,33 +185,41 @@ function wrap(arg::FunctionArg, strm)
   println(strm, "@c ", ret_type, " ", symbol(spelling(arg.cursor)), " ", arg_list, " shlib")
 end
 
-function wrap(arg::TypedefArg, strm)
+function wrap(wc::WrapContext, arg::TypedefArg, strm::IOStream)
   @assert cu_kind(arg.cursor) == CurKind.TYPEDEFDECL
 
   typedef_spelling = spelling(arg.cursor)
-  add!(__cache_wrapped, typedef_spelling)
+  add!(wc.cache_wrapped, typedef_spelling)
 
   cursor_type = cindex.cu_type(arg.cursor)
   td_type = cindex.resolve_type(cindex.getTypedefDeclUnderlyingType(arg.cursor))
   # initialize typealias in current context to avoid error TODO delete
   #:(typealias $typedef_spelling ctype_to_julia($td_type))
   
-  println(strm, "@ctypedef ",  typedef_spelling, " ", ctype_to_julia(td_type) )
+  println(wc.common_stream, "@ctypedef ",  typedef_spelling, " ", ctype_to_julia(td_type) )
 end
 
-function wrap_header(hfile, tunit, check_incl::Function, ostrm)
-  topcu = cindex.getTranslationUnitCursor(tunit)
+function wrap_header(wc::WrapContext, topcu::CXCursor, top_hdr, ostrm::IOStream)
   topcl = children(topcu)
-  
+
+  # Loop over all of the child cursors and wrap them, if appropriate.
   for i=1:topcl.size
     cursor = topcl[i]
+    cursor_hdr = cu_file(cursor)
     cursor_name = name(cursor)
     kind = cu_kind(cursor)
 
-    # Skip wrapping based on function supplied by client
-    if (!check_incl(cu_file(cursor))) continue end
-    # Skip wrapping cached item
-    if (has(__cache_wrapped, cursor_name)) continue end
+    # Heuristic to decide what should be wrapped:
+    #  1. always wrap things in the current top header (ie not includes)
+    #  2. everything else is from includes, wrap if:
+    #     - the client wants it wc.header_wrapped == True)
+    #     - the item has not already been wrapped (ie not in wc.cache_wrapped)
+    if (cursor_hdr == top_hdr)
+      # pass
+    elseif (!wc.header_wrapped(top_hdr, cu_file(cursor)) ||
+            has(wc.cache_wrapped, cursor_name) )
+      continue
+    end
 
     towrap = None
     if (kind == CurKind.TYPEDEFDECL)
@@ -208,7 +228,7 @@ function wrap_header(hfile, tunit, check_incl::Function, ostrm)
       towrap = FunctionArg(cursor)
     elseif (cu_kind(cursor) == CurKind.ENUMDECL)
       # TODO: need a better solution for this
-      #  libclang does not provide xref between enum/typedef
+      #  libclang does not provide xref between each cursor for typedef'd enum
       #  right now, if a typedef follows enum then we just assume it is
       #  for the enum declaration. this might not be true for anonymous enums.
       tdcu = topcl[i+1]
@@ -217,46 +237,89 @@ function wrap_header(hfile, tunit, check_incl::Function, ostrm)
     else
       continue
     end
-    wrap(towrap, ostrm)
+    wrap(wc, towrap, ostrm)
   end
   cindex.cl_dispose(topcl)
 end
 
-typealias StringsArray Array{ASCIIString,1}
+function header_output_stream(wc::WrapContext, hfile)
+  if (_x = get(wc.output_streams, hfile, None)) != None
+    return _x
+  else
+    strm = IOStream("")
+    try strm = open(wc.header_outfile(hfile), "w")
+    catch error("Unable to create output file for header: $hfile") end
+    wc.output_streams[hfile] = strm
+  end
+  return strm
+end    
+
+function sort_common_includes(strm::IOStream)
+end
+
+### init: setup wrapping context 
+function init(
+    out_path::ASCIIString,
+    common_file::ASCIIString,
+    clang_includes::StringsArray,
+    clang_extra_args::StringsArray,
+    header_wrapped::Function,
+    header_library::Function,
+    header_outfile::Function)
+
+  WrapContext(out_path,common_file,clang_includes,clang_extra_args,header_wrapped,header_library,header_outfile)
+end
 
 ### wrap_c_headers: main entry point
 #   TODO: use dict for mapping from h file to wrapper file (or module?)
 function wrap_c_headers(
-    headers::StringsArray,          # header files to wrap
-    clang_includes::StringsArray,   # clang include paths
-    clang_extra_args::StringsArray, # additional {"-Arg", "value"} pairs for clang
-    check_include::Function,        # called to determing inclusion status
-    output_file::ASCIIString)       # eponymous
+    wc::WrapContext,          # wrapping context
+    headers::StringsArray)    # header files to wrap
 
+  println(wc.clang_includes)
+
+  # Check headers!
   for h in headers
     if !isfile(h)
       error(h, " cannot be found")
     end
   end
-  for d in clang_includes
+  for d in wc.clang_includes
     if !isdir(d)
       error(d, " cannot be found")
     end
   end
 
-  clang_args = build_clang_args(clang_includes, clang_extra_args)
-  idx = cindex.idx_create(1,1)
+  clang_args = build_clang_args(wc.clang_includes, wc.clang_extra_args)
 
-  begin ostrm = open(output_file, "w")
-    println(ostrm, helper_macros, "\n")
+  # Common output stream for common items: typedefs, enums, etc.
+  #wc.common_stream = memio()
+  wc.common_stream = open(wc.common_file, "w")
+
+  # Write the helper macros
+  println(wc.common_stream, helper_macros, "\n")
+
+  # Generate the wrappings
+  try
     for hfile in headers
-      println(ostrm, "# header: $hfile")
-      tunit = cindex.tu_parse(idx, hfile, clang_args)
-      wrap_header(hfile, tunit, check_include, ostrm)
+      ostrm = header_output_stream(wc, hfile)
+      println(ostrm, "# Julia wrapper for header: $hfile")
+      println(ostrm, "# Automatically generated using Clang.wrap_c version $version\n")
+
+      tunit = cindex.tu_parse(wc.index, hfile, clang_args)
+      topcu = cindex.getTranslationUnitCursor(tunit)
+      wrap_header(wc, topcu, hfile, ostrm)
+
       println(ostrm)
-    end
-    close(ostrm)
+    end 
+  finally
+    [close(os) for os in values(wc.output_streams)]
   end
+
+  # Sort the common includes so that things aren't used out-of-order
+  sort_common_includes(wc.common_stream)
+
+  close(wc.common_stream)
 end
 
 end # module wrap_c

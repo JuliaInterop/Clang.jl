@@ -255,6 +255,33 @@ function header_output_stream(wc::WrapContext, hfile)
 end    
 
 function sort_common_includes(strm::IOStream)
+  # TODO: too many temporaries
+  seek(strm,0)
+  col1 = Dict{ASCIIString,Int}() 
+  col2 = Dict{ASCIIString,Int}()
+  tmp = Dict{Int,ASCIIString}()
+  pos = Int[]
+  fnl = ASCIIString[]
+
+  for (i,ln) in enumerate(readlines(strm))
+    tmp[i] = ln
+    if (m = match(r"@ctypedef (.*) ", ln)) != nothing
+      col1[m.captures[1]] = i
+    end
+    if (m = match(r"@ctypedef (.*) .*{:(.*)}", ln)) != nothing
+      col2[m.captures[2]] = i
+    end
+  end
+
+  for s in keys(col2)
+    if ( (j = get(col1, s, None)) != None)
+      push!(fnl, tmp[j])
+      push!(pos, j)
+    end
+  end
+ 
+  kj = setdiff(1:length(tmp), pos)
+  vcat(fnl,[tmp[i] for i in kj])
 end
 
 ### init: setup wrapping context 
@@ -293,18 +320,14 @@ function wrap_c_headers(
   clang_args = build_clang_args(wc.clang_includes, wc.clang_extra_args)
 
   # Common output stream for common items: typedefs, enums, etc.
-  #wc.common_stream = memio()
-  wc.common_stream = open(wc.common_file, "w")
-
-  # Write the helper macros
-  println(wc.common_stream, helper_macros, "\n")
+  wc.common_stream = memio()
 
   # Generate the wrappings
   try
     for hfile in headers
       ostrm = header_output_stream(wc, hfile)
       println(ostrm, "# Julia wrapper for header: $hfile")
-      println(ostrm, "# Automatically generated using Clang.wrap_c version $version\n")
+      println(ostrm, "# Automatically generated using Clang.jl wrap_c, version $version\n")
 
       tunit = cindex.tu_parse(wc.index, hfile, clang_args)
       topcu = cindex.getTranslationUnitCursor(tunit)
@@ -317,8 +340,13 @@ function wrap_c_headers(
   end
 
   # Sort the common includes so that things aren't used out-of-order
-  sort_common_includes(wc.common_stream)
-
+  incl_lines = sort_common_includes(wc.common_stream)
+  open(wc.common_file, "w") do strm
+    # Write the helper macros
+    println(strm, helper_macros, "\n")
+    [print(strm, l) for l in incl_lines]
+  end
+  
   close(wc.common_stream)
 end
 

@@ -265,22 +265,19 @@ function sort_common_includes(strm::IOStream)
 
   for (i,ln) in enumerate(readlines(strm))
     tmp[i] = ln
-    if (m = match(r"@ctypedef (.*) ", ln)) != nothing
+    if (m = match(r"@ctypedef (\w+) (?:Ptr{:)?(\w+)(?:}?)", ln)) != nothing
       col1[m.captures[1]] = i
-    end
-    if (m = match(r"@ctypedef (.*) .*{:(.*)}", ln)) != nothing
       col2[m.captures[2]] = i
     end
   end
-
-  for s in keys(col2)
-    if ( (j = get(col1, s, None)) != None)
-      push!(fnl, tmp[j])
-      push!(pos, j)
+  for s in sort(keys(col2))
+    if( (m = get(col1, s, None))!=None)
+      push!(fnl, tmp[m])
+      push!(pos, m)
     end
   end
  
-  kj = setdiff(1:length(tmp), pos)
+  kj = setdiff(1:length(keys(tmp)), pos)
   vcat(fnl,[tmp[i] for i in kj])
 end
 

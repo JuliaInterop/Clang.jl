@@ -1,6 +1,6 @@
 module cindex
 
-import Base.ref
+import Base.getindex
 
 export cu_type, cu_kind, ty_kind, name, spelling, is_function, is_null,
   value, children, cu_file
@@ -169,7 +169,14 @@ cl_size(clptr::Ptr{Void}) =
     Int,
     (Ptr{Void},), clptr)
 
-function ref(cl::CursorList, clid::Int)
+function getindex(cl::CursorList, clid::Int, default::UnionType)
+  try
+    getindex(cl, clid)
+  catch
+    return default
+  end
+end
+function getindex(cl::CursorList, clid::Int)
   if (clid < 1 || clid > cl.size) error("Index out of range or empty list") end 
   cu = CXCursor()
   ccall( (:wci_getCLCursor, libwci),

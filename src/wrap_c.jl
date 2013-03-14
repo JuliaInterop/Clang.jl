@@ -159,7 +159,6 @@ function wrap(wc::WrapContext, argt::EnumArg, strm::IOStream)
   end
 
   println(wc.common_stream, "# enum $enum_name")
-#  println(wc.common_stream, "@ctypedef $enum_name Int32")
   cl = cindex.children(argt.cu_decl)
 
   for i=1:cl.size
@@ -182,7 +181,9 @@ function wrap(wc::WrapContext, arg::FunctionArg, strm::IOStream)
   arg_types = function_args(arg.cursor)
   arg_list = tuple( [ctype_to_julia(x) for x in arg_types]... )
   ret_type = ctype_to_julia(cindex.return_type(arg.cursor))
-  println(strm, "@c ", ret_type, " ", symbol(spelling(arg.cursor)), " ", arg_list, " shlib")
+  println(strm, "@c ", ret_type, " ",
+          symbol(spelling(arg.cursor)), " ",
+          arg_list, " ", wc.header_library(cu_file(arg.cursor)) )
 end
 
 function wrap(wc::WrapContext, arg::TypedefArg, strm::IOStream)
@@ -212,7 +213,7 @@ function wrap_header(wc::WrapContext, topcu::CXCursor, top_hdr, ostrm::IOStream)
     # Heuristic to decide what should be wrapped:
     #  1. always wrap things in the current top header (ie not includes)
     #  2. everything else is from includes, wrap if:
-    #     - the client wants it wc.header_wrapped == True)
+    #     - the client wants it wc.header_wrapped == True
     #     - the item has not already been wrapped (ie not in wc.cache_wrapped)
     if (cursor_hdr == top_hdr)
       # pass
@@ -231,8 +232,12 @@ function wrap_header(wc::WrapContext, topcu::CXCursor, top_hdr, ostrm::IOStream)
       #  libclang does not provide xref between each cursor for typedef'd enum
       #  right now, if a typedef follows enum then we just assume it is
       #  for the enum declaration. this might not be true for anonymous enums.
-      tdcu = topcl[i+1]
-      tdcu = ((cindex.cu_kind(tdcu) == CurKind.TYPEDEFDECL) ? tdcu : None)
+      
+      tdcu = None
+      if (i<topcl.size)
+        tdcu = getindex(topcl, i+1)
+        ((cindex.cu_kind(tdcu) == CurKind.TYPEDEFDECL) ? tdcu : None)
+      end
       towrap = EnumArg(cursor, tdcu)
     else
       continue
@@ -247,8 +252,9 @@ function header_output_stream(wc::WrapContext, hfile)
     return _x
   else
     strm = IOStream("")
-    try strm = open(wc.header_outfile(hfile), "w")
-    catch error("Unable to create output file for header: $hfile") end
+    jloutfile = wc.header_outfile(hfile)
+    try strm = open(jloutfile, "w")
+    catch error("Unable to create output: $jloutfile for header: $hfile") end
     wc.output_streams[hfile] = strm
   end
   return strm

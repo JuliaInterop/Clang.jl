@@ -248,14 +248,14 @@ function wrap_header(wc::WrapContext, topcu::CXCursor, top_hdr, ostrm::IOStream)
 end
 
 function header_output_stream(wc::WrapContext, hfile)
-  if (_x = get(wc.output_streams, hfile, None)) != None
+  jloutfile = wc.header_outfile(hfile)
+  if (_x = get(wc.output_streams, jloutfile, None)) != None
     return _x
   else
     strm = IOStream("")
-    jloutfile = wc.header_outfile(hfile)
     try strm = open(jloutfile, "w")
     catch error("Unable to create output: $jloutfile for header: $hfile") end
-    wc.output_streams[hfile] = strm
+    wc.output_streams[jloutfile] = strm
   end
   return strm
 end    
@@ -322,7 +322,7 @@ function wrap_c_headers(
 
   clang_args = build_clang_args(wc.clang_includes, wc.clang_extra_args)
 
-  # Common output stream for common items: typedefs, enums, etc.
+  # Output stream for common items: typedefs, enums, etc.
   wc.common_stream = memio()
 
   # Generate the wrappings

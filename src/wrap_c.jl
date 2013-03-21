@@ -154,7 +154,7 @@ function wrap(wc::WrapContext, argt::EnumArg, strm::IOStream)
 
   if (has(wc.cache_wrapped, enum_name))
     return
-  else
+  elseif(argt.cu_typedef == None)
     add!(wc.cache_wrapped, enum_name)
   end
 

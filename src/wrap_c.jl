@@ -125,6 +125,10 @@ function ctype_to_julia(cutype::CXType)
   end
 end
 
+function rep_type(t)
+  replace( string(t), ":", "")
+end
+
 ### Build array of include definitions: ["-I", "incpath",...] plus extra args
 function build_clang_args(includes, extras)
   reduce(vcat, [], vcat([["-I",x] for x in includes], extras))
@@ -179,8 +183,8 @@ function wrap(wc::WrapContext, arg::FunctionArg, strm::IOStream)
   add!(wc.cache_wrapped, name(arg.cursor))
   
   arg_types = function_args(arg.cursor)
-  arg_list = tuple( [ctype_to_julia(x) for x in arg_types]... )
-  ret_type = ctype_to_julia(cindex.return_type(arg.cursor))
+  arg_list = tuple( [rep_type(ctype_to_julia(x)) for x in arg_types]... )
+  ret_type = rep_type( ctype_to_julia(cindex.return_type(arg.cursor)) )
   println(strm, "@c ", ret_type, " ",
           symbol(spelling(arg.cursor)), " ",
           arg_list, " ", wc.header_library(cu_file(arg.cursor)) )
@@ -197,7 +201,7 @@ function wrap(wc::WrapContext, arg::TypedefArg, strm::IOStream)
   # initialize typealias in current context to avoid error TODO delete
   #:(typealias $typedef_spelling ctype_to_julia($td_type))
   
-  println(wc.common_stream, "@ctypedef ",  typedef_spelling, " ", ctype_to_julia(td_type) )
+  println(wc.common_stream, "@ctypedef ",  typedef_spelling, " ", rep_type(ctype_to_julia(td_type)) )
 end
 
 function wrap_header(wc::WrapContext, topcu::CXCursor, top_hdr, ostrm::IOStream)

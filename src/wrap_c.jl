@@ -61,21 +61,14 @@ WrapContext(op,cmn,incl,extra,hwrap,hlib,hout) = WrapContext(op,cmn,incl,extra,h
 
 
 ### These helpers will be written to the generated file
-helper_macros = "
-recurs_sym_type(ex::Any) = 
-  (ex==None || typeof(ex)==Symbol || length(ex.args)==1) ? eval(ex) : Expr(ex.head, ex.args[1], recurs_sym_type(ex.args[2]))
-macro c(ret_type, func, arg_types, lib)
-  local _arg_types = Expr(:tuple, [recurs_sym_type(a) for a in arg_types.args]...)
-  local _ret_type = recurs_sym_type(ret_type)
-  local _args_in = Any[ symbol(string('a',x)) for x in 1:length(_arg_types.args) ]
-  local _lib = eval(lib)
+helper_macros = "macro c(ret_type, func, arg_types, lib)
+  local args_in = Any[ symbol(string('a',x)) for x in 1:length(arg_types.args) ]
   quote
-    \$(esc(func))(\$(_args_in...)) = ccall( (\$(string(func)), \$(Expr(:quote, _lib)) ), \$_ret_type, \$_arg_types, \$(_args_in...) )
+    \$(esc(func))(\$(args_in...)) = ccall( (\$(string(func)), \$(Expr(:quote, lib)) ), \$ret_type, \$arg_types, \$(args_in...) )
   end
 end
 
 macro ctypedef(fake_t,real_t)
-  real_t = recurs_sym_type(real_t)
   quote
     typealias \$fake_t \$real_t
   end
@@ -123,6 +116,29 @@ function ctype_to_julia(cutype::CXType)
     # TODO: missing mappings should generate a warning
     return symbol( string( get(c_jl, typkind, :Void) ))
   end
+end
+
+### eliminate symbol from the final type representation
+rep_type(t) = begin
+  replace(string(t), ":", "")
+end
+
+### Tuple representation without quotes
+rep_args(v) = begin    
+  o = memio()
+  print(o, "(")
+  s = first = start(v)
+  r = (!done(v,s))
+  while r
+    x,s = next(v,s)
+    print(o, x)
+    done(v,s) && break
+    print(o, ", ")
+  end
+  r && (s == next(v,first)[2]) && print(o, ",")
+  print(o, ")")
+  seek(o, 0)
+  readall(o)
 end
 
 ### Build array of include definitions: ["-I", "incpath",...] plus extra args
@@ -179,11 +195,11 @@ function wrap(wc::WrapContext, arg::FunctionArg, strm::IOStream)
   add!(wc.cache_wrapped, name(arg.cursor))
   
   arg_types = function_args(arg.cursor)
-  arg_list = tuple( [ctype_to_julia(x) for x in arg_types]... )
+  arg_list = tuple( [rep_type(ctype_to_julia(x)) for x in arg_types]... )
   ret_type = ctype_to_julia(cindex.return_type(arg.cursor))
-  println(strm, "@c ", ret_type, " ",
+  println(strm, "@c ", rep_type(ret_type), " ",
           symbol(spelling(arg.cursor)), " ",
-          arg_list, " ", wc.header_library(cu_file(arg.cursor)) )
+          rep_args(arg_list), " ", wc.header_library(cu_file(arg.cursor)) )
 end
 
 function wrap(wc::WrapContext, arg::TypedefArg, strm::IOStream)
@@ -197,7 +213,7 @@ function wrap(wc::WrapContext, arg::TypedefArg, strm::IOStream)
   # initialize typealias in current context to avoid error TODO delete
   #:(typealias $typedef_spelling ctype_to_julia($td_type))
   
-  println(wc.common_stream, "@ctypedef ",  typedef_spelling, " ", ctype_to_julia(td_type) )
+  println(wc.common_stream, "@ctypedef ",  typedef_spelling, " ", rep_type(ctype_to_julia(td_type)) )
 end
 
 function wrap_header(wc::WrapContext, topcu::CXCursor, top_hdr, ostrm::IOStream)
@@ -271,7 +287,7 @@ function sort_common_includes(strm::IOStream)
 
   for (i,ln) in enumerate(readlines(strm))
     tmp[i] = ln
-    if (m = match(r"@ctypedef (\w+) (?:Ptr{:)?(\w+)(?:}?)", ln)) != nothing
+    if (m = match(r"@ctypedef (\w+) (?:Ptr{)?(\w+)(?:}?)", ln)) != nothing
       col1[m.captures[1]] = i
       col2[m.captures[2]] = i
     end

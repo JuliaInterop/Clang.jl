@@ -1,7 +1,10 @@
-#include "clang-c/Index.h"
 #include <cstring>
 #include <vector>
 #include <set>
+
+extern "C" {
+#include "clang-c/Index.h"
+}
 
 #define wci_st(rtype) \
   static inline void wci_save_##rtype(rtype i, char* o) \
@@ -19,6 +22,69 @@ wci_st(CXCursor)
 wci_st(CXType)
 wci_st(CXToken)
 wci_st(CXString)
+
+// Test code
+#define __STDC_LIMIT_MACROS
+#define __STDC_CONSTANT_MACROS
+#include "clang/AST/ASTContext.h"
+#include "clang/AST/Mangle.h"
+#include "clang/AST/DeclCXX.h"
+#include "clang/AST/VTableBuilder.h"
+
+#include "CXCursor.h"
+#include <iostream>
+using namespace clang;
+
+class llvm::raw_string_ostream;
+#define WCI_CHECK_DECL(D) \
+  if(!D) { printf("unable to get cursor Decl\n"); return NULL; }
+
+extern "C" {
+
+void* wci_getMethodVTableIndex(char* cuin, char* cuin2)
+{
+  CXCursor cu = wci_get_CXCursor(cuin);
+  CXCursor cu2 = wci_get_CXCursor(cuin2);
+
+  Decl *D = cxcursor::getCursorDecl(cu);
+  WCI_CHECK_DECL(D);
+
+  CXXRecordDecl *CXXRecord;
+  if ( !(CXXRecord = dyn_cast<CXXRecordDecl>(D)) )
+  { 
+    printf("failed cast to CXXRecordDecl\n");
+    return NULL;
+  }
+
+  ASTContext &astctx = CXXRecord->getASTContext();
+  VTableContext ctx = VTableContext(astctx);
+
+  Decl* MD = cxcursor::getCursorDecl(cu2);
+  WCI_CHECK_DECL(MD);
+
+  CXXMethodDecl* CXXMethod;
+  if ( !(CXXMethod = dyn_cast<CXXMethodDecl>(MD)) )
+  {
+    printf("failed cast to CXXMethodDecl\n");
+    return NULL;
+  }
+
+  unsigned int idx = ctx.getMethodVTableIndex(CXXMethod);
+  std::string sbuf; 
+  llvm::raw_string_ostream os(sbuf);
+  
+  MangleContext* mc = astctx.createMangleContext();
+  if (mc->shouldMangleDeclName( dyn_cast<NamedDecl>(MD)) ) {
+    mc->mangleName( dyn_cast<NamedDecl>(MD), os);
+  }
+  os.flush();
+  std::cout << "index: " << idx << " mangled name: " << sbuf << std::endl;
+}
+
+} // extern C
+#undef __STDC_LIMIT_MACROS
+#undef __STDC_CONSTANT_MACROS
+
 
 typedef std::vector<CXCursor> CursorList;
 typedef std::set<CursorList*> allcl_t;

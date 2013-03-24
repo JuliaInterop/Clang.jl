@@ -1,32 +1,41 @@
-Clang.jl provides a wrapping of libclang for the 
-Julia language (http://julialang.org). The goal of
-Clang.jl is to facilitate access to C and C++ source
-parse trees from Julia.
+Clang.jl provides an interface to libclang for the 
+Julia language, and associated tools built on this
+interface.
 
-libclang is the stable interface to the Clang compiler 
-from the LLVM project. libclang provides a C interface
-to a subset of Clang functionality, with a primary focus 
-on exposing the C/C++/ObjC parser AST.
+libclang is a stable, C-exported interface to a subset
+of functionality provided by the Clang compiler, with 
+a primary focus on exposing the C/C++/ObjC parse tree.
 
-libclang API docs: http://clang.llvm.org/doxygen/group__CINDEX.html
+The [libclang API documentation](http://clang.llvm.org/doxygen/group__CINDEX.html)
+provides background on the functionality available through libclang, and thus
+through the Julia wrapper.
 
 ## Status
 
-Preliminary. Most CXType, CXCursor, and C++ related 
-functions are wrapped, and a few convenience functions
-are provided.
+The cindex.jl wrapping encompasses most CXType, CXCursor,
+and C++ related functions. A small convenience API is provided
+for basic tasks related to index generation, and retreival of
+cursor kind and type information.
+
+A wrapper generator is in development to automatically create
+Julia interfaces from C headers (src/wrap\_c.jl). Please see the
+following repositories for examples of the wrapper driver and
+generator output:
+
+[libXML2](http://github.com/ihnorton/libXML2.jl)
+[libAV](http://github.com/ihnorton/libAV.jl)
 
 All testing and development so far has been on Ubuntu 12.04.1 (64-bit)
 
 ## Prerequisites
 
-libclang >= 3.1 must be available as a shared library. libclang can
+libclang >= 3.1 must be available as a shared library. libclang may
 optionally be built by the Julia build system by setting 
 BUILD_LLVM_CLANG=1 in julia/deps/Makefile.
 
 ## Installation
 
-Pkg.add("Clang")
+To install using the Julia package manager, use: Pkg.add("Clang")
 
 ## Usage
   ```julia

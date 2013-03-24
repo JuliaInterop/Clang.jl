@@ -73,7 +73,7 @@ ty_kind(c::CXType) = reinterpret(Int32, c.data[1:4])[1]
 name(c::CXCursor) = getCursorDisplayName(c)
 spelling(c::CXType) = getTypeKindSpelling(ty_kind(c))
 spelling(c::CXCursor) = getCursorSpelling(c)
-is_function(c::CXCursor) = (cu_kind(c) == CurKind.FUNCTIONDECL)
+is_function(c::CXCursor) = true # (cu_kind(c) == CurKind.FUNCTIONDECL || cu_kind(c) == 15)
 is_function(t::CXType) = (ty_kind(t) == TypKind.FUNCTIONPROTO)
 is_null(c::CXCursor) = (Cursor_isNull(c) != 0)
 

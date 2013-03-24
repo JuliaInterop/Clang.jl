@@ -26,6 +26,7 @@ end
 
 type StructArg <: CArg
   cursor::cindex.CXCursor
+  typedef::Any
 end
 
 type FunctionArg <: CArg
@@ -33,8 +34,8 @@ type FunctionArg <: CArg
 end
 
 type EnumArg <: CArg
-  cu_decl::cindex.CXCursor
-  cu_typedef::Any
+  cursor::cindex.CXCursor
+  typedef::Any
 end
 
 ### Execution context for wrap_c
@@ -156,9 +157,9 @@ end
 
 ### Wrap enum. NOTE: we write this to wc.common_stream
 function wrap(wc::WrapContext, argt::EnumArg, strm::IOStream)
-  enum = cindex.name(argt.cu_decl)
-  enum_typedef = if (typeof(argt.cu_typedef) == cindex.CXCursor)
-      cindex.name(argt.cu_typedef)
+  enum = cindex.name(argt.cursor)
+  enum_typedef = if (typeof(argt.typedef) == cindex.CXCursor)
+      cindex.name(argt.typedef)
     else
       ""
     end
@@ -170,12 +171,12 @@ function wrap(wc::WrapContext, argt::EnumArg, strm::IOStream)
 
   if (has(wc.cache_wrapped, enum_name))
     return
-  elseif(argt.cu_typedef == None)
+  elseif(argt.typedef == None)
     add!(wc.cache_wrapped, enum_name)
   end
 
   println(wc.common_stream, "# enum $enum_name")
-  cl = cindex.children(argt.cu_decl)
+  cl = cindex.children(argt.cursor)
 
   for i=1:cl.size
     cur_cu = cindex.ref(cl,i)
@@ -186,6 +187,50 @@ function wrap(wc::WrapContext, argt::EnumArg, strm::IOStream)
   end
   cindex.cl_dispose(cl)
   println(wc.common_stream, "# end")
+end
+
+function wrap(wc::WrapContext, arg::StructArg, strm::IOStream)
+  @assert cu_kind(arg.cursor) == CurKind.STRUCTDECL
+
+  st = cindex.name(arg.cursor)
+  st_typedef = if (typeof(arg.typedef) == cindex.CXCursor)
+      cindex.name(arg.typedef)
+    else
+      ""
+    end
+  st_name = 
+    if (st != "") st
+    elseif (st_typedef != "") st_typedef
+    else
+      # TODO: um. no.
+      "ANONYMOUS"*string(round(rand()*10000,5))
+    end
+
+  if (has(wc.cache_wrapped, st_name))
+    return
+  else
+    # Cache this regardless of typedef
+    add!(wc.cache_wrapped, st_name)
+  end
+
+  cl = cindex.children(arg.cursor)
+  if (cl.size == 0)
+    # Probably a forward declaration.
+    # TODO: check on this. any nesting?
+    return
+  end
+
+  println(wc.common_stream, "type $st_name")
+
+  for i=1:cl.size
+    cur_cu = cindex.ref(cl,i)
+    cur_name = cindex.spelling(cur_cu)
+    if (length(cur_name) < 1) continue end
+
+    println(wc.common_stream, "  ", cur_name, "::", rep_type(ctype_to_julia(cindex.cu_type(cur_cu))))
+  end
+  cindex.cl_dispose(cl)
+  println(wc.common_stream, "end")
 end
 
 function wrap(wc::WrapContext, arg::FunctionArg, strm::IOStream)
@@ -206,7 +251,11 @@ function wrap(wc::WrapContext, arg::TypedefArg, strm::IOStream)
   @assert cu_kind(arg.cursor) == CurKind.TYPEDEFDECL
 
   typedef_spelling = spelling(arg.cursor)
-  add!(wc.cache_wrapped, typedef_spelling)
+  if(has(wc.cache_wrapped, typedef_spelling))
+    return
+  else
+    add!(wc.cache_wrapped, typedef_spelling)
+  end
 
   cursor_type = cindex.cu_type(arg.cursor)
   td_type = cindex.resolve_type(cindex.getTypedefDeclUnderlyingType(arg.cursor))
@@ -255,6 +304,13 @@ function wrap_header(wc::WrapContext, topcu::CXCursor, top_hdr, ostrm::IOStream)
         ((cindex.cu_kind(tdcu) == CurKind.TYPEDEFDECL) ? tdcu : None)
       end
       towrap = EnumArg(cursor, tdcu)
+    elseif (cu_kind(cursor) == CurKind.STRUCTDECL)
+      tdcu = None
+      if (i<topcl.size)
+        tdcu = getindex(topcl, i+1)
+        ((cindex.cu_kind(tdcu) == CurKind.TYPEDEFDECL) ? tdcu : None)
+      end
+      towrap = StructArg(cursor, tdcu)
     else
       continue
     end

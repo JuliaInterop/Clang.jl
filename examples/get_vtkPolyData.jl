@@ -7,3 +7,7 @@ topcu = cindex.getTranslationUnitCursor(tu); topcl = children(topcu)
 
 cu = topcl[447]
 println(name(cu))
+
+cl = children(cu); cm = cl[79]
+
+bufr = ones(Uint8,1024)

@@ -8,7 +8,7 @@ ifndef JULIAHOME
 endif
 
 CXX = g++
-INC = -I"$(JULIAHOME)/usr/include" 
+INC = -I"$(JULIAHOME)/usr/include" -I"$(JULIAHOME)/deps/llvm-3.2/tools/clang/tools/libclang" 
 FLAGS = -Wall -Wno-strict-aliasing -fno-omit-frame-pointer -fPIC
 CXXFLAGS = -g
 OBJS = wrapclang.cpp.o
@@ -37,7 +37,7 @@ default: libwrapclang.$(SHLIB_EXT)
 	$(CXX) $< -fPIC -c -o $@ $(INC) $(CXXFLAGS) $(FLAGS)
 
 libwrapclang.$(SHLIB_EXT): $(OBJS)
-	$(CXX) $(OBJS) -rdynamic -shared -o $@ -L"$(JULIAHOME)/usr/lib" $(LDFLAGS) $(LIBS) -lclang
+	$(CXX) $(OBJS) -rdynamic -shared -o $@ -L"$(JULIAHOME)/usr/lib" $(LDFLAGS) $(LIBS) -lclang -lclangAST
 
 clean:
 	rm -f *.o *.$(SHLIB_EXT)

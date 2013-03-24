@@ -32,44 +32,53 @@ wci_st(CXString)
 #include "clang/AST/VTableBuilder.h"
 
 #include "CXCursor.h"
+#include <string>
 #include <iostream>
 using namespace clang;
 
 class llvm::raw_string_ostream;
 #define WCI_CHECK_DECL(D) \
-  if(!D) { printf("unable to get cursor Decl\n"); return NULL; }
+  if(!D) { printf("unable to get cursor Decl\n"); return -1; }
 
 extern "C" {
 
-void* wci_getMethodVTableIndex(char* cuin, char* cuin2)
+int wci_getCXXMethodVTableIndex(char* cuin)
 {
   CXCursor cu = wci_get_CXCursor(cuin);
-  CXCursor cu2 = wci_get_CXCursor(cuin2);
 
-  Decl *D = cxcursor::getCursorDecl(cu);
-  WCI_CHECK_DECL(D);
-
-  CXXRecordDecl *CXXRecord;
-  if ( !(CXXRecord = dyn_cast<CXXRecordDecl>(D)) )
-  { 
-    printf("failed cast to CXXRecordDecl\n");
-    return NULL;
-  }
-
-  ASTContext &astctx = CXXRecord->getASTContext();
-  VTableContext ctx = VTableContext(astctx);
-
-  Decl* MD = cxcursor::getCursorDecl(cu2);
+  Decl* MD = cxcursor::getCursorDecl(cu);
   WCI_CHECK_DECL(MD);
 
   CXXMethodDecl* CXXMethod;
   if ( !(CXXMethod = dyn_cast<CXXMethodDecl>(MD)) )
   {
     printf("failed cast to CXXMethodDecl\n");
-    return NULL;
+    return -1;
   }
 
-  unsigned int idx = ctx.getMethodVTableIndex(CXXMethod);
+  ASTContext &astctx = CXXMethod->getASTContext();
+  // TODO: perf, is this cached?
+  VTableContext ctx = VTableContext(astctx);
+
+  return ctx.getMethodVTableIndex(CXXMethod);
+}
+
+int wci_getCXXMethodMangledName(char* cuin, char* outbuf)
+{
+  CXCursor cu = wci_get_CXCursor(cuin);
+  Decl* MD = cxcursor::getCursorDecl(cu);
+  WCI_CHECK_DECL(MD);
+
+  CXXMethodDecl* CXXMethod;
+  if ( !(CXXMethod = dyn_cast<CXXMethodDecl>(MD)) )
+  {
+    printf("failed cast to CXXMethodDecl\n");
+    return -1;
+  }
+
+  ASTContext &astctx = CXXMethod->getASTContext();
+  VTableContext ctx = VTableContext(astctx);
+
   std::string sbuf; 
   llvm::raw_string_ostream os(sbuf);
   
@@ -78,8 +87,11 @@ void* wci_getMethodVTableIndex(char* cuin, char* cuin2)
     mc->mangleName( dyn_cast<NamedDecl>(MD), os);
   }
   os.flush();
-  std::cout << "index: " << idx << " mangled name: " << sbuf << std::endl;
+  std::cout << "mangled name: " << sbuf << std::endl;
+
+  std::strcpy(outbuf, sbuf.c_str());
 }
+
 
 } // extern C
 #undef __STDC_LIMIT_MACROS

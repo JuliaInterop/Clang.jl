@@ -37,7 +37,7 @@ default: libwrapclang.$(SHLIB_EXT)
 	$(CXX) $< -fPIC -c -o $@ $(INC) $(CXXFLAGS) $(FLAGS)
 
 libwrapclang.$(SHLIB_EXT): $(OBJS)
-	$(CXX) $(OBJS) -shared -o $@ -L"$(JULIAHOME)/usr/lib" $(LDFLAGS) $(LIBS) -lclang
+	$(CXX) $(OBJS) -rdynamic -shared -o $@ -L"$(JULIAHOME)/usr/lib" $(LDFLAGS) $(LIBS) -lclang
 
 clean:
 	rm -f *.o *.$(SHLIB_EXT)

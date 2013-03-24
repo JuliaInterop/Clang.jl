@@ -38,6 +38,8 @@ type EnumArg <: CArg
   typedef::Any
 end
 
+reserved_words = ["type", "end"]
+
 ### Execution context for wrap_c
 typealias StringsArray Array{ASCIIString,1}
 
@@ -172,6 +174,7 @@ function wrap(wc::WrapContext, argt::EnumArg, strm::IOStream)
   if (has(wc.cache_wrapped, enum_name))
     return
   elseif(argt.typedef == None)
+    println("caching enum: $enum_name")
     add!(wc.cache_wrapped, enum_name)
   end
 
@@ -202,8 +205,8 @@ function wrap(wc::WrapContext, arg::StructArg, strm::IOStream)
     if (st != "") st
     elseif (st_typedef != "") st_typedef
     else
-      # TODO: um. no.
-      "ANONYMOUS"*string(round(rand()*10000,5))
+      # TODO: come up with a better idea
+      "ANONYMOUS_"*string(round(rand()*10000,5))
     end
 
   if (has(wc.cache_wrapped, st_name))
@@ -225,7 +228,12 @@ function wrap(wc::WrapContext, arg::StructArg, strm::IOStream)
   for i=1:cl.size
     cur_cu = cindex.ref(cl,i)
     cur_name = cindex.spelling(cur_cu)
-    if (length(cur_name) < 1) continue end
+    
+    if (length(cur_name) < 1) 
+      warn("Skipping unnamed struct member in: $st_name")
+      continue 
+    end
+    if (contains(reserved_words, cur_name)) cur_name = cur_name*"_" end
 
     println(wc.common_stream, "  ", cur_name, "::", rep_type(ctype_to_julia(cindex.cu_type(cur_cu))))
   end
@@ -301,7 +309,7 @@ function wrap_header(wc::WrapContext, topcu::CXCursor, top_hdr, ostrm::IOStream)
       tdcu = None
       if (i<topcl.size)
         tdcu = getindex(topcl, i+1)
-        ((cindex.cu_kind(tdcu) == CurKind.TYPEDEFDECL) ? tdcu : None)
+        tdcu = ((cindex.cu_kind(tdcu) == CurKind.TYPEDEFDECL) ? tdcu : None)
       end
       towrap = EnumArg(cursor, tdcu)
     elseif (cu_kind(cursor) == CurKind.STRUCTDECL)

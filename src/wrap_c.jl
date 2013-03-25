@@ -100,7 +100,7 @@ c_jl = {
   TypKind.FLOAT       => Cfloat,
   TypKind.DOUBLE      => Cdouble,
   TypKind.LONGDOUBLE  => Float64,   # TODO detect?
-  TypKind.ENUM        => Int32,     # TODO arch check?
+  TypKind.ENUM        => Cint,     # TODO arch check?
   TypKind.NULLPTR     => C_NULL
                                     # TypKind.UINT128 => TODO
   }
@@ -174,7 +174,6 @@ function wrap(wc::WrapContext, argt::EnumArg, strm::IOStream)
   if (has(wc.cache_wrapped, enum_name))
     return
   elseif(argt.typedef == None)
-    println("caching enum: $enum_name")
     add!(wc.cache_wrapped, enum_name)
   end
 
@@ -219,7 +218,7 @@ function wrap(wc::WrapContext, arg::StructArg, strm::IOStream)
   cl = cindex.children(arg.cursor)
   if (cl.size == 0)
     # Probably a forward declaration.
-    # TODO: check on this. any nesting?
+    # TODO: check on this. any nesting that we need to handle?
     return
   end
 
@@ -228,14 +227,20 @@ function wrap(wc::WrapContext, arg::StructArg, strm::IOStream)
   for i=1:cl.size
     cur_cu = cindex.ref(cl,i)
     cur_name = cindex.spelling(cur_cu)
-    
+
+    if (cu_kind(cur_cu) != CurKind.FIELDDECL)
+      warn("STRUCT: Skipping non-field declaration: $cur_name in: $st_name")
+      continue
+    end
     if (length(cur_name) < 1) 
-      warn("Skipping unnamed struct member in: $st_name")
+      warn("STRUCT: Skipping unnamed struct member in: $st_name")
       continue 
     end
-    if (contains(reserved_words, cur_name)) cur_name = cur_name*"_" end
+    if (contains(reserved_words, cur_name)) cur_name = "_"*cur_name end
 
-    println(wc.common_stream, "  ", cur_name, "::", rep_type(ctype_to_julia(cindex.cu_type(cur_cu))))
+    ty = resolve_type(cindex.cu_type(cur_cu))
+
+    println(wc.common_stream, "  ", cur_name, "::", rep_type(ctype_to_julia(ty)))
   end
   cindex.cl_dispose(cl)
   println(wc.common_stream, "end")

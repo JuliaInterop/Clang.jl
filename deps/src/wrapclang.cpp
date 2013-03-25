@@ -87,9 +87,9 @@ int wci_getCXXMethodMangledName(char* cuin, char* outbuf)
     mc->mangleName( dyn_cast<NamedDecl>(MD), os);
   }
   os.flush();
-  std::cout << "mangled name: " << sbuf << std::endl;
 
   std::strcpy(outbuf, sbuf.c_str());
+  return sbuf.size();
 }
 
 

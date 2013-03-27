@@ -52,7 +52,7 @@ int wci_getCXXMethodVTableIndex(char* cuin)
   CXXMethodDecl* CXXMethod;
   if ( !(CXXMethod = dyn_cast<CXXMethodDecl>(MD)) )
   {
-    printf("failed cast to CXXMethodDecl\n");
+//    printf("failed cast to CXXMethodDecl\n");
     return -1;
   }
 
@@ -60,7 +60,11 @@ int wci_getCXXMethodVTableIndex(char* cuin)
   // TODO: perf, is this cached?
   VTableContext ctx = VTableContext(astctx);
 
-  return ctx.getMethodVTableIndex(CXXMethod);
+  // Clang dies at assert for constructor or destructor, see GlobalDecl.h:32-33
+  if (isa<CXXConstructorDecl>(CXXMethod) || isa<CXXDestructorDecl>(CXXMethod))
+    return -1;
+  else
+    return ctx.getMethodVTableIndex(CXXMethod);
 }
 
 int wci_getCXXMethodMangledName(char* cuin, char* outbuf)
@@ -72,7 +76,7 @@ int wci_getCXXMethodMangledName(char* cuin, char* outbuf)
   CXXMethodDecl* CXXMethod;
   if ( !(CXXMethod = dyn_cast<CXXMethodDecl>(MD)) )
   {
-    printf("failed cast to CXXMethodDecl\n");
+//    printf("failed cast to CXXMethodDecl\n");
     return -1;
   }
 
@@ -85,6 +89,10 @@ int wci_getCXXMethodMangledName(char* cuin, char* outbuf)
   MangleContext* mc = astctx.createMangleContext();
   if (mc->shouldMangleDeclName( dyn_cast<NamedDecl>(MD)) ) {
     mc->mangleName( dyn_cast<NamedDecl>(MD), os);
+  }
+  else
+  {
+    return 0;
   }
   os.flush();
 

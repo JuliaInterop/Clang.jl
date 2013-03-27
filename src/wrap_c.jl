@@ -1,4 +1,4 @@
-###############################################################################
+e##############################################################################
 # Julia wrapper generator using libclang from the LLVM project                #
 ###############################################################################
 
@@ -148,7 +148,7 @@ end
 
 ### Retrieve function arguments for a given cursor
 function function_args(cursor::CXCursor)
-  @assert cu_kind(cursor) == CurKind.FUNCTIONDECL
+  #@assert cu_kind(cursor) == CurKind.FUNCTIONDECL
 
   cursor_type = cindex.cu_type(cursor)
   [cindex.getArgType(cursor_type, uint32(arg_i)) for arg_i in 0:cindex.getNumArgTypes(cursor_type)-1]

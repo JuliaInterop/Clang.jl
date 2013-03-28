@@ -22,7 +22,7 @@ macro vcall(vtidx, ret_type, func, arg_types)
   local _arg_types = tuple(:(Ptr{Void}), arg_types.args...)
   quote
     function $(esc(func))(thisptr, $(_args_in...))
-      fptr = vtblfunc(thisptr, $(vtidx))
+      fptr = pointer(Void, unsafe_ref(pointer(Uint64, unsafe_ref(pointer(Uint64,thisptr))))+$(vtidx) )
       ccall( fptr, thiscall, $ret_type, $arg_types, $(_args_in...) )
     end
   end
@@ -39,5 +39,26 @@ macro scall(ret_type, func, arg_types, sym, lib)
   end
 end
 
+function find_sym(name,liblist)
+  libs = {dlopen(l)=>l for l in liblist}
+  println(libs)
+  found = false
+  dl = C_NULL
+  for dl in keys(libs)
+    try
+      dlsym_e(dl, name)
+    catch
+      continue
+    end
+    found = true
+  end
+  if found
+    println("symbol $name found in ", libs[dl])
+    return libs[dl]
+  else
+    return None
+    println("NOT FOUND")
+  end
+end
 
 end # module wrap_cpp

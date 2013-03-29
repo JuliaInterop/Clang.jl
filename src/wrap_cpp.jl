@@ -2,7 +2,7 @@ module wrap_cpp
 
 using Clang.cindex
 
-export @vcall, @scall
+export @vcall, @scall, @mcall
 
 function method_vt_index(cursor::cindex.CXCursor)
   ccall( ("wci_getCXXMethodVTableIndex", :libwrapclang), Int32, (Ptr{Uint8},), cursor.data)
@@ -20,21 +20,7 @@ vtblfunc(p::Ptr{Void}, offset) = pointer(Void, unsafe_ref(pointer(Uint64, unsafe
 #derefptr(p::Ptr{Void}, offset) = convert( Ptr{Void}, pointer_to_array(convert(Ptr{Uint64}, p+offset), (1,) )[1] )
 derefptr(thisptr, vtidx) = pointer(Void, unsafe_ref(pointer(Uint64, unsafe_ref(pointer(Uint64,thisptr)))+vtidx*8) )
 
-macro vcall(vtidx, ret_type, func, arg_types)
-  local _args_in = Any[ symbol(string('a',x)) for x in 1:length(arg_types.args) ]
-  larg_types = :((Ptr{Void}, $(arg_types.args...)))
-  println("argi: ", arg_types)
-  println("argt: ", larg_types)
-  quote
-    function $(esc(func))(thisptr, $(_args_in...))
-      local fptr = derefptr(thisptr, $(vtidx) )
-      println("fptr: ", fptr, "\n")
-      ccall( fptr, thiscall, $(esc(ret_type)), $(larg_types), thisptr, $(_args_in...) )
-      #$(esc( Expr(:ccall, ret_type, larg_types, :thisptr, _args_in..., :thiscall)) )
-    end
-  end
-end
-
+# Static method call
 macro scall(ret_type, func, arg_types, sym, lib)
   local _args_in = Any[ symbol(string('a',x)) for x in 1:length(arg_types.args) ]
   hdl = dlopen(string(lib))
@@ -43,6 +29,32 @@ macro scall(ret_type, func, arg_types, sym, lib)
   quote
     function $(esc(func))($(_args_in...))
       ccall( $(esc(fptr)), $ret_type, $arg_types, $(_args_in...) )
+    end
+  end
+end
+
+# Member function call (takes this* but is not virtual)
+macro mcall(ret_type, func, arg_types, sym, lib)
+  local _args_in = Any[ symbol(string('a',x)) for x in 1:length(arg_types.args) ]
+  larg_types = :((Ptr{Void}, $(arg_types.args...)))
+  hdl = dlopen(string(lib))
+  fptr = dlsym_e(hdl,sym)
+  quote
+    function $(esc(func))(thisptr, $(_args_in...))
+      ccall( $(fptr), thiscall, $(esc(ret_type)), $(larg_types), thisptr, $(_args_in...) )
+    end
+  end
+end
+
+# Virtual table call
+macro vcall(vtidx, ret_type, func, arg_types)
+  local _args_in = Any[ symbol(string('a',x)) for x in 1:length(arg_types.args) ]
+  larg_types = :((Ptr{Void}, $(arg_types.args...)))
+  quote
+    function $(esc(func))(thisptr, $(_args_in...))
+      local fptr = derefptr(thisptr, $(vtidx) )
+      println("fptr: ", fptr, "\n")
+      ccall( fptr, thiscall, $(esc(ret_type)), $(larg_types), thisptr, $(_args_in...) )
     end
   end
 end

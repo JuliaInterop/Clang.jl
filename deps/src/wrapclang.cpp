@@ -100,6 +100,10 @@ int wci_getCXXMethodMangledName(char* cuin, char* outbuf)
   return sbuf.size();
 }
 
+int wci_getCXXClassParents(char* cuin, char* outbuf)
+{
+  CXCursor cu = wci_get_CXCursor(cuin);
+}
 
 } // extern C
 #undef __STDC_LIMIT_MACROS

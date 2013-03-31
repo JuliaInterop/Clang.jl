@@ -15,10 +15,7 @@ function method_mangled_name(cursor::cindex.CXCursor)
 end
 
 # Get function pointer from vtable at given offset
-vtblfunc(p::Ptr{Void}, offset) = pointer(Void, unsafe_ref(pointer(Uint64, unsafe_ref(pointer(Uint64,p))))+offset )
-
-#derefptr(p::Ptr{Void}, offset) = convert( Ptr{Void}, pointer_to_array(convert(Ptr{Uint64}, p+offset), (1,) )[1] )
-derefptr(thisptr, vtidx) = pointer(Void, unsafe_ref(pointer(Uint64, unsafe_ref(pointer(Uint64,thisptr)))+vtidx*8) )
+#derefptr(thisptr::Ptr{Void}, vtidx) = unsafe_ref(unsafe_ref(pointer(Ptr{Ptr{Void}},thisptr)), vtidx)
 
 # Static method call
 macro scall(ret_type, func, arg_types, sym, lib)

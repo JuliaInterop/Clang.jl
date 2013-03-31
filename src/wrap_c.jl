@@ -43,6 +43,12 @@ reserved_words = ["type", "end"]
 ### Execution context for wrap_c
 typealias StringsArray Array{ASCIIString,1}
 
+# InternalOptions
+type InternalOptions
+  wrap_structs::Bool
+end
+InternalOptions() = InternalOptions(false)
+
 # WrapContext object stores shared information about the wrapping session
 type WrapContext
   out_path::ASCIIString
@@ -56,10 +62,11 @@ type WrapContext
   common_stream
   cache_wrapped::Set{ASCIIString}
   output_streams::Dict{ASCIIString, IOStream}
+  options::InternalOptions
 end
 WrapContext(op,cmn,incl,extra,hwrap,hlib,hout) = WrapContext(op,cmn,incl,extra,hwrap,hlib,hout,
-                                              cindex.idx_create(1,1),None,Set{ASCIIString}(),
-                                              Dict{ASCIIString,IOStream}())
+                                                  cindex.idx_create(1,1),None,Set{ASCIIString}(),
+                                                  Dict{ASCIIString,IOStream}(), InternalOptions())
 
 
 
@@ -100,7 +107,7 @@ c_jl = {
   TypKind.FLOAT       => Cfloat,
   TypKind.DOUBLE      => Cdouble,
   TypKind.LONGDOUBLE  => Float64,   # TODO detect?
-  TypKind.ENUM        => Cint,     # TODO arch check?
+  TypKind.ENUM        => Cint,      # TODO arch check?
   TypKind.NULLPTR     => C_NULL
                                     # TypKind.UINT128 => TODO
   }
@@ -279,6 +286,8 @@ function wrap(wc::WrapContext, arg::TypedefArg, strm::IOStream)
 end
 
 function wrap_header(wc::WrapContext, topcu::CXCursor, top_hdr, ostrm::IOStream)
+  println("WRAPPING HEADER: $top_hdr")
+  
   topcl = children(topcu)
 
   # Loop over all of the child cursors and wrap them, if appropriate.
@@ -317,7 +326,7 @@ function wrap_header(wc::WrapContext, topcu::CXCursor, top_hdr, ostrm::IOStream)
         tdcu = ((cindex.cu_kind(tdcu) == CurKind.TYPEDEFDECL) ? tdcu : None)
       end
       towrap = EnumArg(cursor, tdcu)
-    elseif (cu_kind(cursor) == CurKind.STRUCTDECL)
+    elseif (wc.options.wrap_structs && cu_kind(cursor) == CurKind.STRUCTDECL)
       tdcu = None
       if (i<topcl.size)
         tdcu = getindex(topcl, i+1)

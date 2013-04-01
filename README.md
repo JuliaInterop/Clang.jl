@@ -1,5 +1,5 @@
 Clang.jl provides a Julia language wrapper for libclang: the stable, C-exported
-interface to (a subset) of the LLVM Clang compiler. The [libclang API documentation](http://clang.llvm.org/doxygen/group__CINDEX.html)
+interface to (a subset of) the LLVM Clang compiler. The [libclang API documentation](http://clang.llvm.org/doxygen/group__CINDEX.html)
 provides background on the functionality available through libclang, and thus
 through the Julia wrapper. The Clang.jl repository also hosts related tools built
 on top of libclang functionality.

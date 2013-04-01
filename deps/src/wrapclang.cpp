@@ -30,13 +30,14 @@ wci_st(CXString)
 #include "clang/AST/Mangle.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/VTableBuilder.h"
+#include "clang/AST/Type.h"
 
 #include "CXCursor.h"
 #include <string>
 #include <iostream>
 using namespace clang;
 
-class llvm::raw_string_ostream;
+//class llvm::raw_string_ostream;
 #define WCI_CHECK_DECL(D) \
   if(!D) { printf("unable to get cursor Decl\n"); return -1; }
 
@@ -49,7 +50,7 @@ int wci_getCXXMethodVTableIndex(char* cuin)
   Decl* MD = cxcursor::getCursorDecl(cu);
   WCI_CHECK_DECL(MD);
 
-  CXXMethodDecl* CXXMethod;
+  const CXXMethodDecl* CXXMethod;
   if ( !(CXXMethod = dyn_cast<CXXMethodDecl>(MD)) )
   {
 //    printf("failed cast to CXXMethodDecl\n");
@@ -73,7 +74,7 @@ int wci_getCXXMethodMangledName(char* cuin, char* outbuf)
   Decl* MD = cxcursor::getCursorDecl(cu);
   WCI_CHECK_DECL(MD);
 
-  CXXMethodDecl* CXXMethod;
+  const CXXMethodDecl* CXXMethod;
   if ( !(CXXMethod = dyn_cast<CXXMethodDecl>(MD)) )
   {
 //    printf("failed cast to CXXMethodDecl\n");
@@ -100,9 +101,43 @@ int wci_getCXXMethodMangledName(char* cuin, char* outbuf)
   return sbuf.size();
 }
 
-int wci_getCXXClassParents(char* cuin, char* outbuf)
+typedef int (*ClassParentCB)(char*, void*);
+int wci_getCXXClassParents(char* cuin, ClassParentCB visit_cb, void* cbdata)
 {
   CXCursor cu = wci_get_CXCursor(cuin);
+  CXTranslationUnit TU = static_cast<CXTranslationUnit>(cu.data[2]);
+
+  Decl* MD = cxcursor::getCursorDecl(cu);
+  WCI_CHECK_DECL(MD);
+
+  const CXXRecordDecl* CXXClass;
+  if ( !(CXXClass = dyn_cast<CXXRecordDecl>(MD)) )
+    return -1;
+
+  for(CXXRecordDecl::base_class_const_iterator it = CXXClass->bases_begin();
+      it != CXXClass->bases_end(); ++it)
+  {
+    const CXXBaseSpecifier &Base = *it;
+    RecordDecl *BaseDecl;
+    QualType T = Base.getType();
+    const RecordType *RT = T->getAs<RecordType>();
+    if (RT == NULL)
+    {
+      std::cerr << "Error: missing record type" << std::endl;
+      return -1;
+    } else {
+      BaseDecl = RT->getDecl();
+    } 
+    
+    CXCursor cuback = cxcursor::MakeCXCursor(BaseDecl, TU); // TODO: something safer
+    char* cubackptr = (char*)malloc(sizeof(CXCursor));
+    memcpy(cubackptr, &cuback, sizeof(CXCursor));
+    
+    
+    std::cout << "calling callback with: " << clang_getCString(clang_getCursorDisplayName(cuback)) << std::endl;
+    (visit_cb)(cubackptr, cbdata);
+  }
+  return 0;
 }
 
 } // extern C

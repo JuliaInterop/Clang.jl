@@ -129,13 +129,10 @@ int wci_getCXXClassParents(char* cuin, ClassParentCB visit_cb, void* cbdata)
       BaseDecl = RT->getDecl();
     } 
     
-    CXCursor cuback = cxcursor::MakeCXCursor(BaseDecl, TU); // TODO: something safer
-    char* cubackptr = (char*)malloc(sizeof(CXCursor));
-    memcpy(cubackptr, &cuback, sizeof(CXCursor));
-    
+    CXCursor cuback = cxcursor::MakeCXCursor(BaseDecl, TU);
     
     std::cout << "calling callback with: " << clang_getCString(clang_getCursorDisplayName(cuback)) << std::endl;
-    (visit_cb)(cubackptr, cbdata);
+    (visit_cb)((char*)&cuback, cbdata);
   }
   return 0;
 }

@@ -14,6 +14,22 @@ function method_mangled_name(cursor::cindex.CXCursor)
   bytestring(convert(Ptr{Uint8},bufr))
 end
 
+
+function cxxclass_cb(cursor::Ptr{Uint8}, data::Ptr{Void})
+  cu = CXCursor()
+  ccall(:memcpy, Void, (Ptr{Void},Ptr{Void}, Uint), cu.data, cursor, cindex.CXCursor_size)  
+  holder = unsafe_pointer_to_objref(data)
+  push!(holder, cu)
+  return int(0)
+end
+
+function base_class(cursor::cindex.CXCursor)
+  cb = cfunction(cxxclass_cb, Int, (Ptr{Uint8},Ptr{Void}))
+  temp = CXCursor[]
+  ccall( ("wci_getCXXClassParents", :libwrapclang), Int32, (Ptr{Uint8}, Ptr{Void}, Ptr{Void}), cursor.data, cb, pointer_from_objref(temp))
+  return temp[1] # TODO: don't assume single inheritance...
+end
+
 # Get function pointer from vtable at given offset
 #derefptr(thisptr::Ptr{Void}, vtidx) = unsafe_ref(unsafe_ref(pointer(Ptr{Ptr{Void}},thisptr)), vtidx)
 
@@ -49,7 +65,7 @@ macro vcall(vtidx, ret_type, func, arg_types)
   larg_types = :((Ptr{Void}, $(arg_types.args...)))
   quote
     function $(esc(func))(thisptr, $(_args_in...))
-      local fptr = derefptr(thisptr, $(vtidx) )
+      local fptr =  unsafe_ref(unsafe_ref(pointer(Ptr{Ptr{Void}},thisptr)), $(vtidx)+1)
       println("fptr: ", fptr, "\n")
       ccall( fptr, thiscall, $(esc(ret_type)), $(larg_types), thisptr, $(_args_in...) )
     end

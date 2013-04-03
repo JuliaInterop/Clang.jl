@@ -41,7 +41,7 @@ macro scall(ret_type, func, arg_types, sym, lib)
   if (fptr==C_NULL) return end
   quote
     function $(esc(func))($(_args_in...))
-      ccall( $(esc(fptr)), $ret_type, $arg_types, $(_args_in...) )
+      ccall( $(esc(fptr)), $(esc(ret_type)), $(esc(arg_types)), $(_args_in...) )
     end
   end
 end
@@ -54,20 +54,20 @@ macro mcall(ret_type, func, arg_types, sym, lib)
   fptr = dlsym_e(hdl,sym)
   quote
     function $(esc(func))(thisptr, $(_args_in...))
-      ccall( $(fptr), thiscall, $(esc(ret_type)), $(larg_types), thisptr, $(_args_in...) )
+      ccall( $(fptr), thiscall, $(esc(ret_type)), $(esc(larg_types)), thisptr, $(_args_in...) )
     end
   end
 end
 
 # Virtual table call
-macro vcall(vtidx, ret_type, func, arg_types)
+macro vcall(vtidx, ret_type, func, arg_types, classname)
   local _args_in = Any[ symbol(string('a',x)) for x in 1:length(arg_types.args) ]
-  larg_types = :((Ptr{Void}, $(arg_types.args...)))
+  larg_types = :((Ptr{$(classname)}, $(arg_types.args...)))
   quote
-    function $(esc(func))(thisptr, $(_args_in...))
+    function $(esc(func)){T <: $(esc(classname))}(thisptr::Ptr{T}, $(_args_in...))
       local fptr =  unsafe_ref(unsafe_ref(pointer(Ptr{Ptr{Void}},thisptr)), $(vtidx)+1)
       println("fptr: ", fptr, "\n")
-      ccall( fptr, thiscall, $(esc(ret_type)), $(larg_types), thisptr, $(_args_in...) )
+      ccall( fptr, thiscall, $(esc(ret_type)), $(esc(larg_types)), thisptr, $(_args_in...) )
     end
   end
 end

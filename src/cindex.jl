@@ -91,10 +91,18 @@ function resolve_type(rt::CXType)
   # client needs to sort out.
   return rt
 end
-function return_type(c::CXCursor)
-  is_function(c) ? resolve_type( getCursorResultType(c) ) : 
+
+function return_type(c::CXCursor, resolve::Bool)
+  if (!is_function(c))
     error("return_type Cursor argument must be a function")
+  end
+  if (resolve)
+    return resolve_type( getCursorResultType(c) )
+  else
+    return getCursorResultType(c)
+  end
 end
+return_type(c::CXCursor) = return_type(c, true)
 
 function value(c::CXCursor)
   if cu_kind(c) != CurKind.ENUMCONSTANTDECL

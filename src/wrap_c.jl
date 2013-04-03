@@ -120,7 +120,7 @@ function ctype_to_julia(cutype::CXType)
     ptr_ctype = cindex.getPointeeType(cutype)
     ptr_jltype = ctype_to_julia(ptr_ctype)
     return Ptr{ptr_jltype}
-  elseif (typkind == TypKind.TYPEDEF)
+  elseif (typkind == TypKind.TYPEDEF || typkind == TypKind.RECORD)
     return symbol( string( spelling( cindex.getTypeDeclaration(cutype) ) ) )
   else
     # TODO: missing mappings should generate a warning

@@ -27,6 +27,7 @@ function base_class(cursor::cindex.CXCursor)
   cb = cfunction(cxxclass_cb, Int, (Ptr{Uint8},Ptr{Void}))
   temp = CXCursor[]
   ccall( ("wci_getCXXClassParents", :libwrapclang), Int32, (Ptr{Uint8}, Ptr{Void}, Ptr{Void}), cursor.data, cb, pointer_from_objref(temp))
+  if (length(temp) < 1) return None end
   return temp[1] # TODO: don't assume single inheritance...
 end
 

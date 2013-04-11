@@ -114,6 +114,7 @@ int wci_getCXXClassParents(char* cuin, ClassParentCB visit_cb, void* cbdata)
   if ( !(CXXClass = dyn_cast<CXXRecordDecl>(MD)) )
     return -1;
 
+  int count = 0;
   for(CXXRecordDecl::base_class_const_iterator it = CXXClass->bases_begin();
       it != CXXClass->bases_end(); ++it)
   {
@@ -133,8 +134,9 @@ int wci_getCXXClassParents(char* cuin, ClassParentCB visit_cb, void* cbdata)
     
     std::cout << "calling callback with: " << clang_getCString(clang_getCursorDisplayName(cuback)) << std::endl;
     (visit_cb)((char*)&cuback, cbdata);
+    count++;
   }
-  return 0;
+  return count;
 }
 
 } // extern C

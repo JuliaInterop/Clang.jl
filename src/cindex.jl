@@ -5,7 +5,7 @@ import Base.getindex
 export cu_type, cu_kind, ty_kind, name, spelling, is_function, is_null,
   value, children, cu_file
 export resolve_type, return_type
-export tu_init, tu_cursor
+export tu_init, tu_cursor, tu_parse, tu_dispose
 export CXType, CXCursor, CXString, CXTypeKind, CursorList
 
 const libwci = :libwrapclang
@@ -117,6 +117,8 @@ function tu_init(hdrfile::Any, diagnostics, cpp::Bool)
   tu = tu_parse(idx, hdrfile, (cpp ? ["-x", "c++"] : [""]))
   return tu
 end
+
+tu_dispose(tu::CXTranslationUnit) = ccall( (:clang_disposeTranslationUnit, "libclang"), Void, (Ptr{Void},), tu)
 
 tu_cursor(tu::CXTranslationUnit) = getTranslationUnitCursor(tu)
 

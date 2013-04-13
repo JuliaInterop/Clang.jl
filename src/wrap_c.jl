@@ -6,7 +6,7 @@ module wrap_c
   version = v"0.0.0"
 
 using Clang.cindex
-import cindex.TypKind, cindex.CurKind
+import ..cindex.TypKind, ..cindex.CurKind
 
 ### Wrappable type hierarchy
 

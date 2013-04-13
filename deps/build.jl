@@ -8,4 +8,4 @@ end
 if (!ispath("../usr/lib")) 
   run(`mkdir ../usr/lib`)
 end
-run(`mv libwrapclang.so ../usr/lib`)
+run(`mv libwrapclang.$(BinDeps.shlib_ext) ../usr/lib`)

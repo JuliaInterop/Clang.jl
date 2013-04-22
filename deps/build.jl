@@ -1,4 +1,4 @@
-require("BinDeps")
+using BinDeps
 
 cd(joinpath(Pkg.dir(), "Clang", "deps", "src") )
 run(`make`)

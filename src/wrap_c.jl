@@ -178,7 +178,7 @@ function wrap(wc::WrapContext, argt::EnumArg, strm::IOStream)
     else "ANONYMOUS"
     end
 
-  if (has(wc.cache_wrapped, enum_name))
+  if (contains(wc.cache_wrapped, enum_name))
     return
   elseif(argt.typedef == None)
     add!(wc.cache_wrapped, enum_name)
@@ -215,7 +215,7 @@ function wrap(wc::WrapContext, arg::StructArg, strm::IOStream)
       "ANONYMOUS_"*string(round(rand()*10000,5))
     end
 
-  if (has(wc.cache_wrapped, st_name))
+  if (contains(wc.cache_wrapped, st_name))
     return
   else
     # Cache this regardless of typedef
@@ -271,7 +271,7 @@ function wrap(wc::WrapContext, arg::TypedefArg, strm::IOStream)
   @assert cu_kind(arg.cursor) == CurKind.TYPEDEFDECL
 
   typedef_spelling = spelling(arg.cursor)
-  if(has(wc.cache_wrapped, typedef_spelling))
+  if(contains(wc.cache_wrapped, typedef_spelling))
     return
   else
     add!(wc.cache_wrapped, typedef_spelling)
@@ -305,7 +305,7 @@ function wrap_header(wc::WrapContext, topcu::CXCursor, top_hdr, ostrm::IOStream)
     if (cursor_hdr == top_hdr)
       # pass
     elseif (!wc.header_wrapped(top_hdr, cu_file(cursor)) ||
-            has(wc.cache_wrapped, cursor_name) )
+            contains(wc.cache_wrapped, cursor_name) )
       continue
     end
 
@@ -370,7 +370,7 @@ function sort_common_includes(strm::IOStream)
       col2[m.captures[2]] = i
     end
   end
-  for s in sort(keys(col2))
+  for s in sort(collect(keys(col2)))
     if( (m = get(col1, s, None))!=None)
       push!(fnl, tmp[m])
       push!(pos, m)

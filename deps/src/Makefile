@@ -8,10 +8,17 @@ ifndef JULIAHOME
 endif
 
 CXX = g++
-INC = -I"$(JULIAHOME)/usr/include" -I"$(JULIAHOME)/deps/llvm-3.2/tools/clang/tools/libclang" 
+INC = -I"$(JULIAHOME)/usr/include"
 FLAGS = -Wall -Wno-strict-aliasing -fno-omit-frame-pointer -fPIC
 CXXFLAGS = -g
 OBJS = wrapclang.cpp.o
+LIBS = -lclang
+
+ifdef USE_CLANG_CPP
+	INC += -I"$(JULIAHOME)/deps/llvm-3.2/tools/clang/tools/libclang"
+	LIBS += -lclangAST
+	CXXFLAGS += -DUSE_CLANG_CPP
+endif
 
 # Figure out OS and architecture
 OS = $(shell uname)
@@ -37,7 +44,7 @@ default: libwrapclang.$(SHLIB_EXT)
 	$(CXX) $< -fPIC -c -o $@ $(INC) $(CXXFLAGS) $(FLAGS)
 
 libwrapclang.$(SHLIB_EXT): $(OBJS)
-	$(CXX) $(OBJS) -rdynamic -shared -o $@ -L"$(JULIAHOME)/usr/lib" $(LDFLAGS) $(LIBS) -lclang -lclangAST
+	$(CXX) $(OBJS) -rdynamic -shared -o $@ -L"$(JULIAHOME)/usr/lib" $(LDFLAGS) $(LIBS)
 
 clean:
 	rm -f *.o *.$(SHLIB_EXT)

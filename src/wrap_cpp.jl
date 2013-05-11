@@ -5,6 +5,9 @@ using Clang.cindex
 export @vcall, @scall, @mcall
 
 function method_vt_index(cursor::cindex.CXCursor)
+  if !(cindex.CXXMethod_isVirtual(cursor) == 1)
+    return -1
+  end
   ccall( ("wci_getCXXMethodVTableIndex", :libwrapclang), Int32, (Ptr{Uint8},), cursor.data)
 end
 

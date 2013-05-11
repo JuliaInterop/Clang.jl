@@ -136,7 +136,7 @@ int wci_getCXXMethodVTableIndex(char* cuin)
   VTableContext ctx = VTableContext(astctx);
 
   // Clang dies at assert for constructor or destructor, see GlobalDecl.h:32-33
-  if (isa<CXXConstructorDecl>(CXXMethod) || isa<CXXDestructorDecl>(CXXMethod))
+  if (!CXXMethod->isVirtual())
     return -1;
   else
     return ctx.getMethodVTableIndex(CXXMethod);

@@ -112,9 +112,9 @@ function value(c::CXCursor)
 end
 
 tu_init(hdrfile::Any) = tu_init(hdrfile, 0, false)
-function tu_init(hdrfile::Any, diagnostics, cpp::Bool)
+function tu_init(hdrfile::Any, diagnostics, cpp::Bool, opts::Int)
   idx = idx_create(0,diagnostics)
-  tu = tu_parse(idx, hdrfile, (cpp ? ["-x", "c++"] : [""]))
+  tu = tu_parse(idx, hdrfile, (cpp ? ["-x", "c++"] : [""]), opts)
   return tu
 end
 
@@ -123,8 +123,8 @@ tu_dispose(tu::CXTranslationUnit) = ccall( (:clang_disposeTranslationUnit, "libc
 tu_cursor(tu::CXTranslationUnit) = getTranslationUnitCursor(tu)
 
 tu_parse(CXIndex, source_filename::ASCIIString) = tu_parse(CXIndex, source_filename, [""])
-tu_parse(CXIndex, source_filename::ASCIIString, cl_args::Array{ASCIIString,1}) =
-  tu_parse(CXIndex, source_filename, cl_args, length(cl_args), C_NULL, 0, 0)
+tu_parse(CXIndex, source_filename::ASCIIString, cl_args::Array{ASCIIString,1}, opts::Int) =
+  tu_parse(CXIndex, source_filename, cl_args, length(cl_args), C_NULL, 0, opts)
 tu_parse(CXIndex, source_filename::ASCIIString, 
          cl_args::Array{ASCIIString,1}, num_clargs,
          unsaved_files::CXUnsavedFile, num_unsaved_files,

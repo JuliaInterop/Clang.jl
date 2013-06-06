@@ -448,4 +448,13 @@ function wrap_c_headers(
   close(wc.common_stream)
 end
 
+###############################################################################
+
+function get_top_cursor(wc::WrapContext, header)
+  tunit = cindex.tu_parse(wc.index, header,
+                  build_clang_args(wc.clang_includes, wc.clang_extra_args),
+                  cindex.TranslationUnit_Flags.None)
+  topcu = cindex.getTranslationUnitCursor(tunit)
+end
+
 end # module wrap_c

@@ -27,11 +27,6 @@ generator output:
 * [libXML2.jl](http://github.com/ihnorton/libXML2.jl): wrapper of libxml2
 * [libAV.jl](http://github.com/ihnorton/libAV.jl): work-in-progress wrapper of libavcodec and related headers
 
-## C++ wrapper generator
-
-The wip_cpp branch hosts a preliminary, work-in-progress C++ wrapper generator (Itanium ABI only).
-For more information, see [this issue](https://github.com/ihnorton/Clang.jl/issues/20) and the C++ issue tag.
-
 ## Installation
 
 ### Prerequisites
@@ -39,6 +34,10 @@ For more information, see [this issue](https://github.com/ihnorton/Clang.jl/issu
 libclang >= 3.1 must be available as a shared library. libclang may
 optionally be built by the Julia build system by setting 
 BUILD_LLVM_CLANG=1 in julia/deps/Makefile.
+
+When using a distribution packaged version, note the latest version 
+may only be available from an optional pre-release archive (e.g. Ubuntu PPA).
+
 
 ### Install
 

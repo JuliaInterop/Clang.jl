@@ -1,7 +1,10 @@
-#include "clang-c/Index.h"
 #include <cstring>
 #include <vector>
 #include <set>
+
+extern "C" {
+#include "clang-c/Index.h"
+}
 
 #define wci_st(rtype) \
   static inline void wci_save_##rtype(rtype i, char* o) \
@@ -88,3 +91,135 @@ void wci_disposeString(char* csin)
 }
 
 } // extern
+
+/* 
+  Optional Clang.jl C++ Support                                               #
+*/
+
+#ifdef USE_CLANG_CPP
+
+#define __STDC_LIMIT_MACROS
+#define __STDC_CONSTANT_MACROS
+#include "clang/AST/ASTContext.h"
+#include "clang/AST/Mangle.h"
+#include "clang/AST/DeclCXX.h"
+#include "clang/AST/VTableBuilder.h"
+#include "clang/AST/Type.h"
+
+#include "CXCursor.h"
+#include <string>
+#include <iostream>
+using namespace clang;
+
+//class llvm::raw_string_ostream;
+#define WCI_CHECK_DECL(D) \
+  if(!D) { printf("unable to get cursor Decl\n"); return -1; }
+
+extern "C" {
+
+int wci_getCXXMethodVTableIndex(char* cuin)
+{
+  CXCursor cu = wci_get_CXCursor(cuin);
+
+  Decl* MD = cxcursor::getCursorDecl(cu);
+  WCI_CHECK_DECL(MD);
+
+  const CXXMethodDecl* CXXMethod;
+  if ( !(CXXMethod = dyn_cast<CXXMethodDecl>(MD)) )
+  {
+//    printf("failed cast to CXXMethodDecl\n");
+    return -1;
+  }
+
+  ASTContext &astctx = CXXMethod->getASTContext();
+  // TODO: perf, is this cached?
+  VTableContext ctx = VTableContext(astctx);
+
+  // Clang dies at assert for constructor or destructor, see GlobalDecl.h:32-33
+  if (!CXXMethod->isVirtual())
+    return -1;
+  else
+    return ctx.getMethodVTableIndex(CXXMethod);
+}
+
+int wci_getCXXMethodMangledName(char* cuin, char* outbuf)
+{
+  CXCursor cu = wci_get_CXCursor(cuin);
+  Decl* MD = cxcursor::getCursorDecl(cu);
+  WCI_CHECK_DECL(MD);
+
+  const CXXMethodDecl* CXXMethod;
+  if ( !(CXXMethod = dyn_cast<CXXMethodDecl>(MD)) )
+  {
+//    printf("failed cast to CXXMethodDecl\n");
+    return -1;
+  }
+
+  ASTContext &astctx = CXXMethod->getASTContext();
+  VTableContext ctx = VTableContext(astctx);
+
+  std::string sbuf; 
+  llvm::raw_string_ostream os(sbuf);
+  
+  MangleContext* mc = astctx.createMangleContext();
+  if (mc->shouldMangleDeclName( dyn_cast<NamedDecl>(MD)) ) {
+    mc->mangleName( dyn_cast<NamedDecl>(MD), os);
+  }
+  else
+  {
+    return 0;
+  }
+  os.flush();
+
+  std::strcpy(outbuf, sbuf.c_str());
+  return sbuf.size();
+}
+
+typedef int (*ClassParentCB)(char*, void*);
+int wci_getCXXClassParents(char* cuin, ClassParentCB visit_cb, void* cbdata)
+{
+  CXCursor cu = wci_get_CXCursor(cuin);
+  CXTranslationUnit TU = static_cast<CXTranslationUnit>(cu.data[2]);
+
+  Decl* MD = cxcursor::getCursorDecl(cu);
+  WCI_CHECK_DECL(MD);
+
+  const CXXRecordDecl* CXXClass;
+  if ( !(CXXClass = dyn_cast<CXXRecordDecl>(MD)) )
+    return -1;
+
+  int count = 0;
+  for(CXXRecordDecl::base_class_const_iterator it = CXXClass->bases_begin();
+      it != CXXClass->bases_end(); ++it)
+  {
+    const CXXBaseSpecifier &Base = *it;
+    RecordDecl *BaseDecl;
+    QualType T = Base.getType();
+    const RecordType *RT = T->getAs<RecordType>();
+    if (RT == NULL)
+    {
+      std::cerr << "Error: missing record type" << std::endl;
+      return -1;
+    } else {
+      BaseDecl = RT->getDecl();
+    } 
+    
+    CXCursor cuback = cxcursor::MakeCXCursor(BaseDecl, TU);
+    
+    std::cout << "calling callback with: " << clang_getCString(clang_getCursorDisplayName(cuback)) << std::endl;
+    (visit_cb)((char*)&cuback, cbdata);
+    count++;
+  }
+  return count;
+}
+
+} // extern C
+#undef __STDC_LIMIT_MACROS
+#undef __STDC_CONSTANT_MACROS
+
+#endif
+/*
+  End of Optional Clang.jl C++ Support
+*/
+
+

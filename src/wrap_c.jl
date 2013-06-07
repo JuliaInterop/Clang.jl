@@ -1,4 +1,4 @@
-###############################################################################
+e##############################################################################
 # Julia wrapper generator using libclang from the LLVM project                #
 ###############################################################################
 
@@ -120,7 +120,7 @@ function ctype_to_julia(cutype::CXType)
     ptr_ctype = cindex.getPointeeType(cutype)
     ptr_jltype = ctype_to_julia(ptr_ctype)
     return Ptr{ptr_jltype}
-  elseif (typkind == TypKind.TYPEDEF)
+  elseif (typkind == TypKind.TYPEDEF || typkind == TypKind.RECORD)
     return symbol( string( spelling( cindex.getTypeDeclaration(cutype) ) ) )
   else
     # TODO: missing mappings should generate a warning
@@ -158,7 +158,7 @@ end
 
 ### Retrieve function arguments for a given cursor
 function function_args(cursor::CXCursor)
-  @assert cu_kind(cursor) == CurKind.FUNCTIONDECL
+  #@assert cu_kind(cursor) == CurKind.FUNCTIONDECL
 
   cursor_type = cindex.cu_type(cursor)
   [cindex.getArgType(cursor_type, uint32(arg_i)) for arg_i in 0:cindex.getNumArgTypes(cursor_type)-1]

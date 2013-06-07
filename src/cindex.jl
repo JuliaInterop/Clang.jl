@@ -73,7 +73,7 @@ ty_kind(c::CXType) = reinterpret(Int32, c.data[1:4])[1]
 name(c::CXCursor) = getCursorDisplayName(c)
 spelling(c::CXType) = getTypeKindSpelling(ty_kind(c))
 spelling(c::CXCursor) = getCursorSpelling(c)
-is_function(c::CXCursor) = (cu_kind(c) == CurKind.FUNCTIONDECL)
+is_function(c::CXCursor) = true # (cu_kind(c) == CurKind.FUNCTIONDECL || cu_kind(c) == 15)
 is_function(t::CXType) = (ty_kind(t) == TypKind.FUNCTIONPROTO)
 is_null(c::CXCursor) = (Cursor_isNull(c) != 0)
 
@@ -91,10 +91,18 @@ function resolve_type(rt::CXType)
   # client needs to sort out.
   return rt
 end
-function return_type(c::CXCursor)
-  is_function(c) ? resolve_type( getCursorResultType(c) ) : 
+
+function return_type(c::CXCursor, resolve::Bool)
+  if (!is_function(c))
     error("return_type Cursor argument must be a function")
+  end
+  if (resolve)
+    return resolve_type( getCursorResultType(c) )
+  else
+    return getCursorResultType(c)
+  end
 end
+return_type(c::CXCursor) = return_type(c, true)
 
 function value(c::CXCursor)
   if cu_kind(c) != CurKind.ENUMCONSTANTDECL

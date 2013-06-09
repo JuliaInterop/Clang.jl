@@ -108,8 +108,11 @@ c_jl = {
   TypKind.DOUBLE      => Cdouble,
   TypKind.LONGDOUBLE  => Float64,   # TODO detect?
   TypKind.ENUM        => Cint,      # TODO arch check?
-  TypKind.NULLPTR     => C_NULL
+  TypKind.NULLPTR     => C_NULL,
                                     # TypKind.UINT128 => TODO
+  "size_t"            => :Csize_t,
+  "ptrdiff_t"         => :Cptrdiff_t
+  
   }
 
 # Convert clang type to julia type
@@ -121,7 +124,8 @@ function ctype_to_julia(cutype::CXType)
     ptr_jltype = ctype_to_julia(ptr_ctype)
     return Ptr{ptr_jltype}
   elseif (typkind == TypKind.TYPEDEF || typkind == TypKind.RECORD)
-    return symbol( string( spelling( cindex.getTypeDeclaration(cutype) ) ) )
+    basename = string( spelling( cindex.getTypeDeclaration(cutype) ) )
+    return symbol( get(c_jl, basename, basename))
   else
     # TODO: missing mappings should generate a warning
     return symbol( string( get(c_jl, typkind, :Void) ))

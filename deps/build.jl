@@ -1,5 +1,7 @@
 using BinDeps
 
+ENV["JULIA_ROOT"] = abspath(JULIA_HOME, "../../")
+
 cd(joinpath(Pkg.dir(), "Clang", "deps", "src") )
 run(`make`)
 if (!ispath("../usr")) 

@@ -3,19 +3,19 @@ all: check-env default
 .PHONY: all clean check-env default
 
 check-env:
-ifndef JULIAHOME
-	$(error Environment variable JULIAHOME is not set.)
+ifndef JULIA_ROOT
+	$(error Environment variable JULIA_ROOT is not set.)
 endif
 
 CXX = g++
-INC = -I"$(JULIAHOME)/usr/include"
+INC = -I"$(JULIA_ROOT)/usr/include"
 FLAGS = -Wall -Wno-strict-aliasing -fno-omit-frame-pointer -fPIC
 CXXFLAGS = -g
 OBJS = wrapclang.cpp.o
 LIBS = -lclang
 
 ifdef USE_CLANG_CPP
-	INC += -I"$(JULIAHOME)/deps/llvm-3.2/tools/clang/tools/libclang"
+	INC += -I"$(JULIA_ROOT)/deps/llvm-3.2/tools/clang/tools/libclang"
 	LIBS += -lclangAST
 	CXXFLAGS += -DUSE_CLANG_CPP
 endif
@@ -44,7 +44,7 @@ default: libwrapclang.$(SHLIB_EXT)
 	$(CXX) $< -fPIC -c -o $@ $(INC) $(CXXFLAGS) $(FLAGS)
 
 libwrapclang.$(SHLIB_EXT): $(OBJS)
-	$(CXX) $(OBJS) -rdynamic -shared -o $@ -L"$(JULIAHOME)/usr/lib" $(LDFLAGS) $(LIBS)
+	$(CXX) $(OBJS) -rdynamic -shared -o $@ -L"$(JULIA_ROOT)/usr/lib" $(LDFLAGS) $(LIBS)
 
 clean:
 	rm -f *.o *.$(SHLIB_EXT)

@@ -1,8 +1,8 @@
 let 
     function find_library(libname,filename)
         try 
-            dl = dlopen(joinpath(Pkg.dir(),"Clang","deps","usr","lib",filename))
-            ccall(:add_library_mapping,Int32,(Ptr{Uint8},Ptr{Uint8}),libname,dl)
+            push!(DL_LOAD_PATH, joinpath(Pkg.dir(), "Clang", "deps", "usr", "lib"))
+            dl = dlopen(libname)
         catch
             try 
                 dl = dlopen(libname)

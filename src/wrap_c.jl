@@ -358,7 +358,7 @@ function header_output_stream(wc::WrapContext, hfile)
   return strm
 end    
 
-function sort_common_includes(strm::IOStream)
+function sort_common_includes(strm::IOBuffer)
   # TODO: too many temporaries
   seek(strm,0)
   col1 = Dict{ASCIIString,Int}() 
@@ -421,7 +421,7 @@ function wrap_c_headers(
   clang_args = build_clang_args(wc.clang_includes, wc.clang_extra_args)
 
   # Output stream for common items: typedefs, enums, etc.
-  wc.common_stream = memio()
+  wc.common_stream = IOBuffer()
 
   # Generate the wrappings
   try

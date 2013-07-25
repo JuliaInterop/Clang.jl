@@ -139,7 +139,7 @@ end
 
 ### Tuple representation without quotes
 rep_args(v) = begin    
-  o = memio()
+  o = IOBuffer()
   print(o, "(")
   s = first = start(v)
   r = (!done(v,s))

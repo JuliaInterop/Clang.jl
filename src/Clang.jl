@@ -3,6 +3,8 @@ include(joinpath(Pkg.dir(), "Clang", "deps", "ext.jl"))
 module Clang
   include("cindex.jl")
   include("wrap_c.jl")
+  export cindex
+  export wrap_c
   try
     # Check for global variable USE_CLANG_CPP
     if(Main.USE_CLANG_CPP)

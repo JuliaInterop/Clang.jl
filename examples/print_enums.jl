@@ -1,12 +1,10 @@
-#error("Running this file will overwrite existing cindex_h.jl")
-# Uncomment below to run
-require("cindex.jl")
+using Clang.cindex
 
 const ENUM_DECL = 5
 const TYPEDEF_DECL = 20
 
 enum_remaps = {
-  "CXCursor_" => ("", uppercase)
+  "CXCursor_" => ("", uppercase),
   "CXType_" => ("", uppercase)
 }
 

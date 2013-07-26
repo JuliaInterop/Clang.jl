@@ -1,4 +1,5 @@
 using Clang.cindex
+import Clang.cindex
 import cindex.CurKind
 import cindex.TypKind
 

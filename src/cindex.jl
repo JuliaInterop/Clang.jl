@@ -119,7 +119,7 @@ function value(c::CXCursor)
   end
 end
 
-tu_init(hdrfile::Any) = tu_init(hdrfile, 0, false)
+tu_init(hdrfile::Any) = tu_init(hdrfile, 0, false, 0)
 function tu_init(hdrfile::Any, diagnostics, cpp::Bool, opts::Int)
   idx = idx_create(0,diagnostics)
   tu = tu_parse(idx, hdrfile, (cpp ? ["-x", "c++"] : [""]), opts)

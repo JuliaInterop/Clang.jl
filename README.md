@@ -24,8 +24,6 @@ generator output:
 
 * [Sundials.jl](https://github.com/tshort/Sundials.jl): interface to the LLNL "SUite of Nonlinear and DIfferential/ALgebraic equation Solvers" package
 * [libCURL.jl](https://github.com/amitmurthy/libCURL.jl): wrapper of cURL
-* [libXML2.jl](http://github.com/ihnorton/libXML2.jl): wrapper of libxml2
-* [libAV.jl](http://github.com/ihnorton/libAV.jl): work-in-progress wrapper of libavcodec and related headers
 
 ## Installation
 

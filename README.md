@@ -31,7 +31,7 @@ generator output:
 
 libclang >= 3.1 must be available as a shared library. libclang may
 optionally be built by the Julia build system by setting 
-BUILD_LLVM_CLANG=1 in julia/deps/Makefile.
+BUILD_LLVM_CLANG=1 in `julia/Make.user`.
 
 When using a distribution packaged version, note the latest version 
 may only be available from an optional pre-release archive (e.g. Ubuntu PPA).

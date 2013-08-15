@@ -15,7 +15,7 @@ OBJS = wrapclang.cpp.o
 LIBS = -lclang
 
 ifdef USE_CLANG_CPP
-	INC += -I"$(JULIA_ROOT)/deps/llvm-3.2/tools/clang/tools/libclang"
+	INC += -I"$(JULIA_ROOT)/deps/llvm-3.3/tools/clang/tools/libclang"
 	LIBS += -lclangAST
 	CXXFLAGS += -DUSE_CLANG_CPP
 endif

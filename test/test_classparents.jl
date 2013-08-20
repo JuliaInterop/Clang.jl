@@ -13,8 +13,8 @@ clsname = "Derived"
   tu = cindex.tu_parse(idx, hpath,
     ["-x", "c++",
      "-I./",
-     "-I/cmn/git/julia/deps/llvm-3.2/build/Release/lib/clang/3.2/include",
-     "-v", "-c"])
+     "-I$JULIA_HOME/../../deps/llvm-3.2/build/Release/lib/clang/3.3/include",
+     "-v", "-c"], 0)
 
   topcu = cindex.getTranslationUnitCursor(tu)
   topcl = children(topcu)

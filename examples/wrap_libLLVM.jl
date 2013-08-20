@@ -1,6 +1,6 @@
 JULIAHOME=EnvHash()["JULIAHOME"]
-libLLVM_path = joinpath(JULIAHOME, "deps/llvm-3.2/include/llvm-c")
-clanginc_path = joinpath(JULIAHOME, "deps/llvm-3.2/Release/lib/clang/3.2/include")
+libLLVM_path = joinpath(JULIAHOME, "deps/llvm-3.3/include/llvm-c")
+clanginc_path = joinpath(JULIAHOME, "deps/llvm-3.3/Release/lib/clang/3.3/include")
 
 wrap_hdrs = map(x->joinpath(libLLVM_path, x), 
   {

@@ -8,7 +8,7 @@ let
                 dl = dlopen(libname)
                 dlclose(dl)
             catch
-                error("Failed to find required library "*libname*". Try re-running the package script using Pkg.runbuildscript(\"pkg\")")
+                error("Failed to find required library "*libname*". Try re-running the package script using Pkg.build(\"pkg\")")
             end
         end
     end

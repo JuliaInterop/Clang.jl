@@ -23,11 +23,11 @@ wrap_hdrs = map(x->joinpath(libLLVM_path, x),
   })
 
 clang_includes = map(x->joinpath(JULIAHOME, x), [
-  "deps/llvm-3.2/build/Release/lib/clang/3.2/include",
-  "deps/llvm-3.2/include",
-  "deps/llvm-3.2/include",
-  "deps/llvm-3.2/build/include/",
-  "deps/llvm-3.2/include/"
+  "deps/llvm-3.3/build/Release/lib/clang/3.3/include",
+  "deps/llvm-3.3/include",
+  "deps/llvm-3.3/include",
+  "deps/llvm-3.3/build/include/",
+  "deps/llvm-3.3/include/"
   ])
 clang_extraargs = ["-D", "__STDC_LIMIT_MACROS", "-D", "__STDC_CONSTANT_MACROS"]
 

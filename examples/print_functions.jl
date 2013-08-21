@@ -1,7 +1,7 @@
 using Clang.cindex
 import Clang.cindex
-import cindex.CurKind
-import cindex.TypKind
+CurKind = cindex.CurKind
+TypKind = cindex.TypKind
 
 function full_name(t::CXType)
   

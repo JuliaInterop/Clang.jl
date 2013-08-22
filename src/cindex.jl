@@ -1,6 +1,6 @@
 module cindex
 
-import Base.getindex
+import Base.getindex, Base.start, Base.next, Base.done
 
 export cu_type, cu_kind, ty_kind, name, spelling, is_function, is_null,
     value, children, cu_file
@@ -211,5 +211,9 @@ function cu_file(cu::CXCursor)
             (Ptr{Void}, Ptr{Void}), cu.data, str.data)
     return get_string(str)
 end
+
+start(cl::CursorList) = 1
+done(cl::CursorList, i) = (i == cl.size)
+next(cl::CursorList, i) = (cl[i], i+1)
 
 end # module

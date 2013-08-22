@@ -1,5 +1,12 @@
 # Automatically generated from Index.h
 #   using dumpenums.jl
+# enum ENUM___codecvt_result
+const __codecvt_ok = 0
+const __codecvt_partial = 1
+const __codecvt_error = 2
+const __codecvt_noconv = 3
+# end
+
 # enum ENUM_CXAvailabilityKind
 const CXAvailability_Available = 0
 const CXAvailability_Deprecated = 1
@@ -45,9 +52,10 @@ const CXTranslationUnit_DetailedPreprocessingRecord = 1
 const CXTranslationUnit_Incomplete = 2
 const CXTranslationUnit_PrecompiledPreamble = 4
 const CXTranslationUnit_CacheCompletionResults = 8
-const CXTranslationUnit_CXXPrecompiledPreamble = 16
+const CXTranslationUnit_ForSerialization = 16
 const CXTranslationUnit_CXXChainedPCH = 32
 const CXTranslationUnit_SkipFunctionBodies = 64
+const CXTranslationUnit_IncludeBriefCommentsInCodeCompletion = 128
 # end
 
 # enum ENUM_CXSaveTranslationUnit_Flags
@@ -194,7 +202,8 @@ const PACKEXPANSIONEXPR = 142
 const SIZEOFPACKEXPR = 143
 const LAMBDAEXPR = 144
 const OBJCBOOLLITERALEXPR = 145
-const LASTEXPR = 145
+const OBJCSELFEXPR = 146
+const LASTEXPR = 146
 const FIRSTSTMT = 200
 const UNEXPOSEDSTMT = 200
 const LABELSTMT = 201
@@ -211,6 +220,7 @@ const INDIRECTGOTOSTMT = 211
 const CONTINUESTMT = 212
 const BREAKSTMT = 213
 const RETURNSTMT = 214
+const GCCASMSTMT = 215
 const ASMSTMT = 215
 const OBJCATTRYSTMT = 216
 const OBJCATCATCHSTMT = 217
@@ -225,6 +235,7 @@ const CXXFORRANGESTMT = 225
 const SEHTRYSTMT = 226
 const SEHEXCEPTSTMT = 227
 const SEHFINALLYSTMT = 228
+const MSASMSTMT = 229
 const NULLSTMT = 230
 const DECLSTMT = 231
 const LASTSTMT = 231
@@ -246,6 +257,9 @@ const MACROINSTANTIATION = 502
 const INCLUSIONDIRECTIVE = 503
 const FIRSTPREPROCESSING = 500
 const LASTPREPROCESSING = 503
+const MODULEIMPORTDECL = 600
+const FIRSTEXTRADECL = 600
+const LASTEXTRADECL = 600
 # end
 
 # enum ENUM_CXLinkageKind
@@ -254,13 +268,6 @@ const CXLinkage_NoLinkage = 1
 const CXLinkage_Internal = 2
 const CXLinkage_UniqueExternal = 3
 const CXLinkage_External = 4
-# end
-
-# enum ENUM_CXLanguageKind
-const CXLanguage_Invalid = 0
-const CXLanguage_C = 1
-const CXLanguage_ObjC = 2
-const CXLanguage_CPlusPlus = 3
 # end
 
 # enum ENUM_CXTypeKind
@@ -321,8 +328,18 @@ const CXCallingConv_X86ThisCall = 4
 const CXCallingConv_X86Pascal = 5
 const CXCallingConv_AAPCS = 6
 const CXCallingConv_AAPCS_VFP = 7
+const CXCallingConv_PnaclCall = 8
+const CXCallingConv_IntelOclBicc = 9
 const CXCallingConv_Invalid = 100
 const CXCallingConv_Unexposed = 200
+# end
+
+# enum ENUM_CXTypeLayoutError
+const AYOUTERROR_INVALID = -1
+const AYOUTERROR_INCOMPLETE = -2
+const AYOUTERROR_DEPENDENT = -3
+const AYOUTERROR_NOTCONSTANTSIZE = -4
+const AYOUTERROR_INVALIDFIELDNAME = -5
 # end
 
 # enum ENUM_CX_CXXAccessSpecifier
@@ -338,6 +355,61 @@ const CXChildVisit_Continue = 1
 const CXChildVisit_Recurse = 2
 # end
 # const CXCursorVisitor == ENUM_CXChildVisitResult
+
+# enum CXObjCPropertyAttrKind
+const CXObjCPropertyAttr_noattr = 0
+const CXObjCPropertyAttr_readonly = 1
+const CXObjCPropertyAttr_getter = 2
+const CXObjCPropertyAttr_assign = 4
+const CXObjCPropertyAttr_readwrite = 8
+const CXObjCPropertyAttr_retain = 16
+const CXObjCPropertyAttr_copy = 32
+const CXObjCPropertyAttr_nonatomic = 64
+const CXObjCPropertyAttr_setter = 128
+const CXObjCPropertyAttr_atomic = 256
+const CXObjCPropertyAttr_weak = 512
+const CXObjCPropertyAttr_strong = 1024
+const CXObjCPropertyAttr_unsafe_unretained = 2048
+# end
+
+# enum CXObjCDeclQualifierKind
+const CXObjCDeclQualifier_None = 0
+const CXObjCDeclQualifier_In = 1
+const CXObjCDeclQualifier_Inout = 2
+const CXObjCDeclQualifier_Out = 4
+const CXObjCDeclQualifier_Bycopy = 8
+const CXObjCDeclQualifier_Byref = 16
+const CXObjCDeclQualifier_Oneway = 32
+# end
+
+# enum ENUM_CXCommentKind
+const CXComment_Null = 0
+const CXComment_Text = 1
+const CXComment_InlineCommand = 2
+const CXComment_HTMLStartTag = 3
+const CXComment_HTMLEndTag = 4
+const CXComment_Paragraph = 5
+const CXComment_BlockCommand = 6
+const CXComment_ParamCommand = 7
+const CXComment_TParamCommand = 8
+const CXComment_VerbatimBlockCommand = 9
+const CXComment_VerbatimBlockLine = 10
+const CXComment_VerbatimLine = 11
+const CXComment_FullComment = 12
+# end
+
+# enum ENUM_CXCommentInlineCommandRenderKind
+const CXCommentInlineCommandRenderKind_Normal = 0
+const CXCommentInlineCommandRenderKind_Bold = 1
+const CXCommentInlineCommandRenderKind_Monospaced = 2
+const CXCommentInlineCommandRenderKind_Emphasized = 3
+# end
+
+# enum ENUM_CXCommentParamPassDirection
+const CXCommentParamPassDirection_In = 0
+const CXCommentParamPassDirection_Out = 1
+const CXCommentParamPassDirection_InOut = 2
+# end
 
 # enum ENUM_CXNameRefFlags
 const CXNameRange_WantQualifier = 1
@@ -381,6 +453,7 @@ const CXCompletionChunk_VerticalSpace = 20
 # enum ENUM_CXCodeComplete_Flags
 const CXCodeComplete_IncludeMacros = 1
 const CXCodeComplete_IncludeCodePatterns = 2
+const CXCodeComplete_IncludeBriefComments = 4
 # end
 
 # enum ENUM_CXCompletionContext
@@ -415,6 +488,12 @@ const CXVisit_Break = 0
 const CXVisit_Continue = 1
 # end
 
+# enum CXResult
+const CXResult_Success = 0
+const CXResult_Invalid = 1
+const CXResult_VisitBreak = 2
+# end
+
 # enum CXIdxEntityKind
 const CXIdxEntity_Unexposed = 0
 const CXIdxEntity_Typedef = 1
@@ -442,6 +521,7 @@ const CXIdxEntity_CXXConstructor = 22
 const CXIdxEntity_CXXDestructor = 23
 const CXIdxEntity_CXXConversionFunction = 24
 const CXIdxEntity_CXXTypeAlias = 25
+const CXIdxEntity_CXXInterface = 26
 # end
 
 # enum CXIdxEntityLanguage
@@ -465,6 +545,10 @@ const CXIdxAttr_IBOutlet = 2
 const CXIdxAttr_IBOutletCollection = 3
 # end
 
+# enum CXIdxDeclInfoFlags
+const CXIdxDeclFlag_Skipped = 1
+# end
+
 # enum CXIdxObjCContainerKind
 const CXIdxObjCContainer_ForwardRef = 0
 const CXIdxObjCContainer_Interface = 1
@@ -482,5 +566,6 @@ const CXIndexOpt_SuppressRedundantRefs = 1
 const CXIndexOpt_IndexFunctionLocalSymbols = 2
 const CXIndexOpt_IndexImplicitTemplateInstantiations = 4
 const CXIndexOpt_SuppressWarnings = 8
+const CXIndexOpt_SkipParsedBodiesInSession = 16
 # end
 

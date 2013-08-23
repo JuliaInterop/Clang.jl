@@ -59,6 +59,7 @@ type WrapContext
     header_library::Function                     # called to determine shared library for given header
     header_outfile::Function                     # called to determine output file group for given header
     index::cindex.CXIndex
+    fixup_names::Dict{ASCIIString, ASCIIString}
     common_stream
     cache_wrapped::Set{ASCIIString}
     output_streams::Dict{ASCIIString, IOStream}
@@ -133,12 +134,12 @@ function ctype_to_julia(cutype::CXType)
 end
 
 ### eliminate symbol from the final type representation
-rep_type(t) = begin
+function rep_type(t)
     replace(string(t), ":", "")
 end
 
 ### Tuple representation without quotes
-rep_args(v) = begin        
+function rep_args(v)
     o = IOBuffer()
     print(o, "(")
     s = first = start(v)

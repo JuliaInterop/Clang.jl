@@ -1,12 +1,15 @@
-e##############################################################################
-# Julia wrapper generator using libclang from the LLVM project                                #
-###############################################################################
+##############################################################################
+# Julia wrapper generator using libclang from the LLVM project               #
+##############################################################################
 
 module wrap_c
     version = v"0.0.0"
 
 using Clang.cindex
 import ..cindex.TypKind, ..cindex.CurKind
+
+export ctype_to_julia, wrap_c_headers
+export WrapContext
 
 ### Wrappable type hierarchy
 
@@ -59,7 +62,6 @@ type WrapContext
     header_library::Function                     # called to determine shared library for given header
     header_outfile::Function                     # called to determine output file group for given header
     index::cindex.CXIndex
-    fixup_names::Dict{ASCIIString, ASCIIString}
     common_stream
     cache_wrapped::Set{ASCIIString}
     output_streams::Dict{ASCIIString, IOStream}
@@ -186,7 +188,7 @@ function wrap(wc::WrapContext, argt::EnumArg, strm::IOStream)
     if (contains(wc.cache_wrapped, enum_name))
         return
     elseif(argt.typedef == None)
-        add!(wc.cache_wrapped, enum_name)
+        push!(wc.cache_wrapped, enum_name)
     end
 
     println(wc.common_stream, "# enum $enum_name")
@@ -224,7 +226,7 @@ function wrap(wc::WrapContext, arg::StructArg, strm::IOStream)
         return
     else
         # Cache this regardless of typedef
-        add!(wc.cache_wrapped, st_name)
+        push!(wc.cache_wrapped, st_name)
     end
 
     cl = cindex.children(arg.cursor)
@@ -262,7 +264,7 @@ function wrap(wc::WrapContext, arg::FunctionArg, strm::IOStream)
     @assert cu_kind(arg.cursor) == CurKind.FUNCTIONDECL
 
     cu_spelling = spelling(arg.cursor)
-    add!(wc.cache_wrapped, name(arg.cursor))
+    push!(wc.cache_wrapped, name(arg.cursor))
     
     arg_types = function_args(arg.cursor)
     arg_list = tuple( [rep_type(ctype_to_julia(x)) for x in arg_types]... )
@@ -279,7 +281,7 @@ function wrap(wc::WrapContext, arg::TypedefArg, strm::IOStream)
     if(contains(wc.cache_wrapped, typedef_spelling))
         return
     else
-        add!(wc.cache_wrapped, typedef_spelling)
+        push!(wc.cache_wrapped, typedef_spelling)
     end
 
     cursor_type = cindex.cu_type(arg.cursor)

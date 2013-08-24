@@ -42,7 +42,7 @@ immutable CXString
     CXString() = new(Array(Uint8, CXString_size), "")
 end
 
-immutable CursorList
+type CursorList
     ptr::Ptr{Void}
     size::Int
 end
@@ -86,13 +86,13 @@ function parse(header::String;
                 ClangArgs                       = [""],
                 ParserOptions                   = 0)
     if (ClangIndex == None)
-        cxindex = idx_create(0, (ClangDiagnostics ? 0 : 1))
+        ClangIndex = idx_create(0, (ClangDiagnostics ? 0 : 1))
     end
     if (CPlusPlus)
         push!(ClangOptions, ["-x", "c++"])
     end
     
-    tu = tu_parse(cxindex, header, ClangArgs, length(ClangArgs),
+    tu = tu_parse(ClangIndex, header, ClangArgs, length(ClangArgs),
                   C_NULL, 0, ParserOptions)
     if (tu == C_NULL)
         error("ParseTranslationUnit returned NULL; unable to create TranslationUnit")

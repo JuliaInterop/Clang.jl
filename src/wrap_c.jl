@@ -405,7 +405,7 @@ end
 #     TODO: use dict for mapping from h file to wrapper file (or module?)
 function wrap_c_headers(
         wc::WrapContext,                    # wrapping context
-        headers::StringsArray)        # header files to wrap
+        headers)                            # header files to wrap
 
     println(wc.clang_includes)
 
@@ -433,9 +433,7 @@ function wrap_c_headers(
             println(ostrm, "# Julia wrapper for header: $hfile")
             println(ostrm, "# Automatically generated using Clang.jl wrap_c, version $version\n")
 
-            tunit = cindex.tu_parse(wc.index, hfile, clang_args,
-                                                            cindex.TranslationUnit_Flags.None)
-            topcu = cindex.getTranslationUnitCursor(tunit)
+            topcu = cindex.parse(hfile; ClangIndex = wc.index, ClangArgs = clang_args)
             wrap_header(wc, topcu, hfile, ostrm)
 
             println(ostrm)

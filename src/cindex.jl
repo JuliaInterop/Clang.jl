@@ -2,9 +2,8 @@ module cindex
 
 import Base.getindex, Base.start, Base.next, Base.done
 
-export cu_type, cu_kind, ty_kind, name, spelling, is_function, is_null,
-       value, children, cu_file, resolve_type, return_type,
-       tu_init, tu_cursor, tu_parse, tu_dispose
+export parse, cu_type, cu_kind, ty_kind, name, spelling, is_function, is_null,
+       value, children, cu_file, resolve_type, return_type
 export CXType, CXCursor, CXString, CXTypeKind, CursorList
 
 # Name of the helper library
@@ -43,7 +42,7 @@ immutable CXString
     CXString() = new(Array(Uint8, CXString_size), "")
 end
 
-type CursorList
+immutable CursorList
     ptr::Ptr{Void}
     size::Int
 end
@@ -64,6 +63,44 @@ end
 
 include("cindex_base.jl")
 include("cindex_h.jl")
+
+###############################################################################
+
+# Main entry point for parsing
+# Returns root CXCursor in TranslationUnit
+#
+# Required argument:
+#   "header.h"          header file to parse
+#
+# Optional (keyword) arguments:
+#   ClangIndex:         CXIndex pointer (pass to avoid re-allocation)
+#   ClangDiagnostics:   Display Clang diagnostics
+#   CPlusPlus:          Parse as C++
+#   ClangArgs   :       Compiler switches as string array, eg: ["-x", "c++", "-fno-elide-type"]
+#   ParserOptions:      Bitwise OR of CXTranslationUnit_* flags (see docs, rarely needed)
+#
+function parse(header::String;
+                ClangIndex                      = None,
+                ClangDiagnostics::Bool          = false,
+                CPlusPlus::Bool                 = false,
+                ClangArgs                       = [""],
+                ParserOptions                   = 0)
+    if (ClangIndex == None)
+        cxindex = idx_create(0, (ClangDiagnostics ? 0 : 1))
+    end
+    if (CPlusPlus)
+        push!(ClangOptions, ["-x", "c++"])
+    end
+    
+    tu = tu_parse(cxindex, header, ClangArgs, length(ClangArgs),
+                  C_NULL, 0, ParserOptions)
+    if (tu == C_NULL)
+        error("ParseTranslationUnit returned NULL; unable to create TranslationUnit")
+    end
+    
+    return tu_cursor(tu)
+end
+
 ###############################################################################
 
 # TODO: macro version should be more efficient.
@@ -128,6 +165,9 @@ function tu_init(hdrfile::Any, diagnostics, cpp::Bool, opts::Int)
     return tu
 end
 
+###############################################################################
+# Utility functions
+
 tu_dispose(tu::CXTranslationUnit) = ccall( (:clang_disposeTranslationUnit, "libclang"), Void, (Ptr{Void},), tu)
 
 function tu_cursor(tu::CXTranslationUnit)
@@ -136,10 +176,7 @@ function tu_cursor(tu::CXTranslationUnit)
     end
     getTranslationUnitCursor(tu)
 end
-
-tu_parse(CXIndex, source_filename::ASCIIString) = tu_parse(CXIndex, source_filename, [""])
-tu_parse(CXIndex, source_filename::ASCIIString, cl_args::Array{ASCIIString,1}, opts::Int) =
-    tu_parse(CXIndex, source_filename, cl_args, length(cl_args), C_NULL, 0, opts)
+ 
 tu_parse(CXIndex, source_filename::ASCIIString, 
                  cl_args::Array{ASCIIString,1}, num_clargs,
                  unsaved_files::CXUnsavedFile, num_unsaved_files,

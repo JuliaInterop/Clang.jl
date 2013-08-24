@@ -130,7 +130,12 @@ end
 
 tu_dispose(tu::CXTranslationUnit) = ccall( (:clang_disposeTranslationUnit, "libclang"), Void, (Ptr{Void},), tu)
 
-tu_cursor(tu::CXTranslationUnit) = getTranslationUnitCursor(tu)
+function tu_cursor(tu::CXTranslationUnit)
+    if (tu == C_NULL)
+        error("Invalid TranslationUnit!")
+    end
+    getTranslationUnitCursor(tu)
+end
 
 tu_parse(CXIndex, source_filename::ASCIIString) = tu_parse(CXIndex, source_filename, [""])
 tu_parse(CXIndex, source_filename::ASCIIString, cl_args::Array{ASCIIString,1}, opts::Int) =

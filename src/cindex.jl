@@ -3,11 +3,11 @@ module cindex
 import Base.getindex, Base.start, Base.next, Base.done
 
 export cu_type, cu_kind, ty_kind, name, spelling, is_function, is_null,
-    value, children, cu_file
-export resolve_type, return_type
-export tu_init, tu_cursor, tu_parse, tu_dispose
+       value, children, cu_file, resolve_type, return_type,
+       tu_init, tu_cursor, tu_parse, tu_dispose
 export CXType, CXCursor, CXString, CXTypeKind, CursorList
 
+# Name of the helper library
 const libwci = :libwrapclang
 
 # Type definitions for wrapped types
@@ -30,14 +30,14 @@ for st in Any[
     sz_name = symbol(string(st,"_size"))
     @eval begin
         const $sz_name = get_sz($("$st"))
-        type $(st)
+        immutable $(st)
             data::Array{Uint8,1}
             $st() = new(Array(Uint8, $sz_name))
         end
     end
 end
 
-type CXString
+immutable CXString
     data::Array{Uint8,1}
     str::ASCIIString
     CXString() = new(Array(Uint8, CXString_size), "")
@@ -52,17 +52,19 @@ function get_string(cx::CXString)
     p::Ptr{Uint8} = ccall( (:wci_getCString, libwci), 
         Ptr{Uint8}, (Ptr{Void},), cx.data)
     if (p == C_NULL)
-        cx.str = ""
-    else
-        cx.str = bytestring(p)
-        ccall( (:wci_disposeString, libwci), Void, (Ptr{Uint8},), p)
+        return ""
     end
-    cx.str
+    bytestring(p)
 end
 
-# These include statements must follow type definitions above.
+###############################################################################
+# Include the wrapper functions which do the struct copying
+# These include statements must follow type definitions above
+# because the wrapped functions use those types.
+
 include("cindex_base.jl")
 include("cindex_h.jl")
+###############################################################################
 
 # TODO: macro version should be more efficient.
 anymatch(first, args...) = any({==(first, a) for a in args})

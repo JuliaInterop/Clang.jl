@@ -92,11 +92,22 @@ void wci_disposeString(char* csin)
 
 } // extern
 
+#ifdef USE_CLANG_CPP
+
 /* 
-  Optional Clang.jl C++ Support                                               #
+    Optional extended functionality using Clang C++ API
+
+    wci_getMethodVTableIndex(CXCursor): get the vtable index of
+        a member function.
+    wci_getCXXMethodMangledName(CXCursor): get the mangled name
+        of a C++ class method.
+
+    NOTE: if this section is enabled, the resulting library *must*
+    be compiled against all Clang libraries or else random segfaults
+    and "ld inconsistency detected" warnings will result. The default
+    libclang.so build is *not* sufficient.
 */
 
-#ifdef USE_CLANG_CPP
 
 #define __STDC_LIMIT_MACROS
 #define __STDC_CONSTANT_MACROS
@@ -121,7 +132,7 @@ int wci_getCXXMethodVTableIndex(char* cuin)
 {
   CXCursor cu = wci_get_CXCursor(cuin);
 
-  Decl* MD = cxcursor::getCursorDecl(cu);
+  const Decl* MD = cxcursor::getCursorDecl(cu);
   WCI_CHECK_DECL(MD);
 
   const CXXMethodDecl* CXXMethod;
@@ -145,7 +156,7 @@ int wci_getCXXMethodVTableIndex(char* cuin)
 int wci_getCXXMethodMangledName(char* cuin, char* outbuf)
 {
   CXCursor cu = wci_get_CXCursor(cuin);
-  Decl* MD = cxcursor::getCursorDecl(cu);
+  const Decl* MD = cxcursor::getCursorDecl(cu);
   WCI_CHECK_DECL(MD);
 
   const CXXMethodDecl* CXXMethod;
@@ -179,9 +190,9 @@ typedef int (*ClassParentCB)(char*, void*);
 int wci_getCXXClassParents(char* cuin, ClassParentCB visit_cb, void* cbdata)
 {
   CXCursor cu = wci_get_CXCursor(cuin);
-  CXTranslationUnit TU = static_cast<CXTranslationUnit>(cu.data[2]);
+  CXTranslationUnit TU = (CXTranslationUnit)cu.data[2];
 
-  Decl* MD = cxcursor::getCursorDecl(cu);
+  const Decl* MD = cxcursor::getCursorDecl(cu);
   WCI_CHECK_DECL(MD);
 
   const CXXRecordDecl* CXXClass;
@@ -217,9 +228,5 @@ int wci_getCXXClassParents(char* cuin, ClassParentCB visit_cb, void* cbdata)
 #undef __STDC_LIMIT_MACROS
 #undef __STDC_CONSTANT_MACROS
 
-#endif
-/*
-  End of Optional Clang.jl C++ Support
-*/
-
+#endif // USE_CLANG_CPP
 

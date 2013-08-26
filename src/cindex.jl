@@ -1,10 +1,16 @@
 module cindex
 
-import Base.getindex, Base.start, Base.next, Base.done
+###############################################################################
 
 export parse, cu_type, cu_kind, ty_kind, name, spelling, is_function, is_null,
        value, children, cu_file, resolve_type, return_type
 export CXType, CXCursor, CXString, CXTypeKind, CursorList
+
+import Base.getindex, Base.start, Base.next, Base.done, Base.search
+
+###############################################################################
+
+# Types and global definitions
 
 # Name of the helper library
 const libwci = :libwrapclang
@@ -67,7 +73,7 @@ include("cindex_h.jl")
 ###############################################################################
 
 # Main entry point for parsing
-# Returns root CXCursor in TranslationUnit
+# Returns root CXCursor in the TranslationUnit for a given header
 #
 # Required argument:
 #   "header.h"          header file to parse

@@ -59,8 +59,7 @@ All testing and development so far has been on Ubuntu 12.04.1 (64-bit)
   ```julia
   using Clang.cindex
 
-  julia> tu = tu_init("Index.h")   # Initialize and parse Index.h
-  julia> topcu = tu_cursor(tu)     # get TU top cursor
+  julia> topcu = cindex.parse("Index.h") # Parse Index.h, returning the root cursor
   julia> topcl = children(topcu)
   julia> topcl.size
   595

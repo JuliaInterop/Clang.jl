@@ -186,44 +186,6 @@ int wci_getCXXMethodMangledName(char* cuin, char* outbuf)
   return sbuf.size();
 }
 
-typedef int (*ClassParentCB)(char*, void*);
-int wci_getCXXClassParents(char* cuin, ClassParentCB visit_cb, void* cbdata)
-{
-  CXCursor cu = wci_get_CXCursor(cuin);
-  CXTranslationUnit TU = (CXTranslationUnit)cu.data[2];
-
-  const Decl* MD = cxcursor::getCursorDecl(cu);
-  WCI_CHECK_DECL(MD);
-
-  const CXXRecordDecl* CXXClass;
-  if ( !(CXXClass = dyn_cast<CXXRecordDecl>(MD)) )
-    return -1;
-
-  int count = 0;
-  for(CXXRecordDecl::base_class_const_iterator it = CXXClass->bases_begin();
-      it != CXXClass->bases_end(); ++it)
-  {
-    const CXXBaseSpecifier &Base = *it;
-    RecordDecl *BaseDecl;
-    QualType T = Base.getType();
-    const RecordType *RT = T->getAs<RecordType>();
-    if (RT == NULL)
-    {
-      std::cerr << "Error: missing record type" << std::endl;
-      return -1;
-    } else {
-      BaseDecl = RT->getDecl();
-    } 
-    
-    CXCursor cuback = cxcursor::MakeCXCursor(BaseDecl, TU);
-    
-    std::cout << "calling callback with: " << clang_getCString(clang_getCursorDisplayName(cuback)) << std::endl;
-    (visit_cb)((char*)&cuback, cbdata);
-    count++;
-  }
-  return count;
-}
-
 } // extern C
 #undef __STDC_LIMIT_MACROS
 #undef __STDC_CONSTANT_MACROS

@@ -6,7 +6,7 @@ export parse, cu_type, cu_kind, ty_kind, name, spelling, is_function, is_null,
        value, children, cu_file, resolve_type, return_type
 export CXType, CXCursor, CXString, CXTypeKind, CursorList
 
-import Base.getindex, Base.start, Base.next, Base.done, Base.search
+import Base.getindex, Base.start, Base.next, Base.done, Base.search, Base.show
 
 ###############################################################################
 
@@ -106,6 +106,26 @@ function parse(header::String;
     
     return tu_cursor(tu)
 end
+
+
+# Search function for CursorList
+# Returns vector of CXCursors in CursorList matching predicate
+#
+# Required arguments:
+#   CursorList      List to search
+#   IsMatch(CXCursor)
+#                   Predicate Function, accepting a CXCursor argument
+#
+function search(cl::CursorList, ismatch::Function)
+    ret = CXCursor[]
+    for cu in cl
+        ismatch(cu) && push!(ret, cu)
+    end
+    ret
+end
+search(cu::CXCursor, ismatch::Function) = search(children(cu), ismatch)
+
+show(io::IO, cu::CXCursor) = print(io, "CXCursor: ", name(cu), " kind: ", cu_kind(cu))
 
 ###############################################################################
 

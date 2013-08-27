@@ -40,11 +40,14 @@ function output_file(hdr::ASCIIString)
     return "PETSc.jl"
 end
 
-const wc = wrap_c.init("libPETSc_h.jl", "libPETSc_common.jl", clang_includes,
-                       clang_extraargs,
-                       should_wrap,
-                       lib_file,
-                       output_file)
+const wc = wrap_c.init(; 
+                        OutputFile = "libPETSc_h.jl",
+                        CommonFile = "libPETSc_common.jl",
+                        ClangIncludes = clang_includes,
+                        ClangArgs = clang_extraargs,
+                        header_wrapped = should_wrap, 
+                        header_library = lib_file,
+                        header_outputfile = output_file)
 
 function wrap_libPETSc(wc::WrapContext, wrap_hdrs)
     wrap_c.wrap_c_headers(wc, wrap_hdrs)

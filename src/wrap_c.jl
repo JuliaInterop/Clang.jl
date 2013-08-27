@@ -54,26 +54,57 @@ InternalOptions() = InternalOptions(false)
 
 # WrapContext object stores shared information about the wrapping session
 type WrapContext
-    out_path::ASCIIString
+    index::cindex.CXIndex
+    output_file::ASCIIString
     common_file::ASCIIString
     clang_includes::StringsArray             # clang include paths
     clang_extra_args::StringsArray         # additional {"-Arg", "value"} pairs for clang
     header_wrapped::Function                     # called to determine cursor inclusion status
     header_library::Function                     # called to determine shared library for given header
     header_outfile::Function                     # called to determine output file group for given header
-    index::cindex.CXIndex
     common_stream
     cache_wrapped::Set{ASCIIString}
     output_streams::Dict{ASCIIString, IOStream}
     options::InternalOptions
 end
-WrapContext(op,cmn,incl,extra,hwrap,hlib,hout) = WrapContext(op,cmn,incl,extra,hwrap,hlib,hout,
-                                                                                                    cindex.idx_create(1,1),None,Set{ASCIIString}(),
-                                                                                                    Dict{ASCIIString,IOStream}(), InternalOptions())
+WrapContext(idx,outfile,cmnfile,clanginc,clangextra,hwrap,hlib,hout) = 
+    WrapContext(idx,outfile,cmnfile,clanginc,clangextra,hwrap,hlib,hout,
+                None,Set{ASCIIString}(), Dict{ASCIIString,IOStream}(), InternalOptions())
 
+#
+# Initialize wrapping context
+#
+function init(;
+            Index                           = None,
+            OutputFile::ASCIIString         = ".",
+            CommonFile::ASCIIString         = None,
+            ClangArgs::StringsArray         = [""],
+            ClangIncludes::StringsArray     = [""],
+            ClangDiagnostics::Bool          = false,
+            header_wrapped::Function        = (header, cursorname) -> true,
+            header_library::Union(Function,ASCIIString)
+                                            = None,
+            header_outputfile::Function     = None)
 
+    # Set up some optional args if they are not explicitly passed.
 
-### These helpers will be written to the generated file
+    (Index == None)         && ( Index = cindex.idx_create(0, (ClangDiagnostics ? 0 : 1)) )
+    (CommonFile == None)    && ( CommonFile = OutputFile )
+    
+    if (header_library == None)
+        error("Missing header_library argument: pass lib name, or (hdr)->lib::ASCIIString function")
+    elseif(typeof(header_library) == ASCIIString)
+        header_library = x->header_library
+    end
+    if (header_outputfile == None)
+        header_outputfile = x->OutputFile
+    end
+
+    # Instantiate and return the WrapContext    
+    return WrapContext(Index, OutputFile, CommonFile, ClangIncludes, ClangArgs, header_wrapped, header_library,header_outputfile)
+end
+
+### These helper macros will be written to the generated file
 helper_macros = "macro c(ret_type, func, arg_types, lib)
     local args_in = Any[ symbol(string('a',x)) for x in 1:length(arg_types.args) ]
     quote
@@ -87,38 +118,46 @@ macro ctypedef(fake_t,real_t)
     end
 end"
 
-### libclang types to Julia types
+###############################################################################
+#
+# Mapping from libclang types to Julia types
+#
+#   This is primarily used with CXTypeKind enums (aka: cindex.TypKind)
+#   but can also be used to map arbitrary type names to corresponding
+#   Julia entities, for example "size_t" -> :Csize_t
+#
+##############################################################################
 
-c_jl = {
-    TypKind.VOID                => Void,
-    TypKind.BOOL                => Bool,
-    TypKind.CHAR_U            => Uint8,
-    TypKind.UCHAR             => Cuchar,
-    TypKind.CHAR16            => Uint16,
-    TypKind.CHAR32            => Uint32,
-    TypKind.USHORT            => Uint16,
-    TypKind.UINT                => Uint32,
-    TypKind.ULONG             => Culong,
-    TypKind.ULONGLONG     => Culonglong,
-    TypKind.CHAR_S            => Uint8,         # TODO check
-    TypKind.SCHAR             => Uint8,         # TODO check
-    TypKind.WCHAR             => Char,
-    TypKind.SHORT             => Int16,
-    TypKind.INT                 => Cint,
-    TypKind.LONG                => Clong,
+c_to_jl = {
+    TypKind.VOID            => Void,
+    TypKind.BOOL            => Bool,
+    TypKind.CHAR_U          => Uint8,
+    TypKind.UCHAR           => Cuchar,
+    TypKind.CHAR16          => Uint16,
+    TypKind.CHAR32          => Uint32,
+    TypKind.USHORT          => Uint16,
+    TypKind.UINT            => Uint32,
+    TypKind.ULONG           => Culong,
+    TypKind.ULONGLONG       => Culonglong,
+    TypKind.CHAR_S          => Uint8,           # TODO check
+    TypKind.SCHAR           => Uint8,           # TODO check
+    TypKind.WCHAR           => Char,
+    TypKind.SHORT           => Int16,
+    TypKind.INT             => Cint,
+    TypKind.LONG            => Clong,
     TypKind.LONGLONG        => Clonglong,
-    TypKind.FLOAT             => Cfloat,
-    TypKind.DOUBLE            => Cdouble,
-    TypKind.LONGDOUBLE    => Float64,     # TODO detect?
-    TypKind.ENUM                => Cint,            # TODO arch check?
+    TypKind.FLOAT           => Cfloat,
+    TypKind.DOUBLE          => Cdouble,
+    TypKind.LONGDOUBLE      => Float64,         # TODO detect?
+    TypKind.ENUM            => Cint,            # TODO arch check?
     TypKind.NULLPTR         => C_NULL,
-                                                                        # TypKind.UINT128 => TODO
+    TypKind.UINT128         => Uint128,
     "size_t"                        => :Csize_t,
     "ptrdiff_t"                 => :Cptrdiff_t
     
     }
 
-# Convert clang type to julia type
+# Convert libclang type to julia type
 function ctype_to_julia(cutype::CXType)
     typkind = ty_kind(cutype)
     # Special cases: TYPEDEF, POINTER
@@ -128,12 +167,14 @@ function ctype_to_julia(cutype::CXType)
         return Ptr{ptr_jltype}
     elseif (typkind == TypKind.TYPEDEF || typkind == TypKind.RECORD)
         basename = string( spelling( cindex.getTypeDeclaration(cutype) ) )
-        return symbol( get(c_jl, basename, basename))
+        return symbol( get(c_to_jl, basename, basename))
     else
         # TODO: missing mappings should generate a warning
-        return symbol( string( get(c_jl, typkind, :Void) ))
+        return symbol( string( get(c_to_jl, typkind, :Void) ))
     end
 end
+
+###############################################################################
 
 ### eliminate symbol from the final type representation
 function rep_type(t)
@@ -386,19 +427,6 @@ function sort_common_includes(strm::IOBuffer)
  
     kj = setdiff(1:length(keys(tmp)), pos)
     vcat(fnl,[tmp[i] for i in kj])
-end
-
-### init: setup wrapping context 
-function init(
-              out_path::ASCIIString,
-              common_file::ASCIIString,
-              clang_includes::StringsArray,
-              clang_extra_args::StringsArray,
-              header_wrapped::Function,
-              header_library::Function,
-              header_outfile::Function)
-
-    WrapContext(out_path,common_file,clang_includes,clang_extra_args,header_wrapped,header_library,header_outfile)
 end
 
 ### wrap_c_headers: main entry point

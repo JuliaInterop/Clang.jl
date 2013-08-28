@@ -81,10 +81,9 @@ function init(;
             ClangArgs::StringsArray         = [""],
             ClangIncludes::StringsArray     = [""],
             ClangDiagnostics::Bool          = false,
-            header_wrapped::Function        = (header, cursorname) -> true,
-            header_library::Union(Function,ASCIIString)
-                                            = None,
-            header_outputfile::Function     = None)
+            header_wrapped                  = (header, cursorname) -> true,
+            header_library                  = None,
+            header_outputfile               = None)
 
     # Set up some optional args if they are not explicitly passed.
 

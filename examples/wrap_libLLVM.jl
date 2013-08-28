@@ -39,9 +39,13 @@ clang_includes = map(x::ASCIIString->joinpath(LLVM_PATH, x), [
     ])
 clang_extraargs = ["-D", "__STDC_LIMIT_MACROS", "-D", "__STDC_CONSTANT_MACROS"]
 
-const wc = wrap_c.init("libLLVM_h.jl", "libLLVM_common.jl", clang_includes,
-                       clang_extraargs, (x...)->true, (x...)->true, (x...)->"libLLVM_h.jl")
+const wc = wrap_c.init(;
+                        OutputFile = "libLLVM_h.jl",
+                        CommonFile = "libLLVM_common.jl",
+                        ClangIncludes = clang_includes,
+                        ClangArgs = clang_extraargs,
+                        header_library = "LLVM-3.3")
 
-function wrap_libLLVM(wc::WrapContext, wrap_hdrs::Vector{ASCIIString})
-    wrap_c.wrap_c_headers(wc, wrap_hdrs)
+function wrap_libLLVM(wc::WrapContext, wrap_hdrs)
+    wrap_c.wrap_c_headers(wc, convert(Vector{ASCIIString}, wrap_hdrs))
 end

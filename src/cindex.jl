@@ -203,23 +203,24 @@ function tu_cursor(tu::CXTranslationUnit)
     getTranslationUnitCursor(tu)
 end
  
-tu_parse(CXIndex, source_filename::ASCIIString, 
+function tu_parse(CXIndex, source_filename::ASCIIString, 
                  cl_args::Array{ASCIIString,1}, num_clargs,
                  unsaved_files::CXUnsavedFile, num_unsaved_files,
-                 options) =
+                 options)
     ccall( (:clang_parseTranslationUnit, "libclang"),
         CXTranslationUnit,
         (Ptr{Void}, Ptr{Uint8}, Ptr{Ptr{Uint8}}, Uint32, Ptr{Void}, Uint32, Uint32), 
-            CXIndex, source_filename,
-            cl_args, num_clargs,
-            unsaved_files, num_unsaved_files, options)
+        CXIndex, source_filename, cl_args, num_clargs,
+        unsaved_files, num_unsaved_files, options)
+end
 
-idx_create() = idx_create(0,0)
-idx_create(excludeDeclsFromPCH::Int, displayDiagnostics::Int) =
+function idx_create(excludeDeclsFromPCH::Int, displayDiagnostics::Int)
     ccall( (:clang_createIndex, "libclang"),
         CXTranslationUnit,
         (Int32, Int32),
         excludeDeclsFromPCH, displayDiagnostics)
+end
+idx_create() = idx_create(0,0)
 
 #Typedef{"Pointer CXFile"} clang_getFile(CXTranslationUnit, const char *)
 getFile(tu::CXTranslationUnit, file::ASCIIString) = 

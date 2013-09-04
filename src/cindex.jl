@@ -1,74 +1,21 @@
 module cindex
 
-###############################################################################
-
 export parse, cu_type, cu_kind, ty_kind, name, spelling, is_function, is_null,
        value, children, cu_file, resolve_type, return_type
-export CXType, CXCursor, CXString, CXTypeKind, CursorList
+export CXType, CXNode, CXString, CXTypeKind, CursorList
 
 import Base.getindex, Base.start, Base.next, Base.done, Base.search, Base.show
 
 ###############################################################################
 
-# Types and global definitions
-
 # Name of the helper library
 const libwci = :libwrapclang
 
-# Type definitions for wrapped types
-typealias CXIndex Ptr{Void}
-typealias CXUnsavedFile Ptr{Void}
-typealias CXFile Ptr{Void}
-typealias CXTypeKind Int32
-typealias CXCursorKind Int32
-typealias CXTranslationUnit Ptr{Void}
-const CXString_size = ccall( ("wci_size_CXString", libwci), Int, ())
-
-# Work-around: ccall followed by composite_type in @eval gives error.
-get_sz(sym) = @eval ccall( ($(string("wci_size_", sym)), :($(libwci))), Int, ())
-
-# Generate container types
-for st in Any[
-        :CXSourceLocation, :CXSourceRange,
-        :CXTUResourceUsageEntry, :CXTUResourceUsage, :CXCursor, :CXType,
-        :CXToken ]
-    sz_name = symbol(string(st,"_size"))
-    @eval begin
-        const $sz_name = get_sz($("$st"))
-        immutable $(st)
-            data::Array{Uint8,1}
-            $st() = new(Array(Uint8, $sz_name))
-        end
-    end
-end
-
-immutable CXString
-    data::Array{Uint8,1}
-    str::ASCIIString
-    CXString() = new(Array(Uint8, CXString_size), "")
-end
-
-type CursorList
-    ptr::Ptr{Void}
-    size::Int
-end
-
-function get_string(cx::CXString)
-    p::Ptr{Uint8} = ccall( (:wci_getCString, libwci), 
-        Ptr{Uint8}, (Ptr{Void},), cx.data)
-    if (p == C_NULL)
-        return ""
-    end
-    bytestring(p)
-end
-
 ###############################################################################
-# Include the wrapper functions which do the struct copying
-# These include statements must follow type definitions above
-# because the wrapped functions use those types.
 
-include("cindex_base.jl")
-include("cindex_h.jl")
+include("cindex/defs.jl")
+include("cindex/types.jl")
+include("cindex/base.jl")
 
 ###############################################################################
 
@@ -82,7 +29,7 @@ include("cindex_h.jl")
 #   ClangIndex:         CXIndex pointer (pass to avoid re-allocation)
 #   ClangDiagnostics:   Display Clang diagnostics
 #   CPlusPlus:          Parse as C++
-#   ClangArgs   :       Compiler switches as string array, eg: ["-x", "c++", "-fno-elide-type"]
+#   ClangArgs:       Compiler switches as string array, eg: ["-x", "c++", "-fno-elide-type"]
 #   ParserOptions:      Bitwise OR of CXTranslationUnit_* flags (see docs, rarely needed)
 #
 function parse(header::String;
@@ -117,30 +64,30 @@ end
 #                   Predicate Function, accepting a CXCursor argument
 #
 function search(cl::CursorList, ismatch::Function)
-    ret = CXCursor[]
+    ret = CXNode[]
     for cu in cl
         ismatch(cu) && push!(ret, cu)
     end
     ret
 end
-search(cu::CXCursor, ismatch::Function) = search(children(cu), ismatch)
+search(cu::CXNode, ismatch::Function) = search(children(cu), ismatch)
 
-show(io::IO, cu::CXCursor) = print(io, "CXCursor: ", name(cu), " kind: ", cu_kind(cu))
+show(io::IO, cu::CXNode) = print(io, "CXCursor: ", name(cu), " kind: ", cu_kind(cu))
 
 ###############################################################################
 
 # TODO: macro version should be more efficient.
 anymatch(first, args...) = any({==(first, a) for a in args})
 
-cu_type(c::CXCursor) = getCursorType(c)
-cu_kind(c::CXCursor) = getCursorKind(c)
+cu_type(c::CXNode) = getCursorType(c)
+cu_kind(c::CXNode) = getCursorKind(c)
 ty_kind(c::CXType) = reinterpret(Int32, c.data[1:4])[1]
-name(c::CXCursor) = getCursorDisplayName(c)
+name(c::CXNode) = getCursorDisplayName(c)
 spelling(c::CXType) = getTypeKindSpelling(ty_kind(c))
-spelling(c::CXCursor) = getCursorSpelling(c)
-is_function(c::CXCursor) = true # (cu_kind(c) == CurKind.FUNCTIONDECL || cu_kind(c) == 15)
+spelling(c::CXNode) = getCursorSpelling(c)
+is_function(c::CXNode) = true # (cu_kind(c) == CurKind.FUNCTIONDECL || cu_kind(c) == 15)
 is_function(t::CXType) = (ty_kind(t) == TypKind.FUNCTIONPROTO)
-is_null(c::CXCursor) = (Cursor_isNull(c) != 0)
+is_null(c::CXNode) = (Cursor_isNull(c) != 0)
 
 function resolve_type(rt::CXType)
     # This helper attempts to work around some limitations of the
@@ -148,7 +95,7 @@ function resolve_type(rt::CXType)
     if ty_kind(rt) == cindex.TypKind.UNEXPOSED
         # try to resolve Unexposed type to cursor definition.
         rtdef_cu = cindex.getTypeDeclaration(rt)
-        if (!is_null(rtdef_cu) && cu_kind(rtdef_cu) != CurKind.NODECLFOUND)
+        if (!is_null(rtdef_cu) && !isa(rtdef_cu, NoDeclFound))
             return cu_type(rtdef_cu)
         end
     end
@@ -157,7 +104,7 @@ function resolve_type(rt::CXType)
     return rt
 end
 
-function return_type(c::CXCursor, resolve::Bool)
+function return_type(c::CXNode, resolve::Bool)
     if (!is_function(c))
         error("return_type Cursor argument must be a function")
     end
@@ -167,10 +114,10 @@ function return_type(c::CXCursor, resolve::Bool)
         return getCursorResultType(c)
     end
 end
-return_type(c::CXCursor) = return_type(c, true)
+return_type(c::CXNode) = return_type(c, true)
 
-function value(c::CXCursor)
-    if cu_kind(c) != CurKind.ENUMCONSTANTDECL
+function value(c::CXNode)
+    if !isa(c, EnumConstantDecl)
         error("Not a value cursor.")
     end
     t = cu_type(c)
@@ -258,23 +205,23 @@ function getindex(cl::CursorList, clid::Int, default::UnionType)
 end
 function getindex(cl::CursorList, clid::Int)
     if (clid < 1 || clid > cl.size) error("Index out of range or empty list") end 
-    cu = CXCursor()
+    cu = TmpCursor()
     ccall( (:wci_getCLCursor, libwci),
         Void,
         (Ptr{Void}, Ptr{Void}, Int), cu.data, cl.ptr, clid-1)
-    return cu
+    return CXCursor(cu)
 end
 
-function children(cu::CXCursor)
+function children(cu::CXNode)
     cl = cl_create() 
     ccall( (:wci_getChildren, libwci),
         Ptr{Void},
-            (Ptr{Void}, Ptr{Void}), cu.data, cl.ptr)
+            (Ptr{CXCursor}, Ptr{Void}), cu.data, cl.ptr)
     cl.size = cl_size(cl.ptr)
     return cl
 end
 
-function cu_file(cu::CXCursor)
+function cu_file(cu::CXNode)
     str = CXString()
     ccall( (:wci_getCursorFile, libwci),
         Void,

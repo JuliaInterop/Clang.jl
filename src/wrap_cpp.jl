@@ -2,8 +2,6 @@ module wrap_cpp
 
 using Clang.cindex
 
-export @vcall, @scall, @mcall
-
 function base_classes(c)
 	search(c, x->(cu_kind(c) == CurKind.CXXBaseSpecifier))
 end

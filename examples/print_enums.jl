@@ -4,12 +4,12 @@ const ENUM_DECL = 5
 const TYPEDEF_DECL = 20
 
 enum_remaps = {
-    "CXCursor_" => ("", uppercase),
-    "CXType_" => ("", uppercase)
+    "CXCursor_" => ("", x->x),
+    "CXType_" => ("", x->x)
 }
 
 
-function wrap_enums(io::IOStream, cu::cindex.CXCursor, typedef::Any)
+function wrap_enums(io::IOStream, cu::cindex.CXNode, typedef::Any)
     enum = cindex.name(cu)
     enum_typedef = if (typeof(typedef) == cindex.CXCursor)
             cindex.name(typedef)
@@ -52,8 +52,7 @@ function wrap_enums(io::IOStream, cu::cindex.CXCursor, typedef::Any)
 end
 
 index_fn = "Index.h"
-tu = cindex.tu_init(index_fn)
-topcu = cindex.tu_cursor(tu)
+topcu = cindex.parse(index_fn)
 topcl = cindex.children(topcu)
 print("cursors: ", topcl.size)
 f_out = open("test_enums.jl", "w")

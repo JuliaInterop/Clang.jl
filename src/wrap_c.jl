@@ -1,12 +1,14 @@
-##############################################################################
-# Julia wrapper generator using libclang from the LLVM project               #
-##############################################################################
+################################################################################
+# Julia C wrapper generator using libclang from the LLVM project               #
+################################################################################
 
 module wrap_c
     version = v"0.0.0"
 
 using Clang.cindex
 import ..cindex.TypKind, ..cindex.CurKind
+import ..cindex.TypedefDecl, ..cindex.FunctionDecl, ..cindex.StructDecl
+import ..cindex.EnumDecl
 
 export ctype_to_julia, wrap_c_headers
 export WrapContext
@@ -16,28 +18,28 @@ export WrapContext
 abstract CArg
 
 type IntrinsicArg <: CArg
-    cursor::cindex.CXCursor
+    cursor::cindex.CXNode
 end
 
 type TypedefArg <: CArg
-    cursor::cindex.CXCursor
+    cursor::cindex.CXNode
 end
 
 type PtrArg <: CArg
-    cursor::cindex.CXCursor
+    cursor::cindex.CXNode
 end
 
 type StructArg <: CArg
-    cursor::cindex.CXCursor
+    cursor::cindex.CXNode
     typedef::Any
 end
 
 type FunctionArg <: CArg
-    cursor::cindex.CXCursor
+    cursor::cindex.CXNode
 end
 
 type EnumArg <: CArg
-    cursor::cindex.CXCursor
+    cursor::cindex.CXNode
     typedef::Any
 end
 
@@ -204,7 +206,7 @@ function build_clang_args(includes, extras)
 end
 
 ### Retrieve function arguments for a given cursor
-function function_args(cursor::CXCursor)
+function function_args(cursor::CXNode)
     #@assert cu_kind(cursor) == CurKind.FUNCTIONDECL
 
     cursor_type = cindex.cu_type(cursor)
@@ -225,7 +227,7 @@ function wrap(wc::WrapContext, argt::EnumArg, strm::IOStream)
         else "ANONYMOUS"
         end
 
-    if (contains(wc.cache_wrapped, enum_name))
+    if (enum_name in wc.cache_wrapped)
         return
     elseif(argt.typedef == None)
         push!(wc.cache_wrapped, enum_name)
@@ -246,7 +248,7 @@ function wrap(wc::WrapContext, argt::EnumArg, strm::IOStream)
 end
 
 function wrap(wc::WrapContext, arg::StructArg, strm::IOStream)
-    @assert cu_kind(arg.cursor) == CurKind.STRUCTDECL
+    @assert isa(arg.cursor, StructDecl)
 
     st = cindex.name(arg.cursor)
     st_typedef = if (typeof(arg.typedef) == cindex.CXCursor)
@@ -262,7 +264,7 @@ function wrap(wc::WrapContext, arg::StructArg, strm::IOStream)
             "ANONYMOUS_"*string(round(rand()*10000,5))
         end
 
-    if (contains(wc.cache_wrapped, st_name))
+    if (st_name in wc.cache_wrapped)
         return
     else
         # Cache this regardless of typedef
@@ -282,7 +284,7 @@ function wrap(wc::WrapContext, arg::StructArg, strm::IOStream)
         cur_cu = cindex.ref(cl,i)
         cur_name = cindex.spelling(cur_cu)
 
-        if (cu_kind(cur_cu) != CurKind.FIELDDECL)
+        if (!isa(cur_cu, FieldDecl))
             warn("STRUCT: Skipping non-field declaration: $cur_name in: $st_name")
             continue
         end
@@ -290,7 +292,7 @@ function wrap(wc::WrapContext, arg::StructArg, strm::IOStream)
             warn("STRUCT: Skipping unnamed struct member in: $st_name")
             continue 
         end
-        if (contains(reserved_words, cur_name)) cur_name = "_"*cur_name end
+        if ((cur_name in reserved_words)) cur_name = "_"*cur_name end
 
         ty = resolve_type(cindex.cu_type(cur_cu))
 
@@ -301,7 +303,7 @@ function wrap(wc::WrapContext, arg::StructArg, strm::IOStream)
 end
 
 function wrap(wc::WrapContext, arg::FunctionArg, strm::IOStream)
-    @assert cu_kind(arg.cursor) == CurKind.FUNCTIONDECL
+    @assert isa(arg.cursor, FunctionDecl)
 
     cu_spelling = spelling(arg.cursor)
     push!(wc.cache_wrapped, name(arg.cursor))
@@ -315,10 +317,10 @@ function wrap(wc::WrapContext, arg::FunctionArg, strm::IOStream)
 end
 
 function wrap(wc::WrapContext, arg::TypedefArg, strm::IOStream)
-    @assert cu_kind(arg.cursor) == CurKind.TYPEDEFDECL
+    @assert isa(arg.cursor, TypedefDecl)
 
     typedef_spelling = spelling(arg.cursor)
-    if(contains(wc.cache_wrapped, typedef_spelling))
+    if((typedef_spelling in wc.cache_wrapped))
         return
     else
         push!(wc.cache_wrapped, typedef_spelling)
@@ -332,7 +334,7 @@ function wrap(wc::WrapContext, arg::TypedefArg, strm::IOStream)
     println(wc.common_stream, "@ctypedef ",    typedef_spelling, " ", rep_type(ctype_to_julia(td_type)) )
 end
 
-function wrap_header(wc::WrapContext, topcu::CXCursor, top_hdr, ostrm::IOStream)
+function wrap_header(wc::WrapContext, topcu::CXNode, top_hdr, ostrm::IOStream)
     println("WRAPPING HEADER: $top_hdr")
     
     topcl = children(topcu)
@@ -352,16 +354,16 @@ function wrap_header(wc::WrapContext, topcu::CXCursor, top_hdr, ostrm::IOStream)
         if (cursor_hdr == top_hdr)
             # pass
         elseif (!wc.header_wrapped(top_hdr, cu_file(cursor)) ||
-                        contains(wc.cache_wrapped, cursor_name) )
+                        (cursor_name in wc.cache_wrapped) )
             continue
         end
 
         towrap = None
-        if (kind == CurKind.TYPEDEFDECL)
+        if (isa(cursor, TypedefDecl))
             towrap = TypedefArg(cursor)
-        elseif (cu_kind(cursor) == CurKind.FUNCTIONDECL)
+        elseif (isa(cursor, FunctionDecl))
             towrap = FunctionArg(cursor)
-        elseif (cu_kind(cursor) == CurKind.ENUMDECL)
+        elseif (isa(cursor, EnumDecl))
             # TODO: need a better solution for this
             #    libclang does not provide xref between each cursor for typedef'd enum
             #    right now, if a typedef follows enum then we just assume it is
@@ -370,14 +372,14 @@ function wrap_header(wc::WrapContext, topcu::CXCursor, top_hdr, ostrm::IOStream)
             tdcu = None
             if (i<topcl.size)
                 tdcu = getindex(topcl, i+1)
-                tdcu = ((cindex.cu_kind(tdcu) == CurKind.TYPEDEFDECL) ? tdcu : None)
+                tdcu = (isa(tdcu, TypedefDecl) ? tdcu : None)
             end
             towrap = EnumArg(cursor, tdcu)
-        elseif (wc.options.wrap_structs && cu_kind(cursor) == CurKind.STRUCTDECL)
+        elseif (wc.options.wrap_structs && isa(cursor, StructDecl))
             tdcu = None
             if (i<topcl.size)
                 tdcu = getindex(topcl, i+1)
-                ((cindex.cu_kind(tdcu) == CurKind.TYPEDEFDECL) ? tdcu : None)
+                (isa(tdcu, TypedefDecl) ? tdcu : None)
             end
             towrap = StructArg(cursor, tdcu)
         else

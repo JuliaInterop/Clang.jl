@@ -26,6 +26,29 @@ for st in Any[
     end
 end
 
+immutable _CXSourceLocation
+    ptr_data1::Cptrdiff_t
+    ptr_data2::Cptrdiff_t
+    int_data::Cuint
+end
+
+immutable _CXSourceRange
+    ptr_data1::Cptrdiff_t
+    ptr_data2::Cptrdiff_t
+    begin_int_data::Cuint
+    end_int_data::Cuint
+    foo::_CXSourceLocation
+end
+
+immutable CXCursor
+    kind::Int32
+    xdata::Int32
+    data1::Cptrdiff_t
+    data2::Cptrdiff_t
+    data3::Cptrdiff_t
+    CXCursor() = new(0,0,0,0,0)
+end
+
 immutable CXString
     data::Array{Uint8,1}
     str::ASCIIString
@@ -57,14 +80,6 @@ abstract CLNode
 CXCursorMap = Dict{Int32,Any}()
 const CXCursor_size = get_sz(:CXCursor)
 
-immutable CXCursor
-    kind::Int32
-    xdata::Int32
-    data1::Cptrdiff_t
-    data2::Cptrdiff_t
-    data3::Cptrdiff_t
-    CXCursor() = new(0,0,0,0,0)
-end
 immutable TmpCursor
     data::Array{CXCursor,1}
     TmpCursor() = new(Array(CXCursor,1))

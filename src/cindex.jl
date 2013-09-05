@@ -1,8 +1,8 @@
 module cindex
 
-export parse, cu_type, cu_kind, ty_kind, name, spelling, is_function, is_null,
+export parse, cu_type, ty_kind, name, spelling, is_function, is_null,
        value, children, cu_file, resolve_type, return_type
-export CXType, CXNode, CXString, CXTypeKind, CursorList
+export CLType, CLNode, CXString, CXTypeKind, CursorList
 
 import Base.getindex, Base.start, Base.next, Base.done, Base.search, Base.show
 
@@ -64,32 +64,30 @@ end
 #                   Predicate Function, accepting a CXCursor argument
 #
 function search(cl::CursorList, ismatch::Function)
-    ret = CXNode[]
+    ret = CLNode[]
     for cu in cl
         ismatch(cu) && push!(ret, cu)
     end
     ret
 end
-search(cu::CXNode, ismatch::Function) = search(children(cu), ismatch)
+search(cu::CLNode, ismatch::Function) = search(children(cu), ismatch)
 
-show(io::IO, cu::CXNode) = print(io, "CXCursor: ", name(cu), " kind: ", cu_kind(cu))
+show(io::IO, cu::CLNode) = print(io, typeof(cu), " (CXCursor)")
 
 ###############################################################################
 
 # TODO: macro version should be more efficient.
 anymatch(first, args...) = any({==(first, a) for a in args})
 
-cu_type(c::CXNode) = getCursorType(c)
-cu_kind(c::CXNode) = getCursorKind(c)
-ty_kind(c::CXType) = reinterpret(Int32, c.data[1:4])[1]
-name(c::CXNode) = getCursorDisplayName(c)
-spelling(c::CXType) = getTypeKindSpelling(ty_kind(c))
-spelling(c::CXNode) = getCursorSpelling(c)
-is_function(c::CXNode) = true # (cu_kind(c) == CurKind.FUNCTIONDECL || cu_kind(c) == 15)
-is_function(t::CXType) = (ty_kind(t) == TypKind.FUNCTIONPROTO)
-is_null(c::CXNode) = (Cursor_isNull(c) != 0)
+cu_type(c::CLNode) = getCursorType(c)
+ty_kind(c::CLType) = c.data[1].kind
+name(c::CLNode) = getCursorDisplayName(c)
+spelling(c::CLType) = getTypeKindSpelling(ty_kind(c))
+spelling(c::CLNode) = getCursorSpelling(c)
+is_function(t::CLType) = (ty_kind(t) == TypKind.FUNCTIONPROTO)
+is_null(c::CLNode) = (Cursor_isNull(c) != 0)
 
-function resolve_type(rt::CXType)
+function resolve_type(rt::CLType)
     # This helper attempts to work around some limitations of the
     # current libclang API.
     if ty_kind(rt) == cindex.TypKind.UNEXPOSED
@@ -104,19 +102,16 @@ function resolve_type(rt::CXType)
     return rt
 end
 
-function return_type(c::CXNode, resolve::Bool)
-    if (!is_function(c))
-        error("return_type Cursor argument must be a function")
-    end
+function return_type(c::FunctionDecl, resolve::Bool)
     if (resolve)
         return resolve_type( getCursorResultType(c) )
     else
         return getCursorResultType(c)
     end
 end
-return_type(c::CXNode) = return_type(c, true)
+return_type(c::CLNode) = return_type(c, true)
 
-function value(c::CXNode)
+function value(c::CLNode)
     if !isa(c, EnumConstantDecl)
         error("Not a value cursor.")
     end
@@ -212,7 +207,7 @@ function getindex(cl::CursorList, clid::Int)
     return CXCursor(cu)
 end
 
-function children(cu::CXNode)
+function children(cu::CLNode)
     cl = cl_create() 
     ccall( (:wci_getChildren, libwci),
         Ptr{Void},
@@ -221,7 +216,7 @@ function children(cu::CXNode)
     return cl
 end
 
-function cu_file(cu::CXNode)
+function cu_file(cu::CLNode)
     str = CXString()
     ccall( (:wci_getCursorFile, libwci),
         Void,

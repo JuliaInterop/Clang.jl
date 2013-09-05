@@ -3,7 +3,7 @@ module wrap_cpp
 using Clang.cindex
 
 function base_classes(c)
-	search(c, x->(cu_kind(c) == CurKind.CXXBaseSpecifier))
+	search(c, isa(c, CurKind.CXXBaseSpecifier))
 end
 
 function find_sym(name,liblist)

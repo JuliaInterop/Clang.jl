@@ -8,7 +8,7 @@ module wrap_c
 using Clang.cindex
 import ..cindex.TypKind, ..cindex.CurKind
 import ..cindex.TypedefDecl, ..cindex.FunctionDecl, ..cindex.StructDecl
-import ..cindex.EnumDecl
+import ..cindex.EnumDecl, ..cindex.CLType
 
 export ctype_to_julia, wrap_c_headers
 export WrapContext
@@ -18,28 +18,28 @@ export WrapContext
 abstract CArg
 
 type IntrinsicArg <: CArg
-    cursor::cindex.CXNode
+    cursor::cindex.CLNode
 end
 
 type TypedefArg <: CArg
-    cursor::cindex.CXNode
+    cursor::cindex.CLNode
 end
 
 type PtrArg <: CArg
-    cursor::cindex.CXNode
+    cursor::cindex.CLNode
 end
 
 type StructArg <: CArg
-    cursor::cindex.CXNode
+    cursor::cindex.CLNode
     typedef::Any
 end
 
 type FunctionArg <: CArg
-    cursor::cindex.CXNode
+    cursor::cindex.CLNode
 end
 
 type EnumArg <: CArg
-    cursor::cindex.CXNode
+    cursor::cindex.CLNode
     typedef::Any
 end
 
@@ -159,7 +159,7 @@ c_to_jl = {
     }
 
 # Convert libclang type to julia type
-function ctype_to_julia(cutype::CXType)
+function ctype_to_julia(cutype::CLType)
     typkind = ty_kind(cutype)
     # Special cases: TYPEDEF, POINTER
     if (typkind == TypKind.POINTER)
@@ -206,9 +206,7 @@ function build_clang_args(includes, extras)
 end
 
 ### Retrieve function arguments for a given cursor
-function function_args(cursor::CXNode)
-    #@assert cu_kind(cursor) == CurKind.FUNCTIONDECL
-
+function function_args(cursor::FunctionDecl)
     cursor_type = cindex.cu_type(cursor)
     [cindex.getArgType(cursor_type, uint32(arg_i)) for arg_i in 0:cindex.getNumArgTypes(cursor_type)-1]
 end
@@ -334,7 +332,7 @@ function wrap(wc::WrapContext, arg::TypedefArg, strm::IOStream)
     println(wc.common_stream, "@ctypedef ",    typedef_spelling, " ", rep_type(ctype_to_julia(td_type)) )
 end
 
-function wrap_header(wc::WrapContext, topcu::CXNode, top_hdr, ostrm::IOStream)
+function wrap_header(wc::WrapContext, topcu::CLNode, top_hdr, ostrm::IOStream)
     println("WRAPPING HEADER: $top_hdr")
     
     topcl = children(topcu)
@@ -344,7 +342,6 @@ function wrap_header(wc::WrapContext, topcu::CXNode, top_hdr, ostrm::IOStream)
         cursor = topcl[i]
         cursor_hdr = cu_file(cursor)
         cursor_name = name(cursor)
-        kind = cu_kind(cursor)
 
         # Heuristic to decide what should be wrapped:
         #    1. always wrap things in the current top header (ie not includes)

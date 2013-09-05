@@ -15,8 +15,7 @@ get_sz(sym) = @eval ccall( ($(string("wci_size_", sym)), :($(libwci))), Int, ())
 # Generate container types
 for st in Any[
         :CXSourceLocation, :CXSourceRange,
-        :CXTUResourceUsageEntry, :CXTUResourceUsage, :CXType,
-        :CXToken ]
+        :CXTUResourceUsageEntry, :CXTUResourceUsage, :CXToken ]
     sz_name = symbol(string(st,"_size"))
     @eval begin
         const $sz_name = get_sz($("$st"))
@@ -47,7 +46,14 @@ function get_string(cx::CXString)
     bytestring(p)
 end
 
-abstract CXNode
+###############################################################################
+# Set up CXCursor wrapping
+#
+#   Each CXCursorKind enum gets a specific Julia type wrapping
+#   so that we can dispatch directly on node kinds.
+###############################################################################
+
+abstract CLNode
 CXCursorMap = Dict{Int32,Any}()
 const CXCursor_size = get_sz(:CXCursor)
 
@@ -68,7 +74,7 @@ for sym in names(CurKind, true)
     if(sym == :CurKind) continue end
     rval = eval(CurKind.(sym))
     @eval begin
-        immutable $(sym) <: CXNode
+        immutable $(sym) <: CLNode
             data::Array{CXCursor,1}
         end
     CXCursorMap[int32($rval)] = $sym
@@ -79,3 +85,38 @@ function CXCursor(c::TmpCursor)
     return CXCursorMap[c.data[1].kind](c.data)
 end
 
+###############################################################################
+# Set up CXType wrapping
+#
+#   Each CXTypeKind enum gets a specific Julia type wrapping
+#   so that we can dispatch directly on node kinds.
+###############################################################################
+
+abstract CLType
+CLTypeMap = Dict{Int32,Any}()
+
+immutable CXType
+    kind::Int32
+    data1::Cptrdiff_t
+    data2::Cptrdiff_t
+    CXType() = new(0,0,0)
+end
+immutable TmpType
+    data::Array{CXType,1}
+    TmpType() = new(Array(CXType,1))
+end
+
+for sym in names(TypKind, true)
+    if(sym == :TypKind) continue end
+    rval = eval(TypKind.(sym))
+    @eval begin
+        immutable $(sym) <: CLType
+            data::Array{CXType,1}
+        end
+        CLTypeMap[int32($rval)] = $sym
+    end
+end
+
+function CXType(c::TmpType)
+    return CLTypeMap[c.data[1].kind](c.data)
+end

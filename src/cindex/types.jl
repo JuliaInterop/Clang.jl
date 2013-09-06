@@ -12,19 +12,10 @@ const CXString_size = ccall( ("wci_size_CXString", libwci), Int, ())
 # Work-around: ccall followed by composite_type in @eval gives error.
 get_sz(sym) = @eval ccall( ($(string("wci_size_", sym)), :($(libwci))), Int, ())
 
-# Generate container types
-for st in Any[
-        :CXSourceLocation, :CXSourceRange,
-        :CXTUResourceUsageEntry, :CXTUResourceUsage, :CXToken ]
-    sz_name = symbol(string(st,"_size"))
-    @eval begin
-        const $sz_name = get_sz($("$st"))
-        immutable $(st)
-            data::Array{Uint8,1}
-            $st() = new(Array(Uint8, $sz_name))
-        end
-    end
-end
+###############################################################################
+# Container types
+#   for now we use these as the element type of the target array
+###############################################################################
 
 immutable _CXSourceLocation
     ptr_data1::Cptrdiff_t
@@ -40,9 +31,43 @@ immutable _CXSourceRange
     foo::_CXSourceLocation
 end
 
+immutable _CXToken
+    int_data1::Uint
+    int_data2::Uint
+    int_data3::Uint
+    int_data4::Uint
+    ptr_data::Cptrdiff_t
+end
+
+immutable _CXTUResourceUsageEntry
+    kind::Cint
+    amount::Culong
+end
+
+immutable _CXTUResourceUsage
+    data::Void
+    numEntries::Cuint
+    entries::Ptr{Cptrdiff_t}
+end
+
+# Generate container types
+for st in Any[
+        :CXSourceLocation, :CXSourceRange,
+        :CXTUResourceUsageEntry, :CXTUResourceUsage, :CXToken ]
+    sz_name = symbol(string(st,"_size"))
+    st_base = symbol(string("_", st))
+    @eval begin
+        const $sz_name = get_sz($("$st"))
+        immutable $(st)
+            data::Array{$st_base,1}
+            # $st() = new(Array(Uint8, $sz_name))
+        end
+    end
+end
+
 immutable CXCursor
-    kind::Int32
-    xdata::Int32
+    kind::Cint
+    xdata::Cint
     data1::Cptrdiff_t
     data2::Cptrdiff_t
     data3::Cptrdiff_t

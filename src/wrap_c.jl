@@ -8,7 +8,7 @@ module wrap_c
 using Clang.cindex
 import ..cindex.TypKind, ..cindex.CurKind
 import ..cindex.TypedefDecl, ..cindex.FunctionDecl, ..cindex.StructDecl
-import ..cindex.EnumDecl, ..cindex.CLType
+import ..cindex.EnumDecl, ..cindex.CLType, ..cindex.FieldDecl
 
 export ctype_to_julia, wrap_c_headers
 export WrapContext
@@ -17,25 +17,9 @@ export WrapContext
 
 abstract CArg
 
-type IntrinsicArg <: CArg
-    cursor::cindex.CLNode
-end
-
-type TypedefArg <: CArg
-    cursor::cindex.CLNode
-end
-
-type PtrArg <: CArg
-    cursor::cindex.CLNode
-end
-
 type StructArg <: CArg
     cursor::cindex.CLNode
     typedef::Any
-end
-
-type FunctionArg <: CArg
-    cursor::cindex.CLNode
 end
 
 type EnumArg <: CArg
@@ -247,10 +231,12 @@ end
 
 function wrap(wc::WrapContext, arg::StructArg, strm::IOStream)
     @assert isa(arg.cursor, StructDecl)
+    cursor = arg.cursor
+    typedef = arg.typedef
 
-    st = cindex.name(arg.cursor)
-    st_typedef = if (typeof(arg.typedef) == cindex.CXCursor)
-            cindex.name(arg.typedef)
+    st = cindex.name(cursor)
+    st_typedef = if (typeof(typedef) == cindex.CXCursor)
+            cindex.name(typedef)
         else
             ""
         end
@@ -269,7 +255,7 @@ function wrap(wc::WrapContext, arg::StructArg, strm::IOStream)
         push!(wc.cache_wrapped, st_name)
     end
 
-    cl = cindex.children(arg.cursor)
+    cl = cindex.children(cursor)
     if (cl.size == 0)
         # Probably a forward declaration.
         # TODO: check on this. any nesting that we need to handle?
@@ -300,32 +286,32 @@ function wrap(wc::WrapContext, arg::StructArg, strm::IOStream)
     println(wc.common_stream, "end")
 end
 
-function wrap(wc::WrapContext, arg::FunctionArg, strm::IOStream)
-    @assert isa(arg.cursor, FunctionDecl)
+function wrap(wc::WrapContext, arg::FunctionDecl, strm::IOStream)
+    @assert isa(arg, FunctionDecl)
 
-    cu_spelling = spelling(arg.cursor)
-    push!(wc.cache_wrapped, name(arg.cursor))
+    cu_spelling = spelling(arg)
+    push!(wc.cache_wrapped, name(arg))
     
-    arg_types = function_args(arg.cursor)
+    arg_types = function_args(arg)
     arg_list = tuple( [rep_type(ctype_to_julia(x)) for x in arg_types]... )
-    ret_type = ctype_to_julia(cindex.return_type(arg.cursor))
+    ret_type = ctype_to_julia(cindex.return_type(arg))
     println(strm, "@c ", rep_type(ret_type), " ",
-                    symbol(spelling(arg.cursor)), " ",
-                    rep_args(arg_list), " ", wc.header_library(cu_file(arg.cursor)) )
+                    symbol(spelling(arg)), " ",
+                    rep_args(arg_list), " ", wc.header_library(cu_file(arg)) )
 end
 
-function wrap(wc::WrapContext, arg::TypedefArg, strm::IOStream)
-    @assert isa(arg.cursor, TypedefDecl)
+function wrap(wc::WrapContext, arg::TypedefDecl, strm::IOStream)
+    @assert isa(arg, TypedefDecl)
 
-    typedef_spelling = spelling(arg.cursor)
+    typedef_spelling = spelling(arg)
     if((typedef_spelling in wc.cache_wrapped))
         return
     else
         push!(wc.cache_wrapped, typedef_spelling)
     end
 
-    cursor_type = cindex.cu_type(arg.cursor)
-    td_type = cindex.resolve_type(cindex.getTypedefDeclUnderlyingType(arg.cursor))
+    cursor_type = cindex.cu_type(arg)
+    td_type = cindex.resolve_type(cindex.getTypedefDeclUnderlyingType(arg))
     # initialize typealias in current context to avoid error TODO delete
     #:(typealias $typedef_spelling ctype_to_julia($td_type))
     
@@ -355,11 +341,8 @@ function wrap_header(wc::WrapContext, topcu::CLNode, top_hdr, ostrm::IOStream)
             continue
         end
 
-        towrap = None
-        if (isa(cursor, TypedefDecl))
-            towrap = TypedefArg(cursor)
-        elseif (isa(cursor, FunctionDecl))
-            towrap = FunctionArg(cursor)
+        if (isa(cursor, FunctionDecl) || isa(cursor, FieldDecl) || isa(cursor, TypedefDecl))
+            towrap = cursor 
         elseif (isa(cursor, EnumDecl))
             # TODO: need a better solution for this
             #    libclang does not provide xref between each cursor for typedef'd enum

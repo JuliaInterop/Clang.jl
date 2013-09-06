@@ -1,3 +1,33 @@
+export Availability
+export GlobalOptFlags
+export DiagnosticSeverity
+export LoadDiag_Error
+export DiagnosticDisplay
+export TranslationUnit_Flags
+export SaveTranslationUnit_Flags
+export SaveError
+export Reparse_Flags
+export TUResourceUsage
+export CursorKind
+export LinkageKind
+export LanguageKind
+export TypeKind
+export CallingConv
+export CXXAccessSpecifiers
+export CursorVisitorResult
+export NameRefFlags
+export TokenKind
+export CompletionChunkKind
+export CodeComplete_Flags
+export VisitorResult
+export EntityKind
+export EntityLanguage
+export EntityCXXTemplateKind
+export AttrKind
+export ObjCContainerKind
+export EntityRefKind
+export IndexOptFlags
+
 # Generated from Index.h
 baremodule Availability
     const Available = 0
@@ -76,7 +106,7 @@ baremodule TUResourceUsage
     const First = 1
     const Last = 14
 end
-baremodule CurKind
+baremodule CursorKind
     const UnexposedDecl = 1
     const StructDecl = 2
     const UnionDecl = 3
@@ -256,53 +286,53 @@ baremodule LanguageKind
     const ObjC = 2
     const CPlusPlus = 3
 end
-baremodule TypKind
-    const INVALID = 0
-    const UNEXPOSED = 1
-    const VOID = 2
-    const BOOL = 3
-    const CHAR_U = 4
-    const UCHAR = 5
-    const CHAR16 = 6
-    const CHAR32 = 7
-    const USHORT = 8
-    const UINT = 9
-    const ULONG = 10
-    const ULONGLONG = 11
-    const UINT128 = 12
-    const CHAR_S = 13
-    const SCHAR = 14
-    const WCHAR = 15
-    const SHORT = 16
-    const INT = 17
-    const LONG = 18
-    const LONGLONG = 19
-    const INT128 = 20
-    const FLOAT = 21
-    const DOUBLE = 22
-    const LONGDOUBLE = 23
-    const NULLPTR = 24
-    const OVERLOAD = 25
-    const DEPENDENT = 26
-    const OBJCID = 27
-    const OBJCCLASS = 28
-    const OBJCSEL = 29
-    const FIRSTBUILTIN = 2
-    const LASTBUILTIN = 29
-    const COMPLEX = 100
-    const POINTER = 101
-    const BLOCKPOINTER = 102
-    const LVALUEREFERENCE = 103
-    const RVALUEREFERENCE = 104
-    const RECORD = 105
-    const ENUM = 106
-    const TYPEDEF = 107
-    const OBJCINTERFACE = 108
-    const OBJCOBJECTPOINTER = 109
-    const FUNCTIONNOPROTO = 110
-    const FUNCTIONPROTO = 111
-    const CONSTANTARRAY = 112
-    const VECTOR = 113
+baremodule TypeKind
+    const Invalid = 0
+    const Unexposed = 1
+    const VoidType = 2
+    const BoolType = 3
+    const Char_U = 4
+    const UChar = 5
+    const Char16 = 6
+    const Char32 = 7
+    const UShort = 8
+    const UInt = 9
+    const ULong = 10
+    const ULongLong = 11
+    const UInt128 = 12
+    const Char_S = 13
+    const SChar = 14
+    const WChar = 15
+    const Short = 16
+    const IntType = 17
+    const Long = 18
+    const LongLong = 19
+    const Int128 = 20
+    const Float = 21
+    const Double = 22
+    const LongDouble = 23
+    const NullPtr = 24
+    const Overload = 25
+    const Dependent = 26
+    const ObjCId = 27
+    const ObjCClass = 28
+    const ObjCSel = 29
+    const FirstBuiltin = 2
+    const LastBuiltin = 29
+    const Complex = 100
+    const Pointer = 101
+    const BlockPointer = 102
+    const LValueReference = 103
+    const RValueReference = 104
+    const Record = 105
+    const Enum = 106
+    const Typedef = 107
+    const ObjCInterface = 108
+    const ObjCObjectPointer = 109
+    const FunctionNoProto = 110
+    const FunctionProto = 111
+    const ConstantArray = 112
+    const Vector = 113
 end
 baremodule CallingConv
     const Default = 0

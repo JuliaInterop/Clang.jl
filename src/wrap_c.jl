@@ -6,7 +6,6 @@ module wrap_c
     version = v"0.0.0"
 
 using Clang.cindex
-import ..cindex.TypKind, ..cindex.CurKind
 import ..cindex.TypedefDecl, ..cindex.FunctionDecl, ..cindex.StructDecl
 import ..cindex.EnumDecl, ..cindex.CLType, ..cindex.FieldDecl
 
@@ -31,7 +30,6 @@ reserved_words = ["type", "end"]
 
 ### Execution context for wrap_c
 typealias StringsArray Array{ASCIIString,1}
-
 # InternalOptions
 type InternalOptions
     wrap_structs::Bool
@@ -43,8 +41,8 @@ type WrapContext
     index::cindex.CXIndex
     output_file::ASCIIString
     common_file::ASCIIString
-    clang_includes::StringsArray             # clang include paths
-    clang_extra_args::StringsArray         # additional {"-Arg", "value"} pairs for clang
+    clang_includes::StringsArray                 # clang include paths
+    clang_extra_args::StringsArray               # additional {"-Arg", "value"} pairs for clang
     header_wrapped::Function                     # called to determine cursor inclusion status
     header_library::Function                     # called to determine shared library for given header
     header_outfile::Function                     # called to determine output file group for given header
@@ -107,36 +105,36 @@ end"
 #
 # Mapping from libclang types to Julia types
 #
-#   This is primarily used with CXTypeKind enums (aka: cindex.TypKind)
+#   This is primarily used with CXTypeKind enums (aka: cindex.TypeKind)
 #   but can also be used to map arbitrary type names to corresponding
 #   Julia entities, for example "size_t" -> :Csize_t
 #
 ##############################################################################
 
 c_to_jl = {
-    TypKind.VOID            => Void,
-    TypKind.BOOL            => Bool,
-    TypKind.CHAR_U          => Uint8,
-    TypKind.UCHAR           => Cuchar,
-    TypKind.CHAR16          => Uint16,
-    TypKind.CHAR32          => Uint32,
-    TypKind.USHORT          => Uint16,
-    TypKind.UINT            => Uint32,
-    TypKind.ULONG           => Culong,
-    TypKind.ULONGLONG       => Culonglong,
-    TypKind.CHAR_S          => Uint8,           # TODO check
-    TypKind.SCHAR           => Uint8,           # TODO check
-    TypKind.WCHAR           => Char,
-    TypKind.SHORT           => Int16,
-    TypKind.INT             => Cint,
-    TypKind.LONG            => Clong,
-    TypKind.LONGLONG        => Clonglong,
-    TypKind.FLOAT           => Cfloat,
-    TypKind.DOUBLE          => Cdouble,
-    TypKind.LONGDOUBLE      => Float64,         # TODO detect?
-    TypKind.ENUM            => Cint,            # TODO arch check?
-    TypKind.NULLPTR         => C_NULL,
-    TypKind.UINT128         => Uint128,
+    TypeKind.Void            => Void,
+    TypeKind.Bool            => Bool,
+    TypeKind.Char_U          => Uint8,
+    TypeKind.UChar           => Cuchar,
+    TypeKind.Char16          => Uint16,
+    TypeKind.Char32          => Uint32,
+    TypeKind.UShort          => Uint16,
+    TypeKind.UInt            => Uint32,
+    TypeKind.ULong           => Culong,
+    TypeKind.ULongLong       => Culonglong,
+    TypeKind.Char_S          => Uint8,           # TODO check
+    TypeKind.SChar           => Uint8,           # TODO check
+    TypeKind.WChar           => Char,
+    TypeKind.Short           => Int16,
+    TypeKind.Int             => Cint,
+    TypeKind.Long            => Clong,
+    TypeKind.LongLong        => Clonglong,
+    TypeKind.Float           => Cfloat,
+    TypeKind.Double          => Cdouble,
+    TypeKind.LongDouble      => Float64,         # TODO detect?
+    TypeKind.Enum            => Cint,            # TODO arch check?
+    TypeKind.NullPtr         => C_NULL,
+    TypeKind.UInt128         => Uint128,
     "size_t"                        => :Csize_t,
     "ptrdiff_t"                 => :Cptrdiff_t
     
@@ -146,11 +144,11 @@ c_to_jl = {
 function ctype_to_julia(cutype::CLType)
     typkind = ty_kind(cutype)
     # Special cases: TYPEDEF, POINTER
-    if (typkind == TypKind.POINTER)
+    if (typkind == TypeKind.Pointer)
         ptr_ctype = cindex.getPointeeType(cutype)
         ptr_jltype = ctype_to_julia(ptr_ctype)
         return Ptr{ptr_jltype}
-    elseif (typkind == TypKind.TYPEDEF || typkind == TypKind.RECORD)
+    elseif (typkind == TypeKind.Typedef || typkind == TypeKind.Record)
         basename = string( spelling( cindex.getTypeDeclaration(cutype) ) )
         return symbol( get(c_to_jl, basename, basename))
     else

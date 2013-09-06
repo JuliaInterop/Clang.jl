@@ -1,4 +1,5 @@
-using Clang.cindex
+using Clang
+importall Clang.cindex
 
 const ENUM_DECL = 5
 const TYPEDEF_DECL = 20
@@ -9,7 +10,7 @@ enum_remaps = {
 }
 
 
-function wrap_enums(io::IOStream, cu::cindex.CXNode, typedef::Any)
+function wrap_enums(io::IOStream, cu::cindex.CLNode, typedef::Any)
     enum = cindex.name(cu)
     enum_typedef = if (typeof(typedef) == cindex.CXCursor)
             cindex.name(typedef)
@@ -63,9 +64,9 @@ for i = 1:topcl.size
     fn = cindex.cu_file(cu)
     fn = "Index.h"
     if (fn != index_fn) continue end
-    if (cindex.cu_kind(cu) == ENUM_DECL)
+    if isa(cu, cindex.EnumDecl)
         tdcu = cindex.ref(topcl,i+1)
-        tdcu = ((cindex.cu_kind(tdcu) == TYPEDEF_DECL) ? tdcu : None)
+        tdcu = (isa(tdcu, cindex.TypedefDecl) ? tdcu : None)
         wrap_enums(f_out, cu, tdcu)
     end
 end

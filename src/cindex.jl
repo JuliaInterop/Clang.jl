@@ -29,15 +29,16 @@ include("cindex/base.jl")
 #   ClangIndex:         CXIndex pointer (pass to avoid re-allocation)
 #   ClangDiagnostics:   Display Clang diagnostics
 #   CPlusPlus:          Parse as C++
-#   ClangArgs:       Compiler switches as string array, eg: ["-x", "c++", "-fno-elide-type"]
-#   ParserOptions:      Bitwise OR of CXTranslationUnit_* flags (see docs, rarely needed)
+#   ClangArgs:          Compiler switches as string array, eg: ["-x", "c++", "-fno-elide-type"]
+#   ParserFlags:        Bitwise OR of TranslationUnitFlags
 #
 function parse(header::String;
                 ClangIndex                      = None,
                 ClangDiagnostics::Bool          = false,
                 CPlusPlus::Bool                 = false,
                 ClangArgs                       = [""],
-                ParserOptions                   = 0)
+                ParserFlags                     = TranslationUnit_Flags.DetailedPreprocessingRecord |
+                                                  TranslationUnit_Flags.SkipFunctionBodies)
     if (ClangIndex == None)
         ClangIndex = idx_create(0, (ClangDiagnostics ? 0 : 1))
     end
@@ -46,7 +47,7 @@ function parse(header::String;
     end
     
     tu = tu_parse(ClangIndex, header, ClangArgs, length(ClangArgs),
-                  C_NULL, 0, ParserOptions)
+                  C_NULL, 0, ParserFlags)
     if (tu == C_NULL)
         error("ParseTranslationUnit returned NULL; unable to create TranslationUnit")
     end
@@ -85,13 +86,13 @@ ty_kind(c::CLType) = c.data[1].kind
 name(c::CLNode) = getCursorDisplayName(c)
 spelling(c::CLType) = getTypeKindSpelling(ty_kind(c))
 spelling(c::CLNode) = getCursorSpelling(c)
-is_function(t::CLType) = (ty_kind(t) == TypKind.FUNCTIONPROTO)
+is_function(t::CLType) = (ty_kind(t) == TypeKind.FunctionProto)
 is_null(c::CLNode) = (Cursor_isNull(c) != 0)
 
 function resolve_type(rt::CLType)
     # This helper attempts to work around some limitations of the
     # current libclang API.
-    if ty_kind(rt) == cindex.TypKind.UNEXPOSED
+    if ty_kind(rt) == cindex.TypeKind.Unexposed
         # try to resolve Unexposed type to cursor definition.
         rtdef_cu = cindex.getTypeDeclaration(rt)
         if (!is_null(rtdef_cu) && !isa(rtdef_cu, NoDeclFound))
@@ -118,11 +119,11 @@ function value(c::CLNode)
     end
     t = cu_type(c)
     if anymatch(ty_kind(t), 
-        TypKind.INT, TypKind.LONG, TypKind.LONGLONG)
+        TypeKind.IntType, TypeKind.Long, TypeKind.LongLong)
             return getEnumConstantDeclValue(c)
     end
     if anymatch(ty_kind(t),
-        TypKind.UINT, TypKind.ULONG, TypKind.ULONGLONG)
+        TypeKind.UInt, TypeKind.ULong, TypeKind.ULongLong)
             return getEnumConstantDeclUnsignedValue(c)
     end
 end

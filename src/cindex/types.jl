@@ -80,19 +80,20 @@ abstract CLNode
 CXCursorMap = Dict{Int32,Any}()
 const CXCursor_size = get_sz(:CXCursor)
 
-immutable TmpCursor
+immutable TmpCursor <: CLNode
     data::Array{CXCursor,1}
     TmpCursor() = new(Array(CXCursor,1))
 end
 
-for sym in names(CurKind, true)
-    if(sym == :CurKind) continue end
-    rval = eval(CurKind.(sym))
+for sym in names(CursorKind, true)
+    if(sym == :CursorKind) continue end
+    rval = eval(CursorKind.(sym))
     @eval begin
         immutable $(sym) <: CLNode
             data::Array{CXCursor,1}
         end
-    CXCursorMap[int32($rval)] = $sym
+        CXCursorMap[int32($rval)] = $sym
+        Expr(:toplevel, Expr(:export, Any[$sym]))
     end
 end
 
@@ -121,9 +122,9 @@ immutable TmpType
     TmpType() = new(Array(CXType,1))
 end
 
-for sym in names(TypKind, true)
-    if(sym == :TypKind) continue end
-    rval = eval(TypKind.(sym))
+for sym in names(TypeKind, true)
+    if(sym == :TypeKind) continue end
+    rval = eval(TypeKind.(sym))
     @eval begin
         immutable $(sym) <: CLType
             data::Array{CXType,1}

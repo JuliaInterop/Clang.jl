@@ -71,6 +71,7 @@ function search(cl::CursorList, ismatch::Function)
     ret
 end
 search(cu::CLNode, ismatch::Function) = search(children(cu), ismatch)
+search(cu::CLNode, T::DataType) = search(cu, x->isa(x, T))
 
 show(io::IO, cu::CLNode) = print(io, typeof(cu), " (CXCursor)")
 

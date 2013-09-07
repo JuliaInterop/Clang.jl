@@ -55,7 +55,7 @@ function parse(header::String;
     return tu_cursor(tu)
 end
 
-
+###############################################################################
 # Search function for CursorList
 # Returns vector of CXCursors in CursorList matching predicate
 #
@@ -75,6 +75,20 @@ search(cu::CLNode, ismatch::Function) = search(children(cu), ismatch)
 search(cu::CLNode, T::DataType) = search(cu, x->isa(x, T))
 
 show(io::IO, cu::CLNode) = print(io, typeof(cu), " (CXCursor)")
+
+###############################################################################
+# Extended search function
+# Returns a Dict{ DataType => CLNode
+
+function matchchildren(cu::CLNode, types::Array{DataType,1})
+    ret = { t => CLNode[] for t in types}
+    for child in children(cu)
+        for t in types
+            isa(child, t) && push!(ret[t], child)
+        end
+    end
+    return ret
+end
 
 ###############################################################################
 

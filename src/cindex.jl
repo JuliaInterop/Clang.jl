@@ -186,11 +186,10 @@ getFile(tu::CXTranslationUnit, file::ASCIIString) =
         (Ptr{Void}, Ptr{Uint8}), tu, file)
 
 function cl_create()
-    cl = CursorList(C_NULL,0)
-    cl.ptr = ccall( (:wci_createCursorList, libwci),
+    ptr = ccall( (:wci_createCursorList, libwci),
         Ptr{Void},
         () )
-    return cl
+    return CursorList(ptr,0)
 end
 
 function cl_dispose(cl::CursorList)
@@ -228,8 +227,8 @@ function children(cu::CLNode)
     ccall( (:wci_getChildren, libwci),
         Ptr{Void},
             (Ptr{CXCursor}, Ptr{Void}), cu.data, cl.ptr)
-    cl.size = cl_size(cl.ptr)
-    return cl
+    size = cl_size(cl.ptr)
+    return CursorList(cl.ptr,size)
 end
 
 function cu_file(cu::CLNode)

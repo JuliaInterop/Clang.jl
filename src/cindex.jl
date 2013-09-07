@@ -1,6 +1,6 @@
 module cindex
 
-export parse, cu_type, ty_kind, name, spelling, is_function, is_null,
+export cu_type, ty_kind, name, spelling, is_function, is_null,
        value, children, cu_file, resolve_type, return_type
 export CLType, CLNode, CXString, CXTypeKind, CursorList
 

@@ -1,7 +1,8 @@
 module cindex
 
 export cu_type, ty_kind, name, spelling, is_function, is_null,
-       value, children, cu_file, resolve_type, return_type
+       value, children, cu_file, resolve_type, return_type,
+       tokenize
 export CLType, CLNode, CXString, CXTypeKind, CursorList
 
 import Base.getindex, Base.start, Base.next, Base.done, Base.search, Base.show
@@ -242,5 +243,42 @@ end
 start(cl::CursorList) = 1
 done(cl::CursorList, i) = (i == cl.size)
 next(cl::CursorList, i) = (cl[i], i+1)
+
+###############################################################################
+# Tokenizer access
+###############################################################################
+
+# Returns TokenList
+function tokenize(cursor::CLNode)
+    tu = Cursor_getTranslationUnit(cursor)
+    sourcerange = getCursorExtent(cursor)
+    return cindex.tokenize(tu, sourcerange)
+end
+
+start(tl::TokenList) = 1
+done(tl::TokenList, i) = (i == tl.size)
+next(tl::TokenList, i) = (tl[i], i+1)
+
+show(io::IO, tk::CLToken) = print(typeof(tk), "(\"", tk.text, "\")")
+
+function getindex(tl::TokenList, i::Int)
+    if (i < 1 || i > tl.size - 1) throw(BoundsError()) end
+
+    c = CXToken(unsafe_load(tl.ptr, i))
+    kind = c.data[1].int_data1
+    spelling = cindex.getTokenSpelling(tl.tunit, c)
+
+    if (kind == TokenKind.Punctuation)
+        return Punctuation(spelling)
+    elseif (kind == TokenKind.Keyword)
+        return Keyword(spelling)
+    elseif (kind == TokenKind.Identifier)
+        return Identifier(spelling)
+    elseif (kind == TokenKind.Literal)
+        return Literal(spelling)
+    elseif (kind == TokenKind.Comment)
+        return Comment(spelling)
+    end
+end
 
 end # module

@@ -90,6 +90,48 @@ void wci_disposeString(char* csin)
   clang_disposeString(cxstr);
 }
 
+void wci_getCursorExtent(char* _cursor, char* sourcerange_) {
+  CXCursor l1 = wci_get_CXCursor(_cursor);
+  CXSourceRange rx = clang_getCursorExtent(l1);
+  wci_save_CXSourceRange(rx, sourcerange_);
+}
+
+//CINDEX_LINKAGE void clang_tokenize(CXTranslationUnit TU, CXSourceRange Range,
+//                                   CXToken **Tokens, unsigned *NumTokens);
+unsigned wci_tokenize(CXTranslationUnit tu, char *_range, CXToken **Tokens) {
+  CXSourceRange range = wci_get_CXSourceRange(_range);
+  unsigned NumTokens;
+  clang_tokenize(tu, range, Tokens, &NumTokens);
+
+  return NumTokens;
+}
+
+CXTranslationUnit wci_Cursor_getTranslationUnit(char* _cursor) {
+  CXCursor cursor = wci_get_CXCursor(_cursor);
+  return clang_Cursor_getTranslationUnit(cursor);
+}
+
+void wci_debug_token(CXTranslationUnit tu, char* _token) {
+  CXToken tok = wci_get_CXToken(_token);
+  int kind = clang_getTokenKind(tok);
+  CXString spelling = clang_getTokenSpelling(tu, tok);
+  printf("kind: %d spelling: %s\n", kind, clang_getCString(spelling));
+}
+
+void wci_print_tokens(CXTranslationUnit tu, char* _range) {
+  CXSourceRange range = wci_get_CXSourceRange(_range);
+  unsigned NumTokens;
+  CXToken* Tokens;
+  clang_tokenize(tu, range, &Tokens, &NumTokens);
+  
+  for (int i=0; i < NumTokens; i++) {
+    CXToken tok = Tokens[i];
+    int kind = clang_getTokenKind(tok);
+    CXString spelling = clang_getTokenSpelling(tu, tok);
+    printf("kind: %d spelling: %s\n", kind, clang_getCString(spelling));
+  }
+}
+
 } // extern
 
 #ifdef USE_CLANG_CPP

@@ -262,3 +262,21 @@ function getClangVersion()
     ccall( (:wci_getClangVersion, libwci), Void, (Ptr{Void},),    c.data,)
     return get_string(c)
 end
+function getCursorExtent(a1::CLNode)
+    c = CXSourceRange()
+    ccall( (:wci_getCursorExtent, libwci), Void, (Ptr{Void},Ptr{Void}), a1.data, c.data)
+    return c
+end
+function disposeTokens(tu::CXTranslationUnit, tokens::Ptr{_CXToken}, numtokens::Cuint)
+    ccall( (:clang_disposeTokens, :libclang), Void, (Ptr{Void}, Ptr{_CXToken}, Cuint),
+           tu, tokens, numtokens)
+end
+function tokenize(tu::CXTranslationUnit, sr::CXSourceRange)
+    tokens = Ptr{_CXToken}[C_NULL]
+    numtokens = ccall( (:wci_tokenize, libwci), Cuint, (Ptr{Void}, Ptr{Void}, Ptr{_CXToken}),
+            tu, sr.data, tokens)
+    return TokenList(tokens[1], numtokens, tu)
+end
+function Cursor_getTranslationUnit(cu::CLNode)
+    ccall( (:wci_Cursor_getTranslationUnit, libwci), CXTranslationUnit, (Ptr{Void},), cu.data)
+end

@@ -21,6 +21,7 @@ immutable _CXSourceLocation
     ptr_data1::Cptrdiff_t
     ptr_data2::Cptrdiff_t
     int_data::Cuint
+    _CXSourceLocation() = new(0,0,0)
 end
 
 immutable _CXSourceRange
@@ -28,40 +29,36 @@ immutable _CXSourceRange
     ptr_data2::Cptrdiff_t
     begin_int_data::Cuint
     end_int_data::Cuint
-    foo::_CXSourceLocation
-end
-
-immutable _CXToken
-    int_data1::Uint
-    int_data2::Uint
-    int_data3::Uint
-    int_data4::Uint
-    ptr_data::Cptrdiff_t
+    _CXSourceRange() = new(0,0,0,0)
 end
 
 immutable _CXTUResourceUsageEntry
     kind::Cint
     amount::Culong
+    _CXTUResourceUsageEntry() = new(0,0)
 end
 
 immutable _CXTUResourceUsage
     data::Void
     numEntries::Cuint
     entries::Ptr{Cptrdiff_t}
+    _CXTUResourceUsage() = new(0,0,0)
 end
 
 # Generate container types
 for st in Any[
         :CXSourceLocation, :CXSourceRange,
-        :CXTUResourceUsageEntry, :CXTUResourceUsage, :CXToken ]
+        :CXTUResourceUsageEntry, :CXTUResourceUsage ]
     sz_name = symbol(string(st,"_size"))
     st_base = symbol(string("_", st))
     @eval begin
         const $sz_name = get_sz($("$st"))
         immutable $(st)
             data::Array{$st_base,1}
-            # $st() = new(Array(Uint8, $sz_name))
+            $st(d) = new(d)
         end
+        $st() = $st(Array($st_base, 1))
+        $st(d::$st_base) = $st([d])
     end
 end
 
@@ -80,7 +77,7 @@ immutable CXString
     CXString() = new(Array(Uint8, CXString_size), "")
 end
 
-type CursorList
+immutable CursorList
     ptr::Ptr{Void}
     size::Int
 end
@@ -92,6 +89,52 @@ function get_string(cx::CXString)
         return ""
     end
     bytestring(p)
+end
+
+###############################################################################
+# Set up CXToken wrapping
+#   Note that this low-level interface should be used with care.
+#   Accessing a CXToken after the originating TokenList has been
+#   finalized is undefined and will most likely segfault.
+#   The high-level TokenList[] and CLToken interface is preferred.
+###############################################################################
+
+immutable _CXToken
+    int_data1::Cuint
+    int_data2::Cuint
+    int_data3::Cuint
+    int_data4::Cuint
+    ptr_data::Cptrdiff_t
+    _CXToken() = new(0,0,0,0,C_NULL)
+end
+
+# We generate this here manually because it has an extra field to keep
+# track of the TranslationUnit.
+immutable CXToken
+    data::Array{_CXToken,1}
+    CXToken(d) = new(d)
+end
+CXToken() = CXToken(Array(_CXToken, 1))
+CXToken(d::_CXToken) = CXToken([d])
+
+immutable TokenList
+    ptr::Ptr{_CXToken}
+    size::Cuint
+    tunit::CXTranslationUnit
+end
+
+abstract CLToken
+for sym in names(TokenKind, true)
+    if(sym == :TokenKind) continue end
+    @eval begin
+        immutable $sym <: CLToken
+            text::ASCIIString
+        end
+    end
+end
+
+function finalizer(l::TokenList)
+    cindex.disposeTokens(l)
 end
 
 ###############################################################################

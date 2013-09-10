@@ -3,9 +3,11 @@ module cindex
 export cu_type, ty_kind, name, spelling, is_function, is_null,
        value, children, cu_file, resolve_type, return_type,
        tokenize
-export CLType, CLNode, CXString, CXTypeKind, CursorList
+export CLType, CLNode, CXString, CXTypeKind, CursorList, TokenList
+export getindex, start, next, done, search, show, endof
 
 import Base.getindex, Base.start, Base.next, Base.done, Base.search, Base.show
+import Base.endof, Base.length
 
 ###############################################################################
 
@@ -74,6 +76,7 @@ function search(cl::CursorList, ismatch::Function)
 end
 search(cu::CLNode, ismatch::Function) = search(children(cu), ismatch)
 search(cu::CLNode, T::DataType) = search(cu, x->isa(x, T))
+search(cu::CLNode, name::ASCIIString) = search(cu, x->(cindex.name(x) == name))
 
 show(io::IO, cu::CLNode) = print(io, typeof(cu), " (CXCursor)")
 
@@ -197,8 +200,6 @@ function cl_dispose(cl::CursorList)
     ccall( (:wci_disposeCursorList, libwci),
         None,
         (Ptr{Void},), cl.ptr)
-    cl.ptr = C_NULL
-    cl.size = 0
 end
 
 cl_size(cl::CursorList) = cl.size
@@ -256,13 +257,15 @@ function tokenize(cursor::CLNode)
 end
 
 start(tl::TokenList) = 1
-done(tl::TokenList, i) = (i == tl.size)
+done(tl::TokenList, i) = (i > tl.size)
 next(tl::TokenList, i) = (tl[i], i+1)
+endof(tl::TokenList) = tl.size
+length(tl::TokenList) = tl.size
 
-show(io::IO, tk::CLToken) = print(typeof(tk), "(\"", tk.text, "\")")
+show(io::IO, tk::CLToken) = print(io, typeof(tk), "(\"", tk.text, "\")")
 
 function getindex(tl::TokenList, i::Int)
-    if (i < 1 || i > tl.size - 1) throw(BoundsError()) end
+    if (i < 1 || i > tl.size) throw(BoundsError()) end
 
     c = CXToken(unsafe_load(tl.ptr, i))
     kind = c.data[1].int_data1

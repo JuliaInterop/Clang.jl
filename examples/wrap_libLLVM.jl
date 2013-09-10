@@ -10,10 +10,10 @@ LLVM_BUILD_TYPE="Release+Asserts"
 
 JULIA_ROOT=abspath(JULIA_HOME, "../../")
 LLVM_PATH=joinpath(JULIA_ROOT, "deps/llvm-$LLVM_VER")
-libLLVM_path = joinpath(LLVM_PATH, "include/llvm-c")
+libLLVM_PATH = joinpath(LLVM_PATH, "include/llvm-c")
 clanginc_path = joinpath(LLVM_PATH, "build/$LLVM_BUILD_TYPE/lib/clang/3.3/include")
 
-libllvm_hdrs = map(x->joinpath(libLLVM_path, x), 
+libllvm_hdrs = map(x->joinpath(libLLVM_PATH, x), 
     {
     "BitWriter.h",
     "Target.h",
@@ -44,7 +44,8 @@ const wc = wrap_c.init(;
                         CommonFile = "libLLVM_common.jl",
                         ClangIncludes = clang_includes,
                         ClangArgs = clang_extraargs,
-                        header_library = "LLVM-3.3")
+                        header_library = "LLVM-3.3",
+                        header_wrapped = (x,cu)->beginswith(x, splitdir(libLLVM_PATH)[1]) )
 
 function wrap_libLLVM(wc::WrapContext, wrap_hdrs)
     wrap_c.wrap_c_headers(wc, convert(Vector{ASCIIString}, wrap_hdrs))

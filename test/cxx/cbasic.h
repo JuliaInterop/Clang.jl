@@ -1,5 +1,6 @@
 #define CONST 1
 #define CONSTADD CONST + 2
+#define CONSTSFT (1<<2)
 
 typedef enum {
     Juneau = 0x0,

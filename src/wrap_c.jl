@@ -288,7 +288,7 @@ function wrap(wc::WrapContext, arg::FunctionDecl, strm::IO)
     @assert isa(arg, FunctionDecl)
 
     cu_spelling = spelling(arg)
-    push!(wc.cache_wrapped, name(arg))
+    push!(wc.cache_wrapped, spelling(arg))
     
     arg_types = function_args(arg)
     arg_list = tuple( [rep_type(ctype_to_julia(x)) for x in arg_types]... )
@@ -317,10 +317,10 @@ function wrap(wc::WrapContext, arg::TypedefDecl, strm::IO)
 end
 
 function trans(tok)
-    binops = ["+" "-" "<" "<<" "<<<" "/" "\\" "%"]
+    ops = ["+" "-" ">>" "<<" "/" "\\" "%"]
     if (isa(tok, cindex.Literal) || 
         (isa(tok,cindex.Identifier) && isupper(tok.text))) return 0
-    elseif (isa(tok, cindex.Punctuation) && tok.text in binops) return 1
+    elseif (isa(tok, cindex.Punctuation) && tok.text in ops) return 1
     else return -1
     end
 end

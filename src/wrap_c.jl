@@ -6,8 +6,8 @@ module wrap_c
     version = v"0.0.0"
 
 using Clang.cindex
-import ..cindex.TypedefDecl, ..cindex.FunctionDecl, ..cindex.StructDecl
-import ..cindex.EnumDecl, ..cindex.CLType, ..cindex.FieldDecl
+import Clang.cindex: TypedefDecl, FunctionDecl, StructDecl, EnumDecl, FieldDecl
+import Clang.cindex: CLType, MacroDefinition
 
 export ctype_to_julia, wrap_c_headers
 export WrapContext
@@ -48,12 +48,12 @@ type WrapContext
     header_outfile::Function                     # called to determine output file group for given header
     common_stream
     cache_wrapped::Set{ASCIIString}
-    output_streams::Dict{ASCIIString, IOStream}
+    output_streams::Dict{ASCIIString, IO}
     options::InternalOptions
 end
 WrapContext(idx,outfile,cmnfile,clanginc,clangextra,hwrap,hlib,hout) = 
     WrapContext(idx,outfile,cmnfile,clanginc,clangextra,hwrap,hlib,hout,
-                None,Set{ASCIIString}(), Dict{ASCIIString,IOStream}(), InternalOptions())
+                None,Set{ASCIIString}(), Dict{ASCIIString,IO}(), InternalOptions())
 
 #
 # Initialize wrapping context
@@ -61,7 +61,7 @@ WrapContext(idx,outfile,cmnfile,clanginc,clangextra,hwrap,hlib,hout) =
 function init(;
             Index                           = None,
             OutputFile::ASCIIString         = ".",
-            CommonFile::ASCIIString         = None,
+            CommonFile::ASCIIString         = "",
             ClangArgs::StringsArray         = [""],
             ClangIncludes::StringsArray     = [""],
             ClangDiagnostics::Bool          = false,
@@ -72,7 +72,7 @@ function init(;
     # Set up some optional args if they are not explicitly passed.
 
     (Index == None)         && ( Index = cindex.idx_create(0, (ClangDiagnostics ? 0 : 1)) )
-    (CommonFile == None)    && ( CommonFile = OutputFile )
+    (CommonFile == "")    && ( CommonFile = OutputFile )
     
     if (header_library == None)
         error("Missing header_library argument: pass lib name, or (hdr)->lib::ASCIIString function")
@@ -194,7 +194,7 @@ function function_args(cursor::FunctionDecl)
 end
 
 ### Wrap enum. NOTE: we write this to wc.common_stream
-function wrap(wc::WrapContext, argt::EnumArg, strm::IOStream)
+function wrap(wc::WrapContext, argt::EnumArg, strm::IO)
     enum = cindex.name(argt.cursor)
     enum_typedef = if (typeof(argt.typedef) == cindex.CXCursor)
             cindex.name(argt.typedef)
@@ -227,7 +227,7 @@ function wrap(wc::WrapContext, argt::EnumArg, strm::IOStream)
     println(wc.common_stream, "# end")
 end
 
-function wrap(wc::WrapContext, arg::StructArg, strm::IOStream)
+function wrap(wc::WrapContext, arg::StructArg, strm::IO)
     @assert isa(arg.cursor, StructDecl)
     cursor = arg.cursor
     typedef = arg.typedef
@@ -284,7 +284,7 @@ function wrap(wc::WrapContext, arg::StructArg, strm::IOStream)
     println(wc.common_stream, "end")
 end
 
-function wrap(wc::WrapContext, arg::FunctionDecl, strm::IOStream)
+function wrap(wc::WrapContext, arg::FunctionDecl, strm::IO)
     @assert isa(arg, FunctionDecl)
 
     cu_spelling = spelling(arg)
@@ -298,7 +298,7 @@ function wrap(wc::WrapContext, arg::FunctionDecl, strm::IOStream)
                     rep_args(arg_list), " ", wc.header_library(cu_file(arg)) )
 end
 
-function wrap(wc::WrapContext, arg::TypedefDecl, strm::IOStream)
+function wrap(wc::WrapContext, arg::TypedefDecl, strm::IO)
     @assert isa(arg, TypedefDecl)
 
     typedef_spelling = spelling(arg)
@@ -316,7 +316,53 @@ function wrap(wc::WrapContext, arg::TypedefDecl, strm::IOStream)
     println(wc.common_stream, "@ctypedef ",    typedef_spelling, " ", rep_type(ctype_to_julia(td_type)) )
 end
 
-function wrap_header(wc::WrapContext, topcu::CLNode, top_hdr, ostrm::IOStream)
+function trans(tok)
+    binops = ["+" "-" "<" "<<" "<<<" "/" "\\" "%"]
+    if (isa(tok, cindex.Literal) || 
+        (isa(tok,cindex.Identifier) && isupper(tok.text))) return 0
+    elseif (isa(tok, cindex.Punctuation) && tok.text in binops) return 1
+    else return -1
+    end
+end
+ 
+function lex_exprn(tokens::TokenList, pos::Int)
+    exprn = ""
+    prev = 1 >> trans(tokens[pos])
+    for pos = pos:tokens.size
+        tok = tokens[pos]
+        state = trans(tok)
+        if ( state $ prev  == 1)
+            prev = state
+        else
+            break
+        end 
+        exprn = exprn * tok.text
+    end
+    return (exprn,pos)
+end 
+
+function wrap(wc::WrapContext, md::cindex.MacroDefinition, strm::IO)
+    tokens = tokenize(md)
+    
+    # Skip any empty definitions
+    if(tokens.size < 2) return end
+    if(beginswith(name(md), "_")) return end 
+
+    pos = 0; exprn = ""
+    if(tokens[2].text == "(")
+        exprn,pos = lex_exprn(tokens, 3)
+        if (pos != tokens.size || tokens[pos].text != ")")
+            print(strm, "# Skipping MacroDefinition: ", join([c.text*" " for c in tokens]), "\n")
+            return
+        end
+        exprn = "(" * exprn * ")"
+    else
+        (exprn,pos) = lex_exprn(tokens, 2)
+    end
+    print(strm, "const " * string(tokens[1].text) * " = " * exprn * "\n")
+end
+
+function wrap_header(wc::WrapContext, topcu::CLNode, top_hdr, ostrm::IO)
     println("WRAPPING HEADER: $top_hdr")
     
     topcl = children(topcu)
@@ -353,6 +399,8 @@ function wrap_header(wc::WrapContext, topcu::CLNode, top_hdr, ostrm::IOStream)
                 tdcu = (isa(tdcu, TypedefDecl) ? tdcu : None)
             end
             towrap = EnumArg(cursor, tdcu)
+        elseif (isa(cursor, MacroDefinition))
+            towrap = cursor
         elseif (wc.options.wrap_structs && isa(cursor, StructDecl))
             tdcu = None
             if (i<topcl.size)

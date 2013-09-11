@@ -78,7 +78,7 @@ search(cu::CLNode, ismatch::Function) = search(children(cu), ismatch)
 search(cu::CLNode, T::DataType) = search(cu, x->isa(x, T))
 search(cu::CLNode, name::ASCIIString) = search(cu, x->(cindex.name(x) == name))
 
-show(io::IO, cu::CLNode) = print(io, typeof(cu), " (CXCursor)")
+show(io::IO, cu::CLNode) = print(io, typeof(cu), " (CXCursor): ", name(cu))
 
 ###############################################################################
 # Extended search function

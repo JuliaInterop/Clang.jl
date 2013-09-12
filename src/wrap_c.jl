@@ -7,7 +7,7 @@ module wrap_c
 
 using Clang.cindex
 import Clang.cindex: TypedefDecl, FunctionDecl, StructDecl, EnumDecl, FieldDecl
-import Clang.cindex: CLType, MacroDefinition
+import Clang.cindex: CLType, MacroDefinition, CXXMethod
 
 export ctype_to_julia, wrap_c_headers
 export WrapContext
@@ -17,12 +17,12 @@ export WrapContext
 abstract CArg
 
 type StructArg <: CArg
-    cursor::cindex.CLNode
+    cursor::cindex.CLCursor
     typedef::Any
 end
 
 type EnumArg <: CArg
-    cursor::cindex.CLNode
+    cursor::cindex.CLCursor
     typedef::Any
 end
 
@@ -112,32 +112,31 @@ end"
 ##############################################################################
 
 c_to_jl = {
-    TypeKind.Void            => Void,
-    TypeKind.Bool            => Bool,
-    TypeKind.Char_U          => Uint8,
-    TypeKind.UChar           => Cuchar,
-    TypeKind.Char16          => Uint16,
-    TypeKind.Char32          => Uint32,
-    TypeKind.UShort          => Uint16,
-    TypeKind.UInt            => Uint32,
-    TypeKind.ULong           => Culong,
-    TypeKind.ULongLong       => Culonglong,
-    TypeKind.Char_S          => Uint8,           # TODO check
-    TypeKind.SChar           => Uint8,           # TODO check
-    TypeKind.WChar           => Char,
-    TypeKind.Short           => Int16,
-    TypeKind.Int             => Cint,
-    TypeKind.Long            => Clong,
-    TypeKind.LongLong        => Clonglong,
-    TypeKind.Float           => Cfloat,
-    TypeKind.Double          => Cdouble,
-    TypeKind.LongDouble      => Float64,         # TODO detect?
-    TypeKind.Enum            => Cint,            # TODO arch check?
-    TypeKind.NullPtr         => C_NULL,
-    TypeKind.UInt128         => Uint128,
-    "size_t"                        => :Csize_t,
-    "ptrdiff_t"                 => :Cptrdiff_t
-    
+    TypeKind.VoidType       => Void,
+    TypeKind.BoolType       => Bool,
+    TypeKind.Char_U         => Uint8,
+    TypeKind.UChar          => :Cuchar,
+    TypeKind.Char16         => Uint16,
+    TypeKind.Char32         => Uint32,
+    TypeKind.UShort         => Uint16,
+    TypeKind.UInt           => Uint32,
+    TypeKind.ULong          => :Culong,
+    TypeKind.ULongLong      => :Culonglong,
+    TypeKind.Char_S         => Uint8,           # TODO check
+    TypeKind.SChar          => Uint8,           # TODO check
+    TypeKind.WChar          => Char,
+    TypeKind.Short          => Int16,
+    TypeKind.IntType        => :Cint,
+    TypeKind.Long           => :Clong,
+    TypeKind.LongLong       => :Clonglong,
+    TypeKind.Float          => :Cfloat,
+    TypeKind.Double         => :Cdouble,
+    TypeKind.LongDouble     => Float64,         # TODO detect?
+    TypeKind.Enum           => :Cint,            # TODO arch check?
+    TypeKind.NullPtr      => C_NULL,
+    TypeKind.UInt128      => Uint128,
+    "size_t"                => :Csize_t,
+    "ptrdiff_t"             => :Cptrdiff_t
     }
 
 # Convert libclang type to julia type
@@ -188,7 +187,7 @@ function build_clang_args(includes, extras)
 end
 
 ### Retrieve function arguments for a given cursor
-function function_args(cursor::FunctionDecl)
+function function_args(cursor::Union(FunctionDecl, CXXMethod))
     cursor_type = cindex.cu_type(cursor)
     [cindex.getArgType(cursor_type, uint32(arg_i)) for arg_i in 0:cindex.getNumArgTypes(cursor_type)-1]
 end
@@ -362,7 +361,7 @@ function wrap(wc::WrapContext, md::cindex.MacroDefinition, strm::IO)
     print(strm, "const " * string(tokens[1].text) * " = " * exprn * "\n")
 end
 
-function wrap_header(wc::WrapContext, topcu::CLNode, top_hdr, ostrm::IO)
+function wrap_header(wc::WrapContext, topcu::CLCursor, top_hdr, ostrm::IO)
     println("WRAPPING HEADER: $top_hdr")
     
     topcl = children(topcu)

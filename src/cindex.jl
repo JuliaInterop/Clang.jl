@@ -3,7 +3,7 @@ module cindex
 export cu_type, ty_kind, name, spelling, is_function, is_null,
        value, children, cu_file, resolve_type, return_type,
        tokenize
-export CLType, CLNode, CXString, CXTypeKind, CursorList, TokenList
+export CLType, CLCursor, CXString, CXTypeKind, CursorList, TokenList
 export getindex, start, next, done, search, show, endof
 
 import Base.getindex, Base.start, Base.next, Base.done, Base.search, Base.show
@@ -68,24 +68,22 @@ end
 #                   Predicate Function, accepting a CXCursor argument
 #
 function search(cl::CursorList, ismatch::Function)
-    ret = CLNode[]
+    ret = CLCursor[]
     for cu in cl
         ismatch(cu) && push!(ret, cu)
     end
     ret
 end
-search(cu::CLNode, ismatch::Function) = search(children(cu), ismatch)
-search(cu::CLNode, T::DataType) = search(cu, x->isa(x, T))
-search(cu::CLNode, name::ASCIIString) = search(cu, x->(cindex.name(x) == name))
-
-show(io::IO, cu::CLNode) = print(io, typeof(cu), " (CXCursor): ", name(cu))
+search(cu::CLCursor, ismatch::Function) = search(children(cu), ismatch)
+search(cu::CLCursor, T::DataType) = search(cu, x->isa(x, T))
+search(cu::CLCursor, name::ASCIIString) = search(cu, x->(cindex.spelling(x) == name))
 
 ###############################################################################
 # Extended search function
-# Returns a Dict{ DataType => CLNode
+# Returns a Dict{ DataType => CLCursor
 
-function matchchildren(cu::CLNode, types::Array{DataType,1})
-    ret = { t => CLNode[] for t in types}
+function matchchildren(cu::CLCursor, types::Array{DataType,1})
+    ret = { t => CLCursor[] for t in types}
     for child in children(cu)
         for t in types
             isa(child, t) && push!(ret[t], child)
@@ -99,13 +97,13 @@ end
 # TODO: macro version should be more efficient.
 anymatch(first, args...) = any({==(first, a) for a in args})
 
-cu_type(c::CLNode) = getCursorType(c)
-ty_kind(c::CLType) = c.data[1].kind
-name(c::CLNode) = getCursorDisplayName(c)
+cu_type(c::CLCursor) = getCursorType(c)
+ty_kind(c::CLType) = convert(Int, c.data[1].kind)
+name(c::CLCursor) = getCursorDisplayName(c)
 spelling(c::CLType) = getTypeKindSpelling(ty_kind(c))
-spelling(c::CLNode) = getCursorSpelling(c)
+spelling(c::CLCursor) = getCursorSpelling(c)
 is_function(t::CLType) = (ty_kind(t) == TypeKind.FunctionProto)
-is_null(c::CLNode) = (Cursor_isNull(c) != 0)
+is_null(c::CLCursor) = (Cursor_isNull(c) != 0)
 
 function resolve_type(rt::CLType)
     # This helper attempts to work around some limitations of the
@@ -122,16 +120,16 @@ function resolve_type(rt::CLType)
     return rt
 end
 
-function return_type(c::FunctionDecl, resolve::Bool)
+function return_type(c::Union(FunctionDecl, CXXMethod), resolve::Bool)
     if (resolve)
         return resolve_type( getCursorResultType(c) )
     else
         return getCursorResultType(c)
     end
 end
-return_type(c::CLNode) = return_type(c, true)
+return_type(c::CLCursor) = return_type(c, true)
 
-function value(c::CLNode)
+function value(c::CLCursor)
     if !isa(c, EnumConstantDecl)
         error("Not a value cursor.")
     end
@@ -224,7 +222,7 @@ function getindex(cl::CursorList, clid::Int)
     return CXCursor(cu)
 end
 
-function children(cu::CLNode)
+function children(cu::CLCursor)
     cl = cl_create() 
     ccall( (:wci_getChildren, libwci),
         Ptr{Void},
@@ -233,7 +231,7 @@ function children(cu::CLNode)
     return CursorList(cl.ptr,size)
 end
 
-function cu_file(cu::CLNode)
+function cu_file(cu::CLCursor)
     str = CXString()
     ccall( (:wci_getCursorFile, libwci),
         Void,
@@ -244,13 +242,14 @@ end
 start(cl::CursorList) = 1
 done(cl::CursorList, i) = (i == cl.size)
 next(cl::CursorList, i) = (cl[i], i+1)
+length(cl::CursorList) = cl.size
 
-###############################################################################
+################################################################################
 # Tokenizer access
-###############################################################################
+################################################################################
 
 # Returns TokenList
-function tokenize(cursor::CLNode)
+function tokenize(cursor::CLCursor)
     tu = Cursor_getTranslationUnit(cursor)
     sourcerange = getCursorExtent(cursor)
     return cindex.tokenize(tu, sourcerange)
@@ -261,8 +260,6 @@ done(tl::TokenList, i) = (i > tl.size)
 next(tl::TokenList, i) = (tl[i], i+1)
 endof(tl::TokenList) = tl.size
 length(tl::TokenList) = tl.size
-
-show(io::IO, tk::CLToken) = print(io, typeof(tk), "(\"", tk.text, "\")")
 
 function getindex(tl::TokenList, i::Int)
     if (i < 1 || i > tl.size) throw(BoundsError()) end
@@ -283,5 +280,13 @@ function getindex(tl::TokenList, i::Int)
         return Comment(spelling)
     end
 end
+
+################################################################################
+# Display overrides
+################################################################################
+
+show(io::IO, tk::CLToken)   = print(io, typeof(tk), "(\"", tk.text, "\")")
+show(io::IO, ty::CLType)    = print(io, "CLType (", typeof(ty), ") ")
+show(io::IO, cu::CLCursor)    = print(io, "CLCursor (", typeof(cu), ") ", name(cu))
 
 end # module

@@ -144,11 +144,11 @@ end
 #   so that we can dispatch directly on node kinds.
 ###############################################################################
 
-abstract CLNode
+abstract CLCursor
 CXCursorMap = Dict{Int32,Any}()
 const CXCursor_size = get_sz(:CXCursor)
 
-immutable TmpCursor <: CLNode
+immutable TmpCursor <: CLCursor
     data::Array{CXCursor,1}
     TmpCursor() = new(Array(CXCursor,1))
 end
@@ -157,7 +157,7 @@ for sym in names(CursorKind, true)
     if(sym == :CursorKind) continue end
     rval = eval(CursorKind.(sym))
     @eval begin
-        immutable $(sym) <: CLNode
+        immutable $(sym) <: CLCursor
             data::Array{CXCursor,1}
         end
         CXCursorMap[int32($rval)] = $sym

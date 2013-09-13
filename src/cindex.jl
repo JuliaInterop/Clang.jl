@@ -240,7 +240,7 @@ function cu_file(cu::CLCursor)
 end
 
 start(cl::CursorList) = 1
-done(cl::CursorList, i) = (i == cl.size)
+done(cl::CursorList, i) = (i > cl.size)
 next(cl::CursorList, i) = (cl[i], i+1)
 length(cl::CursorList) = cl.size
 

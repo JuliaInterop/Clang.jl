@@ -29,7 +29,7 @@ generator output:
 
 ### Prerequisites
 
-libclang >= 3.1 must be available as a shared library. libclang may
+libclang and libclang-dev (versions >= 3.1) are required. libclang may
 optionally be built by the Julia build system by setting 
 BUILD_LLVM_CLANG=1 in `julia/Make.user`.
 

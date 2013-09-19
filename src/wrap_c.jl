@@ -52,7 +52,7 @@ type WrapContext
     options::InternalOptions
 end
 WrapContext(idx,outfile,cmnfile,clanginc,clangextra,hwrap,hlib,hout) = 
-    WrapContext(idx,outfile,cmnfile,clanginc,clangextra,hwrap,hlib,hout,
+    WrapContext(idx,outfile,cmnfile,convert(Array{ASCIIString,1},clanginc),convert(Array{ASCIIString,1}, clangextra),hwrap,hlib,hout,
                 None,Set{ASCIIString}(), Dict{ASCIIString,IO}(), InternalOptions())
 
 #

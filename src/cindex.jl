@@ -129,6 +129,11 @@ function return_type(c::Union(FunctionDecl, CXXMethod), resolve::Bool)
 end
 return_type(c::CLCursor) = return_type(c, true)
 
+function pointee_type(t::CLType)
+    return cindex.getPointeeType(t)
+end
+pointee_type(cu::CLCursor) = pointee_type(cindex.cu_type(cu))
+
 function value(c::CLCursor)
     if !isa(c, EnumConstantDecl)
         error("Not a value cursor.")

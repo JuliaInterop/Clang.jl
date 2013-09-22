@@ -40,8 +40,7 @@ function parse(header::String;
                 ClangDiagnostics::Bool          = false,
                 CPlusPlus::Bool                 = false,
                 ClangArgs                       = [""],
-                ParserFlags                     = TranslationUnit_Flags.DetailedPreprocessingRecord |
-                                                  TranslationUnit_Flags.SkipFunctionBodies)
+                ParserFlags                     = TranslationUnit_Flags.None)
     if (ClangIndex == None)
         ClangIndex = idx_create(0, (ClangDiagnostics ? 0 : 1))
     end

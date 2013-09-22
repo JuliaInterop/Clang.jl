@@ -487,7 +487,11 @@ function wrap_c_headers(
             println(ostrm, "# Julia wrapper for header: $hfile")
             println(ostrm, "# Automatically generated using Clang.jl wrap_c, version $version\n")
 
-            topcu = cindex.parse(hfile; ClangIndex = wc.index, ClangArgs = clang_args)
+            topcu = cindex.parse(hfile; 
+                                 ClangIndex = wc.index,
+                                 ClangArgs  = clang_args
+                                 ParseFlags = TranslationUnit_Flags.DetailedPreprocessingRecord |
+                                              TranslationUnit_Flags.SkipFunctionBodies)
             wrap_header(wc, topcu, hfile, ostrm)
 
             println(ostrm)

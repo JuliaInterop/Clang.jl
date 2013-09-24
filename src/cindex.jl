@@ -39,7 +39,8 @@ function parse(header::String;
                 ClangIndex                      = None,
                 ClangDiagnostics::Bool          = false,
                 CPlusPlus::Bool                 = false,
-                ClangArgs                       = [""],
+                ClangArgs                       = ASCIIString[""],
+                ClangIncludes                   = ASCIIString[],
                 ParserFlags                     = TranslationUnit_Flags.None)
     if (ClangIndex == None)
         ClangIndex = idx_create(0, (ClangDiagnostics ? 0 : 1))
@@ -47,7 +48,10 @@ function parse(header::String;
     if (CPlusPlus)
         push!(ClangOptions, ["-x", "c++"])
     end
-    
+    if (length(ClangIncludes) > 0)
+        ClangArgs = vcat(ClangArgs, [["-I",x] for x in ClangIncludes]...)
+    end
+
     tu = tu_parse(ClangIndex, header, ClangArgs, length(ClangArgs),
                   C_NULL, 0, ParserFlags)
     if (tu == C_NULL)

@@ -181,11 +181,6 @@ function rep_args(v)
     readall(o)
 end
 
-### Build array of include definitions: ["-I", "incpath",...] plus extra args
-function build_clang_args(includes, extras)
-    reduce(vcat, [], vcat([["-I",x] for x in includes], extras))
-end
-
 ### Retrieve function arguments for a given cursor
 function function_args(cursor::Union(FunctionDecl, CXXMethod))
     cursor_type = cindex.cu_type(cursor)
@@ -475,8 +470,6 @@ function wrap_c_headers(
         end
     end
 
-    clang_args = build_clang_args(wc.clang_includes, wc.clang_extra_args)
-
     # Output stream for common items: typedefs, enums, etc.
     wc.common_stream = IOBuffer()
 
@@ -490,6 +483,7 @@ function wrap_c_headers(
             topcu = cindex.parse(hfile; 
                                  ClangIndex = wc.index,
                                  ClangArgs  = clang_args,
+                                 ClangIncludes = wc.clang_includes,
                                  ParseFlags = TranslationUnit_Flags.DetailedPreprocessingRecord |
                                               TranslationUnit_Flags.SkipFunctionBodies)
             wrap_header(wc, topcu, hfile, ostrm)

@@ -489,7 +489,7 @@ function wrap_c_headers(
 
             topcu = cindex.parse(hfile; 
                                  ClangIndex = wc.index,
-                                 ClangArgs  = clang_args
+                                 ClangArgs  = clang_args,
                                  ParseFlags = TranslationUnit_Flags.DetailedPreprocessingRecord |
                                               TranslationUnit_Flags.SkipFunctionBodies)
             wrap_header(wc, topcu, hfile, ostrm)

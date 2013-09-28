@@ -161,7 +161,6 @@ for sym in names(CursorKind, true)
             data::Array{CXCursor,1}
         end
         CXCursorMap[int32($rval)] = $sym
-        Expr(:toplevel, Expr(:export, Any[$sym]))
     end
 end
 

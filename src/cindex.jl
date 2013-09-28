@@ -2,7 +2,7 @@ module cindex
 
 export cu_type, ty_kind, name, spelling, is_function, is_null,
        value, children, cu_file, resolve_type, return_type,
-       tokenize
+       tokenize, pointee_type
 export CLType, CLCursor, CXString, CXTypeKind, CursorList, TokenList
 export getindex, start, next, done, search, show, endof
 

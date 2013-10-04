@@ -6,6 +6,10 @@ function base_classes(c)
 	search(c, isa(c, cindex.CXXBaseSpecifier))
 end
 
+################################################################################
+# Output helpers
+################################################################################
+
 space(io::IO)      = print(io, " ")
 openparen(io::IO)  = print(io, "(")
 closeparen(io::IO) = print(io, ")")
@@ -75,7 +79,14 @@ function emit_args(out::IO, args)
 end
 
 function emit_name(out::IO, method::cindex.CXXMethod, parent::cindex.CLCursor)
-    print(out, spelling(method))
+    buf = IOBuffer()
+    print(buf, spelling(method))
+    args = get_args(method)
+    for a in args
+        print(buf, "_")
+        print(buf, spelling(cu_type(a)))
+    end
+    print(out, takebuf_string(buf))
 end
 
 function wrap(out::IO, method::cindex.CXXMethod)
@@ -93,7 +104,10 @@ function wrap(out::IO, method::cindex.CXXMethod)
     openparen(buf)
     print(buf, parentname, "* this")
     args = get_args(method)
+    
+    # bail out if any argument is not supported
     if (!check_args(args)) return end
+    
     length(args) > 0 && (comma(buf); space(buf))
     emit_args(buf, args)
     closeparen(buf)
@@ -149,6 +163,10 @@ cl_to_c = {
     cindex.NullPtr        => "NULL",
     cindex.UInt128        => "uint128_t"
     }
+
+################################################################################
+# Construction of Julia wrapper
+################################################################################
 
 
 # end # module wrap_cpp

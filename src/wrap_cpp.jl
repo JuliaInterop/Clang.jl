@@ -168,5 +168,100 @@ cl_to_c = {
 # Construction of Julia wrapper
 ################################################################################
 
+function wrapjl(out::IO, t::cindex.ConstantArray)
+    print(out, "FIXEDARRAY") # TODO: FIXME
+end
+
+function wrapjl(out::IO, t::Union(cindex.Record, cindex.Typedef))
+    print(out, spelling(cindex.getTypeDeclaration(t)))
+end
+
+function wrapjl(out::IO, arg::cindex.CLType)
+    print(out, string(cl_to_jl[typeof(arg)]))
+end
+
+function wrapjl(out::IO, ptr::cindex.Pointer)
+    pointee = pointee_type(ptr)
+    
+    print(out, "Ptr")
+    opencurly(out)
+    wrapjl(out, pointee)
+    closecurly(out)
+end
+
+function wrapjl(out::IO, parm::cindex.ParmDecl)
+    wrapjl(out, cu_type(parm))
+end
+
+function wrapjl_args(out::IO, args)
+    emit_arg(out,arg,docomma=false) = begin
+        print(out,spelling(arg))
+        print(out,"::")
+        wrapjl(out,arg)
+        docomma && (comma(out); space(out))
+    end
+    for i = 1:length(args)
+        emit_arg(out,args[i], i < length(args))
+    end
+end
+
+function wrapjl(out::IO, method::cindex.CXXMethod)
+    buf = IOBuffer()
+    parentdecl = cindex.getCursorLexicalParent(method)
+    parentname = spelling(parentdecl)
+    
+    args = get_args(method)
+    if (!check_args(args)) return end # TODO: warn?
+
+    # emit Julia call
+    print(buf, "@method")
+    space(buf)
+    print(buf, parentname)
+    space(buf)
+    print(buf, spelling(method))
+    space(buf)
+    openparen(buf)
+    wrapjl_args(buf, args)
+    closeparen(buf)
+    newline(buf)
+    print(out, takebuf_string(buf))
+end
+
+function wrapjl(out::IO, class::cindex.ClassDecl)
+    println("in class")
+    for c in children(class)
+        if(isa(c, cindex.CXXMethod))
+            wrapjl(out, c)
+        end
+    end
+end
+
+cl_to_jl = {
+    cindex.VoidType        => Void,
+    cindex.BoolType        => Bool,
+    cindex.Char_U          => Uint8,
+    cindex.UChar           => :Cuchar,
+    cindex.Char16          => Uint16,
+    cindex.Char32          => Uint32,
+    cindex.UShort          => Uint16,
+    cindex.UInt            => Uint32,
+    cindex.ULong           => :Culong,
+    cindex.ULongLong       => :Culonglong,
+    cindex.Char_S          => Uint8,           # TODO check
+    cindex.SChar           => Uint8,           # TODO check
+    cindex.WChar           => Char,
+    cindex.Short           => Int16,
+    cindex.IntType         => :Cint,
+    cindex.Long            => :Clong,
+    cindex.LongLong        => :Clonglong,
+    cindex.Float           => :Cfloat,
+    cindex.Double          => :Cdouble,
+    cindex.LongDouble      => Float64,         # TODO detect?
+    cindex.Enum            => :Cint,            # TODO arch check?
+    cindex.NullPtr         => C_NULL,
+    cindex.UInt128         => Uint128,
+    "size_t"        => :Csize_t,
+    "ptrdiff_t"     => :Cptrdiff_t
+    }
 
 # end # module wrap_cpp

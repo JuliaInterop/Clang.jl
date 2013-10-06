@@ -1,30 +1,19 @@
 # module wrap_cpp
 
 using Clang.cindex
-
-function base_classes(c)
-	search(c, isa(c, cindex.CXXBaseSpecifier))
-end
+using Clang.wrap_base
 
 ################################################################################
-# Output helpers
+# Generation of C wrapper
 ################################################################################
 
-space(io::IO)      = print(io, " ")
-openparen(io::IO)  = print(io, "(")
-closeparen(io::IO) = print(io, ")")
-opencurly(io::IO)  = print(io, "{")
-closecurly(io::IO) = print(io, "}")
-opensquare(io::IO) = print(io, "[")
-closesquare(io::IO)= print(io, "]")
-comma(io::IO)      = print(io, ",")
-newline(io::IO)    = print(io, "\n")
+emitc(out::IO, arg::ArgProxy) = emitc(out, arg.cltype)
 
-function emit(out::IO, t::cindex.CLType)
+function emit(out::IO, t::CLType)
     print(out, cl_to_c[typeof(t)])
 end
 
-function emit(out::IO, t::Union(cindex.Record, cindex.Typedef))
+function emit(out::IO, t::Union(Record, Typedef))
     print(out, spelling(cindex.getTypeDeclaration(t)))
 end
 
@@ -41,29 +30,26 @@ function emit(out::IO, t::cindex.Pointer)
     print(out, "*")
 end
 
-function base_classes(c)
-	cindex.search(c, x->isa(x, cindex.CXXBaseSpecifier))
-end
-
 function emit(out::IO, parm::cindex.ParmDecl)
     emit(out, cu_type(parm))
 end
 
 function check_args(args)
+    check = true
     for arg in args
         argt = cu_type(arg)
-        if isa(argt, cindex.LValueReference)  ||
-               isa(argt, cindex.FirstBuiltin)
-            return false
-        end
+        check &= isa(argt, cindex.LValueReference)
+        check &= isa(argt, cindex.FirstBuiltin)
     end
-    return true
+    return check
 end
 
 function get_args(method::cindex.CXXMethod)
     args = CLCursor[]
-    for c in children(method) isa(c,cindex.ParmDecl) ? push!(args, c) : break end
-    args
+    for c in children(method)
+        isa(c,cindex.ParmDecl) ? push!(args, c) : break
+    end
+    return args
 end
 
 function emit_args(out::IO, args)
@@ -78,46 +64,53 @@ function emit_args(out::IO, args)
     end
 end
 
-function emit_name(out::IO, method::cindex.CXXMethod, parent::cindex.CLCursor)
-    buf = IOBuffer()
-    print(buf, spelling(method))
-    args = get_args(method)
-    for a in args
-        print(buf, "_")
-        print(buf, spelling(cu_type(a)))
-    end
-    print(out, takebuf_string(buf))
+function returns_value(rtype::CLType)
+    hasret = true
+    hasret &= ~isa(rtype, VoidType)
+    return hasret
 end
 
-function wrap(out::IO, method::cindex.CXXMethod)
+function wrap(out::IO, method::cindex.CXXMethod, nameid::Int)
     buf = IOBuffer()
+
+    # bail out if any argument is not supported
+    args = get_args(method)
+    if (!check_args(args)) return end
+ 
+    methodname = spelling(method)
     parentdecl = cindex.getCursorLexicalParent(method)
     parentname = spelling(parentdecl)
 
     # emit return type and name
-    ret_type = return_type(method)    
-    emit(buf, ret_type)
+    rettype = return_type(method)
+    emit(buf, rettype)
     space(buf)
-    emit_name(buf, method, parentdecl)
-
+    print(buf, parentname, "_", methodname, nameid)
+    
+    # check for a return value
+    hasreturn = returns_value(rettype)
+   
     # emit arguments
     openparen(buf)
-    print(buf, parentname, "* this")
-    args = get_args(method)
-    
-    # bail out if any argument is not supported
-    if (!check_args(args)) return end
-    
-    length(args) > 0 && (comma(buf); space(buf))
-    emit_args(buf, args)
+        print(buf, parentname, "* this")
+        length(args) > 0 && comma(buf)
+        space(buf)
+        emit_args(buf, args)
     closeparen(buf)
-    space(buf); opencurly(buf)
-    newline(buf)
+    space(buf)
     
+    opencurly(buf)
+    newline(buf)
+    print(buf, "  ")
+
     # emit method call
-    print(buf, "  this->", spelling(method))
+    if(hasreturn)
+        print(buf, "return")
+        space(buf)
+    end    
+    print(buf, "this->", methodname)
     openparen(buf)
-    emit_args(buf, args)
+        emit_args(buf, args)
     closeparen(buf)
     
     # close
@@ -125,15 +118,21 @@ function wrap(out::IO, method::cindex.CXXMethod)
     closecurly(buf)
     newline(buf)
 
-    # print the buffer to the outpur
-    print(STDOUT, takebuf_string(buf))
+    # print the buffer to the output
+    print(out, takebuf_string(buf))
     # TODO: return information about the thing we wrapped?
 end
 
 function wrap(out::IO, top::cindex.ClassDecl)
     println("Wrapping class: ", name(top))
-    for decl in [c for c in children(top)] #[1:30] # TODO: remove this
-        isa(decl, cindex.CXXMethod) && wrap(out, decl)
+    MethodCount = Dict{ASCIIString, Int}()
+
+    for decl in [c for c in children(top)]
+        declname = spelling(decl)
+        if isa(decl, cindex.CXXMethod)
+            id = (MethodCount[declname] = get(MethodCount, declname, 0) + 1)
+            wrap(out, decl, id)
+        end 
     end
 end
 
@@ -168,8 +167,9 @@ cl_to_c = {
 # Construction of Julia wrapper
 ################################################################################
 
+# TODO: FIXME
 function wrapjl(out::IO, t::cindex.ConstantArray)
-    print(out, "FIXEDARRAY") # TODO: FIXME
+    print(out, "FIXEDARRAY")
 end
 
 function wrapjl(out::IO, t::Union(cindex.Record, cindex.Typedef))
@@ -205,63 +205,94 @@ function wrapjl_args(out::IO, args)
     end
 end
 
-function wrapjl(out::IO, method::cindex.CXXMethod)
+function wrapjl(out::IO, method::cindex.CXXMethod, id::Int)
     buf = IOBuffer()
+
+    methodname = spelling(method)
     parentdecl = cindex.getCursorLexicalParent(method)
     parentname = spelling(parentdecl)
     
     args = get_args(method)
-    if (!check_args(args)) return end # TODO: warn?
+    if (!check_args(args)) return end                       # TODO: warning?
 
-    # emit Julia call
-    print(buf, "@method")
+    print(buf, "@method")                                   # emit Julia call
     space(buf)
-    print(buf, parentname)
+    print(buf, parentname)                                  # parent class
     space(buf)
-    print(buf, spelling(method))
+    print(buf, methodname)
+    space(buf)
+    wrapjl(buf, return_type(method))                        # return type
     space(buf)
     openparen(buf)
-    wrapjl_args(buf, args)
+    wrapjl_args(buf, args)                                  # arguments
     closeparen(buf)
+    space(buf)
+    print(buf, methodname, id)             # C name
     newline(buf)
     print(out, takebuf_string(buf))
 end
 
 function wrapjl(out::IO, class::cindex.ClassDecl)
-    println("in class")
-    for c in children(class)
-        if(isa(c, cindex.CXXMethod))
-            wrapjl(out, c)
-        end
+    MethodCount = Dict{ASCIIString, Int}()
+
+    for decl in [c for c in children(class)]
+        declname = spelling(decl)
+        if isa(decl, cindex.CXXMethod)
+            id = (MethodCount[declname] = get(MethodCount, declname, 0) + 1)
+            wrapjl(out, decl, id)
+        end 
     end
 end
 
 cl_to_jl = {
-    cindex.VoidType        => Void,
-    cindex.BoolType        => Bool,
-    cindex.Char_U          => Uint8,
-    cindex.UChar           => :Cuchar,
-    cindex.Char16          => Uint16,
-    cindex.Char32          => Uint32,
-    cindex.UShort          => Uint16,
-    cindex.UInt            => Uint32,
-    cindex.ULong           => :Culong,
-    cindex.ULongLong       => :Culonglong,
-    cindex.Char_S          => Uint8,           # TODO check
-    cindex.SChar           => Uint8,           # TODO check
-    cindex.WChar           => Char,
-    cindex.Short           => Int16,
-    cindex.IntType         => :Cint,
-    cindex.Long            => :Clong,
-    cindex.LongLong        => :Clonglong,
-    cindex.Float           => :Cfloat,
-    cindex.Double          => :Cdouble,
-    cindex.LongDouble      => Float64,         # TODO detect?
-    cindex.Enum            => :Cint,            # TODO arch check?
-    cindex.NullPtr         => C_NULL,
-    cindex.UInt128         => Uint128,
-    "size_t"        => :Csize_t,
-    "ptrdiff_t"     => :Cptrdiff_t
+    cindex.VoidType         => Void,
+    cindex.BoolType         => Bool,
+    cindex.Char_U           => Uint8,
+    cindex.UChar            => :Cuchar,
+    cindex.Char16           => Uint16,
+    cindex.Char32           => Uint32,
+    cindex.UShort           => Uint16,
+    cindex.UInt             => Uint32,
+    cindex.ULong            => :Culong,
+    cindex.ULongLong        => :Culonglong,
+    cindex.Char_S           => Uint8,
+    cindex.SChar            => Uint8,
+    cindex.WChar            => Char,
+    cindex.Short            => Int16,
+    cindex.IntType          => :Cint,
+    cindex.Long             => :Clong,
+    cindex.LongLong         => :Clonglong,
+    cindex.Float            => :Cfloat,
+    cindex.Double           => :Cdouble,
+    cindex.LongDouble       => Float64,
+    cindex.Enum             => :Cint,
+    cindex.NullPtr          => C_NULL,
+    cindex.UInt128          => Uint128,
+    cindex.FirstBuiltin     => Void,
+    "size_t"                => :Csize_t,
+    "ptrdiff_t"             => :Cptrdiff_t
     }
+
+
+################################################################################
+# Utility functions
+################################################################################
+
+space(io::IO)      = print(io, " ")
+openparen(io::IO)  = print(io, "(")
+closeparen(io::IO) = print(io, ")")
+opencurly(io::IO)  = print(io, "{")
+closecurly(io::IO) = print(io, "}")
+opensquare(io::IO) = print(io, "[")
+closesquare(io::IO)= print(io, "]")
+comma(io::IO)      = print(io, ",")
+newline(io::IO)    = print(io, "\n")
+
+
+function base_classes(class::cindex.ClassDecl)
+    return [cindex.getCursorReferenced(c)
+            for c in cindex.search(class, cindex.CXXBaseSpecifier)]
+end
+
 
 # end # module wrap_cpp

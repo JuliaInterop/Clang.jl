@@ -1,7 +1,52 @@
 # module wrap_cpp
+module testing
 
 using Clang.cindex
 using Clang.wrap_base
+
+################################################################################
+# Extensible type-proxy interface
+################################################################################
+# Usage:
+#   - create custom handler ArgType <: ArgProxy
+#   - write arg_init and arg_post for that type
+#   - TypeProxies[type_spelling] = ArgType
+
+export
+    CustomArg,
+    ArgProxy,
+    WrMethod
+    emitc_init,
+    emitc_post
+
+immutable ArgProxy
+    cltype::CLType
+end
+
+type WrMethod
+    parent::ClassDecl
+    args
+end
+
+TypeProxies = Dict{ASCIIString, Type}()
+
+function should_proxy(arg::Union(Typedef, Record))
+end
+
+###
+# Parse a C++ method and build a collection of
+# argument types, possibly with proxy implementation.
+###
+function analyze_method(method::CXXMethod)
+    arg_list = get_args(method)
+
+    hasreturn = returns_value(method)
+
+    for arg in arg_list
+        if should_proxy(arg)
+        end
+    end
+end
 
 ################################################################################
 # Generation of C wrapper
@@ -294,5 +339,4 @@ function base_classes(class::cindex.ClassDecl)
             for c in cindex.search(class, cindex.CXXBaseSpecifier)]
 end
 
-
-# end # module wrap_cpp
+end # module wrap_cpp

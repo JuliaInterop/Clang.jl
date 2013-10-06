@@ -1,36 +1,27 @@
 # module wrap_cpp
-module testing
+module wt
 
 using Clang.cindex
-using Clang.wrap_base
-
-################################################################################
-# Extensible type-proxy interface
-################################################################################
-# Usage:
-#   - create custom handler ArgType <: ArgProxy
-#   - write arg_init and arg_post for that type
-#   - TypeProxies[type_spelling] = ArgType
 
 export
     CustomArg,
     ArgProxy,
     WrMethod
-    emitc_init,
-    emitc_post
+    #emitc_init,
+    #emitc_post
 
-immutable ArgProxy
-    cltype::CLType
-end
 
-type WrMethod
+
+################################################################################
+# Method entry point
+################################################################################
+
+immutable WrappedMethod
+    name::ASCIIString
+    method::CXXMethod
     parent::ClassDecl
-    args
-end
-
-TypeProxies = Dict{ASCIIString, Type}()
-
-function should_proxy(arg::Union(Typedef, Record))
+    args::Array{Any,1}
+    hasretval::Bool
 end
 
 ###
@@ -42,17 +33,40 @@ function analyze_method(method::CXXMethod)
 
     hasreturn = returns_value(method)
 
+    args = Any[]
     for arg in arg_list
-        if should_proxy(arg)
-        end
+        proxy = get_proxy(spelling(cu_type(arg)))
+        (proxy == None) ? push!(args, arg) : push!(args, proxy)
     end
+    return WrappedMethod(spelling(method),
+                         method,
+                         cindex.getCursorLexicalParent(method),
+                         args,
+                         hasreturn)
+end
+
+################################################################################
+# Extensible type-proxy interface
+################################################################################
+# Usage:
+#   - create custom handler ArgType <: ArgProxy
+#   - write emitc_init and emitc_post for that type
+#   - set TypeProxies[type_spelling] = ArgType
+
+abstract TypeProxy <: CLType
+
+typealias __TypeProxiesType Dict{String, Type}
+const TypeProxies = Dict{String, Type}()
+
+function get_proxy(typename::String)
+    get(TypeProxies::__TypeProxiesType, typename, None)
 end
 
 ################################################################################
 # Generation of C wrapper
 ################################################################################
 
-emitc(out::IO, arg::ArgProxy) = emitc(out, arg.cltype)
+#emitc(out::IO, arg::ArgProxy) = emitc(out, arg.cltype)
 
 function emit(out::IO, t::CLType)
     print(out, cl_to_c[typeof(t)])
@@ -89,14 +103,6 @@ function check_args(args)
     return check
 end
 
-function get_args(method::cindex.CXXMethod)
-    args = CLCursor[]
-    for c in children(method)
-        isa(c,cindex.ParmDecl) ? push!(args, c) : break
-    end
-    return args
-end
-
 function emit_args(out::IO, args)
     emit_arg(out,arg,docomma=false) = begin
         emit(out,arg)
@@ -107,12 +113,6 @@ function emit_args(out::IO, args)
     for i = 1:length(args)
         emit_arg(out,args[i], i < length(args))
     end
-end
-
-function returns_value(rtype::CLType)
-    hasret = true
-    hasret &= ~isa(rtype, VoidType)
-    return hasret
 end
 
 function wrap(out::IO, method::cindex.CXXMethod, nameid::Int)
@@ -337,6 +337,21 @@ newline(io::IO)    = print(io, "\n")
 function base_classes(class::cindex.ClassDecl)
     return [cindex.getCursorReferenced(c)
             for c in cindex.search(class, cindex.CXXBaseSpecifier)]
+end
+
+returns_value(m::CXXMethod) = returns_value(cu_type(m))
+function returns_value(rtype::CLType)
+    hasret = true
+    hasret &= ~isa(rtype, VoidType)
+    return hasret
+end
+
+function get_args(method::cindex.CXXMethod)
+    args = CLCursor[]
+    for c in children(method)
+        isa(c,cindex.ParmDecl) ? push!(args, c) : break
+    end
+    return args
 end
 
 end # module wrap_cpp

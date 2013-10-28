@@ -2,7 +2,7 @@ module cindex
 
 export cu_type, ty_kind, name, spelling, is_function, is_null,
        value, children, cu_file, resolve_type, return_type,
-       tokenize, pointee_type
+       tokenize, pointee_type, parse_header
 export CLType, CLCursor, CXString, CXTypeKind, CursorList, TokenList
 export getindex, start, next, done, search, show, endof
 
@@ -35,7 +35,7 @@ include("cindex/base.jl")
 #   ClangArgs:          Compiler switches as string array, eg: ["-x", "c++", "-fno-elide-type"]
 #   ParserFlags:        Bitwise OR of TranslationUnitFlags
 #
-function parse(header::String;
+function parse_header(header::String;
                 ClangIndex                      = None,
                 ClangDiagnostics::Bool          = false,
                 CPlusPlus::Bool                 = false,

@@ -1,8 +1,8 @@
 module cindex
 
-export cu_type, ty_kind, name, spelling, is_function, is_null,
+export parse_header, cu_type, ty_kind, name, spelling,
        value, children, cu_file, resolve_type, return_type,
-       tokenize, pointee_type, parse_header
+       tokenize, pointee_type, typedef_type
 export CLType, CLCursor, CXString, CXTypeKind, CursorList, TokenList
 export getindex, start, next, done, search, show, endof
 
@@ -135,6 +135,14 @@ function pointee_type(t::Pointer)
     return cindex.getPointeeType(t)
 end
 pointee_type(cu::CLCursor) = error("pointee_type(CLCursor) is discontinued, please use pointee_type(cindex.cu_type(cu))")
+
+function typedef_type(c::TypedefDecl)
+    t = cindex.getTypedefDeclUnderlyingType(c)
+    if isa(t, Unexposed)
+        t = cu_type(children(c)[1])
+    end
+    return t
+end
 
 function value(c::EnumConstantDecl)
     t = cu_type(c)

@@ -1,0 +1,67 @@
+{
+ "metadata": {
+  "language": "Julia",
+  "name": "Clang.jl Examples"
+ },
+ "nbformat": 3,
+ "nbformat_minor": 0,
+ "worksheets": [
+  {
+   "cells": [
+    {
+     "cell_type": "markdown",
+     "metadata": {},
+     "source": "Prerequisites\n=============\n\nAs referred to below, `Index.h` is the libclang API header, available within the Clang source tree at `include/clang-c/Index.h` ([suggested download location](https://raw.github.com/llvm-mirror/clang/master/include/clang-c/Index.h)).\n\nThe following definitions should be adjusted to match the appropriate paths on your system, if libclang is installed separately from Julia."
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": "indexh         = joinpath(JULIA_HOME, \"../../deps/llvm-3.3/tools/clang/include/clang-c/Index.h\")\nclang_includes = [joinpath(JULIA_HOME, \"../lib/clang/3.3/include\"), joinpath(dirname(indexh), \"..\")]",
+     "language": "python",
+     "metadata": {},
+     "outputs": []
+    },
+    {
+     "cell_type": "markdown",
+     "metadata": {},
+     "source": "Printing Enums\n=============="
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": "using Clang.cindex\n\ntop = parse_header(indexh; clang_includes=clang_includes, diagnostics=true)\n\nfunction print_enums(enumdef::EnumDecl)\n    for enum in children(enumdef)\n        println(\"  const \", name(enum), \" = \", value(enum))\n    end\nend\n\nfor cursor in children(top)\n    # Skip cursors not in target file\n    if (basename(cu_file(cursor)) != basename(indexh)) continue end\n    \n    got_enum = false\n    if isa(cursor, EnumDecl)\n        #if (name(cursor) == \"\") continue end\n        println(\"# Enum: \", name(cursor))\n        print_enums(cursor)\n        got_enum = true\n    elseif isa(cursor, TypedefDecl)\n        td_children = children(cursor)\n        td_children.size == 0 && continue\n        \n        td_cursor = td_children[1]\n        if isa(td_cursor, EnumDecl)\n            println(\"# Typedef Enum: \", name(td_cursor))\n            print_enums(td_cursor)\n            got_enum = true\n        end\n    end\nend",
+     "language": "python",
+     "metadata": {},
+     "outputs": []
+    },
+    {
+     "cell_type": "markdown",
+     "metadata": {},
+     "source": "Print Functions\n===============\n\nExpected output:\n\n```\nNumber of cursors in TranslationUnit: 679\nFunctions:\n  clang_createIndex(CXIndex,Int,Int,)\n  clang_disposeIndex(Typedef,)\n  clang_CXIndex_setGlobalOptions(Typedef,UInt,)\n  clang_CXIndex_getGlobalOptions(Typedef,)\n  clang_getFileName(CXString,Typedef,)\n  clang_getFileTime(time_t,Typedef,)\n  ...\n```\n\nNote: number of cursors may vary depending on the definitions activated in previous includes based on system type and configuration."
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": "using Clang.cindex\n\nget_it(t::TypedefDecl) = get_it(cindex.getTypedefDeclUnderlyingType(t))\nget_it(d::ParmDecl)    = get_it(cu_type(d))\nget_it(t::TypeRef)     = spelling(t)\nget_it(t::Pointer) = string(\"Ptr{\", get_it(cindex.getPointeeType(t)), \"}\")\nget_it(t::CLType)  = spelling(t)\n\nget_it(c::CLCursor) = get_it(cindex.getCursorType(c))\nget_it(f::FunctionDecl) = spelling(f)\n\nfunction print_function(f::FunctionDecl)\n    rt = return_type(f)\n    print(\"  \", get_it(f))\n    print(\"(\")\n    for a in children(f)\n        if !(isa(a, TypeRef) || isa(a, ParmDecl)) break end\n        print(get_it(a))\n        print(\",\")\n    end\n    print(\")\\n\")\nend\n\nfunction dump_functions(header::String)\n    tu = parse_header(header; clang_includes=clang_includes)\n    tu_children = children(tu)\n    \n    println(\"Number of cursors in TranslationUnit: \", length(tu_children))\n    println(\"Functions:\")\n    for node in children(tu)\n        # Skip anything outside of the TU\n        if (basename(cu_file(node)) != basename(header))\n            continue\n        end\n        if isa(node, FunctionDecl)\n            print_function(node)\n        end\n    end\nend\n\ndump_functions(\"Index.h\")",
+     "language": "python",
+     "metadata": {},
+     "outputs": []
+    },
+    {
+     "cell_type": "markdown",
+     "metadata": {},
+     "source": "Printing Structs\n================\n\nExpected output:\n```\nStruct: CXTranslationUnitImpl\nStruct: CXUnsavedFile\nStruct: CXVersion\nStruct: CXVersion\nStruct: \nStruct: \n```\nNote: it takes a little bit more work to get the name of typedef'd structs. See Clang.jl/src/wrap_c.jl for a full implementation."
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": "using Clang.cindex\n\nget_struct(t::TypedefDecl) = get_struct(cindex.getTypeDeclaration(cindex.getTypedefDeclUnderlyingType(t)))\nget_struct(d::StructDecl)  = d\nget_struct(d::CLCursor)    = None\n\nfunction dump_structs(hdr::String)\n    topcu = parse_header(hdr; clang_includes = clang_includes)\n    for cu in children(topcu)\n        # Skip includes\n        if (basename(cu_file(cu)) != basename(hdr)) continue end\n        cur = get_struct(cu)\n        if (cur != None)\n            println(\"Struct: \", name(cur))\n        end\n    end\nend\n\ndump_structs(\"Index.h\")",
+     "language": "python",
+     "metadata": {},
+     "outputs": []
+    }
+   ],
+   "metadata": {}
+  }
+ ]
+}

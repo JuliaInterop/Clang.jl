@@ -29,31 +29,31 @@ include("cindex/base.jl")
 #   "header.h"          header file to parse
 #
 # Optional (keyword) arguments:
-#   ClangIndex:         CXIndex pointer (pass to avoid re-allocation)
-#   ClangDiagnostics:   Display Clang diagnostics
-#   CPlusPlus:          Parse as C++
-#   ClangArgs:          Compiler switches as string array, eg: ["-x", "c++", "-fno-elide-type"]
-#   ParserFlags:        Bitwise OR of TranslationUnitFlags
+#   index:              CXIndex pointer (pass to avoid re-allocation)
+#   diagnostics:        Display Clang diagnostics
+#   cplusplus:          Parse as C++
+#   clang_args:         Compiler switches as string array, eg: ["-x", "c++", "-fno-elide-type"]
+#   clang_flags:        Bitwise OR of TranslationUnitFlags
 #
 function parse_header(header::String;
-                ClangIndex                      = None,
-                ClangDiagnostics::Bool          = false,
-                CPlusPlus::Bool                 = false,
-                ClangArgs                       = ASCIIString[""],
-                ClangIncludes                   = ASCIIString[],
-                ParserFlags                     = TranslationUnit_Flags.None)
-    if (ClangIndex == None)
-        ClangIndex = idx_create(0, (ClangDiagnostics ? 0 : 1))
+                index                           = None,
+                diagnostics::Bool               = false,
+                cplusplus::Bool                 = false,
+                clang_args                      = ASCIIString[""],
+                clang_includes                  = ASCIIString[],
+                clang_flags                     = TranslationUnit_Flags.None)
+    if (index == None)
+        index = idx_create(0, (diagnostics ? 1 : 0))
     end
-    if (CPlusPlus)
-        push!(ClangOptions, ["-x", "c++"])
+    if (cplusplus)
+        push!(clang_args, ["-x", "c++"])
     end
-    if (length(ClangIncludes) > 0)
-        ClangArgs = vcat(ClangArgs, [["-I",x] for x in ClangIncludes]...)
+    if (length(clang_includes) > 0)
+        clang_args = vcat(clang_args, [["-I",x] for x in clang_includes]...)
     end
 
-    tu = tu_parse(ClangIndex, header, ClangArgs, length(ClangArgs),
-                  C_NULL, 0, ParserFlags)
+    tu = tu_parse(index, header, clang_args, length(clang_args),
+                  C_NULL, 0, clang_flags)
     if (tu == C_NULL)
         error("ParseTranslationUnit returned NULL; unable to create TranslationUnit")
     end
@@ -105,7 +105,6 @@ ty_kind(c::CLType) = convert(Int, c.data[1].kind)
 name(c::CLCursor) = getCursorDisplayName(c)
 spelling(c::CLType) = getTypeKindSpelling(convert(Int32, ty_kind(c)))
 spelling(c::CLCursor) = getCursorSpelling(c)
-is_function(t::CLType) = (ty_kind(t) == TypeKind.FunctionProto)
 is_null(c::CLCursor) = (Cursor_isNull(c) != 0)
 
 function resolve_type(rt::CLType)
@@ -132,87 +131,19 @@ function return_type(c::Union(FunctionDecl, CXXMethod), resolve::Bool)
 end
 return_type(c::CLCursor) = return_type(c, true)
 
-function pointee_type(t::CLType)
+function pointee_type(t::Pointer)
     return cindex.getPointeeType(t)
 end
-pointee_type(cu::CLCursor) = pointee_type(cindex.cu_type(cu))
+pointee_type(cu::CLCursor) = error("pointee_type(CLCursor) is discontinued, please use pointee_type(cindex.cu_type(cu))")
 
-function value(c::CLCursor)
-    if !isa(c, EnumConstantDecl)
-        error("Not a value cursor.")
-    end
+function value(c::EnumConstantDecl)
     t = cu_type(c)
-    if anymatch(ty_kind(t), 
-        TypeKind.IntType, TypeKind.Long, TypeKind.LongLong)
+    if isa(t, TypeKind.IntType) || isa(t, TypeKind.Long) || isa(t, TypeKind.LongLong)
             return getEnumConstantDeclValue(c)
-    end
-    if anymatch(ty_kind(t),
-        TypeKind.UInt, TypeKind.ULong, TypeKind.ULongLong)
+    elseif isa(t, TypeKind.UInt) || isa(t, TypeKind.ULong) || isa(t, TypeKind.ULongLong)
             return getEnumConstantDeclUnsignedValue(c)
     end
 end
-
-tu_init(hdrfile::Any) = tu_init(hdrfile, 0, false, 0)
-function tu_init(hdrfile::Any, diagnostics, cpp::Bool, opts::Int)
-    idx = idx_create(0,diagnostics)
-    tu = tu_parse(idx, hdrfile, (cpp ? ["-x", "c++"] : [""]), opts)
-    return tu
-end
-
-###############################################################################
-# Utility functions
-
-tu_dispose(tu::CXTranslationUnit) = ccall( (:clang_disposeTranslationUnit, "libclang"), Void, (Ptr{Void},), tu)
-
-function tu_cursor(tu::CXTranslationUnit)
-    if (tu == C_NULL)
-        error("Invalid TranslationUnit!")
-    end
-    getTranslationUnitCursor(tu)
-end
- 
-tu_parse(CXIndex, source_filename::ASCIIString, 
-                 cl_args::Array{ASCIIString,1}, num_clargs,
-                 unsaved_files::CXUnsavedFile, num_unsaved_files,
-                 options) =
-    ccall( (:clang_parseTranslationUnit, "libclang"),
-        CXTranslationUnit,
-        (Ptr{Void}, Ptr{Uint8}, Ptr{Ptr{Uint8}}, Uint32, Ptr{Void}, Uint32, Uint32), 
-            CXIndex, source_filename,
-            cl_args, num_clargs,
-            unsaved_files, num_unsaved_files, options)
-
-idx_create() = idx_create(0,0)
-idx_create(excludeDeclsFromPCH::Int, displayDiagnostics::Int) =
-    ccall( (:clang_createIndex, "libclang"),
-        CXTranslationUnit,
-        (Int32, Int32),
-        excludeDeclsFromPCH, displayDiagnostics)
-
-#Typedef{"Pointer CXFile"} clang_getFile(CXTranslationUnit, const char *)
-getFile(tu::CXTranslationUnit, file::ASCIIString) = 
-    ccall( (:clang_getFile, "libclang"),
-        CXFile,
-        (Ptr{Void}, Ptr{Uint8}), tu, file)
-
-function cl_create()
-    ptr = ccall( (:wci_createCursorList, libwci),
-        Ptr{Void},
-        () )
-    return CursorList(ptr,0)
-end
-
-function cl_dispose(cl::CursorList)
-    ccall( (:wci_disposeCursorList, libwci),
-        None,
-        (Ptr{Void},), cl.ptr)
-end
-
-cl_size(cl::CursorList) = cl.size
-cl_size(clptr::Ptr{Void}) =
-    ccall( (:wci_sizeofCursorList, libwci),
-        Int,
-        (Ptr{Void},), clptr)
 
 function getindex(cl::CursorList, clid::Int, default::UnionType)
     try
@@ -296,5 +227,69 @@ end
 show(io::IO, tk::CLToken)   = print(io, typeof(tk), "(\"", tk.text, "\")")
 show(io::IO, ty::CLType)    = print(io, "CLType (", typeof(ty), ") ")
 show(io::IO, cu::CLCursor)    = print(io, "CLCursor (", typeof(cu), ") ", name(cu))
+
+###############################################################################
+# Internal functions
+###############################################################################
+
+tu_init(hdrfile::Any) = tu_init(hdrfile, 0, false, 0)
+function tu_init(hdrfile::Any, diagnostics, cpp::Bool, opts::Int)
+    idx = idx_create(0,diagnostics)
+    tu = tu_parse(idx, hdrfile, (cpp ? ["-x", "c++"] : [""]), opts)
+    return tu
+end
+
+
+tu_dispose(tu::CXTranslationUnit) = ccall( (:clang_disposeTranslationUnit, "libclang"), Void, (Ptr{Void},), tu)
+
+function tu_cursor(tu::CXTranslationUnit)
+    if (tu == C_NULL)
+        error("Invalid TranslationUnit!")
+    end
+    getTranslationUnitCursor(tu)
+end
+ 
+tu_parse(CXIndex, source_filename::ASCIIString, 
+                 cl_args::Array{ASCIIString,1}, num_clargs,
+                 unsaved_files::CXUnsavedFile, num_unsaved_files,
+                 options) =
+    ccall( (:clang_parseTranslationUnit, "libclang"),
+        CXTranslationUnit,
+        (Ptr{Void}, Ptr{Uint8}, Ptr{Ptr{Uint8}}, Uint32, Ptr{Void}, Uint32, Uint32), 
+            CXIndex, source_filename,
+            cl_args, num_clargs,
+            unsaved_files, num_unsaved_files, options)
+
+idx_create() = idx_create(0,0)
+idx_create(excludeDeclsFromPCH::Int, displayDiagnostics::Int) =
+    ccall( (:clang_createIndex, "libclang"),
+        CXTranslationUnit,
+        (Int32, Int32),
+        excludeDeclsFromPCH, displayDiagnostics)
+
+#Typedef{"Pointer CXFile"} clang_getFile(CXTranslationUnit, const char *)
+getFile(tu::CXTranslationUnit, file::ASCIIString) = 
+    ccall( (:clang_getFile, "libclang"),
+        CXFile,
+        (Ptr{Void}, Ptr{Uint8}), tu, file)
+
+function cl_create()
+    ptr = ccall( (:wci_createCursorList, libwci),
+        Ptr{Void},
+        () )
+    return CursorList(ptr,0)
+end
+
+function cl_dispose(cl::CursorList)
+    ccall( (:wci_disposeCursorList, libwci),
+        None,
+        (Ptr{Void},), cl.ptr)
+end
+
+cl_size(cl::CursorList) = cl.size
+cl_size(clptr::Ptr{Void}) =
+    ccall( (:wci_sizeofCursorList, libwci),
+        Int,
+        (Ptr{Void},), clptr)
 
 end # module

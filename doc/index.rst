@@ -1,6 +1,8 @@
 Basic API
 ---------
-.. function:: parse_header(header::String;
+.. function:: parse_header(header::String; index, diagnostics, cplusplus, clang_args, clang_includes, clang_flags)
+
+    :Optional args:
                             index                           = None,
                             diagnostics::Bool               = false,
                             cplusplus::Bool                 = false,

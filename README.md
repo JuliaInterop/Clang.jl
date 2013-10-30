@@ -6,7 +6,18 @@ provides background on the functionality available through libclang, and thus
 through the Julia wrapper. The Clang.jl repository also hosts related tools built
 on top of libclang functionality.
 
-[Documentation on readthedocs](http://clangjl.readthedocs.org/)
+## Getting Started
+
+Installation requirements are listed down page.
+
+[Clang.jl Documentation](http://clangjl.readthedocs.org/)
+
+Example notebooks:
+------------------
+
+[Usage Examples](http://nbviewer.ipython.org/urls/raw.github.com/ihnorton/Clang.jl/master/examples/example_notebook.json)
+
+[Parsing C with Clang and Julia](http://nbviewer.ipython.org/urls/raw.github.com/ihnorton/Clang.jl/master/examples/parsing_c_with_clangjl.json)
 
 ## C wrapper generator
 

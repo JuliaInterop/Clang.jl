@@ -6,6 +6,8 @@ provides background on the functionality available through libclang, and thus
 through the Julia wrapper. The Clang.jl repository also hosts related tools built
 on top of libclang functionality.
 
+[Documentation on readthedocs](http://clangjl.readthedocs.org/)
+
 ## C wrapper generator
 
 Clang.jl includes a generator to create Julia wrappers for C libraries

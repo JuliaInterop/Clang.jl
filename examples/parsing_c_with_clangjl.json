@@ -1,0 +1,458 @@
+{
+ "metadata": {
+  "language": "Julia",
+  "name": ""
+ },
+ "nbformat": 3,
+ "nbformat_minor": 0,
+ "worksheets": [
+  {
+   "cells": [
+    {
+     "cell_type": "markdown",
+     "metadata": {},
+     "source": [
+      "Introduction\n",
+      "============\n",
+      "\n",
+      "Clang is an open-source compiler built on the LLVM framework and targeting C, C++, and Objective-C (LLVM is also the JIT backend for Julia). Due to a highly modular design, Clang has in recent years become the core of a growing number of projects utilizing pieces of the compiler, such as tools for source-to-source translation, static analysis and security evaluation, and editor tools for code completion, formatting, etc.\n",
+      "\n",
+      "While LLVM and Clang are written in C++, the Clang project maintains a C-exported interface called \"libclang\" which provides access to the abstract syntax tree and type representations. Thanks to the ubiquity of support for C calling conventions, a number of languages have utilized libclang as a basis for tooling related to C and C++.\n",
+      "\n",
+      "The Clang.jl Julia package wraps libclang, provides a small convenience API for Julia-style programming, and provides a C-to-Julia wrapper generator built on libclang functionality.\n",
+      "\n",
+      "In this post I will introduce libclang and Clang.jl, and explore several usage examples. All code in this example is available for [download]() (in particular, `example.h` contains all of the C code referenced herein).\n",
+      "\n",
+      "Setting up\n",
+      "==========\n",
+      "\n",
+      "The examples in this post require Julia 0.2 and libclang >= 3.1\n",
+      "\n",
+      "Clang.jl should be installed using the Julia package manager:\n",
+      "    \n",
+      "    Pkg.add(\"Clang\")\n",
+      "    \n",
+      "Please see the Clang.jl [README](https://github.com/ihnorton/Clang.jl/blob/master/README.md) for dependency information."
+     ]
+    },
+    {
+     "cell_type": "markdown",
+     "metadata": {},
+     "source": [
+      "Example 1: Printing Struct Fields\n",
+      "===============================\n",
+      "\n",
+      "To motivate the discussion with a succinct example, consider this struct:\n",
+      "\n",
+      "```C\n",
+      "struct ExStruct {\n",
+      "    int    kind;\n",
+      "    char*  name;\n",
+      "    float* data;\n",
+      "};\n",
+      "```\n",
+      "\n",
+      "Parsing and querying the fields of this struct requires just a few lines of code:"
+     ]
+    },
+    {
+     "cell_type": "code",
+     "collapsed": true,
+     "input": [
+      "using Clang.cindex\n",
+      "\n",
+      "top = cindex.parse_header(\"example.h\")\n",
+      "\n",
+      "st_cursor = cindex.search(top, \"ExStruct\")[1]\n",
+      "\n",
+      "for c in children(st_cursor)\n",
+      "    println(\"Cursor: \", c, \"\\n  Name: \", name(c), \"\\n  Type: \", cu_type(c))\n",
+      "end"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": [
+      {
+       "output_type": "stream",
+       "stream": "stdout",
+       "text": [
+        "Cursor: CLCursor ("
+       ]
+      },
+      {
+       "output_type": "stream",
+       "stream": "stdout",
+       "text": [
+        "FieldDecl) kind\n",
+        "  Name: kind\n",
+        "  Type: CLType (IntType) \n",
+        "Cursor: CLCursor (FieldDecl) name\n",
+        "  Name: name\n",
+        "  Type: CLType (Pointer) \n",
+        "Cursor: CLCursor (FieldDecl) data\n",
+        "  Name: data\n",
+        "  Type: CLType (Pointer) \n"
+       ]
+      }
+     ],
+     "prompt_number": 13
+    },
+    {
+     "cell_type": "markdown",
+     "metadata": {},
+     "source": [
+      "AST Representation\n",
+      "=================="
+     ]
+    },
+    {
+     "cell_type": "markdown",
+     "metadata": {},
+     "source": [
+      "Let's examine the example above, starting with the variable `top`:"
+     ]
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "top"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": [
+      {
+       "metadata": {},
+       "output_type": "pyout",
+       "prompt_number": 14,
+       "text": [
+        "CLCursor (TranslationUnit) example.h"
+       ]
+      }
+     ],
+     "prompt_number": 14
+    },
+    {
+     "cell_type": "markdown",
+     "metadata": {},
+     "source": [
+      "A `TranslationUnit` is the entry point to the libclang AST. In the example above, `top` is the TranslationUnit CLCursor for the parsed file *example.h*. The libclang AST is represented as a directed acycyclic graph of `Cursor` nodes carrying three pieces of essential information:\n",
+      "\n",
+      "    Kind: purpose of cursor node\n",
+      "    Type: type of the object represented by cursor\n",
+      "    Children: list of child nodes\n",
+      "\n",
+      "In Clang.jl the cursor type is encapsulated by a Julia type deriving from the abstract type `CLCursor`. Under the hood, libclang represents each cursor (*CXCursor*) kind and type (*CXType*) as an enum value. These enum values are used to automatically map all *CXCursor* and *CXType* objects to Julia types. Thus, it is possible to write multiple-dispatch methods against CLCursor or CLType variables.\n",
+      "\n",
+      "The example demonstrates two different ways of accessing child nodes of a given Cursor. Here, the `children` function returns an iterator over the child nodes of the given cursor:\n",
+      "\n",
+      "    `for c in children(st_cursor)`\n",
+      "\n",
+      "And here, the `search` function returns a list of child node(s) matching the given name:\n",
+      "\n",
+      "    `st_cursor = cindex.search(top, \"ExStruct\")[1]`"
+     ]
+    },
+    {
+     "cell_type": "markdown",
+     "metadata": {},
+     "source": [
+      "Type representation\n",
+      "===================\n",
+      "\n",
+      "Example 1 also demonstrates querying of the Type associated with a given cursor using the `cu_type` helper function. In the output:\n",
+      "\n",
+      "    Cursor: CLCursor (FieldDecl) kind\n",
+      "      Name: kind\n",
+      "      Type: CLType (IntType) \n",
+      "    Cursor: CLCursor (FieldDecl) name\n",
+      "      Name: name\n",
+      "      Type: CLType (Pointer) \n",
+      "    Cursor: CLCursor (FieldDecl) data\n",
+      "      Name: data\n",
+      "      Type: CLType (Pointer) \n",
+      "\n",
+      "Each `FieldDecl` cursor has an associated `CLType` object, with an identity reflecting the field type for the given struct member. It is critical to note the difference between the representation for the *kind* field and the *name* and *data* fields. *kind* is represented directly as an IntType object, but *kind* and *data* are represented as `Pointer` CLTypes. As explored in the next section, the full type of the `Pointer` can be queried to retrieve the full `char\\*` and `float\\*` types of these members. User-defined types are captured using a similar scheme."
+     ]
+    },
+    {
+     "cell_type": "markdown",
+     "metadata": {},
+     "source": [
+      "Example 2: function arguments and types\n",
+      "=====================================\n",
+      "\n",
+      "To further explore type representations, consider the following function (included in `example.h`):\n",
+      "\n",
+      "```C\n",
+      "void* ExFunction (int kind, char* name, float* data) {\n",
+      "    struct ExStruct st;\n",
+      "    st.kind = kind;\n",
+      "    st.name = name;\n",
+      "    st.data = data;\n",
+      "}\n",
+      "```\n",
+      "\n",
+      "To find the cursor for this function declaration, we use the overloaded version of `cindex.search` to retrieve nodes with type `FunctionDecl`, and select the final one in the list:"
+     ]
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "fdecl = cindex.search(top, FunctionDecl)[end]\n",
+      "fdecl_children = [c for c in children(fdecl)]"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": [
+      {
+       "metadata": {},
+       "output_type": "pyout",
+       "prompt_number": 15,
+       "text": [
+        "4-element Array{Any,1}:\n",
+        " CLCursor (ParmDecl) kind\n",
+        " CLCursor (ParmDecl) name\n",
+        " CLCursor (ParmDecl) data\n",
+        " CLCursor (CompoundStmt) "
+       ]
+      }
+     ],
+     "prompt_number": 15
+    },
+    {
+     "cell_type": "markdown",
+     "metadata": {},
+     "source": [
+      "The first three children are `ParmDecl` cursors with the same name as the arguments in the function signature. Checking the types of the `ParmDecl` cursors indicates a similarity to the function signature:"
+     ]
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "[cu_type(t) for t in fdecl_children[1:3]]"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": [
+      {
+       "metadata": {},
+       "output_type": "pyout",
+       "prompt_number": 16,
+       "text": [
+        "3-element Array{Any,1}:\n",
+        " CLType (IntType) \n",
+        " CLType (Pointer) \n",
+        " CLType (Pointer) "
+       ]
+      }
+     ],
+     "prompt_number": 16
+    },
+    {
+     "cell_type": "markdown",
+     "metadata": {},
+     "source": [
+      "And, finally, retrieving the target type of each `Pointer` argument confirms that these cursors represent the function argument type declaration:"
+     ]
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "[cindex.pointee_type(t) for t in fdecl_children[2:3]]"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": [
+      {
+       "ename": "LoadError",
+       "evalue": "pointee_type(CLCursor) is discontinued, please use pointee_type(cindex.cu_type(cu))\nat In[17]:1",
+       "output_type": "pyerr",
+       "traceback": [
+        "pointee_type(CLCursor) is discontinued, please use pointee_type(cindex.cu_type(cu))\nat In[17]:1",
+        " in pointee_type at /home/isaiah/.julia/Clang/src/cindex.jl:137"
+       ]
+      }
+     ],
+     "prompt_number": 17
+    },
+    {
+     "cell_type": "markdown",
+     "metadata": {},
+     "source": [
+      "Example 3: Printing Indented Cursor Hierarchy\n",
+      "=============================================\n",
+      "\n",
+      "As a closing example, here is a simple, indented AST printer using CLType- and CLCursor-related functions, and utilizing various aspects of Julia's type system."
+     ]
+    },
+    {
+     "cell_type": "code",
+     "collapsed": true,
+     "input": [
+      "printind(ind::Int, st...)              = println(join([repeat(\" \", 2*ind), st...]))\n",
+      "\n",
+      "printobj(cursor::cindex.CLCursor)      = printobj(0, cursor)\n",
+      "printobj(t::cindex.CLType)             = join(typeof(t), \" \", spelling(t))\n",
+      "printobj(t::cindex.IntType)            = t\n",
+      "printobj(t::cindex.Pointer)            = cindex.pointee_type(t)\n",
+      "printobj(ind::Int, t::cindex.CLType)   = printind(ind, printobj(t))\n",
+      "\n",
+      "function printobj(ind::Int, cursor::Union(cindex.FieldDecl, cindex.ParmDecl))\n",
+      "    printind(ind+1, typeof(cursor), \" \", printobj(cu_type(cursor)), \" \", name(cursor))\n",
+      "end\n",
+      "\n",
+      "function printobj(ind::Int, node::Union(cindex.CLCursor,\n",
+      "                                        cindex.StructDecl,\n",
+      "                                        cindex.CompoundStmt,\n",
+      "                                        cindex.FunctionDecl,\n",
+      "                                        cindex.BinaryOperator) )\n",
+      "    printind(ind, \" \", typeof(node), \" \", name(node))\n",
+      "    for c in children(node)\n",
+      "        printobj(ind + 1, c)\n",
+      "    end\n",
+      "end"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": [
+      {
+       "metadata": {},
+       "output_type": "pyout",
+       "prompt_number": 18,
+       "text": [
+        "printobj (generic function with 7 methods)"
+       ]
+      }
+     ],
+     "prompt_number": 18
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "printobj(top)"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": [
+      {
+       "output_type": "stream",
+       "stream": "stdout",
+       "text": [
+        " TranslationUnit example.h"
+       ]
+      },
+      {
+       "output_type": "stream",
+       "stream": "stdout",
+       "text": [
+        "\n",
+        "   TypedefDecl __int128_t\n",
+        "   TypedefDecl __uint128_t\n",
+        "   TypedefDecl __builtin_va_list\n",
+        "     TypeRef __va_list_tag\n",
+        "   StructDecl ExStruct\n",
+        "      FieldDecl CLType (IntType)  kind"
+       ]
+      },
+      {
+       "output_type": "stream",
+       "stream": "stdout",
+       "text": [
+        "\n",
+        "      FieldDecl CLType (Char_S)  name\n",
+        "      FieldDecl CLType (Float)  data\n",
+        "   FunctionDecl ExFunction(int, char *, float *)\n",
+        "      ParmDecl CLType (IntType)  kind\n",
+        "      ParmDecl CLType (Char_S)  name\n",
+        "      ParmDecl CLType (Float)  data\n",
+        "     CompoundStmt \n",
+        "       DeclStmt "
+       ]
+      },
+      {
+       "output_type": "stream",
+       "stream": "stdout",
+       "text": [
+        "\n",
+        "         VarDecl st\n",
+        "           TypeRef struct ExStruct\n",
+        "       BinaryOperator \n",
+        "         MemberRefExpr kind\n",
+        "           DeclRefExpr st\n",
+        "         UnexposedExpr kind"
+       ]
+      },
+      {
+       "output_type": "stream",
+       "stream": "stdout",
+       "text": [
+        "\n",
+        "           DeclRefExpr kind\n",
+        "       BinaryOperator \n",
+        "         MemberRefExpr name\n",
+        "           DeclRefExpr st\n",
+        "         UnexposedExpr name\n",
+        "           DeclRefExpr name\n",
+        "       BinaryOperator \n",
+        "         MemberRefExpr data\n",
+        "           DeclRefExpr st\n",
+        "         UnexposedExpr data\n",
+        "           DeclRefExpr data\n"
+       ]
+      }
+     ],
+     "prompt_number": 19
+    },
+    {
+     "cell_type": "markdown",
+     "metadata": {},
+     "source": [
+      "Note that a generic `printobj` function has been defined for the abstract *CLType* and *CLCursor* types, and multiple dispatch is used to define the printers for various specific types needing custom behavior. In particular, the following function handles all cursor types for which recursive printing of child nodes is required:\n",
+      "\n",
+      "    function printobj(ind::Int, node::Union(cindex.CLCursor,\n",
+      "                                            cindex.StructDecl,\n",
+      "                                            cindex.CompoundStmt,\n",
+      "                                            cindex.FunctionDecl) )"
+     ]
+    },
+    {
+     "cell_type": "markdown",
+     "metadata": {},
+     "source": [
+      "Conclusion\n",
+      "==========\n",
+      "\n",
+      "This post has introduced the Clang.jl package and the underlying `libclang` library. The fundamental aspects of Clang.jl are:\n",
+      "\n",
+      "- tree of `Cursor` nodes representing the AST\n",
+      "- each node may have child nodes\n",
+      "- each node is a Julia type identifying the syntactic construct represented by the node.\n",
+      "- each node may have an associated Type serving as a reference to either intrinsic or user-defined data types.\n",
+      "\n",
+      "There are a number of details omitted from this post, especially concerning the full variety of Cursor and Type representations available via libclang. For further information, please see the [Clang.jl documentation]() and the [libclang documentation](http://clang.llvm.org/doxygen/group__CINDEX.html).\n",
+      "\n",
+      "Acknowledgement\n",
+      "===============\n",
+      "\n",
+      "Eli Bendersky's post [Parsing C++ in Pythong with Clang](http://eli.thegreenplace.net/2011/07/03/parsing-c-in-python-with-clang/) has been an extremely helpful reference."
+     ]
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [],
+     "language": "python",
+     "metadata": {},
+     "outputs": [],
+     "prompt_number": 20
+    }
+   ],
+   "metadata": {}
+  }
+ ]
+}

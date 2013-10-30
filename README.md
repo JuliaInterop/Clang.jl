@@ -15,9 +15,9 @@ Installation requirements are listed down page.
 Example notebooks:
 ------------------
 
-[Usage Examples](http://nbviewer.ipython.org/urls/raw.github.com/ihnorton/Clang.jl/master/examples/example_notebook.json)
+[Usage Examples](http://nbviewer.ipython.org/urls/raw.github.com/ihnorton/Clang.jl/master/examples/example_notebook.ipynb)
 
-[Parsing C with Clang and Julia](http://nbviewer.ipython.org/urls/raw.github.com/ihnorton/Clang.jl/master/examples/parsing_c_with_clangjl.json)
+[Parsing C with Clang and Julia](http://nbviewer.ipython.org/urls/raw.github.com/ihnorton/Clang.jl/master/examples/parsing_c_with_clangjl/notebook.ipynb)
 
 ## C wrapper generator
 

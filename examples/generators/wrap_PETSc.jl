@@ -41,10 +41,10 @@ function output_file(hdr::ASCIIString)
 end
 
 const wc = wrap_c.init(; 
-                        OutputFile = "libPETSc_h.jl",
-                        CommonFile = "libPETSc_common.jl",
-                        ClangIncludes = clang_includes,
-                        ClangArgs = clang_extraargs,
+                        output_file = "libPETSc_h.jl",
+                        common_file = "libPETSc_common.jl",
+                        clang_includes = clang_includes,
+                        clang_args = clang_extraargs,
                         header_wrapped = should_wrap, 
                         header_library = lib_file,
                         header_outputfile = output_file)

@@ -40,10 +40,10 @@ clang_includes = map(x::ASCIIString->joinpath(LLVM_PATH, x), [
 clang_extraargs = ["-D", "__STDC_LIMIT_MACROS", "-D", "__STDC_CONSTANT_MACROS"]
 
 const wc = wrap_c.init(;
-                        OutputFile = "libLLVM_h.jl",
-                        CommonFile = "libLLVM_common.jl",
-                        ClangIncludes = clang_includes,
-                        ClangArgs = clang_extraargs,
+                        output_file = "libLLVM_h.jl",
+                        common_file = "libLLVM_common.jl",
+                        clang_includes = clang_includes,
+                        clang_args = clang_extraargs,
                         header_library = x->:libllvm,
                         header_wrapped = (x,cu)->beginswith(x, splitdir(libLLVM_PATH)[1]) )
 

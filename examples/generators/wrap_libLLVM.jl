@@ -44,9 +44,13 @@ const wc = wrap_c.init(;
                         CommonFile = "libLLVM_common.jl",
                         ClangIncludes = clang_includes,
                         ClangArgs = clang_extraargs,
-                        header_library = "LLVM-3.3",
+                        header_library = x->:libllvm,
                         header_wrapped = (x,cu)->beginswith(x, splitdir(libLLVM_PATH)[1]) )
 
 function wrap_libLLVM(wc::WrapContext, wrap_hdrs)
     wrap_c.wrap_c_headers(wc, convert(Vector{ASCIIString}, wrap_hdrs))
+end
+
+if !isinteractive()
+    wrap_libLLVM(wc, libllvm_hdrs)
 end

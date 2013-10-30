@@ -480,11 +480,11 @@ function wrap_c_headers(
             println(ostrm, "# Julia wrapper for header: $hfile")
             println(ostrm, "# Automatically generated using Clang.jl wrap_c, version $version\n")
 
-            topcu = cindex.parse(hfile; 
-                                 ClangIndex = wc.index,
-                                 ClangArgs  = clang_args,
-                                 ClangIncludes = wc.clang_includes,
-                                 ParseFlags = TranslationUnit_Flags.DetailedPreprocessingRecord |
+            topcu = cindex.parse_header(hfile; 
+                                 index = wc.index,
+                                 args  = wc.clang_extra_args,
+                                 includes = wc.clang_includes,
+                                 flags = TranslationUnit_Flags.DetailedPreprocessingRecord |
                                               TranslationUnit_Flags.SkipFunctionBodies)
             wrap_header(wc, topcu, hfile, ostrm)
 
@@ -506,12 +506,5 @@ function wrap_c_headers(
 end
 
 ###############################################################################
-
-function get_top_cursor(wc::WrapContext, header)
-    tunit = cindex.tu_parse(wc.index, header,
-                                    build_clang_args(wc.clang_includes, wc.clang_extra_args),
-                                    cindex.TranslationUnit_Flags.None)
-    topcu = cindex.getTranslationUnitCursor(tunit)
-end
 
 end # module wrap_c

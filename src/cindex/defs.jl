@@ -332,7 +332,7 @@ baremodule TypeKind
     const FunctionNoProto = 110
     const FunctionProto = 111
     const ConstantArray = 112
-    const Vector = 113
+    const CLVector = 113
 end
 baremodule CallingConv
     const Default = 0

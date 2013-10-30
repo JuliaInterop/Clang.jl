@@ -48,7 +48,7 @@ export # TypeKind
     FunctionNoProto,
     FunctionProto,
     ConstantArray,
-    Vector
+    CLVector
 
 export # CursorKind
     UnexposedDecl,

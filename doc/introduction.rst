@@ -12,11 +12,11 @@ Index API
     :type diagnostics: Bool
     :param cplusplus:       Parse as C++ file.
     :type cplusplus: Bool
-    :param clang_args:      Vector of arguments (strings) to pass to Clang.
-    :type clang_args: Vector{String}
-    :param clang_includes:  Vector of include paths for Clang to search (note: path only, "-I" will be prepended automatically)
-    :type clang_includes: Vector{String}
-    :param clang_flags:     Bitwise OR of TranslationUnit_FLags enum. Not required in typical use; see libclang manual for more information.
+    :param args:      Vector of arguments (strings) to pass to Clang.
+    :type args: Vector{String}
+    :param includes:  Vector of include paths for Clang to search (note: path only, "-I" will be prepended automatically)
+    :type includes: Vector{String}
+    :param flags:     Bitwise OR of TranslationUnit_FLags enum. Not required in typical use; see libclang manual for more information.
     :rtype: TranslationUnit (<: CLCursor)
 
 .. function:: children(c::CLCursor)

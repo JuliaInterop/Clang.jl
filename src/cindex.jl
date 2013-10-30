@@ -32,28 +32,29 @@ include("cindex/base.jl")
 #   index:              CXIndex pointer (pass to avoid re-allocation)
 #   diagnostics:        Display Clang diagnostics
 #   cplusplus:          Parse as C++
-#   clang_args:         Compiler switches as string array, eg: ["-x", "c++", "-fno-elide-type"]
-#   clang_flags:        Bitwise OR of TranslationUnitFlags
+#   includes:           Vector of extra include directories to search
+#   args:               Compiler switches as string array, eg: ["-x", "c++", "-fno-elide-type"]
+#   flags:              Bitwise OR of TranslationUnitFlags
 #
 function parse_header(header::String;
                 index                           = None,
                 diagnostics::Bool               = false,
                 cplusplus::Bool                 = false,
-                clang_args                      = ASCIIString[""],
-                clang_includes                  = ASCIIString[],
-                clang_flags                     = TranslationUnit_Flags.None)
+                args                            = ASCIIString[""],
+                includes                        = ASCIIString[],
+                flags                           = TranslationUnit_Flags.None)
     if (index == None)
         index = idx_create(0, (diagnostics ? 1 : 0))
     end
     if (cplusplus)
-        push!(clang_args, ["-x", "c++"])
+        push!(args, ["-x", "c++"])
     end
-    if (length(clang_includes) > 0)
-        clang_args = vcat(clang_args, [["-I",x] for x in clang_includes]...)
+    if (length(includes) > 0)
+        args = vcat(args, [["-I",x] for x in includes]...)
     end
 
-    tu = tu_parse(index, header, clang_args, length(clang_args),
-                  C_NULL, 0, clang_flags)
+    tu = tu_parse(index, header, args, length(args),
+                  C_NULL, 0, flags)
     if (tu == C_NULL)
         error("ParseTranslationUnit returned NULL; unable to create TranslationUnit")
     end
@@ -145,10 +146,10 @@ function typedef_type(c::TypedefDecl)
 end
 
 function value(c::EnumConstantDecl)
-    t = cu_type(c)
-    if isa(t, TypeKind.IntType) || isa(t, TypeKind.Long) || isa(t, TypeKind.LongLong)
+    t = typeof(cu_type(c))
+    if isa(t, IntType) || isa(t, Long) || isa(t, LongLong)
             return getEnumConstantDeclValue(c)
-    elseif isa(t, TypeKind.UInt) || isa(t, TypeKind.ULong) || isa(t, TypeKind.ULongLong)
+    elseif isa(t, UInt) || isa(t, ULong) || isa(t, ULongLong)
             return getEnumConstantDeclUnsignedValue(c)
     end
 end

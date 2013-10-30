@@ -42,7 +42,7 @@ type WrapContext
     output_file::ASCIIString
     common_file::ASCIIString
     clang_includes::StringsArray                 # clang include paths
-    clang_extra_args::StringsArray               # additional {"-Arg", "value"} pairs for clang
+    clang_args::StringsArray               # additional {"-Arg", "value"} pairs for clang
     header_wrapped::Function                     # called to determine cursor inclusion status
     header_library::Function                     # called to determine shared library for given header
     header_outfile::Function                     # called to determine output file group for given header
@@ -59,20 +59,20 @@ WrapContext(idx,outfile,cmnfile,clanginc,clangextra,hwrap,hlib,hout) =
 # Initialize wrapping context
 #
 function init(;
-            Index                           = None,
-            OutputFile::ASCIIString         = ".",
-            CommonFile::ASCIIString         = "",
-            ClangArgs::StringsArray         = [""],
-            ClangIncludes::StringsArray     = [""],
-            ClangDiagnostics::Bool          = false,
+            index                           = None,
+            output_file::ASCIIString        = ".",
+            common_file::ASCIIString        = "",
+            clang_args::StringsArray        = [""],
+            clang_includes::StringsArray    = [""],
+            clang_diagnostics::Bool         = false,
             header_wrapped                  = (header, cursorname) -> true,
             header_library                  = None,
             header_outputfile               = None)
 
     # Set up some optional args if they are not explicitly passed.
 
-    (Index == None)         && ( Index = cindex.idx_create(0, (ClangDiagnostics ? 0 : 1)) )
-    (CommonFile == "")    && ( CommonFile = OutputFile )
+    (index == None)         && ( index = cindex.idx_create(0, (clang_diagnostics ? 1 : 0)) )
+    (common_file == "")    && ( common_file = output_file )
     
     if (header_library == None)
         error("Missing header_library argument: pass lib name, or (hdr)->lib::ASCIIString function")
@@ -80,11 +80,11 @@ function init(;
         header_library = x->header_library
     end
     if (header_outputfile == None)
-        header_outputfile = x->OutputFile
+        header_outputfile = x->output_file
     end
 
     # Instantiate and return the WrapContext    
-    return WrapContext(Index, OutputFile, CommonFile, ClangIncludes, ClangArgs, header_wrapped, header_library,header_outputfile)
+    return WrapContext(index, output_file, common_file, clang_includes, clang_args, header_wrapped, header_library,header_outputfile)
 end
 
 ### These helper macros will be written to the generated file
@@ -482,7 +482,7 @@ function wrap_c_headers(
 
             topcu = cindex.parse_header(hfile; 
                                  index = wc.index,
-                                 args  = wc.clang_extra_args,
+                                 args  = wc.clang_args,
                                  includes = wc.clang_includes,
                                  flags = TranslationUnit_Flags.DetailedPreprocessingRecord |
                                               TranslationUnit_Flags.SkipFunctionBodies)

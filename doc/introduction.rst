@@ -46,7 +46,8 @@ Index API
 
 .. function:: value(c::EnumConstantDecl)
 
-    Returns the value of a given EnumConstantDecl, automatically using correct call for signed/unsigned types (note: there are enum value getter functions in libclang API).
+    Returns the value of a given EnumConstantDecl, automatically using correct call for signed vs. unsigned types.
 
 .. function:: pointee_type(t::Pointer)
 
+    Returns the type of the element pointed to by a Pointer cursor.

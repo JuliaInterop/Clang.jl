@@ -1,7 +1,7 @@
 .. _doc-wrap_c:
 
-Clang.jl wrap_c
-===============
+C Wrapper Generator
+===================
 
 The Clang.jl wrapper generator has two primary API components:
 

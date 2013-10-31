@@ -3,7 +3,14 @@
 C Wrapper Generator
 ===================
 
-The Clang.jl wrapper generator has two primary API components:
+The Clang.jl wrapper generator is designed to be simple to use, but also flexible. A wrapper generation can be as simple as this::
+
+    context = wrap_c.init()
+    
+    headers = ["all.h", "your.h", "headers.h"]
+    wrap_c.wrap_c_headers(context, headers)
+
+However, it is often necessary to set compiler arguments or customize output. The ``init`` function provides several arguments to configure the compiler, as well as callback functions used to determine various aspects of the output.
 
 .. function:: init(; index, output_file, clang_args, clang_includes, clang_diagnostics, header_wrapped, header_library, header_outputfile)
 
@@ -20,8 +27,8 @@ The Clang.jl wrapper generator has two primary API components:
     :type clang_includes: Vector{String}
     :param clang_diagnostics: Display Clang diagnostics
     :type clang_diagnostics: Bool
-    :param header_wrapped
-    :type header_wrapped: Function(header, cursorname) -> Bool
+    :param header_wrapped: Function called to determine whether a header should be wrapped.
+    :type header_wrapped: Function(header::ASCIIString, cursorname::ASCIIString) -> Bool
     :param header_library: Function called to determine the library name for a given header.
     :param header_outputfile: Function called to determine the output filename for a given header.
     :type header_outputfile: Function(header::ASCIIString) -> Bool

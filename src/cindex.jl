@@ -146,12 +146,13 @@ function typedef_type(c::TypedefDecl)
 end
 
 function value(c::EnumConstantDecl)
-    t = typeof(cu_type(c))
+    t = cu_type(c)
     if isa(t, IntType) || isa(t, Long) || isa(t, LongLong)
             return getEnumConstantDeclValue(c)
     elseif isa(t, UInt) || isa(t, ULong) || isa(t, ULongLong)
             return getEnumConstantDeclUnsignedValue(c)
     end
+    error("Unknown EnumConstantDecl type: ", t, " cursor: ", c)
 end
 
 function getindex(cl::CursorList, clid::Int, default::UnionType)

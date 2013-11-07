@@ -6,25 +6,11 @@ module wrap_c
     version = v"0.0.0"
 
 using Clang.cindex
-import Clang.cindex: TypedefDecl, FunctionDecl, StructDecl, EnumDecl, FieldDecl
-import Clang.cindex: CLType, MacroDefinition, CXXMethod
 
 export ctype_to_julia, wrap_c_headers
 export WrapContext
 
 ### Wrappable type hierarchy
-
-abstract CArg
-
-type StructArg <: CArg
-    cursor::cindex.CLCursor
-    typedef::Any
-end
-
-type EnumArg <: CArg
-    cursor::cindex.CLCursor
-    typedef::Any
-end
 
 reserved_words = ["type", "end"]
 
@@ -35,6 +21,8 @@ type InternalOptions
     wrap_structs::Bool
 end
 InternalOptions() = InternalOptions(false)
+
+global context
 
 # WrapContext object stores shared information about the wrapping session
 type WrapContext
@@ -50,20 +38,21 @@ type WrapContext
     cache_wrapped::Set{ASCIIString}
     output_streams::Dict{ASCIIString, IO}
     options::InternalOptions
+    anon_count::Int
 end
 WrapContext(idx,outfile,cmnfile,clanginc,clangextra,hwrap,hlib,hout) = 
     WrapContext(idx,outfile,cmnfile,convert(Array{ASCIIString,1},clanginc),convert(Array{ASCIIString,1}, clangextra),hwrap,hlib,hout,
-                None,Set{ASCIIString}(), Dict{ASCIIString,IO}(), InternalOptions())
+                None,Set{ASCIIString}(), Dict{ASCIIString,IO}(), InternalOptions(),0)
 
 #
 # Initialize wrapping context
 #
 function init(;
             index                           = None,
-            output_file::ASCIIString        = ".",
+            output_file::ASCIIString        = "",
             common_file::ASCIIString        = "",
-            clang_args::StringsArray        = [""],
-            clang_includes::StringsArray    = [""],
+            clang_args::StringsArray        = ASCIIString[],
+            clang_includes::StringsArray    = ASCIIString[],
             clang_diagnostics::Bool         = false,
             header_wrapped                  = (header, cursorname) -> true,
             header_library                  = None,
@@ -72,6 +61,11 @@ function init(;
     # Set up some optional args if they are not explicitly passed.
 
     (index == None)         && ( index = cindex.idx_create(0, (clang_diagnostics ? 1 : 0)) )
+
+    if (output_file == "" && header_outputfile == None)
+        header_outputfile = x->joinpath(strip(splitext(basename(x))[1]) * ".jl")
+    end
+
     (common_file == "")    && ( common_file = output_file )
     
     if (header_library == None)
@@ -83,8 +77,9 @@ function init(;
         header_outputfile = x->output_file
     end
 
-    # Instantiate and return the WrapContext    
-    return WrapContext(index, output_file, common_file, clang_includes, clang_args, header_wrapped, header_library,header_outputfile)
+    # Instantiate and return the WrapContext
+    global context = WrapContext(index, output_file, common_file, clang_includes, clang_args, header_wrapped, header_library,header_outputfile)
+    return context
 end
 
 ### These helper macros will be written to the generated file
@@ -94,12 +89,7 @@ helper_macros = "macro c(ret_type, func, arg_types, lib)
         \$(esc(func))(\$(args_in...)) = ccall( (\$(string(func)), \$(Expr(:quote, lib)) ), \$ret_type, \$arg_types, \$(args_in...) )
     end
 end
-
-macro ctypedef(fake_t,real_t)
-    quote
-        typealias \$fake_t \$real_t
-    end
-end"
+"
 
 ###############################################################################
 #
@@ -122,8 +112,8 @@ c_to_jl = {
     TypeKind.UInt           => Uint32,
     TypeKind.ULong          => :Culong,
     TypeKind.ULongLong      => :Culonglong,
-    TypeKind.Char_S         => Uint8,           # TODO check
-    TypeKind.SChar          => Uint8,           # TODO check
+    TypeKind.Char_S         => Uint8,
+    TypeKind.SChar          => Uint8,
     TypeKind.WChar          => Char,
     TypeKind.Short          => Int16,
     TypeKind.IntType        => :Cint,
@@ -131,10 +121,10 @@ c_to_jl = {
     TypeKind.LongLong       => :Clonglong,
     TypeKind.Float          => :Cfloat,
     TypeKind.Double         => :Cdouble,
-    TypeKind.LongDouble     => Float64,         # TODO detect?
-    TypeKind.Enum           => :Cint,            # TODO arch check?
-    TypeKind.NullPtr      => C_NULL,
-    TypeKind.UInt128      => Uint128,
+    TypeKind.LongDouble     => Float64,
+    TypeKind.Enum           => :Cint,
+    TypeKind.NullPtr        => C_NULL,
+    TypeKind.UInt128        => Uint128,
     "size_t"                => :Csize_t,
     "ptrdiff_t"             => :Cptrdiff_t
     }
@@ -181,145 +171,146 @@ function rep_args(v)
     readall(o)
 end
 
-### Retrieve function arguments for a given cursor
-function function_args(cursor::Union(FunctionDecl, CXXMethod))
-    cursor_type = cindex.cu_type(cursor)
-    [cindex.getArgType(cursor_type, uint32(arg_i)) for arg_i in 0:cindex.getNumArgTypes(cursor_type)-1]
-end
-
-### Wrap enum. NOTE: we write this to wc.common_stream
-function wrap(wc::WrapContext, argt::EnumArg, strm::IO)
-    enum = cindex.name(argt.cursor)
-    enum_typedef = if (typeof(argt.typedef) == cindex.CXCursor)
-            cindex.name(argt.typedef)
-        else
-            ""
-        end
-    enum_name = 
-        if (enum != "") enum
-        elseif (enum_typedef != "") enum_typedef
-        else "ANONYMOUS"
-        end
-
-    if (enum_name in wc.cache_wrapped)
+function wrap(buf::IO, cursor::EnumDecl; usename="")
+    if (usename == "")
         return
-    elseif(argt.typedef == None)
-        push!(wc.cache_wrapped, enum_name)
     end
-
-    println(wc.common_stream, "# enum $enum_name")
-    cl = cindex.children(argt.cursor)
-
-    for i=1:cl.size
-        cur_cu = cindex.ref(cl,i)
-        cur_name = cindex.spelling(cur_cu)
+    enumname = usename
+    println(buf, "# enum $enumname")
+    println(buf, "typealias $enumname ", rep_type(ctype_to_julia(cindex.getEnumDeclIntegerType(cursor))))
+    for enumitem in children(cursor)
+        cur_name = cindex.spelling(enumitem)
         if (length(cur_name) < 1) continue end
 
-        println(wc.common_stream, "const ", cur_name, " = ", cindex.value(cur_cu))
+        println(buf, "const ", cur_name, " = ", value(enumitem))
     end
-    cindex.cl_dispose(cl)
-    println(wc.common_stream, "# end")
+    println(buf, "# end $enumname")
 end
 
-function wrap(wc::WrapContext, arg::StructArg, strm::IO)
-    @assert isa(arg.cursor, StructDecl)
-    cursor = arg.cursor
-    typedef = arg.typedef
+function name_anon(wc::WrapContext)
+    "ANONYMOUS_"*string(wc.anon_count += 1)
+end
 
-    st = cindex.name(cursor)
-    st_typedef = if (typeof(typedef) == cindex.CXCursor)
-            cindex.name(typedef)
+function wrap (buf::IO, sd::StructDecl; usename = "")
+    function ref_name(reftype::CLType)
+        if isa(reftype, Typedef) || isa(reftype, Unexposed)
+            refdecl = cindex.getTypeDeclaration(reftype)
+            refname = spelling(refdecl)
         else
-            ""
+            refname = spelling(reftype)
         end
-    st_name = 
-        if (st != "") st
-        elseif (st_typedef != "") st_typedef
+        refname
+    end
+    function help_type(t::ConstantArray, cu::CLCursor)
+        global context::WrapContext
+        arrsize = cindex.getArraySize(t)
+        eltype = resolve_type(cindex.getArrayElementType(t))
+        elname = ref_name(eltype)
+        repname = string("Array_", arrsize, "_", elname)
+        if (repname in context.cache_wrapped)
+            helper = ""
         else
-            # TODO: come up with a better idea
-            "ANONYMOUS_"*string(round(rand()*10000,5))
+            helper = string("bitstype 32*sizeof(", rep_type(ctype_to_julia(eltype)), ")*", arrsize, " ", repname)
+            push!(context.cache_wrapped, repname)
         end
-
-    if (st_name in wc.cache_wrapped)
-        return
-    else
-        # Cache this regardless of typedef
-        push!(wc.cache_wrapped, st_name)
+        return (helper, repname)
+    end
+    function help_type(t::Pointer, cu::CLCursor)
+        ptename = ref_name(pointee_type(t))
+        return ("", string("Ptr{", ptename, "}"))
+    end
+    function help_type(t::CLType, cu::CLCursor)
+        return None
     end
 
-    cl = cindex.children(cursor)
-    if (cl.size == 0)
-        # Probably a forward declaration.
-        # TODO: check on this. any nesting that we need to handle?
+    ########################################################
+    
+    if (usename == "" && (usename = name(sd)) == "")
+        warn("Skipping unnamed StructDecl")
+        return
+    end
+    global context::WrapContext
+    if (!context.options.wrap_structs)
         return
     end
 
-    println(wc.common_stream, "type $st_name")
+    prebuf = IOBuffer()
+    outbuf = IOBuffer()
 
-    for i=1:cl.size
-        cur_cu = cindex.ref(cl,i)
-        cur_name = cindex.spelling(cur_cu)
-
-        if (!isa(cur_cu, FieldDecl))
-            warn("STRUCT: Skipping non-field declaration: $cur_name in: $st_name")
+    # Generate type declaration
+    println(outbuf, "type $usename")
+    ccl = children(sd)
+    if (length(ccl) < 1)
+        warn("Skipping empty struct: \"$usename\"")
+        return
+    end
+    for cu in children(sd)
+        cur_name = spelling(cu)
+        if (isa(cu, StructDecl))
             continue
-        end
-        if (length(cur_name) < 1) 
-            warn("STRUCT: Skipping unnamed struct member in: $st_name")
-            continue 
+        elseif !(isa(cu, FieldDecl) || isa(cu, TypeRef))
+            warn("Skipping struct: \"$usename\" due to unsupported field: $cur_name")
+            return
+        elseif (length(cur_name) < 1)
+            error("Unnamed struct member in: $usename ... cursor: ", string(cu)) 
         end
         if ((cur_name in reserved_words)) cur_name = "_"*cur_name end
 
-        ty = resolve_type(cindex.cu_type(cur_cu))
+        ty = cu_type(cu)
 
-        println(wc.common_stream, "    ", cur_name, "::", rep_type(ctype_to_julia(ty)))
+        if ((hlp = help_type(ty,cu)) != None)
+            (hlp[1] != "") && println(prebuf, hlp[1])
+            println(outbuf, "    ", cur_name, "::", hlp[2])
+        else
+            println(outbuf, "    ", cur_name, "::", ctype_to_julia(resolve_type(ty)))
+        end
     end
-    cindex.cl_dispose(cl)
-    println(wc.common_stream, "end")
-end
+    println(outbuf, "end")
 
-function wrap(wc::WrapContext, arg::FunctionDecl, strm::IO)
-    @assert isa(arg, FunctionDecl)
+    # print the type helpers to real output
+    print(buf, takebuf_string(prebuf))
+    # print the type declaration to real output
+    print(buf, takebuf_string(outbuf))
+end   
 
-    cu_spelling = spelling(arg)
-    push!(wc.cache_wrapped, spelling(arg))
+function wrap(buf::IO, funcdecl::FunctionDecl, libname::ASCIIString)
+    cu_spelling = spelling(funcdecl)
     
-    arg_types = function_args(arg)
+    arg_types = cindex.function_args(funcdecl)
     arg_list = tuple( [rep_type(ctype_to_julia(x)) for x in arg_types]... )
-    ret_type = ctype_to_julia(cindex.return_type(arg))
-    println(strm, "@c ", rep_type(ret_type), " ",
-                    symbol(spelling(arg)), " ",
-                    rep_args(arg_list), " ", wc.header_library(cu_file(arg)) )
+    ret_type = ctype_to_julia(return_type(funcdecl))
+    println(buf, "@c ", rep_type(ret_type), " ",
+                    symbol(spelling(funcdecl)), " ",
+                    rep_args(arg_list), " ", libname )
 end
 
-function wrap(wc::WrapContext, arg::TypedefDecl, strm::IO)
-    @assert isa(arg, TypedefDecl)
-
-    typedef_spelling = spelling(arg)
-    if((typedef_spelling in wc.cache_wrapped))
-        return
-    else
-        push!(wc.cache_wrapped, typedef_spelling)
+function wrap(buf::IO, tdecl::TypedefDecl)
+    function wrap_td(out::IO, t::CLType)
+        println(buf, "typealias ",    spelling(t), " ", rep_type(ctype_to_julia(t)) )
     end
 
-    cursor_type = cindex.cu_type(arg)
-    td_type = cindex.resolve_type(cindex.getTypedefDeclUnderlyingType(arg))
-    # initialize typealias in current context to avoid error TODO delete
-    #:(typealias $typedef_spelling ctype_to_julia($td_type))
+    cursor_type = cindex.cu_type(tdecl)
+    td_type = cindex.getTypedefDeclUnderlyingType(tdecl)
     
-    println(wc.common_stream, "@ctypedef ",    typedef_spelling, " ", rep_type(ctype_to_julia(td_type)) )
+    if isa(td_type, Unexposed)
+        tdunxp = children(tdecl)[1]
+        wrap(buf, tdunxp; usename=name(tdecl))
+        return
+    end
+
+    println(buf, "typealias ",    spelling(tdecl), " ", rep_type(ctype_to_julia(td_type)) )
 end
 
-function trans(tok)
-    ops = ["+" "-" ">>" "<<" "/" "\\" "%"]
-    if (isa(tok, cindex.Literal) || 
-        (isa(tok,cindex.Identifier) && isupper(tok.text))) return 0
-    elseif (isa(tok, cindex.Punctuation) && tok.text in ops) return 1
-    else return -1
-    end
-end
- 
 function lex_exprn(tokens::TokenList, pos::Int)
+    function trans(tok)
+        ops = ["+" "-" ">>" "<<" "/" "\\" "%"]
+        if (isa(tok, cindex.Literal) || 
+            (isa(tok,cindex.Identifier) && isupper(tok.text))) return 0
+        elseif (isa(tok, cindex.Punctuation) && tok.text in ops) return 1
+        else return -1
+        end
+    end
+
     exprn = ""
     prev = 1 >> trans(tokens[pos])
     for pos = pos:tokens.size
@@ -335,7 +326,7 @@ function lex_exprn(tokens::TokenList, pos::Int)
     return (exprn,pos)
 end 
 
-function wrap(wc::WrapContext, md::cindex.MacroDefinition, strm::IO)
+function wrap(strm::IO, md::cindex.MacroDefinition)
     tokens = tokenize(md)
     
     # Skip any empty definitions
@@ -355,6 +346,15 @@ function wrap(wc::WrapContext, md::cindex.MacroDefinition, strm::IO)
     end
     print(strm, "const " * string(tokens[1].text) * " = " * exprn * "\n")
 end
+
+function wrap(buf::IO, cursor::TypeRef)
+    println("Printing typeref: ", cursor)
+    print(buf, name(cursor))
+end
+
+################################################################################
+# Wrapping driver
+################################################################################
 
 function wrap_header(wc::WrapContext, topcu::CLCursor, top_hdr, ostrm::IO)
     println("WRAPPING HEADER: $top_hdr")
@@ -377,35 +377,24 @@ function wrap_header(wc::WrapContext, topcu::CLCursor, top_hdr, ostrm::IO)
         elseif (!wc.header_wrapped(top_hdr, cu_file(cursor)) ||
                         (cursor_name in wc.cache_wrapped) )
             continue
+        elseif (beginswith(cursor_name, "__"))
+            # skip compiler definitions
+            continue
         end
 
-        if (isa(cursor, FunctionDecl) || isa(cursor, FieldDecl) || isa(cursor, TypedefDecl))
-            towrap = cursor 
+        if (isa(cursor, FunctionDecl))
+            wrap(ostrm, cursor, wc.header_library(cu_file(cursor)))
         elseif (isa(cursor, EnumDecl))
-            # TODO: need a better solution for this
-            #    libclang does not provide xref between each cursor for typedef'd enum
-            #    right now, if a typedef follows enum then we just assume it is
-            #    for the enum declaration. this might not be true for anonymous enums.
-            
-            tdcu = None
-            if (i<topcl.size)
-                tdcu = getindex(topcl, i+1)
-                tdcu = (isa(tdcu, TypedefDecl) ? tdcu : None)
-            end
-            towrap = EnumArg(cursor, tdcu)
+            wrap(wc.common_stream, cursor)
+        elseif (isa(cursor, TypedefDecl))
+            wrap(wc.common_stream,cursor)
         elseif (isa(cursor, MacroDefinition))
-            towrap = cursor
+            wrap(wc.common_stream,cursor)
         elseif (wc.options.wrap_structs && isa(cursor, StructDecl))
-            tdcu = None
-            if (i<topcl.size)
-                tdcu = getindex(topcl, i+1)
-                (isa(tdcu, TypedefDecl) ? tdcu : None)
-            end
-            towrap = StructArg(cursor, tdcu)
+            wrap(wc.common_stream, cursor)
         else
             continue
         end
-        wrap(wc, towrap, ostrm)
     end
     cindex.cl_dispose(topcl)
 end
@@ -437,6 +426,9 @@ function sort_common_includes(strm::IOBuffer)
         if (m = match(r"@ctypedef (\w+) (?:Ptr{)?(\w+)(?:}?)", ln)) != nothing
             col1[m.captures[1]] = i
             col2[m.captures[2]] = i
+        elseif ((m = match(r"bitstype (.*) (.*)", ln)) != nothing)
+            col1[m.captures[2]] = i
+            col2[m.captures[1]] = i
         end
     end
     for s in sort(collect(keys(col2)))
@@ -452,21 +444,19 @@ end
 
 ### wrap_c_headers: main entry point
 #     TODO: use dict for mapping from h file to wrapper file (or module?)
-function wrap_c_headers(
-        wc::WrapContext,                    # wrapping context
-        headers)                            # header files to wrap
+function wrap_c_headers(wc::WrapContext, headers)
 
     println(wc.clang_includes)
 
     # Check headers!
     for h in headers
         if !isfile(h)
-            error(h, " cannot be found")
+            error("Header file: ", h, " cannot be found")
         end
     end
     for d in wc.clang_includes
         if !isdir(d)
-            error(d, " cannot be found")
+            error("Include file: ", d, " cannot be found")
         end
     end
 

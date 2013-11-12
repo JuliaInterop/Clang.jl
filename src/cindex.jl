@@ -12,7 +12,7 @@ import Base.endof, Base.length
 ###############################################################################
 
 # Name of the helper library
-const libwci = :libwrapclang
+import ..libwci
 
 ###############################################################################
 

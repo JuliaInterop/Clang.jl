@@ -7,7 +7,7 @@ module wrap_c
 
 using Clang.cindex
 
-export ctype_to_julia, wrap_c_headers
+export wrap_c_headers
 export WrapContext
 
 ### Wrappable type hierarchy
@@ -22,7 +22,6 @@ type InternalOptions
 end
 InternalOptions() = InternalOptions(false)
 
-global context
 
 # WrapContext object stores shared information about the wrapping session
 type WrapContext
@@ -30,7 +29,7 @@ type WrapContext
     output_file::ASCIIString
     common_file::ASCIIString
     clang_includes::StringsArray                 # clang include paths
-    clang_args::StringsArray               # additional {"-Arg", "value"} pairs for clang
+    clang_args::StringsArray                     # additional {"-Arg", "value"} pairs for clang
     header_wrapped::Function                     # called to determine cursor inclusion status
     header_library::Function                     # called to determine shared library for given header
     header_outfile::Function                     # called to determine output file group for given header
@@ -44,6 +43,7 @@ WrapContext(idx,outfile,cmnfile,clanginc,clangextra,hwrap,hlib,hout) =
     WrapContext(idx,outfile,cmnfile,convert(Array{ASCIIString,1},clanginc),convert(Array{ASCIIString,1}, clangextra),hwrap,hlib,hout,
                 None,Set{ASCIIString}(), Dict{ASCIIString,IO}(), InternalOptions(),0)
 
+global context
 #
 # Initialize wrapping context
 #
@@ -100,131 +100,127 @@ end
 #   Julia entities, for example "size_t" -> :Csize_t
 #
 ##############################################################################
-
-c_to_jl = {
-    TypeKind.VoidType       => Void,
-    TypeKind.BoolType       => Bool,
-    TypeKind.Char_U         => Uint8,
-    TypeKind.UChar          => :Cuchar,
-    TypeKind.Char16         => Uint16,
-    TypeKind.Char32         => Uint32,
-    TypeKind.UShort         => Uint16,
-    TypeKind.UInt           => Uint32,
-    TypeKind.ULong          => :Culong,
-    TypeKind.ULongLong      => :Culonglong,
-    TypeKind.Char_S         => Uint8,
-    TypeKind.SChar          => Uint8,
-    TypeKind.WChar          => Char,
-    TypeKind.Short          => Int16,
-    TypeKind.IntType        => :Cint,
-    TypeKind.Long           => :Clong,
-    TypeKind.LongLong       => :Clonglong,
-    TypeKind.Float          => :Cfloat,
-    TypeKind.Double         => :Cdouble,
-    TypeKind.LongDouble     => Float64,
-    TypeKind.Enum           => :Cint,
-    TypeKind.NullPtr        => C_NULL,
-    TypeKind.UInt128        => Uint128,
+cl_to_jl = {
+    cindex.VoidType         => Void,
+    cindex.BoolType         => Bool,
+    cindex.Char_U           => Uint8,
+    cindex.UChar            => :Cuchar,
+    cindex.Char16           => Uint16,
+    cindex.Char32           => Uint32,
+    cindex.UShort           => Uint16,
+    cindex.UInt             => Uint32,
+    cindex.ULong            => :Culong,
+    cindex.ULongLong        => :Culonglong,
+    cindex.Char_S           => Uint8,
+    cindex.SChar            => Uint8,
+    cindex.WChar            => Char,
+    cindex.Short            => Int16,
+    cindex.IntType          => :Cint,
+    cindex.Long             => :Clong,
+    cindex.LongLong         => :Clonglong,
+    cindex.Float            => :Cfloat,
+    cindex.Double           => :Cdouble,
+    cindex.LongDouble       => Float64,
+    cindex.Enum             => :Cint,
+    cindex.NullPtr          => C_NULL,
+    cindex.UInt128          => Uint128,
+    cindex.FirstBuiltin     => Void,
     "size_t"                => :Csize_t,
     "ptrdiff_t"             => :Cptrdiff_t
     }
 
-# Convert libclang type to julia type
-function ctype_to_julia(cutype::CLType)
-    typkind = ty_kind(cutype)
-    # Special cases: TYPEDEF, POINTER
-    if (typkind == TypeKind.Pointer)
-        ptr_ctype = cindex.getPointeeType(cutype)
-        ptr_jltype = ctype_to_julia(ptr_ctype)
-        return Ptr{ptr_jltype}
-    elseif (typkind == TypeKind.Typedef || typkind == TypeKind.Record)
-        basename = string( spelling( cindex.getTypeDeclaration(cutype) ) )
-        return symbol( get(c_to_jl, basename, basename))
-    else
-        # TODO: missing mappings should generate a warning
-        return symbol( string( get(c_to_jl, typkind, :Void) ))
+function repr_jl(t::Union(cindex.Record, cindex.Typedef))
+    return spelling(cindex.getTypeDeclaration(t))
+end
+
+function repr_jl(ptr::cindex.Pointer)
+    ptee = pointee_type(ptr)
+    return string("Ptr{", ((r = repr_jl(ptee)) == "" ? "Void" : r), "}")
+end
+
+function repr_jl(parm::cindex.ParmDecl)
+    return repr_jl(cu_type(parm))
+end
+
+function repr_jl(unxp::Unexposed)
+    return spelling(cindex.getTypeDeclaration(unxp))
+end
+
+function repr_jl(arg::cindex.CLType)
+    return string(cl_to_jl[typeof(arg)])
+end
+function repr_jl(t::ConstantArray)
+    # For ConstantArray declarations, we make a bitstype of
+    # the corresonding size and use that, so that at least
+    # all the offsets will be correct.
+
+    # Override pointer representation so pointee type is not written
+    repr_short(t::CLType) = isa(t, Pointer) ? "Ptr" : repr_jl(t)
+    
+    # Grab the WrapContext in order to add bitstype
+    global context::WrapContext
+
+    arrsize = cindex.getArraySize(t)
+    eltype = cindex.getArrayElementType(t)
+    typename = string("Array_", arrsize, "_", repr_short(eltype))
+    if !(typename in context.cache_wrapped)
+        println(context.common_stream,
+                string("bitstype int(WORD_SIZE/8)*sizeof(", repr_jl(eltype),
+                ")*", arrsize, " ", typename))
+        push!(context.cache_wrapped, typename)
     end
+    return typename
+end
+
+function repr_jl(t::UnionType)
+    tdecl = cindex.getTypeDeclaration(t)
+    maxelem = largestfield(tdecl)
+    return repr_jl(maxelem)
 end
 
 ###############################################################################
-
-### eliminate symbol from the final type representation
-function rep_type(t)
-    replace(string(t), ":", "")
-end
-
-### Tuple representation without quotes
-function rep_args(v)
-    o = IOBuffer()
-    print(o, "(")
-    s = first = start(v)
-    r = (!done(v,s))
-    while r
-        x,s = next(v,s)
-        print(o, x)
-        done(v,s) && break
-        print(o, ", ")
+# Get field decl sizes
+#   - used for hacky union inclusion: we find the largest union field and
+#     declare a block of bytes to match.
+###############################################################################
+ 
+typesize(cu::CLCursor)     = typesize(cu_type(cu))
+typesize(t::ConstantArray) = cindex.getArraySize(t)
+    
+function largestfield(cu::UnionDecl)
+    maxsize,maxelem = 0
+    fields = children(cu)
+    for i in 1:length(fields)
+        maxelem = ( (maxsize > (typesize(fields[i]))) ? maxelem : i )
     end
-    r && (s == next(v,first)[2]) && print(o, ",")
-    print(o, ")")
-    seek(o, 0)
-    readall(o)
+    fields[maxelem]
 end
+
+function fieldsize(cu::FieldDecl)
+    fieldsize(children(cu)[1])    
+end
+
+################################################################################
+# Handle declarations
+################################################################################
 
 function wrap(buf::IO, cursor::EnumDecl; usename="")
     if (usename == "")
-        return
+        usename = name_anon()
     end
     enumname = usename
-    println(buf, "# enum $enumname")
-    println(buf, "typealias $enumname ", rep_type(ctype_to_julia(cindex.getEnumDeclIntegerType(cursor))))
+    println(buf, "# begin enum $enumname")
+    println(buf, "typealias $enumname ", repr_jl(cindex.getEnumDeclIntegerType(cursor)))
     for enumitem in children(cursor)
         cur_name = cindex.spelling(enumitem)
         if (length(cur_name) < 1) continue end
 
         println(buf, "const ", cur_name, " = ", value(enumitem))
     end
-    println(buf, "# end $enumname")
-end
-
-function name_anon(wc::WrapContext)
-    "ANONYMOUS_"*string(wc.anon_count += 1)
+    println(buf, "# end enum $enumname")
 end
 
 function wrap (buf::IO, sd::StructDecl; usename = "")
-    function ref_name(reftype::CLType)
-        if isa(reftype, Typedef) || isa(reftype, Unexposed)
-            refdecl = cindex.getTypeDeclaration(reftype)
-            refname = spelling(refdecl)
-        else
-            refname = spelling(reftype)
-        end
-        refname
-    end
-    function help_type(t::ConstantArray, cu::CLCursor)
-        global context::WrapContext
-        arrsize = cindex.getArraySize(t)
-        eltype = resolve_type(cindex.getArrayElementType(t))
-        elname = ref_name(eltype)
-        repname = string("Array_", arrsize, "_", elname)
-        if (repname in context.cache_wrapped)
-            helper = ""
-        else
-            helper = string("bitstype 32*sizeof(", rep_type(ctype_to_julia(eltype)), ")*", arrsize, " ", repname)
-            push!(context.cache_wrapped, repname)
-        end
-        return (helper, repname)
-    end
-    function help_type(t::Pointer, cu::CLCursor)
-        ptename = ref_name(pointee_type(t))
-        return ("", string("Ptr{", ptename, "}"))
-    end
-    function help_type(t::CLType, cu::CLCursor)
-        return None
-    end
-
-    ########################################################
-    
     if (usename == "" && (usename = name(sd)) == "")
         warn("Skipping unnamed StructDecl")
         return
@@ -246,7 +242,7 @@ function wrap (buf::IO, sd::StructDecl; usename = "")
     end
     for cu in children(sd)
         cur_name = spelling(cu)
-        if (isa(cu, StructDecl))
+        if (isa(cu, StructDecl) || isa(cu, UnionDecl))
             continue
         elseif !(isa(cu, FieldDecl) || isa(cu, TypeRef))
             warn("Skipping struct: \"$usename\" due to unsupported field: $cur_name")
@@ -256,14 +252,13 @@ function wrap (buf::IO, sd::StructDecl; usename = "")
         end
         if ((cur_name in reserved_words)) cur_name = "_"*cur_name end
 
-        ty = cu_type(cu)
-
-        if ((hlp = help_type(ty,cu)) != None)
-            (hlp[1] != "") && println(prebuf, hlp[1])
-            println(outbuf, "    ", cur_name, "::", hlp[2])
-        else
-            println(outbuf, "    ", cur_name, "::", ctype_to_julia(resolve_type(ty)))
-        end
+        println(outbuf, "    ", cur_name, "::", repr_jl(cu_type(cu)))
+        #if ((hlp = help_type(ty,cu)) != None)
+        #    (hlp[1] != "") && println(prebuf, hlp[1])
+        #    println(outbuf, "    ", cur_name, "::", hlp[2])
+        #else
+        #    println(outbuf, "    ", cur_name, "::", repr_jl(ty))
+        #end
     end
     println(outbuf, "end")
 
@@ -277,16 +272,20 @@ function wrap(buf::IO, funcdecl::FunctionDecl, libname::ASCIIString)
     cu_spelling = spelling(funcdecl)
     
     arg_types = cindex.function_args(funcdecl)
-    arg_list = tuple( [rep_type(ctype_to_julia(x)) for x in arg_types]... )
-    ret_type = ctype_to_julia(return_type(funcdecl))
+    arg_list = tuple( [repr_jl(x) for x in arg_types]... )
+    ret_type = repr_jl(return_type(funcdecl))
     println(buf, "@c ", rep_type(ret_type), " ",
                     symbol(spelling(funcdecl)), " ",
                     rep_args(arg_list), " ", libname )
 end
 
-function wrap(buf::IO, tdecl::TypedefDecl)
+function wrap(buf::IO, tref::TypeRef; usename="")
+    println("Wrap: ", tref)
+end
+
+function wrap(buf::IO, tdecl::TypedefDecl; usename="")
     function wrap_td(out::IO, t::CLType)
-        println(buf, "typealias ",    spelling(t), " ", rep_type(ctype_to_julia(t)) )
+        println(buf, "typealias ",    spelling(t), " ", repr_jl(t)) 
     end
 
     cursor_type = cindex.cu_type(tdecl)
@@ -298,8 +297,15 @@ function wrap(buf::IO, tdecl::TypedefDecl)
         return
     end
 
-    println(buf, "typealias ",    spelling(tdecl), " ", rep_type(ctype_to_julia(td_type)) )
+    println(buf, "typealias ",    spelling(tdecl), " ", repr_jl(td_type) )
 end
+
+################################################################################
+# Handler for macro definitions
+################################################################################
+#
+# For handling of #define'd constants, allows basic expressions
+# but bails out quickly.
 
 function lex_exprn(tokens::TokenList, pos::Int)
     function trans(tok)
@@ -337,7 +343,7 @@ function wrap(strm::IO, md::cindex.MacroDefinition)
     if(tokens[2].text == "(")
         exprn,pos = lex_exprn(tokens, 3)
         if (pos != tokens.size || tokens[pos].text != ")")
-            print(strm, "# Skipping MacroDefinition: ", join([c.text*" " for c in tokens]), "\n")
+            print(strm, "# Skipping MacroDefinition: ", join([c.text for c in tokens]), "\n")
             return
         end
         exprn = "(" * exprn * ")"
@@ -391,7 +397,7 @@ function wrap_header(wc::WrapContext, topcu::CLCursor, top_hdr, ostrm::IO)
         elseif (isa(cursor, MacroDefinition))
             wrap(wc.common_stream,cursor)
         elseif (wc.options.wrap_structs && isa(cursor, StructDecl))
-            wrap(wc.common_stream, cursor)
+            wrap(wc.common_stream,cursor)
         else
             continue
         end
@@ -411,36 +417,6 @@ function header_output_stream(wc::WrapContext, hfile)
     end
     return strm
 end        
-
-function sort_common_includes(strm::IOBuffer)
-    # TODO: too many temporaries
-    seek(strm,0)
-    col1 = Dict{ASCIIString,Int}() 
-    col2 = Dict{ASCIIString,Int}()
-    tmp = Dict{Int,ASCIIString}()
-    pos = Int[]
-    fnl = ASCIIString[]
-
-    for (i,ln) in enumerate(readlines(strm))
-        tmp[i] = ln
-        if (m = match(r"@ctypedef (\w+) (?:Ptr{)?(\w+)(?:}?)", ln)) != nothing
-            col1[m.captures[1]] = i
-            col2[m.captures[2]] = i
-        elseif ((m = match(r"bitstype (.*) (.*)", ln)) != nothing)
-            col1[m.captures[2]] = i
-            col2[m.captures[1]] = i
-        end
-    end
-    for s in sort(collect(keys(col2)))
-        if( (m = get(col1, s, None))!=None)
-            push!(fnl, tmp[m])
-            push!(pos, m)
-        end
-    end
- 
-    kj = setdiff(1:length(keys(tmp)), pos)
-    vcat(fnl,[tmp[i] for i in kj])
-end
 
 ### wrap_c_headers: main entry point
 #     TODO: use dict for mapping from h file to wrapper file (or module?)
@@ -493,6 +469,65 @@ function wrap_c_headers(wc::WrapContext, headers)
     end
     
     close(wc.common_stream)
+end
+
+###############################################################################
+# Utilities
+###############################################################################
+
+function sort_common_includes(strm::IOBuffer)
+    # TODO: too many temporaries
+    seek(strm,0)
+    col1 = Dict{ASCIIString,Int}() 
+    col2 = Dict{ASCIIString,Int}()
+    tmp = Dict{Int,ASCIIString}()
+    pos = Int[]
+    fnl = ASCIIString[]
+
+    for (i,ln) in enumerate(readlines(strm))
+        tmp[i] = ln
+        if (m = match(r"@ctypedef (\w+) (?:Ptr{)?(\w+)(?:}?)", ln)) != nothing
+            col1[m.captures[1]] = i
+            col2[m.captures[2]] = i
+        end
+    end
+    for s in sort(collect(keys(col2)))
+        if( (m = get(col1, s, None))!=None)
+            push!(fnl, tmp[m])
+            push!(pos, m)
+        end
+    end
+ 
+    kj = setdiff(1:length(keys(tmp)), pos)
+    vcat(fnl,[tmp[i] for i in kj])
+end
+
+# eliminate symbol from the final type representation
+function rep_type(t)
+    replace(string(t), ":", "")
+end
+
+# Tuple representation without quotes
+function rep_args(v)
+    o = IOBuffer()
+    print(o, "(")
+    s = first = start(v)
+    r = (!done(v,s))
+    while r
+        x,s = next(v,s)
+        print(o, x)
+        done(v,s) && break
+        print(o, ", ")
+    end
+    r && (s == next(v,first)[2]) && print(o, ",")
+    print(o, ")")
+    seek(o, 0)
+    readall(o)
+end
+
+function name_anon()
+    global context::WrapContext
+    "ANONYMOUS_"*string(context.anon_count += 1)
 end
 
 ###############################################################################

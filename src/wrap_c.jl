@@ -83,13 +83,7 @@ function init(;
 end
 
 ### These helper macros will be written to the generated file
-helper_macros = "macro c(ret_type, func, arg_types, lib)
-    local args_in = Any[ symbol(string('a',x)) for x in 1:length(arg_types.args) ]
-    quote
-        \$(esc(func))(\$(args_in...)) = ccall( (\$(string(func)), \$(Expr(:quote, lib)) ), \$ret_type, \$arg_types, \$(args_in...) )
-    end
-end
-"
+helper_macros = ""
 
 ###############################################################################
 #
@@ -269,14 +263,39 @@ function wrap (buf::IO, sd::StructDecl; usename = "")
 end   
 
 function wrap(buf::IO, funcdecl::FunctionDecl, libname::ASCIIString)
+    function print_args(buf::IO, cursors, types)
+        i = 1
+        for (c,t) in zip(cursors,types)
+            print(buf, name(c), "::", t)
+            (i < length(cursors)) && print(buf, ", ")
+            i += 1
+        end
+    end
+
     cu_spelling = spelling(funcdecl)
     
+    funcname = spelling(funcdecl)
     arg_types = cindex.function_args(funcdecl)
+    args = [x for x in search(funcdecl, ParmDecl)]
     arg_list = tuple( [repr_jl(x) for x in arg_types]... )
     ret_type = repr_jl(return_type(funcdecl))
-    println(buf, "@c ", rep_type(ret_type), " ",
-                    symbol(spelling(funcdecl)), " ",
-                    rep_args(arg_list), " ", libname )
+
+    print(buf, "function ")
+    print(buf, spelling(funcdecl))
+    print(buf, "(")
+    print_args(buf, args, [repr_jl(x) for x in arg_types])
+    println(buf, ")")
+    print(buf, "  ")
+    print(buf, "ccall( (:", funcname, ", ", libname, "), ")
+    print(buf, rep_type(ret_type))
+    print(buf, ", ")
+    print(buf, rep_args(arg_list), ", ")
+    for (i,arg) in enumerate(args)
+        print(buf, name(arg))
+        (i < length(args)) && print(buf, ", ")
+    end
+    println(buf, ")")
+    println(buf, "end")
 end
 
 function wrap(buf::IO, tref::TypeRef; usename="")
@@ -463,8 +482,6 @@ function wrap_c_headers(wc::WrapContext, headers)
     # Sort the common includes so that things aren't used out-of-order
     incl_lines = sort_common_includes(wc.common_stream)
     open(wc.common_file, "w") do strm
-        # Write the helper macros
-        println(strm, helper_macros, "\n")
         [print(strm, l) for l in incl_lines]
     end
     

@@ -144,25 +144,27 @@ function repr_jl(arg::cindex.CLType)
     return string(cl_to_jl[typeof(arg)])
 end
 function repr_jl(t::ConstantArray)
-    # For ConstantArray declarations, we make a bitstype of
-    # the corresonding size and use that, so that at least
-    # all the offsets will be correct.
+    # For ConstantArray declarations, we make an immutable
+    # array with that many members of the appropriate type.
 
     # Override pointer representation so pointee type is not written
     repr_short(t::CLType) = isa(t, Pointer) ? "Ptr" : repr_jl(t)
     
     # Grab the WrapContext in order to add bitstype
     global context::WrapContext
+    buf = context.common_stream
 
     arrsize = cindex.getArraySize(t)
     eltype = cindex.getArrayElementType(t)
     typename = string("Array_", arrsize, "_", repr_short(eltype))
     if !(typename in context.cache_wrapped)
-        println(context.common_stream,
-                string("bitstype int(WORD_SIZE/8)*sizeof(", repr_jl(eltype),
-                ")*", arrsize, " ", typename))
-        push!(context.cache_wrapped, typename)
+        println(buf, "immutable ", typename)
+        for i = 1:arrsize
+            println(buf, "    d", i, "::", repr_jl(eltype))
+        end
+        println(buf, "end")
     end
+    push!(context.cache_wrapped, typename)
     return typename
 end
 

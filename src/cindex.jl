@@ -38,7 +38,7 @@ include("cindex/base.jl")
 #
 function parse_header(header::String;
                 index                           = None,
-                diagnostics::Bool               = false,
+                diagnostics::Bool               = true,
                 cplusplus::Bool                 = false,
                 args                            = ASCIIString[""],
                 includes                        = ASCIIString[],

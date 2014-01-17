@@ -316,6 +316,8 @@ function wrap(buf::IO, tdecl::TypedefDecl; usename="")
         tdunxp = children(tdecl)[1]
         wrap(buf, tdunxp; usename=name(tdecl))
         return
+    elseif isa(td_type, FunctionProto)
+        return string("# Skipping Typedef: FunctionProto", spelling(tdecl))
     end
 
     println(buf, "typealias ",    spelling(tdecl), " ", repr_jl(td_type) )

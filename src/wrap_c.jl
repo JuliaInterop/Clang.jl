@@ -13,6 +13,10 @@ export WrapContext
 ### Wrappable type hierarchy
 
 reserved_words = ["type", "end"]
+function name_safe(c::CLCursor)
+    cur_name = name(c)
+    return (cur_name in reserved_words) ? "_"*cur_name : cur_name
+end
 
 ### Execution context for wrap_c
 typealias StringsArray Array{ASCIIString,1}
@@ -268,7 +272,7 @@ function wrap(buf::IO, funcdecl::FunctionDecl, libname::ASCIIString)
     function print_args(buf::IO, cursors, types)
         i = 1
         for (c,t) in zip(cursors,types)
-            print(buf, name(c), "::", t)
+            print(buf, name_safe(c), "::", t)
             (i < length(cursors)) && print(buf, ", ")
             i += 1
         end
@@ -293,7 +297,7 @@ function wrap(buf::IO, funcdecl::FunctionDecl, libname::ASCIIString)
     print(buf, ", ")
     print(buf, rep_args(arg_list), ", ")
     for (i,arg) in enumerate(args)
-        print(buf, name(arg))
+        print(buf, name_safe(arg))
         (i < length(args)) && print(buf, ", ")
     end
     println(buf, ")")

@@ -28,7 +28,7 @@ type WrapContext
     index::cindex.CXIndex
     output_file::ASCIIString
     common_file::ASCIIString
-    clang_includes::StringsArray                 # clang include paths
+    clang_includes::Array{ASCIIString,1}         # clang include paths
     clang_args::StringsArray                     # additional {"-Arg", "value"} pairs for clang
     header_wrapped::Function                     # called to determine cursor inclusion status
     header_library::Function                     # called to determine shared library for given header
@@ -69,8 +69,8 @@ function init(;
     (common_file == "")    && ( common_file = output_file )
     
     if (header_library == None)
-        error("Missing header_library argument: pass lib name, or (hdr)->lib::ASCIIString function")
-    elseif(typeof(header_library) == ASCIIString)
+        header_library = x->strip(splitext(basename(x))[1])
+    elseif isa(header_library, ASCIIString)
         header_library = x->header_library
     end
     if (header_outputfile == None)

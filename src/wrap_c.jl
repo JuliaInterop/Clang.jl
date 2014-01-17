@@ -201,7 +201,7 @@ end
 ################################################################################
 
 function wrap(buf::IO, cursor::EnumDecl; usename="")
-    if (usename == "")
+    if (usename == "" && (usename = name(cursor)) == "")
         usename = name_anon()
     end
     enumname = usename

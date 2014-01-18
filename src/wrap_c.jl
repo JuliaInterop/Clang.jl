@@ -29,8 +29,8 @@ type WrapContext
     index::cindex.CXIndex
     output_file::ASCIIString
     common_file::ASCIIString
-    clang_includes::StringsArray                 # clang include paths
-    clang_args::StringsArray                     # additional {"-Arg", "value"} pairs for clang
+    clang_includes::Array{ASCIIString,1}         # clang include paths
+    clang_args::Array{ASCIIString,1}             # additional {"-Arg", "value"} pairs for clang
     header_wrapped::Function                     # called to determine cursor inclusion status
     header_library::Function                     # called to determine shared library for given header
     header_outfile::Function                     # called to determine output file group for given header
@@ -49,8 +49,10 @@ function init(;
             index                           = None,
             output_file::ASCIIString        = "",
             common_file::ASCIIString        = "",
-            clang_args::StringsArray        = ASCIIString[],
-            clang_includes::StringsArray    = ASCIIString[],
+            clang_args::Array{ASCIIString,1}
+                                            = ASCIIString[],
+            clang_includes::Array{ASCIIString,1}
+                                            = ASCIIString[],
             clang_diagnostics::Bool         = false,
             header_wrapped                  = (header, cursorname) -> true,
             header_library                  = None,

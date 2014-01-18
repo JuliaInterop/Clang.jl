@@ -17,14 +17,11 @@ function name_safe(c::CLCursor)
     return (cur_name in reserved_words) ? "_"*cur_name : cur_name
 end
 
-### Execution context for wrap_c
-typealias StringsArray Array{ASCIIString,1}
-# InternalOptions
+### InternalOptions
 type InternalOptions
     wrap_structs::Bool
 end
-InternalOptions() = InternalOptions(false)
-
+InternalOptions() = InternalOptions(true)
 
 ### WrapContext
 # stores shared information about the wrapping session

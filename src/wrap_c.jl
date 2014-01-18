@@ -10,8 +10,7 @@ using Clang.cindex
 export wrap_c_headers
 export WrapContext
 
-### Wrappable type hierarchy
-
+### Reserved Julia identifiers to prepend with "_"
 reserved_words = ["type", "end"]
 function name_safe(c::CLCursor)
     cur_name = name(c)
@@ -27,12 +26,13 @@ end
 InternalOptions() = InternalOptions(false)
 
 
-# WrapContext object stores shared information about the wrapping session
+### WrapContext
+# stores shared information about the wrapping session
 type WrapContext
     index::cindex.CXIndex
     output_file::ASCIIString
     common_file::ASCIIString
-    clang_includes::Array{ASCIIString,1}         # clang include paths
+    clang_includes::StringsArray                 # clang include paths
     clang_args::StringsArray                     # additional {"-Arg", "value"} pairs for clang
     header_wrapped::Function                     # called to determine cursor inclusion status
     header_library::Function                     # called to determine shared library for given header
@@ -47,10 +47,7 @@ WrapContext(idx,outfile,cmnfile,clanginc,clangextra,hwrap,hlib,hout) =
     WrapContext(idx,outfile,cmnfile,convert(Array{ASCIIString,1},clanginc),convert(Array{ASCIIString,1}, clangextra),hwrap,hlib,hout,
                 None,Set{ASCIIString}(), Dict{ASCIIString,IO}(), InternalOptions(),0)
 
-global context
-#
-# Initialize wrapping context
-#
+### Convenience function to initialize wrapping context with defaults
 function init(;
             index                           = None,
             output_file::ASCIIString        = "",
@@ -85,9 +82,6 @@ function init(;
     global context = WrapContext(index, output_file, common_file, clang_includes, clang_args, header_wrapped, header_library,header_outputfile)
     return context
 end
-
-### These helper macros will be written to the generated file
-helper_macros = ""
 
 ###############################################################################
 #
@@ -126,6 +120,15 @@ cl_to_jl = {
     "size_t"                => :Csize_t,
     "ptrdiff_t"             => :Cptrdiff_t
     }
+
+################################################################################
+#
+# libclang objects to Julia representation
+#
+# each repr_jl function takes one or more CLCursor or CLType objects,
+# and returns the appropriate string representation.
+#
+################################################################################
 
 function repr_jl(t::Union(cindex.Record, cindex.Typedef))
     return spelling(cindex.getTypeDeclaration(t))
@@ -445,8 +448,10 @@ function header_output_stream(wc::WrapContext, hfile)
     return strm
 end        
 
-### wrap_c_headers: main entry point
-#     TODO: use dict for mapping from h file to wrapper file (or module?)
+################################################################################
+# Wrapping driver
+################################################################################
+
 function wrap_c_headers(wc::WrapContext, headers)
 
     println(wc.clang_includes)

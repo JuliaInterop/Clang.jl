@@ -130,7 +130,8 @@ cl_to_jl = {
 ################################################################################
 
 function repr_jl(t::Union(cindex.Record, cindex.Typedef))
-    return spelling(cindex.getTypeDeclaration(t))
+    tname = spelling(cindex.getTypeDeclaration(t))
+    return get(cl_to_jl, tname, tname)
 end
 
 function repr_jl(ptr::cindex.Pointer)

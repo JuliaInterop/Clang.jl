@@ -53,7 +53,7 @@ function init(;
                                             = ASCIIString[],
             clang_includes::Array{ASCIIString,1}
                                             = ASCIIString[],
-            clang_diagnostics::Bool         = false,
+            clang_diagnostics::Bool         = true,
             header_wrapped                  = (header, cursorname) -> true,
             header_library                  = None,
             header_outputfile               = None)

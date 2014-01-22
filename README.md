@@ -44,7 +44,7 @@ generator output:
 
 libclang and libclang-dev (versions >= 3.1) are required. libclang may
 optionally be built by the Julia build system by setting 
-BUILD_LLVM_CLANG=1 in `julia/Make.user`.
+BUILD_LLVM_CLANG=1 in `julia/Make.inc`.
 
 When using a distribution packaged version, note the latest version 
 may only be available from an optional pre-release archive (e.g. Ubuntu PPA).

@@ -124,7 +124,7 @@ void wci_print_tokens(CXTranslationUnit tu, char* _range) {
   CXToken* Tokens;
   clang_tokenize(tu, range, &Tokens, &NumTokens);
   
-  for (int i=0; i < NumTokens; i++) {
+  for (unsigned int i=0; i < NumTokens; i++) {
     CXToken tok = Tokens[i];
     int kind = clang_getTokenKind(tok);
     CXString spelling = clang_getTokenSpelling(tu, tok);

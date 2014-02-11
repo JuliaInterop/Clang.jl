@@ -8,7 +8,7 @@ endif
 
 check-env:
 ifndef JULIA_ROOT
-	$(error Environment variable JULIA_ROOT is not set.)
+  $(error Environment variable JULIA_ROOT is not set.)
 endif
 
 CXX = g++
@@ -19,10 +19,10 @@ LIBS =
 LLVM_VER = "3.3"
 
 ifdef USE_CLANG_CPP
-    JLIB = "$(JULIA_ROOT)/usr/lib"
-	INC += -I"$(JULIA_ROOT)/deps/llvm-3.3/tools/clang/tools/libclang"
-	LIBS += -Wl,--whole-archive -Wl,--whole-archive "$(JLIB)/libclang.a" "$(JLIB)/libclangAST.a" "$(JLIB)/libclangAnalysis.a" "$(JLIB)/libclangARCMigrate.a" "$(JLIB)/libclangASTMatchers.a" "$(JLIB)/libclangBasic.a" "$(JLIB)/libclangCodeGen.a" "$(JLIB)/libclangDriver.a" "$(JLIB)/libclangEdit.a" "$(JLIB)/libclangFormat.a" "$(JLIB)/libclangFrontend.a" "$(JLIB)/libclangFrontendTool.a" "$(JLIB)/libclangLex.a" "$(JLIB)/libclangParse.a" "$(JLIB)/libclangRewriteCore.a" "$(JLIB)/libclangRewriteFrontend.a" "$(JLIB)/libclangSema.a" "$(JLIB)/libclangSerialization.a" "$(JLIB)/libclangStaticAnalyzerCore.a" "$(JLIB)/libclangStaticAnalyzerFrontend.a" "$(JLIB)/libclangTooling.a" -Wl,--no-whole-archive -l"LLVM-$(LLVM_VER)"
-    CXXFLAGS += -DUSE_CLANG_CPP
+  JLIB = "$(JULIA_ROOT)/usr/lib"
+  INC += -I"$(JULIA_ROOT)/deps/llvm-3.3/tools/clang/tools/libclang"
+  LIBS += -Wl,--whole-archive -Wl,--whole-archive "$(JLIB)/libclang.a" "$(JLIB)/libclangAST.a" "$(JLIB)/libclangAnalysis.a" "$(JLIB)/libclangARCMigrate.a" "$(JLIB)/libclangASTMatchers.a" "$(JLIB)/libclangBasic.a" "$(JLIB)/libclangCodeGen.a" "$(JLIB)/libclangDriver.a" "$(JLIB)/libclangEdit.a" "$(JLIB)/libclangFormat.a" "$(JLIB)/libclangFrontend.a" "$(JLIB)/libclangFrontendTool.a" "$(JLIB)/libclangLex.a" "$(JLIB)/libclangParse.a" "$(JLIB)/libclangRewriteCore.a" "$(JLIB)/libclangRewriteFrontend.a" "$(JLIB)/libclangSema.a" "$(JLIB)/libclangSerialization.a" "$(JLIB)/libclangStaticAnalyzerCore.a" "$(JLIB)/libclangStaticAnalyzerFrontend.a" "$(JLIB)/libclangTooling.a" -Wl,--no-whole-archive -l"LLVM-$(LLVM_VER)"
+  CXXFLAGS += -DUSE_CLANG_CPP
 endif
 
 OBJS = wrapclang.cpp.o

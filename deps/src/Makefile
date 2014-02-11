@@ -16,15 +16,15 @@ INC =
 FLAGS = -Wall -Wno-strict-aliasing -fno-omit-frame-pointer -fPIC 
 CXXFLAGS = -g
 LIBS =
-LIB_PATH =
-LLVM_VER = "3.3"
+LIB_DIR =
+LLVM_VER = 3.3
 
-ifdef LLVM_ROOT
-  INC += -I"$(LLVM_ROOT)/include"
-  LIB_PATH = -L"$(LLVM_ROOT)/lib"
+ifdef LLVM_CONFIG
+  INC += -I$(shell $(LLVM_CONFIG) --includedir)
+  LIB_DIR += -L$(shell $(LLVM_CONFIG) --libdir)
 else
   INC += -I"$(JULIA_ROOT)/usr/include"
-  LIB_PATH = -L"$(JULIA_ROOT)/usr/lib"
+  LIB_DIR += -L"$(JULIA_ROOT)/usr/lib"
 endif
 
 ifdef USE_CLANG_CPP
@@ -70,7 +70,7 @@ default: libwrapclang.$(SHLIB_EXT)
 	$(CXX) $< -fPIC -c -o $@ $(INC) $(CXXFLAGS) $(FLAGS)
 
 libwrapclang.$(SHLIB_EXT): $(OBJS)
-	$(CXX) $(OBJS) -rdynamic -shared -o $@ $(LIB_PATH) $(LDFLAGS) $(LIBS)
+	$(CXX) $(OBJS) -rdynamic -shared -o $@ $(LIB_DIR) $(LDFLAGS) $(LIBS)
 
 clean:
 	rm -f *.o *.$(SHLIB_EXT)

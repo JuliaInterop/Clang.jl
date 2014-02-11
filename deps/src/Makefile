@@ -12,16 +12,34 @@ ifndef JULIA_ROOT
 endif
 
 CXX = g++
-INC = -I"$(JULIA_ROOT)/usr/include"
+INC =
 FLAGS = -Wall -Wno-strict-aliasing -fno-omit-frame-pointer -fPIC 
 CXXFLAGS = -g
-LIBS = 
+LIBS =
+LIB_PATH =
 LLVM_VER = "3.3"
+
+ifdef LLVM_ROOT
+  INC += -I"$(LLVM_ROOT)/include"
+  LIB_PATH = -L"$(LLVM_ROOT)/lib"
+else
+  INC += -I"$(JULIA_ROOT)/usr/include"
+  LIB_PATH = -L"$(JULIA_ROOT)/usr/lib"
+endif
 
 ifdef USE_CLANG_CPP
   JLIB = "$(JULIA_ROOT)/usr/lib"
-  INC += -I"$(JULIA_ROOT)/deps/llvm-3.3/tools/clang/tools/libclang"
-  LIBS += -Wl,--whole-archive -Wl,--whole-archive "$(JLIB)/libclang.a" "$(JLIB)/libclangAST.a" "$(JLIB)/libclangAnalysis.a" "$(JLIB)/libclangARCMigrate.a" "$(JLIB)/libclangASTMatchers.a" "$(JLIB)/libclangBasic.a" "$(JLIB)/libclangCodeGen.a" "$(JLIB)/libclangDriver.a" "$(JLIB)/libclangEdit.a" "$(JLIB)/libclangFormat.a" "$(JLIB)/libclangFrontend.a" "$(JLIB)/libclangFrontendTool.a" "$(JLIB)/libclangLex.a" "$(JLIB)/libclangParse.a" "$(JLIB)/libclangRewriteCore.a" "$(JLIB)/libclangRewriteFrontend.a" "$(JLIB)/libclangSema.a" "$(JLIB)/libclangSerialization.a" "$(JLIB)/libclangStaticAnalyzerCore.a" "$(JLIB)/libclangStaticAnalyzerFrontend.a" "$(JLIB)/libclangTooling.a" -Wl,--no-whole-archive -l"LLVM-$(LLVM_VER)"
+  INC += -I"$(JULIA_ROOT)/deps/llvm-$(LLVM_VER)/tools/clang/tools/libclang"
+  LIBS += -Wl,--whole-archive -Wl,--whole-archive \
+          "$(JLIB)/libclang.a" "$(JLIB)/libclangAST.a" "$(JLIB)/libclangAnalysis.a" \
+          "$(JLIB)/libclangARCMigrate.a" "$(JLIB)/libclangASTMatchers.a" "$(JLIB)/libclangBasic.a" \
+          "$(JLIB)/libclangCodeGen.a" "$(JLIB)/libclangDriver.a" "$(JLIB)/libclangEdit.a" \
+          "$(JLIB)/libclangFormat.a" "$(JLIB)/libclangFrontend.a" "$(JLIB)/libclangFrontendTool.a" \
+          "$(JLIB)/libclangLex.a" "$(JLIB)/libclangParse.a" "$(JLIB)/libclangRewriteCore.a" \
+          "$(JLIB)/libclangRewriteFrontend.a" "$(JLIB)/libclangSema.a" \
+          "$(JLIB)/libclangSerialization.a" "$(JLIB)/libclangStaticAnalyzerCore.a" \
+          "$(JLIB)/libclangStaticAnalyzerFrontend.a" "$(JLIB)/libclangTooling.a" \
+          -Wl,--no-whole-archive -l"LLVM-$(LLVM_VER)"
   CXXFLAGS += -DUSE_CLANG_CPP
 endif
 
@@ -52,7 +70,7 @@ default: libwrapclang.$(SHLIB_EXT)
 	$(CXX) $< -fPIC -c -o $@ $(INC) $(CXXFLAGS) $(FLAGS)
 
 libwrapclang.$(SHLIB_EXT): $(OBJS)
-	$(CXX) $(OBJS) -rdynamic -shared -o $@ -L"$(JULIA_ROOT)/usr/lib" $(LDFLAGS) $(LIBS)
+	$(CXX) $(OBJS) -rdynamic -shared -o $@ $(LIB_PATH) $(LDFLAGS) $(LIBS)
 
 clean:
 	rm -f *.o *.$(SHLIB_EXT)

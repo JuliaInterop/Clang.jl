@@ -52,8 +52,12 @@ may only be available from an optional pre-release archive (e.g. Ubuntu PPA).
 
 ### Install
 
-To install using the Julia package manager, use: Pkg.add("Clang")
-
+To install using the Julia package manager, use: Pkg.add("Clang").
+You can use an external LLVM/Clang to build Clang.jl by specifying a llvm-config:
+```
+ENV["LLVM_CONFIG"]="/usr/lib/llvm-3.3/bin/llvm-config"
+Pkg.add("Clang")
+```
 
 ## Background Information
 

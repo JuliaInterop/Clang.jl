@@ -31,17 +31,18 @@ type WrapContext
     common_file::ASCIIString
     clang_includes::Array{ASCIIString,1}         # clang include paths
     clang_args::Array{ASCIIString,1}             # additional {"-Arg", "value"} pairs for clang
-    header_wrapped::Function                     # called to determine cursor inclusion status
+    header_wrapped::Function                     # called to determine header inclusion status
     header_library::Function                     # called to determine shared library for given header
     header_outfile::Function                     # called to determine output file group for given header
+    cursor_wrapped::Function                     # called to determine cursor inclusion statusk
     common_stream
     cache_wrapped::Set{ASCIIString}
     output_streams::Dict{ASCIIString, IO}
     options::InternalOptions
     anon_count::Int
 end
-WrapContext(idx,outfile,cmnfile,clanginc,clangextra,hwrap,hlib,hout) = 
-    WrapContext(idx,outfile,cmnfile,convert(Array{ASCIIString,1},clanginc),convert(Array{ASCIIString,1}, clangextra),hwrap,hlib,hout,
+WrapContext(idx,outfile,cmnfile,clanginc,clangextra,hwrap,hlib,hout,cwrap) = 
+    WrapContext(idx,outfile,cmnfile,convert(Array{ASCIIString,1},clanginc),convert(Array{ASCIIString,1}, clangextra),hwrap,hlib,hout,cwrap,
                 None,Set{ASCIIString}(), Dict{ASCIIString,IO}(), InternalOptions(),0)
 
 ### Convenience function to initialize wrapping context with defaults
@@ -56,7 +57,8 @@ function init(;
             clang_diagnostics::Bool         = true,
             header_wrapped                  = (header, cursorname) -> true,
             header_library                  = None,
-            header_outputfile               = None)
+            header_outputfile               = None,
+            cursor_wrapped                  = (cursorname, cursor) -> true)
 
     # Set up some optional args if they are not explicitly passed.
 
@@ -78,7 +80,7 @@ function init(;
     end
 
     # Instantiate and return the WrapContext
-    global context = WrapContext(index, output_file, common_file, clang_includes, clang_args, header_wrapped, header_library,header_outputfile)
+    global context = WrapContext(index, output_file, common_file, clang_includes, clang_args, header_wrapped, header_library,header_outputfile,cursor_wrapped)
     return context
 end
 
@@ -413,11 +415,13 @@ function wrap_header(wc::WrapContext, topcu::CLCursor, top_hdr, ostrm::IO)
         elseif (!wc.header_wrapped(top_hdr, cu_file(cursor)) ||
                         (cursor_name in wc.cache_wrapped) )
             continue
+        elseif (!wc.cursor_wrapped(name(cursor), cursor))
+            continue
         elseif (beginswith(cursor_name, "__"))
             # skip compiler definitions
             continue
         end
-
+        
         if (isa(cursor, FunctionDecl))
             wrap(ostrm, cursor, wc.header_library(cu_file(cursor)))
         elseif (isa(cursor, EnumDecl))

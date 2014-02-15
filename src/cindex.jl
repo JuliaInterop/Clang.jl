@@ -204,14 +204,14 @@ function tokenize(cursor::CLCursor)
     return cindex.tokenize(tu, sourcerange)
 end
 
-start(tl::TokenList) = 1
-done(tl::TokenList, i) = (i > tl.size)
-next(tl::TokenList, i) = (tl[i], i+1)
-endof(tl::TokenList) = tl.size
 length(tl::TokenList) = tl.size
+start(tl::TokenList) = 1
+next(tl::TokenList, i) = (tl[i], i+1)
+endof(tl::TokenList) = length(tl)
+done(tl::TokenList, i) = (i > length(tl))
 
 function getindex(tl::TokenList, i::Int)
-    if (i < 1 || i > tl.size) throw(BoundsError()) end
+    if (i < 1 || i > length(tl)) throw(BoundsError()) end
 
     c = CXToken(unsafe_load(tl.ptr, i))
     kind = c.data[1].int_data1

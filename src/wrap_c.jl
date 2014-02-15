@@ -341,7 +341,7 @@ end
 
 function lex_exprn(tokens::TokenList, pos::Int)
     function trans(tok)
-        ops = ["+" "-" ">>" "<<" "/" "\\" "%"]
+        ops = ["+" "-" "*" ">>" "<<" "/" "\\" "%" "|" "||" "^" "&" "&&"]
         if (isa(tok, cindex.Literal) || 
             (isa(tok,cindex.Identifier))) return 0
         elseif (isa(tok, cindex.Punctuation) && tok.text in ops) return 1
@@ -367,12 +367,12 @@ function lex_exprn(tokens::TokenList, pos::Int)
         end
         return txt
     end
-
+    
     # check whether identifiers and literals alternate
     # with punctuation
     exprn = ""
     prev = 1 >> trans(tokens[pos])
-    for pos = pos:tokens.size
+    for pos = pos:length(tokens)
         tok = tokens[pos]
         state = trans(tok)
         if ( state $ prev  == 1)
@@ -387,15 +387,14 @@ end
 
 function wrap(strm::IO, md::cindex.MacroDefinition)
     tokens = tokenize(md)
-    
     # Skip any empty definitions
     if(tokens.size < 2) return end
-    if(beginswith(name(md), "_")) return end 
+    if(beginswith(name(md), "_")) return end
 
-    pos = 0; exprn = ""
+    pos = 1; exprn = ""
     if(tokens[2].text == "(")
         exprn,pos = lex_exprn(tokens, 3)
-        if (pos != tokens.size || tokens[pos].text != ")")
+        if (pos != endof(tokens) || tokens[pos].text != ")")
             print(strm, "# Skipping MacroDefinition: ", join([c.text for c in tokens]), "\n")
             return
         end

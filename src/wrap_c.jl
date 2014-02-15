@@ -343,12 +343,33 @@ function lex_exprn(tokens::TokenList, pos::Int)
     function trans(tok)
         ops = ["+" "-" ">>" "<<" "/" "\\" "%"]
         if (isa(tok, cindex.Literal) || 
-            (isa(tok,cindex.Identifier) && isupper(tok.text))) return 0
+            (isa(tok,cindex.Identifier))) return 0
         elseif (isa(tok, cindex.Punctuation) && tok.text in ops) return 1
         else return -1
         end
     end
 
+    # normalize literal with a size suffix
+    function literally(tok)
+        # note: put multi-character first, or it will break out too soon for those!
+        literalsuffixes = ["UL" "Ul" "uL" "ul" "LU" "Lu" "lU" "lu" "U" "u" "L" "l"]
+        txt = tok.text
+        if isa(tok,cindex.Identifier) || isa(tok,cindex.Punctuation)
+            # pass
+        elseif isa(tok,cindex.Literal)
+            txt = strip(tok.text)
+            for sfx in literalsuffixes
+                if endswith(txt, sfx)
+                    txt = txt[1:end-length(sfx)]
+                    break
+                end
+            end
+        end
+        return txt
+    end
+
+    # check whether identifiers and literals alternate
+    # with punctuation
     exprn = ""
     prev = 1 >> trans(tokens[pos])
     for pos = pos:tokens.size
@@ -359,7 +380,7 @@ function lex_exprn(tokens::TokenList, pos::Int)
         else
             break
         end 
-        exprn = exprn * tok.text
+        exprn = exprn * literally(tok)
     end
     return (exprn,pos)
 end 

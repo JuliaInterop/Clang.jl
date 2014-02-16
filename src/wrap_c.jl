@@ -136,6 +136,11 @@ function repr_jl(t::Union(cindex.Record, cindex.Typedef))
     return get(cl_to_jl, tname, tname)
 end
 
+function repr_jl(t::TypeRef)
+    reftype = cindex.getCursorReferenced(t)
+    return spelling(reftype)
+end
+
 function repr_jl(ptr::cindex.Pointer)
     ptee = pointee_type(ptr)
     return string("Ptr{", ((r = repr_jl(ptee)) == "" ? "Void" : r), "}")
@@ -202,7 +207,7 @@ function largestfield(cu::UnionDecl)
 end
 
 function fieldsize(cu::FieldDecl)
-    fieldsize(children(cu)[1])    
+    fieldsize(children(cu)[1])
 end
 
 ################################################################################
@@ -323,8 +328,12 @@ function wrap(buf::IO, tdecl::TypedefDecl; usename="")
     
     if isa(td_type, Unexposed)
         tdunxp = children(tdecl)[1]
-        wrap(buf, tdunxp; usename=name(tdecl))
-        return
+        if isa(tdunxp, TypeRef)
+            td_type = tdunxp
+        else
+            wrap(buf, tdunxp; usename=name(tdecl))
+            return # TODO.. ugly flow
+        end
     elseif isa(td_type, FunctionProto)
         return string("# Skipping Typedef: FunctionProto", spelling(tdecl))
     end

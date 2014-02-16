@@ -138,7 +138,14 @@ end
 
 function repr_jl(t::TypeRef)
     reftype = cindex.getCursorReferenced(t)
-    return spelling(reftype)
+    refdef = cindex.getCursorDefinition(reftype)
+    if isa(refdef, cindex.InvalidFile) ||
+       isa(refdef, cindex.FirstInvalid) ||
+       isa(refdef, cindex.Invalid)
+        return "Void"
+    else
+        return spelling(reftype)
+    end
 end
 
 function repr_jl(ptr::cindex.Pointer)

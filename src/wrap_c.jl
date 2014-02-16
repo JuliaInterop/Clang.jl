@@ -11,7 +11,11 @@ export wrap_c_headers
 export WrapContext
 
 ### Reserved Julia identifiers to prepend with "_"
-reserved_words = ["type", "end"]
+reserved_words = ["abstract", "baremodule", "begin", "bitstype", "break", "catch", "ccall",                                                                                                                                      "const", "continue", "do", "else", "elseif", "end", "export", "finally",
+                   "for", "function", "global", "if", "immutable", "import", "importall",
+                   "let", "local", "macro", "module", "quote", "return", "try", "type",
+                   "typealias", "using", "while"]
+
 function name_safe(c::CLCursor)
     cur_name = name(c)
     return (cur_name in reserved_words) ? "_"*cur_name : cur_name

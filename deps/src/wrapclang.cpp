@@ -1,6 +1,7 @@
 #include <cstring>
 #include <vector>
 #include <set>
+#include <cstdio>
 
 extern "C" {
 #include "clang-c/Index.h"

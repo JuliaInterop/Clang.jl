@@ -16,6 +16,8 @@ reserved_words = ["abstract", "baremodule", "begin", "bitstype", "break", "catch
                    "let", "local", "macro", "module", "quote", "return", "try", "type",
                    "typealias", "using", "while"]
 
+reserved_argtypes = ["va_list"]
+
 function name_safe(c::CLCursor)
     cur_name = name(c)
     return (cur_name in reserved_words) ? "_"*cur_name : cur_name
@@ -299,18 +301,32 @@ function wrap(buf::IO, funcdecl::FunctionDecl, libname::ASCIIString)
         end
     end
 
+    ftype = cindex.cu_type(funcdecl)
+    if cindex.isFunctionTypeVariadic(ftype) == 1
+        # skip vararg functions
+        return
+    end
+
     cu_spelling = spelling(funcdecl)
     
     funcname = spelling(funcdecl)
+    ret_type = repr_jl(return_type(funcdecl))
+
     arg_types = cindex.function_args(funcdecl)
     args = [x for x in search(funcdecl, ParmDecl)]
-    arg_list = tuple( [repr_jl(x) for x in arg_types]... )
-    ret_type = repr_jl(return_type(funcdecl))
+    arg_list = [repr_jl(x) for x in arg_types]
+    
+    # check whether any argument types are blocked
+    for arg in arg_list
+        if arg in reserved_argtypes
+            return
+        end
+    end
 
     print(buf, "function ")
     print(buf, spelling(funcdecl))
     print(buf, "(")
-    print_args(buf, args, [repr_jl(x) for x in arg_types])
+    print_args(buf, args, arg_list)
     println(buf, ")")
     print(buf, "  ")
     print(buf, "ccall( (:", funcname, ", ", libname, "), ")

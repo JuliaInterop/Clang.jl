@@ -438,6 +438,7 @@ function wrap(strm::IO, md::cindex.MacroDefinition)
     else
         (exprn,pos) = lex_exprn(tokens, 2)
     end
+    exprn = replace(exprn, "\$", "\\\$")
     print(strm, "const " * string(tokens[1].text) * " = " * exprn * "\n")
 end
 

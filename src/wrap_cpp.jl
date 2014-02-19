@@ -69,7 +69,11 @@ end
 #emitc(out::IO, arg::ArgProxy) = emitc(out, arg.cltype)
 
 function emit(out::IO, t::CLType)
-    print(out, cl_to_c[typeof(t)])
+    if haskey(cl_to_c, typeof(t))
+        print(out, cl_to_c[typeof(t)])
+    else
+        warn("no C type defined for $t")
+    end
 end
 
 function emit(out::IO, t::Union(Record, Typedef))
@@ -137,7 +141,7 @@ function wrap(out::IO, method::cindex.CXXMethod, nameid::Int)
    
     # emit arguments
     openparen(buf)
-        print(buf, parentname, "* this")
+        print(buf, parentname, "* x")
         length(args) > 0 && comma(buf)
         space(buf)
         emit_args(buf, args)
@@ -153,10 +157,11 @@ function wrap(out::IO, method::cindex.CXXMethod, nameid::Int)
         print(buf, "return")
         space(buf)
     end    
-    print(buf, "this->", methodname)
+    print(buf, "x->", methodname)
     openparen(buf)
         emit_args(buf, args)
     closeparen(buf)
+    print(buf, ";")
     
     # close
     newline(buf)
@@ -172,13 +177,16 @@ function wrap(out::IO, top::cindex.ClassDecl)
     println("Wrapping class: ", name(top))
     MethodCount = Dict{ASCIIString, Int}()
 
+    println(out, "extern \"C\" {")
     for decl in [c for c in children(top)]
         declname = spelling(decl)
-        if isa(decl, cindex.CXXMethod)
+        if isa(decl, cindex.CXXMethod) && cindex.getCXXAccessSpecifier(decl)==1
+            println(declname, " ", cindex.getCXXAccessSpecifier(decl))
             id = (MethodCount[declname] = get(MethodCount, declname, 0) + 1)
             wrap(out, decl, id)
         end 
     end
+    println(out, "}//extern C")
 end
 
 cl_to_c = {
@@ -203,9 +211,9 @@ cl_to_c = {
     cindex.Float          => "float",
     cindex.Double         => "double",
     cindex.LongDouble     => "long double",
-    cindex.Enum           => "enum",
+    cindex.Enum           => "int",
     cindex.NullPtr        => "NULL",
-    cindex.UInt128        => "uint128_t"
+    cindex.UInt128        => "uint128_t",
     }
 
 ################################################################################
@@ -222,7 +230,11 @@ function wrapjl(out::IO, t::Union(cindex.Record, cindex.Typedef))
 end
 
 function wrapjl(out::IO, arg::cindex.CLType)
-    print(out, string(cl_to_jl[typeof(arg)]))
+    if haskey(cl_to_jl, typeof(arg))
+        print(out, string(cl_to_jl[typeof(arg)]))
+    else
+        warn("no cl_to_jl for $arg")
+    end
 end
 
 function wrapjl(out::IO, ptr::cindex.Pointer)

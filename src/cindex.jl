@@ -47,7 +47,7 @@ function parse_header(header::String;
         index = idx_create(0, (diagnostics ? 1 : 0))
     end
     if (cplusplus)
-        push!(args, ["-x", "c++"])
+        append!(args, ["-x", "c++"])
     end
     if (length(includes) > 0)
         args = vcat(args, [["-I",x] for x in includes]...)

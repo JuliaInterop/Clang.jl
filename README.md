@@ -32,7 +32,7 @@ from a collection of header files. The following declarations are currently supp
   * note: struct support is limited to intrinsic types. Unsupported constructs presently include:
     nested structs and unions, as well as fixed-size arrays.
 
-### Users
+## Users
 
 * [Gtk.jl](https://github.com/JuliaLang/Gtk.jl): Julia Gtk bindings (uses heavily customized generator)
 * [CUFFT.jl](https://github.com/timholy/CUFFT.jl): Bindings to CUDA FFT library

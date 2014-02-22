@@ -32,9 +32,10 @@ from a collection of header files. The following declarations are currently supp
   * note: struct support is limited to intrinsic types. Unsupported constructs presently include:
     nested structs and unions, as well as fixed-size arrays.
 
-Please see the following repositories for examples of the wrapper driver scripts and
-generator output:
+### Users
 
+* [Gtk.jl](https://github.com/JuliaLang/Gtk.jl): Julia Gtk bindings (uses heavily customized generator)
+* [CUFFT.jl](https://github.com/timholy/CUFFT.jl): Bindings to CUDA FFT library
 * [Sundials.jl](https://github.com/tshort/Sundials.jl): interface to the LLNL "SUite of Nonlinear and DIfferential/ALgebraic equation Solvers" package
 * [libCURL.jl](https://github.com/amitmurthy/libCURL.jl): wrapper of cURL
 

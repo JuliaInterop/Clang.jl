@@ -7,3 +7,7 @@ typedef enum {
     Seattle = 0x1,
     Portland = 0x3
 } WtoECapitals;
+
+int func(int x, int y=1) {
+    return x+y;
+}

@@ -239,6 +239,45 @@ function function_args(cursor::Union(FunctionDecl, CXXMethod))
     search(cursor, ParmDecl)
 end
 
+
+#returns a tuple with the default argument values for a C++ function
+#only seems to work if cplusplus=true in parse_header 
+function function_arg_defaults(method::Union(cindex.CXXMethod, cindex.FunctionDecl, cindex.Constructor))
+    defvals = Any[]
+    for c in children(method)
+        if isa(c,cindex.ParmDecl)
+
+            #value in case default was not specified
+            lit = nothing
+            toks = tokenize(c)
+            n = 1
+
+            #get index of '='
+            for tok in toks
+                if isa(tok, cindex.Punctuation) && tok.text == "="
+                    break
+                end
+                n += 1
+            end
+
+            #default value is the one after '='
+            if n<length(toks)
+                lit = toks[n+1].text
+            end
+
+            #parse default value as Julia code
+            pl = lit != nothing ? parse(lit) : lit
+
+            #for empty string, need to add quotes
+            if pl == ""
+                pl = "\"\""
+            end
+            push!(defvals, pl)
+        end
+    end
+    return tuple(defvals...)
+end
+
 ################################################################################
 # Display overrides
 ################################################################################

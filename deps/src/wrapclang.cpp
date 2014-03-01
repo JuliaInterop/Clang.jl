@@ -112,6 +112,7 @@ CXTranslationUnit wci_Cursor_getTranslationUnit(char* _cursor) {
   return clang_Cursor_getTranslationUnit(cursor);
 }
 
+/*
 void wci_debug_token(CXTranslationUnit tu, char* _token) {
   CXToken tok = wci_get_CXToken(_token);
   int kind = clang_getTokenKind(tok);
@@ -132,7 +133,7 @@ void wci_print_tokens(CXTranslationUnit tu, char* _range) {
     printf("kind: %d spelling: %s\n", kind, clang_getCString(spelling));
   }
 }
-
+*/
 } // extern
 
 #ifdef USE_CLANG_CPP

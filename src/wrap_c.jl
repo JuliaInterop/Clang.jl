@@ -17,6 +17,7 @@ reserved_words = ["abstract", "baremodule", "begin", "bitstype", "break", "catch
                    "typealias", "using", "while"]
 
 reserved_argtypes = ["va_list"]
+untyped_argtypes = [IncompleteArray]
 
 function name_safe(c::CLCursor)
     cur_name = name(c)
@@ -167,9 +168,6 @@ function repr_jl(unxp::Unexposed)
     return spelling(cindex.getTypeDeclaration(unxp))
 end
 
-function repr_jl(arg::cindex.CLType)
-    return string(cl_to_jl[typeof(arg)])
-end
 function repr_jl(t::ConstantArray)
     # For ConstantArray declarations, we make an immutable
     # array with that many members of the appropriate type.
@@ -195,10 +193,21 @@ function repr_jl(t::ConstantArray)
     return typename
 end
 
+function repr_jl(t::IncompleteArray)
+    eltype = cindex.getArrayElementType(t)
+    return string("Ptr{", ((r = repr_jl(eltype)) == "" ? "Void" : r), "}")
+end
+
 function repr_jl(t::UnionType)
     tdecl = cindex.getTypeDeclaration(t)
     maxelem = largestfield(tdecl)
     return repr_jl(maxelem)
+end
+
+function repr_jl(arg::cindex.CLType)
+    rep = get(cl_to_jl, typeof(arg), nothing)
+    rep == nothing && error("No CLType translation available for: ", arg)
+    return string(rep)
 end
 
 ###############################################################################
@@ -292,10 +301,11 @@ function wrap (buf::IO, sd::StructDecl; usename = "")
 end   
 
 function wrap(buf::IO, funcdecl::FunctionDecl, libname::ASCIIString)
-    function print_args(buf::IO, cursors, types)
+    function print_args(buf::IO, cursors, typereps)
         i = 1
-        for (c,t) in zip(cursors,types)
-            print(buf, name_safe(c), "::", t)
+        for (c,t) in zip(cursors,typereps)
+            print(buf, name_safe(c))
+            print(buf, "::", t)
             (i < length(cursors)) && print(buf, ", ")
             i += 1
         end
@@ -312,12 +322,14 @@ function wrap(buf::IO, funcdecl::FunctionDecl, libname::ASCIIString)
     funcname = spelling(funcdecl)
     ret_type = repr_jl(return_type(funcdecl))
 
-    arg_types = cindex.function_args(funcdecl)
-    args = [x for x in search(funcdecl, ParmDecl)]
-    arg_list = [repr_jl(x) for x in arg_types]
-    
+    args = cindex.function_args(funcdecl)
+   
+    functy = cu_type(funcdecl)
+    arg_types = [cindex.getArgType(functy, uint32(i)) for i in 0:length(args)-1]
+    arg_typenames = [spelling(x) for x in arg_types]
+    arg_reps = [repr_jl(x) for x in arg_types]
     # check whether any argument types are blocked
-    for arg in arg_list
+    for arg in arg_typenames
         if arg in reserved_argtypes
             return
         end
@@ -326,13 +338,13 @@ function wrap(buf::IO, funcdecl::FunctionDecl, libname::ASCIIString)
     print(buf, "function ")
     print(buf, spelling(funcdecl))
     print(buf, "(")
-    print_args(buf, args, arg_list)
+    print_args(buf, args, arg_reps)
     println(buf, ")")
     print(buf, "  ")
     print(buf, "ccall( (:", funcname, ", ", libname, "), ")
     print(buf, rep_type(ret_type))
     print(buf, ", ")
-    print(buf, rep_args(arg_list), ", ")
+    print(buf, rep_args(arg_reps), ", ")
     for (i,arg) in enumerate(args)
         print(buf, name_safe(arg))
         (i < length(args)) && print(buf, ", ")
@@ -342,7 +354,7 @@ function wrap(buf::IO, funcdecl::FunctionDecl, libname::ASCIIString)
 end
 
 function wrap(buf::IO, tref::TypeRef; usename="")
-    println("Wrap: ", tref)
+    warn("Wrap: ", tref)
 end
 
 function wrap(buf::IO, tdecl::TypedefDecl; usename="")

@@ -8,6 +8,8 @@ typedef enum {
     Portland = 0x3
 } WtoECapitals;
 
-int func(int x, int y=1) {
-    return x+y;
+int func_issue63(int x, int y=1) {
+   return x+y;
 }
+
+int func_issue68(double x, double y[]);

@@ -126,7 +126,9 @@ cl_to_jl = {
     cindex.UInt128          => Uint128,
     cindex.FirstBuiltin     => Void,
     "size_t"                => :Csize_t,
-    "ptrdiff_t"             => :Cptrdiff_t
+    "ptrdiff_t"             => :Cptrdiff_t,
+    "uint64_t"              => :Culong,
+    "uint32_t"              => :Cuint
     }
 
 ################################################################################

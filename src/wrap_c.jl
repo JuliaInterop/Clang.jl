@@ -11,7 +11,8 @@ export wrap_c_headers
 export WrapContext
 
 ### Reserved Julia identifiers to prepend with "_"
-reserved_words = ["abstract", "baremodule", "begin", "bitstype", "break", "catch", "ccall",                                                                                                                                      "const", "continue", "do", "else", "elseif", "end", "export", "finally",
+reserved_words = ["abstract", "baremodule", "begin", "bitstype", "break", "catch", "ccall",
+                   "const", "continue", "do", "else", "elseif", "end", "export", "finally",
                    "for", "function", "global", "if", "immutable", "import", "importall",
                    "let", "local", "macro", "module", "quote", "return", "try", "type",
                    "typealias", "using", "while"]
@@ -27,8 +28,9 @@ end
 ### InternalOptions
 type InternalOptions
     wrap_structs::Bool
+    immutable_structs::Bool
 end
-InternalOptions() = InternalOptions(true)
+InternalOptions() = InternalOptions(true, false)
 
 ### WrapContext
 # stores shared information about the wrapping session
@@ -267,14 +269,16 @@ function wrap (buf::IO, sd::StructDecl; usename = "")
     prebuf = IOBuffer()
     outbuf = IOBuffer()
 
-    # Generate type declaration
-    println(outbuf, "type $usename")
     ccl = children(sd)
     if (length(ccl) < 1)
         warn("Skipping empty struct: \"$usename\"")
         return
     end
-    for cu in children(sd)
+
+    # Generate type declaration
+    print(outbuf, context.options.immutable_structs ? "immutable " : "type ")
+    println(outbuf, usename)
+    for cu in ccl
         cur_name = spelling(cu)
         if (isa(cu, StructDecl) || isa(cu, UnionDecl))
             continue

@@ -484,19 +484,18 @@ function wrap_header(wc::WrapContext, topcu::CLCursor, top_hdr, ostrm::IO)
         #    1. always wrap things in the current top header (ie not includes)
         #    2. everything else is from includes, wrap if:
         #         - the client wants it wc.header_wrapped == True
-        #         - the item has not already been wrapped (ie not in wc.cache_wrapped)
-        if (cursor_hdr == top_hdr)
+        if cursor_hdr == top_hdr
             # pass
-        elseif (!wc.header_wrapped(top_hdr, cu_file(cursor)) ||
-                        (cursor_name in wc.cache_wrapped) )
-            continue
-        elseif (!wc.cursor_wrapped(name(cursor), cursor))
-            continue
-        elseif (beginswith(cursor_name, "__"))
-            # skip compiler definitions
+        elseif !wc.header_wrapped(top_hdr, cursor_hdr)
+           continue
+        end
+
+        if beginswith(cursor_name, "__") || # skip compiler definitions
+           cursor_name in wc.cache_wrapped || # already been wrapped
+           !wc.cursor_wrapped(cursor_name, cursor)
             continue
         end
-        
+
         if (isa(cursor, FunctionDecl))
             wrap(ostrm, cursor, wc.header_library(cu_file(cursor)))
         elseif (isa(cursor, EnumDecl))

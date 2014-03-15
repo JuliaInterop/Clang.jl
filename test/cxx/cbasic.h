@@ -11,3 +11,15 @@ typedef enum {
 int func(int x, int y=1) {
     return x+y;
 }
+
+const char* func2(const char* a=0) {
+	const char* b = a + 2;
+    return b;
+}
+
+class MyClass1 {
+public:
+	const char* func3(int x, int y=1, const char* z=0) {
+		return z;
+	}
+};

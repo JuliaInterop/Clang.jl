@@ -291,12 +291,6 @@ function wrap (buf::IO, sd::StructDecl; usename = "")
         if ((cur_name in reserved_words)) cur_name = "_"*cur_name end
 
         println(outbuf, "    ", cur_name, "::", repr_jl(cu_type(cu)))
-        #if ((hlp = help_type(ty,cu)) != None)
-        #    (hlp[1] != "") && println(prebuf, hlp[1])
-        #    println(outbuf, "    ", cur_name, "::", hlp[2])
-        #else
-        #    println(outbuf, "    ", cur_name, "::", repr_jl(ty))
-        #end
     end
     println(outbuf, "end")
 

@@ -29,8 +29,6 @@ from a collection of header files. The following declarations are currently supp
 * enum: translated to const value symbol
 
 * struct: partial struct support may be enabled by setting WrapContext.options.wrap_structs = true
-  * note: struct support is limited to intrinsic types. Unsupported constructs presently include:
-    nested structs and unions, as well as fixed-size arrays.
 
 ## Users
 
@@ -77,16 +75,30 @@ All testing and development so far has been on Ubuntu 12.04.1 (64-bit)
   ```julia
   using Clang.cindex
 
-  julia> topcu = cindex.parse("Index.h") # Parse Index.h, returning the root cursor
-  julia> topcl = children(topcu)
-  julia> topcl.size
-  595
+  julia> topcu = cindex.parse_header("Index.h") # Parse Index.h, returning the root cursor
+  julia> children(topcu).size
+  2148
 
-  julia> cu = topcl[350]
+  julia> cu = cindex.search(top, "clang_parseTranslationUnit")[1]
   julia> cu_kind(cu) == CIndex.CurKind.FUNCTIONDECL
   true
-  julia> name(topcl[350])
+  julia> name(cu)
   "clang_parseTranslationUnit(CXIndex, const char *, const char *const *, int, struct CXUnsavedFile *, unsigned int, unsigned int)"
+  
+  julia> tkl = tokenize(cu)
+  julia> for tk in tkl
+         println(tk) # use tk.text to get underlying string
+       end
+  Identifier("CXTranslationUnit")
+  Identifier("clang_parseTranslationUnit")
+  Punctuation("(")
+  Identifier("CXIndex")
+  Identifier("CIdx")
+  Punctuation(",")
+  Keyword("const")
+  Keyword("char")
+  Punctuation("*")
+  Identifier("source_filename")
   ```
   See the examples/ and util/ folders for further usage 
   scenarios. Clang.jl is partially self-generating,
@@ -104,6 +116,7 @@ All testing and development so far has been on Ubuntu 12.04.1 (64-bit)
     cu_file     # file in which cursor was declared
     is_function # CXCursor or CXType
     is_null     # CXCursor
+    tokenize    # get tokens underlying given cursor
 
   For documentation of wrapped CIndex functions, see:
 

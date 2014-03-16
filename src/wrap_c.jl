@@ -351,7 +351,7 @@ function wrap(context::WrapContext, buf::IO, funcdecl::FunctionDecl, libname::AS
         end
     end
 
-    args = map(symbol_safe, args)
+    args = convert(Array{Symbol,1}, map(symbol_safe, args))
     sig = efunsig(funcname, args, arg_reps)
     body = eccall(funcname, symbol(libname), ret_type, arg_reps, args)
     e = Expr(:function, sig, Expr(:block, body))

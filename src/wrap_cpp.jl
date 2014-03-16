@@ -137,7 +137,10 @@ function wrap(out::IO, method::cindex.CXXMethod, nameid::Int)
 
     # bail out if any argument is not supported
     args = get_args(method)
-    if (!check_args(args)) return end
+    if (!check_args(args))
+        warn("could not wrap $(spelling(method)) because of arguments")
+        return false
+    end
  
     methodname = spelling(method)
     parentdecl = cindex.getCursorLexicalParent(method)
@@ -200,7 +203,7 @@ function wrap(out::IO, method::cindex.Constructor, nameid::Int)
     # bail out if any argument is not supported
     args = get_args(method)
     if (!check_args(args))
-        warn("mismatch in args: $method")
+        warn("could not wrap $(spelling(method)) because of arguments")
         return false
     end
  
@@ -289,6 +292,15 @@ cl_to_c = {
 ################################################################################
 # Construction of Julia wrapper
 ################################################################################
+
+
+function class_supers(cl::ClassDecl)
+    toks = tokenize(cl)
+    a = findfirst(x->x.text==":", toks)
+    b = findfirst(x->x.text=="{", toks)
+    supers = collect(toks)[a+1:b-1]
+    return collect(filter(x->isa(x, cindex.Identifier), supers))
+end
 
 # TODO: FIXME
 function wrapjl(out::IO, t::cindex.ConstantArray)
@@ -420,15 +432,19 @@ function wrapjl(out::IO, libname::ASCIIString, method::cindex.Constructor, id::I
     print(out, takebuf_string(buf))
 end
 
-function wrapjl(out::IO, class::cindex.ClassDecl)
+function wrapjl(out::IO, libname::ASCIIString, class::cindex.ClassDecl)
     MethodCount = Dict{ASCIIString, Int}()
 
     for decl in [c for c in children(class)]
         declname = spelling(decl)
         if isa(decl, cindex.CXXMethod)
             id = (MethodCount[declname] = get(MethodCount, declname, 0) + 1)
-            wrapjl(out, decl, id)
+            wrapjl(out, libname, decl, id)
         end 
+    end
+
+    for sup in class_supers(class)
+        println(out, "@subclass $(spelling(class)) $(sup.text)")
     end
 end
 

@@ -21,4 +21,10 @@ f = funcs[1]
 
 @test all(map(x->x.text, function_return_modifiers(f)) .== ["const", ])
 
-Clang.wt.wrap(STDOUT, search(top, "MyClass1")|>first)
+cl = search(top, "MyClass1")|>first
+Clang.wt.wrap(STDOUT, cl)
+Clang.wt.wrapjl(STDOUT, "mylib", cl)
+
+cl = search(top, "MyClass2")|>first
+Clang.wt.wrap(STDOUT, cl)
+Clang.wt.wrapjl(STDOUT, "mylib", cl)

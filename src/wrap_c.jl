@@ -209,7 +209,7 @@ function repr_jl(t::ConstantArray)
         println(buf, "end")
     end
     push!(context.cache_wrapped, typename)
-    return typename
+    return symbol(typename)
 end
 
 function repr_jl(t::IncompleteArray)

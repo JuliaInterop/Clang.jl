@@ -51,6 +51,7 @@ type WrapContext
     options::InternalOptions
     anon_count::Int
     func_rewriter::Function
+    type_rewriter::Function
 end
 
 ### Convenience function to initialize wrapping context with defaults
@@ -67,7 +68,8 @@ function init(;
             header_library                  = None,
             header_outputfile               = None,
             cursor_wrapped                  = (cursorname, cursor) -> true,
-            func_rewriter                   = x -> x)
+            func_rewriter                   = x -> x,
+            type_rewriter                   = x -> x)
 
     # Set up some optional args if they are not explicitly passed.
 
@@ -103,7 +105,8 @@ function init(;
                                  Dict{ASCIIString,IO}(),
                                  InternalOptions(),
                                  0,
-                                 func_rewriter)
+                                 func_rewriter,
+                                 type_rewriter)
     return context
 end
 
@@ -271,18 +274,11 @@ function wrap(buf::IO, cursor::EnumDecl; usename="")
     println(buf, "# end enum $enumname")
 end
 
-function wrap (buf::IO, sd::StructDecl; usename = "")
+function wrap(context::WrapContext, buf::IO, sd::StructDecl; usename = "")
     if (usename == "" && (usename = name(sd)) == "")
         warn("Skipping unnamed StructDecl")
         return
     end
-    global context::WrapContext
-    if (!context.options.wrap_structs)
-        return
-    end
-
-    prebuf = IOBuffer()
-    outbuf = IOBuffer()
 
     ccl = children(sd)
     if (length(ccl) < 1)
@@ -291,8 +287,8 @@ function wrap (buf::IO, sd::StructDecl; usename = "")
     end
 
     # Generate type declaration
-    print(outbuf, context.options.immutable_structs ? "immutable " : "type ")
-    println(outbuf, usename)
+    b = Expr(:block)
+    e = Expr(:type, !context.options.immutable_structs, symbol(usename), b)
     for cu in ccl
         cur_name = spelling(cu)
         if (isa(cu, StructDecl) || isa(cu, UnionDecl))
@@ -305,14 +301,13 @@ function wrap (buf::IO, sd::StructDecl; usename = "")
         end
         if ((cur_name in reserved_words)) cur_name = "_"*cur_name end
 
-        println(outbuf, "    ", cur_name, "::", repr_jl(cu_type(cu)))
+        push!(b.args, Expr(:(::), symbol(cur_name), repr_jl(cu_type(cu))))
     end
-    println(outbuf, "end")
 
-    # print the type helpers to real output
-    print(buf, takebuf_string(prebuf))
-    # print the type declaration to real output
-    print(buf, takebuf_string(outbuf))
+    # apply user transformation
+    e = context.type_rewriter(e)
+
+    println(buf, e)
 end
 
 function efunsig(name::Symbol, args::Vector{Symbol}, types)
@@ -508,7 +503,7 @@ function wrap_header(wc::WrapContext, topcu::CLCursor, top_hdr, ostrm::IO)
         elseif (isa(cursor, MacroDefinition))
             wrap(wc.common_stream,cursor)
         elseif (wc.options.wrap_structs && isa(cursor, StructDecl))
-            wrap(wc.common_stream,cursor)
+            wrap(wc, wc.common_stream, cursor)
         else
             continue
         end

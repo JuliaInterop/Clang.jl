@@ -39,3 +39,6 @@ public:
 	}
 
 };
+int func1(int a, double b, double* c, void* d);
+
+const char* func_constcharptr();

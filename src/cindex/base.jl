@@ -236,6 +236,9 @@ end
 function CXXMethod_isVirtual(a1::CLCursor,)
     ccall( (:wci_CXXMethod_isVirtual, libwci), Uint32, (Ptr{Void},), a1.data, )
 end
+function CXXMethod_isProtected(a1::CLCursor,)
+    ccall( (:wci_CXXMethod_isProtected, libwci), Uint32, (Ptr{Void},), a1.data, )
+end
 function getTemplateCursorKind(a1::CLCursor,)
     ccall( (:wci_getTemplateCursorKind, libwci), Int32, (Ptr{Void},), a1.data, )
 end

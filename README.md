@@ -36,6 +36,7 @@ from a collection of header files. The following declarations are currently supp
 * [CUFFT.jl](https://github.com/timholy/CUFFT.jl): Bindings to CUDA FFT library
 * [Sundials.jl](https://github.com/tshort/Sundials.jl): interface to the LLNL "SUite of Nonlinear and DIfferential/ALgebraic equation Solvers" package
 * [libCURL.jl](https://github.com/amitmurthy/libCURL.jl): wrapper of cURL
+* [WCSLIB.jl](https://github.com/JuliaAstro/WCSLIB.jl)
 
 ## Installation
 

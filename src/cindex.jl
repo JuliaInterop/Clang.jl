@@ -6,6 +6,8 @@ export parse_header, cu_type, ty_kind, name, spelling,
 export CLType, CLCursor, CXString, CXTypeKind, CursorList, TokenList
 export getindex, start, next, done, search, show, endof
 
+export function_return_modifiers, function_arg_modifiers
+
 import Base.getindex, Base.start, Base.next, Base.done, Base.search, Base.show
 import Base.endof, Base.length
 
@@ -47,7 +49,7 @@ function parse_header(header::String;
         index = idx_create(0, (diagnostics ? 1 : 0))
     end
     if (cplusplus)
-        push!(args, ["-x", "c++"])
+        append!(args, ["-x", "c++"])
     end
     if (length(includes) > 0)
         args = vcat(args, [["-I",x] for x in includes]...)
@@ -276,6 +278,38 @@ function function_arg_defaults(method::Union(cindex.CXXMethod, cindex.FunctionDe
         end
     end
     return tuple(defvals...)
+end
+
+#returns an array of the function return type modifiers
+function function_return_modifiers(f::Union(FunctionDecl, CXXMethod))
+    modifs = Any[]
+    for tok in tokenize(f)
+        if isa(tok, cindex.Keyword)
+            if tok.text in ["const"]
+                push!(modifs, tok)
+            end
+        end
+        isa(tok, cindex.Identifier) && tok.text==spelling(f) && break
+    end
+    return modifs
+end
+
+function function_arg_modifiers(p::ParmDecl)
+    modifs = cindex.Keyword[]
+    for tok in tokenize(p)
+        
+        #only read keywords
+        isa(tok, cindex.Keyword) || continue
+
+        #read up to variable identifier
+        isa(tok, cindex.Identifier) && break
+
+        const tt = tok.text
+        if tt in ["const", "virtual"]
+            push!(modifs, tok)
+        end
+    end
+    return modifs
 end
 
 ################################################################################

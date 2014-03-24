@@ -8,15 +8,6 @@ typedef enum {
     Portland = 0x3
 } WtoECapitals;
 
-int func(int x, int y=1) {
-    return x+y;
-}
-
-const char* func2(const char* a=0) {
-	const char* b = a + 2;
-    return b;
-}
-
 int func1(int a, double b, double* c, void* d);
 
 const char* func_constcharptr();

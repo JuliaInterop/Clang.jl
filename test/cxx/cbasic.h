@@ -12,7 +12,7 @@ int func1(int a, double b, double* c, void* d);
 
 const char* func_constcharptr();
 
-int func(int x, int y=1) {
+int func(int x, int y=-10) {
     return x+y;
 }
 

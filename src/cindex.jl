@@ -252,8 +252,8 @@ function function_arg_defaults(method::Union(cindex.CXXMethod, cindex.FunctionDe
             #value in case default was not specified
             lit = nothing
             toks = tokenize(c)
-            n = 1
 
+            n = 1
             #get index of '='
             for tok in toks
                 if isa(tok, cindex.Punctuation) && tok.text == "="
@@ -261,10 +261,12 @@ function function_arg_defaults(method::Union(cindex.CXXMethod, cindex.FunctionDe
                 end
                 n += 1
             end
+           
+            ts = collect(toks)
 
             #default value is the one after '='
             if n<length(toks)
-                lit = toks[n+1].text
+                lit = join(map(x->x.text, ts[n+1:end]), "")
             end
 
             #parse default value as Julia code

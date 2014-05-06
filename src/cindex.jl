@@ -104,6 +104,7 @@ end
 anymatch(first, args...) = any({==(first, a) for a in args})
 
 cu_type(c::CLCursor) = getCursorType(c)
+
 ty_kind(c::CLType) = convert(Int, c.data[1].kind)
 name(c::CLCursor) = getCursorDisplayName(c)
 spelling(c::CLType) = getTypeKindSpelling(convert(Int32, ty_kind(c)))
@@ -149,7 +150,7 @@ end
 
 function value(c::EnumConstantDecl)
     t = cu_type(c)
-    if isa(t, IntType) || isa(t, Long) || isa(t, LongLong)
+    if isa(t, IntType) || isa(t, Long) || isa(t, LongLong) || isa(t, Enum)
             return getEnumConstantDeclValue(c)
     elseif isa(t, UInt) || isa(t, ULong) || isa(t, ULongLong)
             return getEnumConstantDeclUnsignedValue(c)
@@ -386,4 +387,18 @@ cl_size(clptr::Ptr{Void}) =
         Int,
         (Ptr{Void},), clptr)
 
+#returns an array of the semantic parentage of a token
+#example namespace1::Class1::MyEnum -> (:namespace1, :Class1)
+function get_parentage(x)
+    arr = Any[]
+    p = x
+    while !isa(p, TranslationUnit)
+        push!(arr, p)
+        p = cindex.getCursorSemanticParent(p)
+    end
+    return arr |> reverse |> collect
+end
+get_name_namespace(x) = join(map(name, get_parentage(x)), "_")
+
+export get_name_namespace, get_parentage
 end # module

@@ -261,7 +261,11 @@ baremodule CursorKind
     const CXXOverrideAttr = 405
     const AnnotateAttr = 406
     const AsmLabelAttr = 407
-    const LastAttr = 407
+    const PackedAttr = 408
+    const PureAttr = 409
+    const ConstAttr = 410
+    const NoDuplicateAttr = 411
+    const LastAttr = NoDuplicateAttr
     const PreprocessingDirective = 500
     const MacroDefinition = 501
     const MacroExpansion = 502

@@ -258,7 +258,7 @@ end
 # Handle declarations
 ################################################################################
 
-function wrap(buf::IO, cursor::EnumDecl; usename="")
+function wrap(context::WrapContext, buf::IO, cursor::EnumDecl; usename="")
     if (usename == "" && (usename = name(cursor)) == "")
         usename = name_anon()
     end
@@ -275,6 +275,8 @@ function wrap(buf::IO, cursor::EnumDecl; usename="")
 end
 
 function wrap(context::WrapContext, buf::IO, sd::StructDecl; usename = "")
+    !context.options.wrap_structs && return
+
     if (usename == "" && (usename = name(sd)) == "")
         warn("Skipping unnamed StructDecl")
         return
@@ -323,7 +325,7 @@ function eccall(funcname::Symbol, libname::Symbol, rtype, types, args)
          args...)
 end
 
-function wrap(context::WrapContext, buf::IO, funcdecl::FunctionDecl, libname::ASCIIString)
+function wrap(context::WrapContext, buf::IO, funcdecl::FunctionDecl, libname)
     ftype = cindex.cu_type(funcdecl)
     if cindex.isFunctionTypeVariadic(ftype) == 1
         # skip vararg functions
@@ -357,11 +359,7 @@ function wrap(context::WrapContext, buf::IO, funcdecl::FunctionDecl, libname::AS
     println(buf, e)
 end
 
-function wrap(buf::IO, tref::TypeRef; usename="")
-    warn("Wrap: ", tref)
-end
-
-function wrap(buf::IO, tdecl::TypedefDecl; usename="")
+function wrap(context::WrapContext, buf::IO, tdecl::TypedefDecl; usename="")
     function wrap_td(out::IO, t::CLType)
         println(buf, "typealias ",    spelling(t), " ", repr_jl(t)) 
     end
@@ -374,7 +372,7 @@ function wrap(buf::IO, tdecl::TypedefDecl; usename="")
         if isa(tdunxp, TypeRef)
             td_type = tdunxp
         else
-            wrap(buf, tdunxp; usename=name(tdecl))
+            wrap(context, buf, tdunxp; usename=name(tdecl))
             return # TODO.. ugly flow
         end
     elseif isa(td_type, FunctionProto)
@@ -437,7 +435,7 @@ function lex_exprn(tokens::TokenList, pos::Int)
     return (exprn,pos)
 end 
 
-function wrap(strm::IO, md::cindex.MacroDefinition)
+function wrap(context::WrapContext, strm::IO, md::cindex.MacroDefinition)
     tokens = tokenize(md)
     # Skip any empty definitions
     if(tokens.size < 2) return end
@@ -458,10 +456,16 @@ function wrap(strm::IO, md::cindex.MacroDefinition)
     print(strm, "const " * string(tokens[1].text) * " = " * exprn * "\n")
 end
 
-function wrap(buf::IO, cursor::TypeRef)
+function wrap(context::WrapContext, buf::IO, cursor::TypeRef; usename="")
+    usename == "" && (usename = name(cursor))
     println("Printing typeref: ", cursor)
-    print(buf, name(cursor))
+    print(buf, usename)
 end
+
+function wrap(context::WrapContext, buf::IO, cursor; usename="")
+    #warn("Not wrapping $(typeof(cursor))")
+end
+
 
 ################################################################################
 # Wrapping driver
@@ -496,13 +500,8 @@ function wrap_header(wc::WrapContext, topcu::CLCursor, top_hdr, ostrm::IO)
 
         if (isa(cursor, FunctionDecl))
             wrap(wc, ostrm, cursor, wc.header_library(cu_file(cursor)))
-        elseif (isa(cursor, EnumDecl))
-            wrap(wc.common_stream, cursor)
-        elseif (isa(cursor, TypedefDecl))
-            wrap(wc.common_stream,cursor)
-        elseif (isa(cursor, MacroDefinition))
-            wrap(wc.common_stream,cursor)
-        elseif (wc.options.wrap_structs && isa(cursor, StructDecl))
+        elseif !isa(cursor, TypeRef)
+            # handle: EnumDecl, TypedefDecl, MacroDefinition, StructDecl
             wrap(wc, wc.common_stream, cursor)
         else
             continue

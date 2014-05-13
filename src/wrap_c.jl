@@ -238,14 +238,16 @@ end
 #     declare a block of bytes to match.
 ###############################################################################
  
-typesize(cu::CLCursor)     = typesize(cu_type(cu))
+typesize(t::CLType) = sizeof(eval(cl_to_jl[typeof(t)]))
+typesize(t::Record) = begin warn("  incorrect typesize for Record field"); 0 end
+typesize(t::Unexposed) = being warn("  incorrect typesize for Unexposed field"); 0 end
 typesize(t::ConstantArray) = cindex.getArraySize(t)
     
 function largestfield(cu::UnionDecl)
-    maxsize,maxelem = 0
+    maxsize,maxelem = 0,0
     fields = children(cu)
     for i in 1:length(fields)
-        maxelem = ( (maxsize > (typesize(fields[i]))) ? maxelem : i )
+        maxelem = ( (maxsize > (typesize(cu_type(fields[i])))) ? maxelem : i )
     end
     fields[maxelem]
 end
@@ -309,6 +311,20 @@ function wrap(context::WrapContext, buf::IO, sd::StructDecl; usename = "")
     # apply user transformation
     e = context.type_rewriter(e)
 
+    println(buf, e)
+end
+
+function wrap(context::WrapContext, buf::IO, ud::UnionDecl; usename = "")
+    if (usename == "" && (usename = name(ud)) == "")
+        warn("Skipping unnamed StructDecl")
+        return
+    end
+    
+    b = Expr(:block)
+    e = Expr(:type, !context.options.immutable_structs, symbol(usename), b)
+    max_cu = largestfield(ud)
+    push!(b.args, Expr(:(::), symbol("_"*usename), repr_jl(cu_type(max_cu))))
+    
     println(buf, e)
 end
 
@@ -463,7 +479,7 @@ function wrap(context::WrapContext, buf::IO, cursor::TypeRef; usename="")
 end
 
 function wrap(context::WrapContext, buf::IO, cursor; usename="")
-    #warn("Not wrapping $(typeof(cursor))")
+    warn("Not wrapping $(typeof(cursor))  $usename $(name(cursor))")
 end
 
 

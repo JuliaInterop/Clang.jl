@@ -144,10 +144,11 @@ cl_to_jl = {
     cindex.NullPtr          => :C_NULL,
     cindex.UInt128          => :Uint128,
     cindex.FirstBuiltin     => :Void,
-    "size_t"                => :Csize_t,
-    "ptrdiff_t"             => :Cptrdiff_t,
-    "uint64_t"              => :Uint64,
-    "uint32_t"              => :Uint32
+    :size_t                 => :Csize_t,
+    :ptrdiff_t              => :Cptrdiff_t,
+    :uint64_t               => :Uint64,
+    :uint32_t               => :Uint32,
+    :uint8_t                => :Uint8
     }
 
 ################################################################################
@@ -240,7 +241,7 @@ end
  
 typesize(t::CLType) = sizeof(eval(cl_to_jl[typeof(t)]))
 typesize(t::Record) = begin warn("  incorrect typesize for Record field"); 0 end
-typesize(t::Unexposed) = being warn("  incorrect typesize for Unexposed field"); 0 end
+typesize(t::Unexposed) = begin warn("  incorrect typesize for Unexposed field"); 0 end
 typesize(t::ConstantArray) = cindex.getArraySize(t)
     
 function largestfield(cu::UnionDecl)
@@ -290,6 +291,8 @@ function wrap(context::WrapContext, buf::IO, sd::StructDecl; usename = "")
         return
     end
 
+    usename in context.cache_wrapped && return
+
     # Generate type declaration
     b = Expr(:block)
     e = Expr(:type, !context.options.immutable_structs, symbol(usename), b)
@@ -312,6 +315,8 @@ function wrap(context::WrapContext, buf::IO, sd::StructDecl; usename = "")
     e = context.type_rewriter(e)
 
     println(buf, e)
+
+    push!(context.cache_wrapped, usename)
 end
 
 function wrap(context::WrapContext, buf::IO, ud::UnionDecl; usename = "")
@@ -376,10 +381,6 @@ function wrap(context::WrapContext, buf::IO, funcdecl::FunctionDecl, libname)
 end
 
 function wrap(context::WrapContext, buf::IO, tdecl::TypedefDecl; usename="")
-    function wrap_td(out::IO, t::CLType)
-        println(buf, "typealias ",    spelling(t), " ", repr_jl(t)) 
-    end
-
     cursor_type = cindex.cu_type(tdecl)
     td_type = cindex.getTypedefDeclUnderlyingType(tdecl)
     

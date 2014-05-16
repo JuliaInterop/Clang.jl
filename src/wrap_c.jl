@@ -245,6 +245,7 @@ typesize(t::Unexposed) = begin warn("  incorrect typesize for Unexposed field");
 typesize(t::ConstantArray) = cindex.getArraySize(t)
 typesize(t::TypedefDecl) = typesize(cindex.getTypedefDeclUnderlyingType(t))
 typesize(t::Typedef) = typesize(cindex.getTypeDeclaration(t))
+typesize(t::Invalid) = begin warn("  incorrect typesize for Invalid field"); 0 end
     
 function largestfield(cu::UnionDecl)
     maxsize,maxelem = 0,0

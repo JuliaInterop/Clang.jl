@@ -243,6 +243,8 @@ typesize(t::CLType) = sizeof(eval(cl_to_jl[typeof(t)]))
 typesize(t::Record) = begin warn("  incorrect typesize for Record field"); 0 end
 typesize(t::Unexposed) = begin warn("  incorrect typesize for Unexposed field"); 0 end
 typesize(t::ConstantArray) = cindex.getArraySize(t)
+typesize(t::TypedefDecl) = typesize(cindex.getTypedefDeclUnderlyingType(t))
+typesize(t::Typedef) = typesize(cindex.getTypeDeclaration(t))
     
 function largestfield(cu::UnionDecl)
     maxsize,maxelem = 0,0

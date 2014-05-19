@@ -465,12 +465,16 @@ function wrap(context::WrapContext, strm::IO, md::cindex.MacroDefinition)
     if(tokens[2].text == "(")
         exprn,pos = lex_exprn(tokens, 3)
         if (pos != endof(tokens) || tokens[pos].text != ")")
-            print(strm, "# Skipping MacroDefinition: ", join([c.text for c in tokens]), "\n")
+            print(strm, "# Skipping MacroDefinition: ", join([c.text for c in tokens], " "), "\n")
             return
         end
         exprn = "(" * exprn * ")"
     else
         (exprn,pos) = lex_exprn(tokens, 2)
+        if (pos != endof(tokens))
+            print(strm, "# Skipping MacroDefinition: ", join([c.text for c in tokens], " "), "\n")
+            return
+        end
     end
     exprn = replace(exprn, "\$", "\\\$")
     print(strm, "const " * string(tokens[1].text) * " = " * exprn * "\n")

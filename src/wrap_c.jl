@@ -148,7 +148,12 @@ cl_to_jl = {
     :ptrdiff_t              => :Cptrdiff_t,
     :uint64_t               => :Uint64,
     :uint32_t               => :Uint32,
-    :uint8_t                => :Uint8
+    :uint16_t               => :Uint16,
+    :uint8_t                => :Uint8,
+    :int64_t                => :Int64,
+    :int32_t                => :Int32,
+    :int16_t                => :Int16,
+    :int8_t                 => :Int8
     }
 
 ################################################################################
@@ -294,8 +299,6 @@ function wrap(context::WrapContext, buf::IO, sd::StructDecl; usename = "")
         return
     end
 
-    usename in context.cache_wrapped && return
-
     # Generate type declaration
     b = Expr(:block)
     e = Expr(:type, !context.options.immutable_structs, symbol(usename), b)
@@ -324,7 +327,7 @@ end
 
 function wrap(context::WrapContext, buf::IO, ud::UnionDecl; usename = "")
     if (usename == "" && (usename = name(ud)) == "")
-        warn("Skipping unnamed StructDecl")
+        warn("Skipping unnamed UnionDecl")
         return
     end
     
@@ -334,6 +337,8 @@ function wrap(context::WrapContext, buf::IO, ud::UnionDecl; usename = "")
     push!(b.args, Expr(:(::), symbol("_"*usename), repr_jl(cu_type(max_cu))))
     
     println(buf, e)
+
+    push!(context.cache_wrapped, usename)
 end
 
 function efunsig(name::Symbol, args::Vector{Symbol}, types)
@@ -343,7 +348,7 @@ end
 
 function eccall(funcname::Symbol, libname::Symbol, rtype, types, args)
     Expr(:ccall,
-         Expr(:tuple, QuoteNode(funcname), libname),
+         Expr(:tuple, QuoteNode(funcname), QuoteNode(libname)),
          rtype,
          Expr(:tuple, types...),
          args...)

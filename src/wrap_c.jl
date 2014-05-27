@@ -429,7 +429,7 @@ function lex_exprn(tokens::TokenList, pos::Int)
         # note: put multi-character first, or it will break out too soon for those!
         literalsuffixes = ["ULL", "Ull", "uLL", "ull", "LLU", "LLu", "llU", "llu",
                            "LL", "ll", "UL", "Ul", "uL", "ul", "LU", "Lu", "lU", "lu",
-                           "U", "u", "L", "l"]
+                           "U", "u", "L", "l", "F", "f"]
         txt = tok.text
         if isa(tok,cindex.Identifier) || isa(tok,cindex.Punctuation)
             # pass

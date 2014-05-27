@@ -6,6 +6,7 @@ module wrap_c
     version = v"0.0.0"
 
 using Clang.cindex
+using DataStructures
 
 export wrap_c_headers
 export WrapContext
@@ -45,9 +46,9 @@ type WrapContext
     header_library::Function                     # called to determine shared library for given header
     header_outfile::Function                     # called to determine output file group for given header
     cursor_wrapped::Function                     # called to determine cursor inclusion statusk
-    common_stream
+    common_buf::Array                            # output buffer for common items: typedefs, enums, etc.
     cache_wrapped::Set{ASCIIString}
-    output_streams::Dict{ASCIIString, IO}
+    output_bufs::DefaultOrderedDict{ASCIIString, Array{Any}}
     options::InternalOptions
     anon_count::Int
     func_rewriter::Function
@@ -100,9 +101,9 @@ function init(;
                                  header_library,
                                  header_outputfile,
                                  cursor_wrapped,
-                                 None,
+                                 {},
                                  Set{ASCIIString}(),
-                                 Dict{ASCIIString,IO}(),
+                                 DefaultOrderedDict(ASCIIString, Array{Any}, ()->{}),
                                  InternalOptions(),
                                  0,
                                  func_rewriter,
@@ -205,17 +206,19 @@ function repr_jl(t::ConstantArray)
     
     # Grab the WrapContext in order to add bitstype
     global context::WrapContext
-    buf = context.common_stream
+    buf = context.common_buf
 
     arrsize = cindex.getArraySize(t)
     eltype = cindex.getArrayElementType(t)
     typename = string("Array_", arrsize, "_", repr_short(eltype))
     if !(typename in context.cache_wrapped)
-        println(buf, "immutable ", typename)
+        b = Expr(:block)
+        e = Expr(:type, false, symbol(typename), b)
+        repr = repr_jl(eltype)
         for i = 1:arrsize
-            println(buf, "    d", i, "::", repr_jl(eltype))
+            push!(b.args, Expr(:(::), symbol("d$i"), repr))
         end
-        println(buf, "end")
+        push!(buf, e)
     end
     push!(context.cache_wrapped, typename)
     return symbol(typename)
@@ -269,23 +272,22 @@ end
 # Handle declarations
 ################################################################################
 
-function wrap(context::WrapContext, buf::IO, cursor::EnumDecl; usename="")
+function wrap(context::WrapContext, buf::Array, cursor::EnumDecl; usename="")
     if (usename == "" && (usename = name(cursor)) == "")
         usename = name_anon()
     end
     enumname = usename
-    println(buf, "# begin enum $enumname")
-    println(buf, "typealias $enumname ", repr_jl(cindex.getEnumDeclIntegerType(cursor)))
+    push!(buf, "# begin enum $enumname")
+    push!(buf, Expr(:typealias, symbol(enumname), repr_jl(cindex.getEnumDeclIntegerType(cursor))))
     for enumitem in children(cursor)
         cur_name = cindex.spelling(enumitem)
         if (length(cur_name) < 1) continue end
-
-        println(buf, "const ", cur_name, " = ", value(enumitem))
+        push!(buf, Expr(:const, Expr(:(=), symbol(cur_name), value(enumitem))))
     end
-    println(buf, "# end enum $enumname")
+    push!(buf, "# end enum $enumname")
 end
 
-function wrap(context::WrapContext, buf::IO, sd::StructDecl; usename = "")
+function wrap(context::WrapContext, buf::Array, sd::StructDecl; usename = "")
     !context.options.wrap_structs && return
 
     if (usename == "" && (usename = name(sd)) == "")
@@ -314,18 +316,19 @@ function wrap(context::WrapContext, buf::IO, sd::StructDecl; usename = "")
         end
         if ((cur_name in reserved_words)) cur_name = "_"*cur_name end
 
-        push!(b.args, Expr(:(::), symbol(cur_name), repr_jl(cu_type(cu))))
+        repr = repr_jl(cu_type(cu))
+        push!(b.args, Expr(:(::), symbol(cur_name), repr))
     end
 
     # apply user transformation
     e = context.type_rewriter(e)
 
-    println(buf, e)
+    push!(buf, e)
 
     push!(context.cache_wrapped, usename)
 end
 
-function wrap(context::WrapContext, buf::IO, ud::UnionDecl; usename = "")
+function wrap(context::WrapContext, buf::Array, ud::UnionDecl; usename = "")
     if (usename == "" && (usename = name(ud)) == "")
         warn("Skipping unnamed UnionDecl")
         return
@@ -336,7 +339,7 @@ function wrap(context::WrapContext, buf::IO, ud::UnionDecl; usename = "")
     max_cu = largestfield(ud)
     push!(b.args, Expr(:(::), symbol("_"*usename), repr_jl(cu_type(max_cu))))
     
-    println(buf, e)
+    push!(buf, e)
 
     push!(context.cache_wrapped, usename)
 end
@@ -354,7 +357,7 @@ function eccall(funcname::Symbol, libname::Symbol, rtype, types, args)
          args...)
 end
 
-function wrap(context::WrapContext, buf::IO, funcdecl::FunctionDecl, libname)
+function wrap(context::WrapContext, buf::Array, funcdecl::FunctionDecl, libname)
     ftype = cindex.cu_type(funcdecl)
     if cindex.isFunctionTypeVariadic(ftype) == 1
         # skip vararg functions
@@ -385,10 +388,10 @@ function wrap(context::WrapContext, buf::IO, funcdecl::FunctionDecl, libname)
     # apply user transformation
     e = context.func_rewriter(e)
 
-    println(buf, e)
+    push!(buf, e)
 end
 
-function wrap(context::WrapContext, buf::IO, tdecl::TypedefDecl; usename="")
+function wrap(context::WrapContext, buf::Array, tdecl::TypedefDecl; usename="")
     cursor_type = cindex.cu_type(tdecl)
     td_type = cindex.getTypedefDeclUnderlyingType(tdecl)
     
@@ -404,7 +407,7 @@ function wrap(context::WrapContext, buf::IO, tdecl::TypedefDecl; usename="")
         return string("# Skipping Typedef: FunctionProto", spelling(tdecl))
     end
 
-    println(buf, "typealias ",    spelling(tdecl), " ", repr_jl(td_type) )
+    push!(buf, Expr(:typealias, symbol(spelling(tdecl)), repr_jl(td_type)))
 end
 
 ################################################################################
@@ -462,7 +465,7 @@ function lex_exprn(tokens::TokenList, pos::Int)
     return (exprn,pos)
 end 
 
-function wrap(context::WrapContext, strm::IO, md::cindex.MacroDefinition)
+function wrap(context::WrapContext, buf::Array, md::cindex.MacroDefinition)
     tokens = tokenize(md)
     # Skip any empty definitions
     if(tokens.size < 2) return end
@@ -472,24 +475,29 @@ function wrap(context::WrapContext, strm::IO, md::cindex.MacroDefinition)
     if(tokens[2].text == "(")
         exprn,pos = lex_exprn(tokens, 3)
         if (pos != endof(tokens) || tokens[pos].text != ")")
-            print(strm, "# Skipping MacroDefinition: ", join([c.text for c in tokens]), "\n")
+            push!(buf, string("# Skipping MacroDefinition: ", join([c.text for c in tokens], " ")))
             return
         end
         exprn = "(" * exprn * ")"
     else
         (exprn,pos) = lex_exprn(tokens, 2)
+        if (pos != endof(tokens))
+            push!(buf, string("# Skipping MacroDefinition: ", join([c.text for c in tokens], " ")))
+            return
+        end
     end
-    exprn = replace(exprn, "\$", "\\\$")
-    print(strm, "const " * string(tokens[1].text) * " = " * exprn * "\n")
+    e = Expr(:const, Expr(:(=), symbol(tokens[1].text), parse(exprn)))
+    push!(buf, e)
 end
 
-function wrap(context::WrapContext, buf::IO, cursor::TypeRef; usename="")
+# Does this actually occur in header files???
+function wrap(context::WrapContext, buf::Array, cursor::TypeRef; usename="")
     usename == "" && (usename = name(cursor))
     println("Printing typeref: ", cursor)
-    print(buf, usename)
+    push!(buf, symbol(usename))
 end
 
-function wrap(context::WrapContext, buf::IO, cursor; usename="")
+function wrap(context::WrapContext, buf::Array, cursor; usename="")
     warn("Not wrapping $(typeof(cursor))  $usename $(name(cursor))")
 end
 
@@ -498,7 +506,7 @@ end
 # Wrapping driver
 ################################################################################
 
-function wrap_header(wc::WrapContext, topcu::CLCursor, top_hdr, ostrm::IO)
+function wrap_header(wc::WrapContext, topcu::CLCursor, top_hdr, obuf::Array)
     println("WRAPPING HEADER: $top_hdr")
     
     topcl = children(topcu)
@@ -526,37 +534,24 @@ function wrap_header(wc::WrapContext, topcu::CLCursor, top_hdr, ostrm::IO)
         end
 
         if (isa(cursor, FunctionDecl))
-            wrap(wc, ostrm, cursor, wc.header_library(cu_file(cursor)))
+            wrap(wc, obuf, cursor, wc.header_library(cu_file(cursor)))
         elseif !isa(cursor, TypeRef)
             # handle: EnumDecl, TypedefDecl, MacroDefinition, StructDecl
-            wrap(wc, wc.common_stream, cursor)
+            wrap(wc, wc.common_buf, cursor)
         else
             continue
         end
     end
+
     cindex.cl_dispose(topcl)
 end
 
-function header_output_stream(wc::WrapContext, hfile)
-    jloutfile = wc.header_outfile(hfile)
-    if (_x = get(wc.output_streams, jloutfile, None)) != None
-        return _x
-    else
-        strm = IOStream("")
-        try strm = open(jloutfile, "w")
-        catch error("Unable to create output: $jloutfile for header: $hfile") end
-        wc.output_streams[jloutfile] = strm
-    end
-    return strm
-end        
 
 ################################################################################
 # Wrapping driver
 ################################################################################
 
 function wrap_c_headers(wc::WrapContext, headers)
-
-    println(wc.clang_includes)
 
     # Check headers!
     for h in headers
@@ -570,37 +565,42 @@ function wrap_c_headers(wc::WrapContext, headers)
         end
     end
 
-    # Output stream for common items: typedefs, enums, etc.
-    wc.common_stream = IOBuffer()
-
     # Generate the wrappings
-    try
-        for hfile in headers
-            ostrm = header_output_stream(wc, hfile)
+    for hfile in headers
+        obuf = wc.output_bufs[hfile]
+        topcu = cindex.parse_header(hfile; 
+                                    index = wc.index,
+                                    args  = wc.clang_args,
+                                    includes = wc.clang_includes,
+                                    flags = TranslationUnit_Flags.DetailedPreprocessingRecord |
+                                    TranslationUnit_Flags.SkipFunctionBodies)
+        wrap_header(wc, topcu, hfile, obuf)
+    end
+
+    for hfile in headers
+        outfile = wc.header_outfile(hfile)
+        println("writing $outfile")
+        open(outfile, "w") do ostrm
             println(ostrm, "# Julia wrapper for header: $hfile")
             println(ostrm, "# Automatically generated using Clang.jl wrap_c, version $version\n")
-
-            topcu = cindex.parse_header(hfile; 
-                                 index = wc.index,
-                                 args  = wc.clang_args,
-                                 includes = wc.clang_includes,
-                                 flags = TranslationUnit_Flags.DetailedPreprocessingRecord |
-                                              TranslationUnit_Flags.SkipFunctionBodies)
-            wrap_header(wc, topcu, hfile, ostrm)
-
             println(ostrm)
+            for e in wc.output_bufs[hfile]
+                println(ostrm, e)
+            end
         end 
-    finally
-        [close(os) for os in values(wc.output_streams)]
+    end
+
+    buf = IOBuffer()
+    for e in wc.common_buf
+        println(buf, e)
     end
 
     # Sort the common includes so that things aren't used out-of-order
-    incl_lines = sort_common_includes(wc.common_stream)
+    incl_lines = sort_common_includes(buf)
     open(wc.common_file, "w") do strm
         [print(strm, l) for l in incl_lines]
     end
-    
-    close(wc.common_stream)
+
 end
 
 ###############################################################################

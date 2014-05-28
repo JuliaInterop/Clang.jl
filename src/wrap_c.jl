@@ -417,7 +417,7 @@ end
 # For handling of #define'd constants, allows basic expressions
 # but bails out quickly.
 
-function lex_exprn(tokens::TokenList, pos::Int)
+function handle_macro_exprn(tokens::TokenList, pos::Int)
     function trans(tok)
         ops = ["+" "-" "*" ">>" "<<" "/" "\\" "%" "|" "||" "^" "&" "&&"]
         if (isa(tok, cindex.Literal) || 
@@ -473,14 +473,14 @@ function wrap(context::WrapContext, buf::Array, md::cindex.MacroDefinition)
 
     pos = 1; exprn = ""
     if(tokens[2].text == "(")
-        exprn,pos = lex_exprn(tokens, 3)
+        exprn,pos = handle_macro_exprn(tokens, 3)
         if (pos != endof(tokens) || tokens[pos].text != ")")
             push!(buf, string("# Skipping MacroDefinition: ", join([c.text for c in tokens], " ")))
             return
         end
         exprn = "(" * exprn * ")"
     else
-        (exprn,pos) = lex_exprn(tokens, 2)
+        (exprn,pos) = handle_macro_exprn(tokens, 2)
         if (pos != endof(tokens))
             push!(buf, string("# Skipping MacroDefinition: ", join([c.text for c in tokens], " ")))
             return

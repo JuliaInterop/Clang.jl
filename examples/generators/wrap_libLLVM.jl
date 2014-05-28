@@ -13,24 +13,9 @@ LLVM_PATH=joinpath(JULIA_ROOT, "deps/llvm-$LLVM_VER")
 libLLVM_PATH = joinpath(LLVM_PATH, "include/llvm-c")
 clanginc_path = joinpath(LLVM_PATH, "build/$LLVM_BUILD_TYPE/lib/clang/3.3/include")
 
-libllvm_hdrs = map(x->joinpath(libLLVM_PATH, x), 
-    {
-    "BitWriter.h",
-    "Target.h",
-    "Initialization.h",
-    "Disassembler.h",
-    "Core.h",
-    "TargetMachine.h",
-    "Analysis.h",
-    "ExecutionEngine.h",
-    "Transforms/Vectorize.h",
-    "Transforms/PassManagerBuilder.h",
-    "Transforms/Scalar.h",
-    "Transforms/IPO.h",
-    "LinkTimeOptimizer.h",
-    "Object.h",
-    "BitReader.h"
-    })
+libllvm_hdrs = map(x->joinpath(libLLVM_PATH, x),
+                    split(readall(`find $libLLVM_PATH -name *.h`))
+                  )
 
 clang_includes = map(x::ASCIIString->joinpath(LLVM_PATH, x), [
     "build/$LLVM_BUILD_TYPE/lib/clang/3.3/include",
@@ -45,7 +30,7 @@ const wc = wrap_c.init(;
                         clang_includes = clang_includes,
                         clang_args = clang_extraargs,
                         header_library = x->:libllvm,
-                        header_wrapped = (x,cu)->beginswith(x, splitdir(libLLVM_PATH)[1]) )
+                        header_wrapped = (x,y)->contains(y, "LLVM") )
 
 function wrap_libLLVM(wc::WrapContext, wrap_hdrs)
     wrap_c.wrap_c_headers(wc, convert(Vector{ASCIIString}, wrap_hdrs))

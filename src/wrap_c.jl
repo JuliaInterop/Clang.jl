@@ -296,10 +296,10 @@ function wrap(context::WrapContext, buf::Array, sd::StructDecl; usename = "")
     end
 
     ccl = children(sd)
-    if (length(ccl) < 1)
-        warn("Skipping empty struct: \"$usename\"")
-        return
-    end
+    #if (length(ccl) < 1)
+    #    warn("Skipping empty struct: \"$usename\"")
+    #    return
+    #end
 
     # Generate type declaration
     b = Expr(:block)
@@ -595,10 +595,8 @@ function wrap_c_headers(wc::WrapContext, headers)
         println(buf, e)
     end
 
-    # Sort the common includes so that things aren't used out-of-order
-    incl_lines = sort_common_includes(buf)
     open(wc.common_file, "w") do strm
-        [print(strm, l) for l in incl_lines]
+        print(strm, takebuf_string(buf))
     end
 
 end
@@ -606,56 +604,6 @@ end
 ###############################################################################
 # Utilities
 ###############################################################################
-
-function sort_common_includes(strm::IOBuffer)
-    # TODO: too many temporaries
-    seek(strm,0)
-    col1 = Dict{ASCIIString,Int}() 
-    col2 = Dict{ASCIIString,Int}()
-    tmp = Dict{Int,ASCIIString}()
-    pos = Int[]
-    fnl = ASCIIString[]
-
-    for (i,ln) in enumerate(readlines(strm))
-        tmp[i] = ln
-        if (m = match(r"@ctypedef (\w+) (?:Ptr{)?(\w+)(?:}?)", ln)) != nothing
-            col1[m.captures[1]] = i
-            col2[m.captures[2]] = i
-        end
-    end
-    for s in sort(collect(keys(col2)))
-        if( (m = get(col1, s, None))!=None)
-            push!(fnl, tmp[m])
-            push!(pos, m)
-        end
-    end
- 
-    kj = setdiff(1:length(keys(tmp)), pos)
-    vcat(fnl,[tmp[i] for i in kj])
-end
-
-# eliminate symbol from the final type representation
-function rep_type(t)
-    replace(string(t), ":", "")
-end
-
-# Tuple representation without quotes
-function rep_args(v)
-    o = IOBuffer()
-    print(o, "(")
-    s = first = start(v)
-    r = (!done(v,s))
-    while r
-        x,s = next(v,s)
-        print(o, x)
-        done(v,s) && break
-        print(o, ", ")
-    end
-    r && (s == next(v,first)[2]) && print(o, ",")
-    print(o, ")")
-    seek(o, 0)
-    readall(o)
-end
 
 function name_anon()
     global context::WrapContext

@@ -296,10 +296,10 @@ function wrap(context::WrapContext, buf::Array, sd::StructDecl; usename = "")
     end
 
     ccl = children(sd)
-    #if (length(ccl) < 1)
-    #    warn("Skipping empty struct: \"$usename\"")
-    #    return
-    #end
+    if (length(ccl) < 1)
+        warn("Skipping empty struct: \"$usename\"")
+        return
+    end
 
     # Generate type declaration
     b = Expr(:block)
@@ -517,10 +517,9 @@ function wrap_header(wc::WrapContext, topcu::CLCursor, top_hdr, obuf::Array)
         cursor_hdr = cu_file(cursor)
         cursor_name = name(cursor)
 
-        # Heuristic to decide what should be wrapped:
+        # what should be wrapped:
         #    1. always wrap things in the current top header (ie not includes)
-        #    2. everything else is from includes, wrap if:
-        #         - the client wants it wc.header_wrapped == True
+        #    2. wrap includes if wc.header_wrapped(header, cursor_name) == True
         if cursor_hdr == top_hdr
             # pass
         elseif !wc.header_wrapped(top_hdr, cursor_hdr)
@@ -536,7 +535,6 @@ function wrap_header(wc::WrapContext, topcu::CLCursor, top_hdr, obuf::Array)
         if (isa(cursor, FunctionDecl))
             wrap(wc, obuf, cursor, wc.header_library(cu_file(cursor)))
         elseif !isa(cursor, TypeRef)
-            # handle: EnumDecl, TypedefDecl, MacroDefinition, StructDecl
             wrap(wc, wc.common_buf, cursor)
         else
             continue

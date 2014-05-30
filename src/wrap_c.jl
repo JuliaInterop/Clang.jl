@@ -550,7 +550,31 @@ end
 ################################################################################
 
 function wrap_c_headers(wc::WrapContext, headers)
+    extract_c_headers(wc, headers)
+    for hfile in headers
+        outfile = wc.header_outfile(hfile)
+        println("writing $outfile")
+        open(outfile, "w") do ostrm
+            println(ostrm, "# Julia wrapper for header: $hfile")
+            println(ostrm, "# Automatically generated using Clang.jl wrap_c, version $version\n")
+            println(ostrm)
+            for e in wc.output_bufs[hfile]
+                println(ostrm, e)
+            end
+        end 
+    end
 
+    buf = IOBuffer()
+    for e in wc.common_buf
+        println(buf, e)
+    end
+
+    open(wc.common_file, "w") do strm
+        print(strm, takebuf_string(buf))
+    end
+end
+
+function extract_c_headers(wc::WrapContext, headers)
     # Check headers!
     for h in headers
         if !isfile(h)
@@ -574,29 +598,6 @@ function wrap_c_headers(wc::WrapContext, headers)
                                     TranslationUnit_Flags.SkipFunctionBodies)
         wrap_header(wc, topcu, hfile, obuf)
     end
-
-    for hfile in headers
-        outfile = wc.header_outfile(hfile)
-        println("writing $outfile")
-        open(outfile, "w") do ostrm
-            println(ostrm, "# Julia wrapper for header: $hfile")
-            println(ostrm, "# Automatically generated using Clang.jl wrap_c, version $version\n")
-            println(ostrm)
-            for e in wc.output_bufs[hfile]
-                println(ostrm, e)
-            end
-        end 
-    end
-
-    buf = IOBuffer()
-    for e in wc.common_buf
-        println(buf, e)
-    end
-
-    open(wc.common_file, "w") do strm
-        print(strm, takebuf_string(buf))
-    end
-
 end
 
 ###############################################################################

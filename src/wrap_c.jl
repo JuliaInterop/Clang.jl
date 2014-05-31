@@ -351,7 +351,7 @@ end
 
 function eccall(funcname::Symbol, libname::Symbol, rtype, types, args)
     Expr(:ccall,
-         Expr(:tuple, QuoteNode(funcname), QuoteNode(libname)),
+         Expr(:tuple, QuoteNode(funcname), libname),
          rtype,
          Expr(:tuple, types...),
          args...)

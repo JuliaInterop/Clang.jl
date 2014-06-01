@@ -566,7 +566,20 @@ end
 ################################################################################
 
 function wrap_c_headers(wc::WrapContext, headers)
+     # Check headers!
+    for h in headers
+        if !isfile(h)
+            error("Header file: ", h, " cannot be found")
+        end
+    end
+    for d in wc.clang_includes
+        if !isdir(d)
+            error("Include file: ", d, " cannot be found")
+        end
+    end
+   
     extract_c_headers(wc, headers)
+        
     for hfile in headers
         outfile = wc.header_outfile(hfile)
         println("writing $outfile")
@@ -580,29 +593,15 @@ function wrap_c_headers(wc::WrapContext, headers)
         end 
     end
 
-    buf = IOBuffer()
-    for e in wc.common_buf
-        println(buf, e)
-    end
-
+    wc.rewriter(filter(x->isa(x,Expr), wc.common_buf))
     open(wc.common_file, "w") do strm
-        print(strm, takebuf_string(buf))
+        for e in wc.common_buf
+            println(strm, e)
+        end
     end
 end
 
 function extract_c_headers(wc::WrapContext, headers)
-    # Check headers!
-    for h in headers
-        if !isfile(h)
-            error("Header file: ", h, " cannot be found")
-        end
-    end
-    for d in wc.clang_includes
-        if !isdir(d)
-            error("Include file: ", d, " cannot be found")
-        end
-    end
-
     # Generate the wrappings
     for hfile in headers
         obuf = wc.output_bufs[hfile]

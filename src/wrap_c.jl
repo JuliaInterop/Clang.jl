@@ -521,6 +521,7 @@ end
 ################################################################################
 # Wrapping driver
 ################################################################################
+debug_cursors = CLCursor[]
 
 function wrap_header(wc::WrapContext, topcu::CLCursor, top_hdr, obuf::Array)
     println("WRAPPING HEADER: $top_hdr")
@@ -542,18 +543,24 @@ function wrap_header(wc::WrapContext, topcu::CLCursor, top_hdr, obuf::Array)
            continue
         end
 
+        try
         if beginswith(cursor_name, "__") || # skip compiler definitions
            cursor_name in wc.cache_wrapped || # already been wrapped
            !wc.cursor_wrapped(cursor_name, cursor)
             continue
         end
 
-        if (isa(cursor, FunctionDecl))
-            wrap(wc, obuf, cursor, wc.header_library(cu_file(cursor)))
-        elseif !isa(cursor, TypeRef)
-            wrap(wc, wc.common_buf, cursor)
-        else
-            continue
+        try
+            if (isa(cursor, FunctionDecl))
+                wrap(wc, obuf, cursor, wc.header_library(cu_file(cursor)))
+            elseif !isa(cursor, TypeRef)
+                wrap(wc, wc.common_buf, cursor)
+            else
+                continue
+            end
+        catch err
+            push!(debug_cursors::Array{CLCursor,1}, cursor)
+            throw(err)
         end
     end
 

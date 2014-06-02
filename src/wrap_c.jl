@@ -385,6 +385,7 @@ function wrap(context::WrapContext, buf::Array, funcdecl::FunctionDecl, libname)
     # check whether any argument types are blocked
     for arg in arg_types
         if spelling(arg) in reserved_argtypes
+            warning("Skipping $(name(funcdecl)) due to unsupported argument: $(name(arg))")
             return
         end
     end

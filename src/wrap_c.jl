@@ -45,14 +45,13 @@ type WrapContext
     header_wrapped::Function                     # called to determine header inclusion status
     header_library::Function                     # called to determine shared library for given header
     header_outfile::Function                     # called to determine output file group for given header
-    cursor_wrapped::Function                     # called to determine cursor inclusion statusk
+    cursor_wrapped::Function                     # called to determine cursor inclusion status
     common_buf::Array                            # output buffer for common items: typedefs, enums, etc.
     cache_wrapped::Set{ASCIIString}
     output_bufs::DefaultOrderedDict{ASCIIString, Array{Any}}
     options::InternalOptions
     anon_count::Int
-    func_rewriter::Function
-    type_rewriter::Function
+    rewriter::Function
 end
 
 ### Convenience function to initialize wrapping context with defaults
@@ -69,8 +68,7 @@ function init(;
             header_library                  = None,
             header_outputfile               = None,
             cursor_wrapped                  = (cursorname, cursor) -> true,
-            func_rewriter                   = x -> x,
-            type_rewriter                   = x -> x)
+            rewriter                        = x -> x)
 
     # Set up some optional args if they are not explicitly passed.
 
@@ -106,8 +104,7 @@ function init(;
                                  DefaultOrderedDict(ASCIIString, Array{Any}, ()->{}),
                                  InternalOptions(),
                                  0,
-                                 func_rewriter,
-                                 type_rewriter)
+                                 rewriter)
     return context
 end
 
@@ -336,11 +333,7 @@ function wrap(context::WrapContext, buf::Array, sd::StructDecl; usename = "")
         push!(b.args, Expr(:(::), symbol(cur_name), repr))
     end
 
-    # apply user transformation
-    e = context.type_rewriter(e)
-
     push!(buf, e)
-
     push!(context.cache_wrapped, usename)
 end
 
@@ -400,9 +393,6 @@ function wrap(context::WrapContext, buf::Array, funcdecl::FunctionDecl, libname)
     sig = efunsig(funcname, args, arg_reps)
     body = eccall(funcname, symbol(libname), ret_type, arg_reps, args)
     e = Expr(:function, sig, Expr(:block, body))
-
-    # apply user transformation
-    e = context.func_rewriter(e)
 
     push!(buf, e)
 end
@@ -589,6 +579,7 @@ function wrap_c_headers(wc::WrapContext, headers)
         
     for hfile in headers
         outfile = wc.header_outfile(hfile)
+        wc.rewriter(filter(x->isa(x,Expr), wc.output_bufs[hfile]))
         println("writing $outfile")
         open(outfile, "w") do ostrm
             println(ostrm, "# Julia wrapper for header: $hfile")

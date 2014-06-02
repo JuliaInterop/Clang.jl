@@ -511,6 +511,8 @@ end
 ################################################################################
 # Wrapping driver
 ################################################################################
+
+# Any failed cursor in the loop below is put in this global for debugging
 debug_cursors = CLCursor[]
 
 function wrap_header(wc::WrapContext, topcu::CLCursor, top_hdr, obuf::Array)
@@ -533,10 +535,10 @@ function wrap_header(wc::WrapContext, topcu::CLCursor, top_hdr, obuf::Array)
            continue
         end
 
-        try
-        if beginswith(cursor_name, "__") || # skip compiler definitions
-           cursor_name in wc.cache_wrapped || # already been wrapped
-           !wc.cursor_wrapped(cursor_name, cursor)
+        if beginswith(cursor_name, "__")    ||      # skip compiler definitions
+           cursor_name in wc.cache_wrapped  ||      # already wrapped
+           !wc.cursor_wrapped(cursor_name, cursor)  # client callback
+
             continue
         end
 
@@ -563,7 +565,7 @@ end
 ################################################################################
 
 function wrap_c_headers(wc::WrapContext, headers)
-     # Check headers!
+    # Check headers!
     for h in headers
         if !isfile(h)
             error("Header file: ", h, " cannot be found")
@@ -574,9 +576,10 @@ function wrap_c_headers(wc::WrapContext, headers)
             error("Include file: ", d, " cannot be found")
         end
     end
-   
+  
+    # Loop over all the headers and get cursors to wrap
     extract_c_headers(wc, headers)
-        
+
     for hfile in headers
         outfile = wc.header_outfile(hfile)
         wc.rewriter(filter(x->isa(x,Expr), wc.output_bufs[hfile]))

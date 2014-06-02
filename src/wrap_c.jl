@@ -12,9 +12,9 @@ export wrap_c_headers
 export WrapContext
 
 ### Reserved Julia identifiers to prepend with "_"
-reserved_words = ["abstract", "baremodule", "begin", "bitstype", "break", "catch", "ccall",
+reserved_words = [ "abstract", "baremodule", "begin", "bitstype", "break", "catch", "ccall",
                    "const", "continue", "do", "else", "elseif", "end", "export", "finally",
-                   "for", "function", "global", "if", "immutable", "import", "importall",
+                   "for", "function", "global", "if", "immutable", "import", "importall", "in",
                    "let", "local", "macro", "module", "quote", "return", "try", "type",
                    "typealias", "using", "while"]
 
@@ -157,6 +157,20 @@ cl_to_jl = {
     :int8_t                 => :Int8
     }
 
+int_conversion = {
+    :Cint   => int32,
+    :Cuint  => uint32,
+    :Uint64 => uint64,
+    :Uint32 => uint32,
+    :Uint16 => uint16,
+    :Uint8  => uint8,
+    :Int64  => int64,
+    :Int32  => int32,
+    :Int16  => int16,
+    :Int8   => int8
+    }
+
+
 ################################################################################
 #
 # libclang objects to Julia representation
@@ -278,11 +292,13 @@ function wrap(context::WrapContext, buf::Array, cursor::EnumDecl; usename="")
     end
     enumname = usename
     push!(buf, "# begin enum $enumname")
-    push!(buf, Expr(:typealias, symbol(enumname), repr_jl(cindex.getEnumDeclIntegerType(cursor))))
+    enumtype = repr_jl(cindex.getEnumDeclIntegerType(cursor))
+    _int = int_conversion[enumtype]
+    push!(buf, :(typealias $(symbol(enumname)) $enumtype))
     for enumitem in children(cursor)
         cur_name = cindex.spelling(enumitem)
         if (length(cur_name) < 1) continue end
-        push!(buf, Expr(:const, Expr(:(=), symbol(cur_name), value(enumitem))))
+        push!(buf, :(const $(symbol(cur_name)) = $_int($(value(enumitem)))))
     end
     push!(buf, "# end enum $enumname")
 end

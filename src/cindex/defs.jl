@@ -147,9 +147,9 @@ baremodule CursorKind
     const ObjCDynamicDecl = 38
     const CXXAccessSpecifier = 39
     const FirstDecl = 1
-    const LastDecl = 39
+    # const LastDecl = 39
     const FirstRef = 40
-    const ObjCSuperClassRef = 40
+    # const ObjCSuperClassRef = 40 dup
     const ObjCProtocolRef = 41
     const ObjCClassRef = 42
     const TypeRef = 43
@@ -160,13 +160,13 @@ baremodule CursorKind
     const LabelRef = 48
     const OverloadedDeclRef = 49
     const VariableRef = 50
-    const LastRef = 50
+    # const LastRef = 50 dup
     const FirstInvalid = 70
-    const InvalidFile = 70
+    # const InvalidFile = 70 dup
     const NoDeclFound = 71
     const NotImplemented = 72
     const InvalidCode = 73
-    const LastInvalid = 73
+    # const LastInvalid = 73 dup
     const FirstExpr = 100
     const UnexposedExpr = 100
     const DeclRefExpr = 101
@@ -215,7 +215,7 @@ baremodule CursorKind
     const LambdaExpr = 144
     const ObjCBoolLiteralExpr = 145
     const ObjCSelfExpr = 146
-    const LastExpr = 146
+    # const LastExpr = 146 dup
     const FirstStmt = 200
     const UnexposedStmt = 200
     const LabelStmt = 201
@@ -233,7 +233,7 @@ baremodule CursorKind
     const BreakStmt = 213
     const ReturnStmt = 214
     const GCCAsmStmt = 215
-    const AsmStmt = 215
+    # const AsmStmt = 215 dup
     const ObjCAtTryStmt = 216
     const ObjCAtCatchStmt = 217
     const ObjCAtFinallyStmt = 218
@@ -253,7 +253,7 @@ baremodule CursorKind
     const LastStmt = 231
     const TranslationUnit = 300
     const FirstAttr = 400
-    const UnexposedAttr = 400
+    # const UnexposedAttr = 400 dupe
     const IBActionAttr = 401
     const IBOutletAttr = 402
     const IBOutletCollectionAttr = 403
@@ -272,7 +272,7 @@ baremodule CursorKind
     const MacroInstantiation = 502
     const InclusionDirective = 503
     const FirstPreprocessing = 500
-    const LastPreprocessing = 503
+    # const LastPreprocessing = 503 dup
     const ModuleImportDecl = 600
     const FirstExtraDecl = 600
     const LastExtraDecl = 600

@@ -421,3 +421,14 @@ end
 function CXType(c::TmpType)
     return CLTypeMap[c.data[1].kind](c.data)
 end
+
+# Duplicates
+const LastDecl = CXXAccessSpecifier
+const ObjCSuperClassRef = FirstRef
+const LastRef = VariableRef
+const InvalidFile = FirstInvalid
+const LastInvalid=InvalidCode
+const LastExpr = ObjCSelfExpr
+const AsmStmt = GCCAsmStmt
+const UnexposedAttr = FirstAttr
+const LastPreprocessing = InclusionDirective

@@ -3,6 +3,12 @@ function getFileName(a1::CXFile,)
     ccall( (:wci_getFileName, libwci), Void, (CXFile,Ptr{Void},), a1, c.data,)
     return get_string(c)
 end
+function getIncludedFile(cu::InclusionDirective)
+    getFileName(ccall( (:wci_getIncludedFile, libwci),
+            Ptr{Void},
+            (Ptr{Uint8},),
+            pointer(cu.data)))
+end
 function getNullLocation()
     c = CXSourceLocation()
     ccall( (:wci_getNullLocation, libwci), Void, (Ptr{Void},),    c.data,)

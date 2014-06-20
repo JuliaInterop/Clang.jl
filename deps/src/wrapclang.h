@@ -290,3 +290,8 @@ void  wci_getClangVersion(char* a1) {
   CXString rx = clang_getClangVersion();
   wci_save_CXString(rx,a1);
 }
+void* wci_getIncludedFile(char* a1) {
+  CXCursor l1 = wci_get_CXCursor(a1);
+  CXFile rx = clang_getIncludedFile(l1);
+  return rx;
+}

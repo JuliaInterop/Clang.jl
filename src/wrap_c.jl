@@ -583,7 +583,7 @@ function parse_c_headers(wc::WrapContext)
 end
 
 function sort_includes(wc::WrapContext, parsed)
-    all_headers =  mapreduce(x->search(parsed[x], InclusionDirective), append!, keys(parsed))
+    all_headers = mapreduce(x->search(parsed[x], InclusionDirective), append!, keys(parsed))
     all_headers = unique(map(x->cindex.getIncludedFile(x), all_headers))
     unique([filter(x -> x in all_headers, wc.headers), wc.headers])
 end
@@ -598,22 +598,26 @@ function run(wc::WrapContext)
     parsed = parse_c_headers(wc)
     wc.headers = sort_includes(wc, parsed)
 
+    filehandles = Dict{ASCIIString,IOStream}()
+    getfile(f) = f in filehandles ? filehandles[f] : (filehandles[f] = open(f, "w"))
+
     for hfile in wc.headers
         outfile = wc.header_outfile(hfile)
         obuf = wc.output_bufs[hfile]
         wrap_header(wc, parsed[hfile], hfile, obuf)
-        println("writing $outfile")
-        open(outfile, "w") do ostrm
-            println(ostrm, "# Julia wrapper for header: $hfile")
-            println(ostrm, "# Automatically generated using Clang.jl wrap_c, version $version\n")
-            println(ostrm)
-            for e in wc.output_bufs[hfile]
-                println(ostrm, e)
-            end
-        end 
+        # Debug
+        println("writing $(outfile)")
+        
+        ostrm = getfile(outfile)
+        println(ostrm, "# Julia wrapper for header: $hfile")
+        println(ostrm, "# Automatically generated using Clang.jl wrap_c, version $version\n")
+        println(ostrm)
+        for e in wc.output_bufs[hfile]
+            println(ostrm, e)
+        end
     end
 
-    wc.rewriter(filter(x->isa(x,Expr), wc.common_buf))
+    wc.rewriter(unique(filter(x->isa(x,Expr), wc.common_buf)))
     open(wc.common_file, "w") do strm
         for e in wc.common_buf
             println(strm, e)

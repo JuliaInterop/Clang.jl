@@ -561,6 +561,7 @@ function wrap_header(wc::WrapContext, topcu::CLCursor, top_hdr, obuf::Array)
             push!(debug_cursors::Array{CLCursor,1}, cursor)
             throw(err)
         end
+        push!(wc.cache_wrapped, cursor_name)
     end
 
     cindex.cl_dispose(topcl)

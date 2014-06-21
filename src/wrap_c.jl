@@ -38,6 +38,7 @@ InternalOptions() = InternalOptions(true, false)
 # stores shared information about the wrapping session
 type WrapContext
     index::cindex.CXIndex
+    headers::Array{ASCIIString,1}
     output_file::ASCIIString
     common_file::ASCIIString
     clang_includes::Array{ASCIIString,1}         # clang include paths
@@ -55,7 +56,9 @@ type WrapContext
 end
 
 ### Convenience function to initialize wrapping context with defaults
+init(;args...) = init(ASCIIString[]; args...)
 function init(;
+            headers                         = ASCIIString[],
             index                           = None,
             output_file::ASCIIString        = "",
             common_file::ASCIIString        = "",
@@ -91,6 +94,7 @@ function init(;
 
     # Instantiate and return the WrapContext
     global context = WrapContext(index,
+                                 headers,
                                  output_file,
                                  common_file,
                                  clang_includes,
@@ -529,7 +533,8 @@ function wrap_header(wc::WrapContext, topcu::CLCursor, top_hdr, obuf::Array)
 
         # what should be wrapped:
         #    1. always wrap things in the current top header (ie not includes)
-        #    2. wrap includes if wc.header_wrapped(header, cursor_name) == True
+        #    2. wrap things that are in other includes
+        #    3. wrap includes if wc.header_wrapped(header, cursor_name) == True
         if cursor_hdr == top_hdr
             # pass
         elseif !wc.header_wrapped(top_hdr, cursor_hdr)
@@ -538,6 +543,7 @@ function wrap_header(wc::WrapContext, topcu::CLCursor, top_hdr, obuf::Array)
 
         if beginswith(cursor_name, "__")    ||      # skip compiler definitions
            cursor_name in wc.cache_wrapped  ||      # already wrapped
+           !(cursor_hdr in wc.headers)      || 
            !wc.cursor_wrapped(cursor_name, cursor)  # client callback
 
             continue
@@ -560,30 +566,42 @@ function wrap_header(wc::WrapContext, topcu::CLCursor, top_hdr, obuf::Array)
     cindex.cl_dispose(topcl)
 end
 
+function parse_c_headers(wc::WrapContext)
+    parsed = Dict{ASCIIString, CLCursor}()
+    
+    # Parse the headers
+    for header in unique(wc.headers)
+        topcu = cindex.parse_header(header; 
+                                    index = wc.index,
+                                    args  = wc.clang_args,
+                                    includes = wc.clang_includes,
+                                    flags = TranslationUnit_Flags.DetailedPreprocessingRecord |
+                                    TranslationUnit_Flags.SkipFunctionBodies)
+        parsed[header] = topcu
+    end
+    return parsed
+end
+
+function sort_includes(wc::WrapContext, parsed)
+    all_headers =  mapreduce(x->search(parsed[x], InclusionDirective), append!, keys(parsed))
+    all_headers = unique(map(x->cindex.getIncludedFile(x), all_headers))
+    unique([filter(x -> x in all_headers, wc.headers), wc.headers])
+end
+
 
 ################################################################################
 # Wrapping driver
 ################################################################################
 
-function wrap_c_headers(wc::WrapContext, headers)
-    # Check headers!
-    for h in headers
-        if !isfile(h)
-            error("Header file: ", h, " cannot be found")
-        end
-    end
-    for d in wc.clang_includes
-        if !isdir(d)
-            error("Include file: ", d, " cannot be found")
-        end
-    end
-  
-    # Loop over all the headers and get cursors to wrap
-    extract_c_headers(wc, headers)
+function run(wc::WrapContext) 
+    # Loop over all the headers and get expressions
+    parsed = parse_c_headers(wc)
+    wc.headers = sort_includes(wc, parsed)
 
-    for hfile in headers
+    for hfile in wc.headers
         outfile = wc.header_outfile(hfile)
-        wc.rewriter(filter(x->isa(x,Expr), wc.output_bufs[hfile]))
+        obuf = wc.output_bufs[hfile]
+        wrap_header(wc, parsed[hfile], hfile, obuf)
         println("writing $outfile")
         open(outfile, "w") do ostrm
             println(ostrm, "# Julia wrapper for header: $hfile")
@@ -602,20 +620,7 @@ function wrap_c_headers(wc::WrapContext, headers)
         end
     end
 end
-
-function extract_c_headers(wc::WrapContext, headers)
-    # Generate the wrappings
-    for hfile in headers
-        obuf = wc.output_bufs[hfile]
-        topcu = cindex.parse_header(hfile; 
-                                    index = wc.index,
-                                    args  = wc.clang_args,
-                                    includes = wc.clang_includes,
-                                    flags = TranslationUnit_Flags.DetailedPreprocessingRecord |
-                                    TranslationUnit_Flags.SkipFunctionBodies)
-        wrap_header(wc, topcu, hfile, obuf)
-    end
-end
+wrap_c_headers(wc::WrapContext, headers) = begin wc.headers = headers; run(wc) end
 
 ###############################################################################
 # Utilities

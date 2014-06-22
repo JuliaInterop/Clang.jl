@@ -321,7 +321,7 @@ function wrap(context::WrapContext, buf::Array, sd::StructDecl; usename = "")
     # Generate type declaration
     b = Expr(:block)
     e = Expr(:type, !context.options.immutable_structs, symbol(usename), b)
-    for cu in ccl
+    for cu in struct_fields
         cur_name = spelling(cu)
         if (isa(cu, StructDecl) || isa(cu, UnionDecl))
             continue
@@ -584,48 +584,64 @@ function parse_c_headers(wc::WrapContext)
 end
 
 function sort_includes(wc::WrapContext, parsed)
-    all_headers = mapreduce(x->search(parsed[x], InclusionDirective), append!, keys(parsed))
-    all_headers = unique(map(x->cindex.getIncludedFile(x), all_headers))
-    unique([filter(x -> x in all_headers, wc.headers), wc.headers])
+    includes = mapreduce(x->search(parsed[x], InclusionDirective), append!, keys(parsed))
+    header_paths = unique(map(x->cindex.getIncludedFile(x), includes))
+    unique([filter(x -> x in header_paths, wc.headers), wc.headers])
 end
-
 
 ################################################################################
 # Wrapping driver
 ################################################################################
 
 function run(wc::WrapContext) 
-    # Loop over all the headers and get expressions
+    # Parse headers
     parsed = parse_c_headers(wc)
+    # Sort includes by requirement order
     wc.headers = sort_includes(wc, parsed)
 
+    # Helper to store file handles 
     filehandles = Dict{ASCIIString,IOStream}()
-    getfile(f) = f in filehandles ? filehandles[f] : (filehandles[f] = open(f, "w"))
+    getfile(f) = (f in keys(filehandles)) ? filehandles[f] : (filehandles[f] = open(f, "w"))
 
     for hfile in wc.headers
         outfile = wc.header_outfile(hfile)
         obuf = wc.output_bufs[hfile]
+
+        # Extract header to Expr[] array
         wrap_header(wc, parsed[hfile], hfile, obuf)
+    
+        # Apply user-supplied transformation
+        wc.rewriter(filter(x->isa(x,Expr), obuf))
+        
         # Debug
         println("writing $(outfile)")
-        
+
+        # Write output 
         ostrm = getfile(outfile)
         println(ostrm, "# Julia wrapper for header: $hfile")
         println(ostrm, "# Automatically generated using Clang.jl wrap_c, version $version\n")
         println(ostrm)
-        for e in wc.output_bufs[hfile]
+        for e in obuf
             println(ostrm, e)
         end
     end
 
+    # Apply user-supplied transformation
     wc.rewriter(unique(filter(x->isa(x,Expr), wc.common_buf)))
+
+    # Write "common" definitions: types, typealiases, etc.
     open(wc.common_file, "w") do strm
         for e in wc.common_buf
             println(strm, e)
         end
     end
 end
-wrap_c_headers(wc::WrapContext, headers) = begin wc.headers = headers; run(wc) end
+
+# Deprecated interface
+wrap_c_headers(wc::WrapContext, headers) = begin
+    warn("wrap_c_headers: deprecated")
+    wc.headers = headers; run(wc)
+end
 
 ###############################################################################
 # Utilities

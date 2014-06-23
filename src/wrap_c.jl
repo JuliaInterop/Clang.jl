@@ -359,7 +359,7 @@ function efunsig(name::Symbol, args::Vector{Symbol}, types)
     Expr(:call, name, x...)
 end
 
-function eccall(funcname::Symbol, libname::Symbol, rtype, types, args)
+function eccall(funcname::Symbol, libname::Symbol, rtype, args, types)
     Expr(:ccall,
          Expr(:tuple, QuoteNode(funcname), libname),
          rtype,
@@ -367,33 +367,39 @@ function eccall(funcname::Symbol, libname::Symbol, rtype, types, args)
          args...)
 end
 
-function wrap(context::WrapContext, buf::Array, funcdecl::FunctionDecl, libname)
-    ftype = cindex.cu_type(funcdecl)
-    if cindex.isFunctionTypeVariadic(ftype) == 1
+function wrap(context::WrapContext, buf::Array, func_decl::FunctionDecl, libname)
+    func_type = cindex.cu_type(func_decl)
+    if cindex.isFunctionTypeVariadic(func_type) == 1
         # skip vararg functions
         return
     end
 
-    funcname = symbol(spelling(funcdecl))
-    ret_type = repr_jl(return_type(funcdecl))
+    funcname = symbol(spelling(func_decl))
+    ret_type = repr_jl(return_type(func_decl))
 
-    args = cindex.function_args(funcdecl)
+    args = cindex.function_args(func_decl)
    
-    functy = cu_type(funcdecl)
-    arg_types = [cindex.getArgType(functy, uint32(i)) for i in 0:length(args)-1]
+    arg_types = [cindex.getArgType(func_type, uint32(i)) for i in 0:length(args)-1]
     arg_reps = [repr_jl(x) for x in arg_types]
 
     # check whether any argument types are blocked
-    for arg in arg_types
-        if spelling(arg) in reserved_argtypes
-            warning("Skipping $(name(funcdecl)) due to unsupported argument: $(name(arg))")
+    for arg_t in arg_types
+        if spelling(arg_t) in reserved_argtypes
+            warning("Skipping $(name(func_decl)) due to unsupported argument: $(name(arg_t))")
             return
         end
     end
 
-    args = convert(Array{Symbol,1}, map(symbol_safe, args))
-    sig = efunsig(funcname, args, arg_reps)
-    body = eccall(funcname, symbol(libname), ret_type, arg_reps, args)
+    # Handle unnamed args and convert names to symbols
+    arg_count = 0
+    arg_names = convert(Vector{Symbol},
+                        map(x-> symbol(begin
+                            nm = name_safe(cindex.name(x))
+                            nm != "" ? nm : "arg"*string(arg_count+=1)
+                        end), args))
+
+    sig = efunsig(funcname, arg_names, arg_reps)
+    body = eccall(funcname, symbol(libname), ret_type, arg_names, arg_reps)
     e = Expr(:function, sig, Expr(:block, body))
 
     push!(buf, e)

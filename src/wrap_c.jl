@@ -562,7 +562,7 @@ function wrap_header(wc::WrapContext, topcu::CLCursor, top_hdr, obuf::Array)
             end
         catch err
             push!(debug_cursors::Array{CLCursor,1}, cursor)
-            throw(err)
+            rethrow(err)
         end
         push!(wc.cache_wrapped, cursor_name)
     end
@@ -638,6 +638,7 @@ function run(wc::WrapContext)
             println(strm, e)
         end
     end
+    map(close, values(filehandles))
 end
 
 # Deprecated interface

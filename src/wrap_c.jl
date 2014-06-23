@@ -11,21 +11,18 @@ using DataStructures
 export wrap_c_headers
 export WrapContext
 
-### Reserved Julia identifiers to prepend with "_"
+# Reserved Julia identifiers will be prepended with "_"
 reserved_words = [ "abstract", "baremodule", "begin", "bitstype", "break", "catch", "ccall",
                    "const", "continue", "do", "else", "elseif", "end", "export", "finally",
                    "for", "function", "global", "if", "immutable", "import", "importall", "in",
                    "let", "local", "macro", "module", "quote", "return", "try", "type",
                    "typealias", "using", "while"]
 
+# These argument types are unsupported
 reserved_argtypes = ["va_list"]
-untyped_argtypes = [IncompleteArray]
 
-function name_safe(c::CLCursor)
-    cur_name = name(c)
-    return (cur_name in reserved_words) ? "_"*cur_name : cur_name
-end
-symbol_safe(c::CLCursor) = symbol(name_safe(c))
+# These argument types will be untyped in the Julia signature
+untyped_argtypes = [IncompleteArray]
 
 ### InternalOptions
 type InternalOptions
@@ -651,6 +648,11 @@ function name_anon()
     global context::WrapContext
     "ANONYMOUS_"*string(context.anon_count += 1)
 end
+
+function name_safe(cursor_name::String)
+    return (cursor_name in reserved_words) ? "_"*cursor_name : cursor_name
+end
+symbol_safe(cursor_name::String) = symbol(name_safe(cursor_name))
 
 ###############################################################################
 

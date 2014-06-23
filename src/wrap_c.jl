@@ -309,11 +309,7 @@ function wrap(context::WrapContext, buf::Array, sd::StructDecl; usename = "")
         return
     end
 
-    ccl = children(sd)
-    if (length(ccl) < 1)
-        warn("Skipping empty struct: \"$usename\"")
-        return
-    end
+    struct_fields = children(sd)
 
     # Generate type declaration
     b = Expr(:block)

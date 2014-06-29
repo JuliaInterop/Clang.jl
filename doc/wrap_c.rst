@@ -3,14 +3,14 @@
 C Wrapper Generator
 ===================
 
-The Clang.jl wrapper generator is designed to be simple to use, but also flexible. A wrapper generation can be as simple as this::
+The Clang.jl wrapper generator is designed to be simple but flexible. The most basic invocation looks like this::
 
     context = wrap_c.init()
     
     headers = ["all.h", "your.h", "headers.h"]
     wrap_c.wrap_c_headers(context, headers)
 
-However, it is often necessary to set compiler arguments or customize output. The ``init`` function provides several arguments to configure the compiler, as well as callback functions used to determine various aspects of the output.
+However, it is usually necessary to set compiler arguments or customize output. The ``init`` function provides several arguments to configure the compiler, as well as callback functions used to determine various aspects of the output.
 
 .. function:: init(; index, output_file, clang_args, clang_includes, clang_diagnostics, header_wrapped, header_library, header_outputfile)
 
@@ -28,10 +28,13 @@ However, it is often necessary to set compiler arguments or customize output. Th
     :param clang_diagnostics: Display Clang diagnostics
     :type clang_diagnostics: Bool
     :param header_wrapped: Function called to determine whether a header should be wrapped.
-    :type header_wrapped: Function(header::ASCIIString, cursorname::ASCIIString) -> Bool
+    :type header_wrapped: Function(header_file::ASCIIString, cursor_name::ASCIIString) -> Bool
     :param header_library: Function called to determine the library name for a given header.
     :param header_outputfile: Function called to determine the output filename for a given header.
     :type header_outputfile: Function(header::ASCIIString) -> Bool
+    :param rewriter: Function to rewrite generated expressions
+    :type rewriter: Function(Expr)
+
 
 .. function:: wrap_c_headers(wc::WrapContext, headers::Vector{String})
 
@@ -49,9 +52,9 @@ However, it is often necessary to set compiler arguments or customize output. Th
     :field header_wrapped: called to determine cursor inclusion status
     :field header_library: called to determine shared library for given header
     :field header_outfile: called to determine output file group for given header
-    :field common_stream:
+    :field common_buf: Array
     :field cache_wrapped: [Internal] Set{ASCIIString}
-    :field output_streams: [Internal] Dict{ASCIIString, IO}
+    :field output_bufs: [Internal] DefaultOrderedDict{ASCIIString, Array{Any}}
     :field options: InternalOptions
 
 

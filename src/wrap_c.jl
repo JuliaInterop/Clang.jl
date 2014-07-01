@@ -11,21 +11,18 @@ using DataStructures
 export wrap_c_headers
 export WrapContext
 
-### Reserved Julia identifiers to prepend with "_"
+# Reserved Julia identifiers will be prepended with "_"
 reserved_words = [ "abstract", "baremodule", "begin", "bitstype", "break", "catch", "ccall",
                    "const", "continue", "do", "else", "elseif", "end", "export", "finally",
                    "for", "function", "global", "if", "immutable", "import", "importall", "in",
                    "let", "local", "macro", "module", "quote", "return", "try", "type",
                    "typealias", "using", "while"]
 
+# These argument types are unsupported
 reserved_argtypes = ["va_list"]
-untyped_argtypes = [IncompleteArray]
 
-function name_safe(c::CLCursor)
-    cur_name = name(c)
-    return (cur_name in reserved_words) ? "_"*cur_name : cur_name
-end
-symbol_safe(c::CLCursor) = symbol(name_safe(c))
+# These argument types will be untyped in the Julia signature
+untyped_argtypes = [IncompleteArray]
 
 ### InternalOptions
 type InternalOptions
@@ -38,6 +35,7 @@ InternalOptions() = InternalOptions(true, false)
 # stores shared information about the wrapping session
 type WrapContext
     index::cindex.CXIndex
+    headers::Array{ASCIIString,1}
     output_file::ASCIIString
     common_file::ASCIIString
     clang_includes::Array{ASCIIString,1}         # clang include paths
@@ -45,18 +43,19 @@ type WrapContext
     header_wrapped::Function                     # called to determine header inclusion status
     header_library::Function                     # called to determine shared library for given header
     header_outfile::Function                     # called to determine output file group for given header
-    cursor_wrapped::Function                     # called to determine cursor inclusion statusk
+    cursor_wrapped::Function                     # called to determine cursor inclusion status
     common_buf::Array                            # output buffer for common items: typedefs, enums, etc.
     cache_wrapped::Set{ASCIIString}
     output_bufs::DefaultOrderedDict{ASCIIString, Array{Any}}
     options::InternalOptions
     anon_count::Int
-    func_rewriter::Function
-    type_rewriter::Function
+    rewriter::Function
 end
 
 ### Convenience function to initialize wrapping context with defaults
+init(;args...) = init(ASCIIString[]; args...)
 function init(;
+            headers                         = ASCIIString[],
             index                           = None,
             output_file::ASCIIString        = "",
             common_file::ASCIIString        = "",
@@ -69,8 +68,7 @@ function init(;
             header_library                  = None,
             header_outputfile               = None,
             cursor_wrapped                  = (cursorname, cursor) -> true,
-            func_rewriter                   = x -> x,
-            type_rewriter                   = x -> x)
+            rewriter                        = x -> x)
 
     # Set up some optional args if they are not explicitly passed.
 
@@ -93,6 +91,7 @@ function init(;
 
     # Instantiate and return the WrapContext
     global context = WrapContext(index,
+                                 headers,
                                  output_file,
                                  common_file,
                                  clang_includes,
@@ -106,8 +105,7 @@ function init(;
                                  DefaultOrderedDict(ASCIIString, Array{Any}, ()->{}),
                                  InternalOptions(),
                                  0,
-                                 func_rewriter,
-                                 type_rewriter)
+                                 rewriter)
     return context
 end
 
@@ -311,16 +309,12 @@ function wrap(context::WrapContext, buf::Array, sd::StructDecl; usename = "")
         return
     end
 
-    ccl = children(sd)
-    if (length(ccl) < 1)
-        warn("Skipping empty struct: \"$usename\"")
-        return
-    end
+    struct_fields = children(sd)
 
     # Generate type declaration
     b = Expr(:block)
     e = Expr(:type, !context.options.immutable_structs, symbol(usename), b)
-    for cu in ccl
+    for cu in struct_fields
         cur_name = spelling(cu)
         if (isa(cu, StructDecl) || isa(cu, UnionDecl))
             continue
@@ -336,11 +330,7 @@ function wrap(context::WrapContext, buf::Array, sd::StructDecl; usename = "")
         push!(b.args, Expr(:(::), symbol(cur_name), repr))
     end
 
-    # apply user transformation
-    e = context.type_rewriter(e)
-
     push!(buf, e)
-
     push!(context.cache_wrapped, usename)
 end
 
@@ -365,7 +355,7 @@ function efunsig(name::Symbol, args::Vector{Symbol}, types)
     Expr(:call, name, x...)
 end
 
-function eccall(funcname::Symbol, libname::Symbol, rtype, types, args)
+function eccall(funcname::Symbol, libname::Symbol, rtype, args, types)
     Expr(:ccall,
          Expr(:tuple, QuoteNode(funcname), libname),
          rtype,
@@ -373,36 +363,40 @@ function eccall(funcname::Symbol, libname::Symbol, rtype, types, args)
          args...)
 end
 
-function wrap(context::WrapContext, buf::Array, funcdecl::FunctionDecl, libname)
-    ftype = cindex.cu_type(funcdecl)
-    if cindex.isFunctionTypeVariadic(ftype) == 1
+function wrap(context::WrapContext, buf::Array, func_decl::FunctionDecl, libname)
+    func_type = cindex.cu_type(func_decl)
+    if cindex.isFunctionTypeVariadic(func_type) == 1
         # skip vararg functions
         return
     end
 
-    funcname = symbol(spelling(funcdecl))
-    ret_type = repr_jl(return_type(funcdecl))
+    funcname = symbol(spelling(func_decl))
+    ret_type = repr_jl(return_type(func_decl))
 
-    args = cindex.function_args(funcdecl)
+    args = cindex.function_args(func_decl)
    
-    functy = cu_type(funcdecl)
-    arg_types = [cindex.getArgType(functy, uint32(i)) for i in 0:length(args)-1]
+    arg_types = [cindex.getArgType(func_type, uint32(i)) for i in 0:length(args)-1]
     arg_reps = [repr_jl(x) for x in arg_types]
 
     # check whether any argument types are blocked
-    for arg in arg_types
-        if spelling(arg) in reserved_argtypes
+    for arg_t in arg_types
+        if spelling(arg_t) in reserved_argtypes
+            warning("Skipping $(name(func_decl)) due to unsupported argument: $(name(arg_t))")
             return
         end
     end
 
-    args = convert(Array{Symbol,1}, map(symbol_safe, args))
-    sig = efunsig(funcname, args, arg_reps)
-    body = eccall(funcname, symbol(libname), ret_type, arg_reps, args)
-    e = Expr(:function, sig, Expr(:block, body))
+    # Handle unnamed args and convert names to symbols
+    arg_count = 0
+    arg_names = convert(Vector{Symbol},
+                        map(x-> symbol(begin
+                            nm = name_safe(cindex.name(x))
+                            nm != "" ? nm : "arg"*string(arg_count+=1)
+                        end), args))
 
-    # apply user transformation
-    e = context.func_rewriter(e)
+    sig = efunsig(funcname, arg_names, arg_reps)
+    body = eccall(funcname, symbol(libname), ret_type, arg_names, arg_reps)
+    e = Expr(:function, sig, Expr(:block, body))
 
     push!(buf, e)
 end
@@ -522,6 +516,9 @@ end
 # Wrapping driver
 ################################################################################
 
+# Any failed cursor in the loop below is put in this global for debugging
+debug_cursors = CLCursor[]
+
 function wrap_header(wc::WrapContext, topcu::CLCursor, top_hdr, obuf::Array)
     println("WRAPPING HEADER: $top_hdr")
     
@@ -535,84 +532,115 @@ function wrap_header(wc::WrapContext, topcu::CLCursor, top_hdr, obuf::Array)
 
         # what should be wrapped:
         #    1. always wrap things in the current top header (ie not includes)
-        #    2. wrap includes if wc.header_wrapped(header, cursor_name) == True
+        #    2. wrap things that are in other includes
+        #    3. wrap includes if wc.header_wrapped(header, cursor_name) == True
         if cursor_hdr == top_hdr
             # pass
         elseif !wc.header_wrapped(top_hdr, cursor_hdr)
            continue
         end
 
-        if beginswith(cursor_name, "__") || # skip compiler definitions
-           cursor_name in wc.cache_wrapped || # already been wrapped
-           !wc.cursor_wrapped(cursor_name, cursor)
+        if beginswith(cursor_name, "__")    ||      # skip compiler definitions
+           cursor_name in wc.cache_wrapped  ||      # already wrapped
+           !(cursor_hdr in wc.headers)      || 
+           !wc.cursor_wrapped(cursor_name, cursor)  # client callback
+
             continue
         end
 
-        if (isa(cursor, FunctionDecl))
-            wrap(wc, obuf, cursor, wc.header_library(cu_file(cursor)))
-        elseif !isa(cursor, TypeRef)
-            wrap(wc, wc.common_buf, cursor)
-        else
-            continue
+        try
+            if (isa(cursor, FunctionDecl))
+                wrap(wc, obuf, cursor, wc.header_library(cu_file(cursor)))
+            elseif !isa(cursor, TypeRef)
+                wrap(wc, wc.common_buf, cursor)
+            else
+                continue
+            end
+        catch err
+            push!(debug_cursors::Array{CLCursor,1}, cursor)
+            rethrow(err)
         end
+        push!(wc.cache_wrapped, cursor_name)
     end
 
     cindex.cl_dispose(topcl)
 end
 
-
-################################################################################
-# Wrapping driver
-################################################################################
-
-function wrap_c_headers(wc::WrapContext, headers)
-     # Check headers!
-    for h in headers
-        if !isfile(h)
-            error("Header file: ", h, " cannot be found")
-        end
-    end
-    for d in wc.clang_includes
-        if !isdir(d)
-            error("Include file: ", d, " cannot be found")
-        end
-    end
-   
-    extract_c_headers(wc, headers)
-        
-    for hfile in headers
-        outfile = wc.header_outfile(hfile)
-        println("writing $outfile")
-        open(outfile, "w") do ostrm
-            println(ostrm, "# Julia wrapper for header: $hfile")
-            println(ostrm, "# Automatically generated using Clang.jl wrap_c, version $version\n")
-            println(ostrm)
-            for e in wc.output_bufs[hfile]
-                println(ostrm, e)
-            end
-        end 
-    end
-
-    wc.rewriter(filter(x->isa(x,Expr), wc.common_buf))
-    open(wc.common_file, "w") do strm
-        for e in wc.common_buf
-            println(strm, e)
-        end
-    end
-end
-
-function extract_c_headers(wc::WrapContext, headers)
-    # Generate the wrappings
-    for hfile in headers
-        obuf = wc.output_bufs[hfile]
-        topcu = cindex.parse_header(hfile; 
+function parse_c_headers(wc::WrapContext)
+    parsed = Dict{ASCIIString, CLCursor}()
+    
+    # Parse the headers
+    for header in unique(wc.headers)
+        topcu = cindex.parse_header(header; 
                                     index = wc.index,
                                     args  = wc.clang_args,
                                     includes = wc.clang_includes,
                                     flags = TranslationUnit_Flags.DetailedPreprocessingRecord |
                                     TranslationUnit_Flags.SkipFunctionBodies)
-        wrap_header(wc, topcu, hfile, obuf)
+        parsed[header] = topcu
     end
+    return parsed
+end
+
+function sort_includes(wc::WrapContext, parsed)
+    includes = mapreduce(x->search(parsed[x], InclusionDirective), append!, keys(parsed))
+    header_paths = unique(map(x->cindex.getIncludedFile(x), includes))
+    unique([filter(x -> x in header_paths, wc.headers), wc.headers])
+end
+
+################################################################################
+# Wrapping driver
+################################################################################
+
+function run(wc::WrapContext) 
+    # Parse headers
+    parsed = parse_c_headers(wc)
+    # Sort includes by requirement order
+    wc.headers = sort_includes(wc, parsed)
+
+    # Helper to store file handles 
+    filehandles = Dict{ASCIIString,IOStream}()
+    getfile(f) = (f in keys(filehandles)) ? filehandles[f] : (filehandles[f] = open(f, "w"))
+
+    for hfile in wc.headers
+        outfile = wc.header_outfile(hfile)
+        obuf = wc.output_bufs[hfile]
+
+        # Extract header to Expr[] array
+        wrap_header(wc, parsed[hfile], hfile, obuf)
+    
+        # Apply user-supplied transformation
+        wc.rewriter(filter(x->isa(x,Expr), obuf))
+        
+        # Debug
+        println("writing $(outfile)")
+
+        # Write output 
+        ostrm = getfile(outfile)
+        println(ostrm, "# Julia wrapper for header: $hfile")
+        println(ostrm, "# Automatically generated using Clang.jl wrap_c, version $version\n")
+        println(ostrm)
+        for e in obuf
+            println(ostrm, e)
+        end
+    end
+
+    # Apply user-supplied transformation
+    wc.rewriter(unique(filter(x->isa(x,Expr), wc.common_buf)))
+
+    # Write "common" definitions: types, typealiases, etc.
+    open(wc.common_file, "w") do strm
+        for e in wc.common_buf
+            println(strm, e)
+        end
+    end
+    map(close, values(filehandles))
+end
+
+# Deprecated interface
+wrap_c_headers(wc::WrapContext, headers) = begin
+    warn("wrap_c_headers: deprecated")
+    wc.headers = headers; run(wc)
 end
 
 ###############################################################################
@@ -623,6 +651,11 @@ function name_anon()
     global context::WrapContext
     "ANONYMOUS_"*string(context.anon_count += 1)
 end
+
+function name_safe(cursor_name::String)
+    return (cursor_name in reserved_words) ? "_"*cursor_name : cursor_name
+end
+symbol_safe(cursor_name::String) = symbol(name_safe(cursor_name))
 
 ###############################################################################
 

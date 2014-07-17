@@ -610,7 +610,7 @@ function run(wc::WrapContext)
         wrap_header(wc, parsed[hfile], hfile, obuf)
     
         # Apply user-supplied transformation
-        wc.rewriter(filter(x->isa(x,Expr), obuf))
+        obuf = wc.rewriter(obuf)
         
         # Debug
         println("writing $(outfile)")
@@ -626,7 +626,7 @@ function run(wc::WrapContext)
     end
 
     # Apply user-supplied transformation
-    wc.rewriter(unique(filter(x->isa(x,Expr), wc.common_buf)))
+    wc.common_buf = wc.rewriter(unique(wc.common_buf))
 
     # Write "common" definitions: types, typealiases, etc.
     open(wc.common_file, "w") do strm

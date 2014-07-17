@@ -46,6 +46,7 @@ type WrapContext
     cursor_wrapped::Function                     # called to determine cursor inclusion status
     common_buf::Array                            # output buffer for common items: typedefs, enums, etc.
     cache_wrapped::Set{ASCIIString}
+    cache_empty_structs::Dict{ASCIIString,Int}
     output_bufs::DefaultOrderedDict{ASCIIString, Array{Any}}
     options::InternalOptions
     anon_count::Int
@@ -102,6 +103,7 @@ function init(;
                                  cursor_wrapped,
                                  {},
                                  Set{ASCIIString}(),
+                                 Dict{ASCIIString,Int}(),
                                  DefaultOrderedDict(ASCIIString, Array{Any}, ()->{}),
                                  InternalOptions(),
                                  0,
@@ -330,8 +332,22 @@ function wrap(context::WrapContext, buf::Array, sd::StructDecl; usename = "")
         push!(b.args, Expr(:(::), symbol(cur_name), repr))
     end
 
-    push!(buf, e)
-    push!(context.cache_wrapped, usename)
+    # Check for a previous forward ordering
+    if length(struct_fields) > 0 && (idx = get(context.cache_empty_structs, usename, 0)) > 0
+        # We previously saw a forward declaration
+        # Replace that definition with the current struct
+        buf[idx] = e
+        delete!(context.cache_empty_structs, usename)
+    elseif !(usename in context.cache_wrapped)
+        push!(buf, e)
+        push!(context.cache_wrapped, usename)
+        if length(struct_fields) == 0
+            # Possible forward definition
+            # Store the name and the location in buf
+            context.cache_empty_structs[usename] = length(buf)
+        end
+    end
+    return
 end
 
 function wrap(context::WrapContext, buf::Array, ud::UnionDecl; usename = "")
@@ -540,10 +556,11 @@ function wrap_header(wc::WrapContext, topcu::CLCursor, top_hdr, obuf::Array)
            continue
         end
 
-        if beginswith(cursor_name, "__")    ||      # skip compiler definitions
-           cursor_name in wc.cache_wrapped  ||      # already wrapped
-           !(cursor_hdr in wc.headers)      || 
-           !wc.cursor_wrapped(cursor_name, cursor)  # client callback
+        if beginswith(cursor_name, "__")                    ||      # skip compiler definitions
+           (cursor_name in wc.cache_wrapped &&
+            !(cursor_name in keys(wc.cache_empty_structs))) ||      # already wrapped
+           !(cursor_hdr in wc.headers)                      || 
+           !wc.cursor_wrapped(cursor_name, cursor)                  # client callback
 
             continue
         end
@@ -621,7 +638,12 @@ function run(wc::WrapContext)
         println(ostrm, "# Automatically generated using Clang.jl wrap_c, version $version\n")
         println(ostrm)
         for e in obuf
-            println(ostrm, e)
+            if isa(e, Expr) && e.head==:function
+                println(ostrm)
+                println(ostrm, e)
+            else
+                println(ostrm, e)
+            end
         end
     end
 
@@ -630,8 +652,14 @@ function run(wc::WrapContext)
 
     # Write "common" definitions: types, typealiases, etc.
     open(wc.common_file, "w") do strm
-        for e in wc.common_buf
-            println(strm, e)
+        for e in unique(wc.common_buf)
+            if isa(e, Expr) && (e.head==:type || e.head==:function)
+                println(strm)
+                println(strm, e)
+                e.head==:type && println(strm)
+            else
+                println(strm, e)
+            end
         end
     end
     map(close, values(filehandles))

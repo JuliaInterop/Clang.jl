@@ -233,6 +233,14 @@ function repr_jl(t::ConstantArray)
             push!(b.args, Expr(:(::), symbol("d$i"), repr))
         end
         push!(buf, e)
+
+        # Add zero function for this type
+        b = :($(symbol(typename))())
+        for i = 1:arrsize
+            push!(b.args, :(zero($repr)))
+        end
+        zero_call = :(zero(::Type{$(symbol(typename))}) = $b)
+        push!(buf, zero_call)
     end
     push!(context.cache_wrapped, typename)
     return symbol(typename)

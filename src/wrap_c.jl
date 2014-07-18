@@ -617,6 +617,46 @@ end
 # Wrapping driver
 ################################################################################
 
+# Pretty-print a buffer of expressions (and comments) to an output stream
+# Adds blank lines at appropriate places for readability
+function print_buffer(ostrm, obuf)
+
+    state = :comment
+    in_enum = false
+
+    for e in obuf
+        prev_state = state
+        if state != :enum
+            state = (isa(e, String) ? :string :
+                     isa(e, Expr)   ? e.head :
+                     error("output: can't handle type $(typeof(e))"))
+        end
+
+        if state == :string
+            if beginswith(e, "# begin enum")
+                state = :enum
+                println(ostrm)
+            elseif beginswith(e, "# Skipping")
+                state = :skipping
+            end
+        end
+
+        if state != :enum
+            if ((state != prev_state && prev_state != :string) ||
+                (state == prev_state && (state == :function ||
+                                         state == :type)))
+                println(ostrm)
+            end
+        end
+
+        println(ostrm, e)
+
+        if state == :enum && isa(e, String) && beginswith(e, "# end enum")
+            state = :end_enum
+        end
+    end
+end
+
 function run(wc::WrapContext) 
     # Parse headers
     parsed = parse_c_headers(wc)
@@ -633,9 +673,14 @@ function run(wc::WrapContext)
 
         # Extract header to Expr[] array
         wrap_header(wc, parsed[hfile], hfile, obuf)
-    
+
         # Apply user-supplied transformation
         obuf = wc.rewriter(obuf)
+
+        if all([isa(x, String) for x in obuf])
+            println("skipping empty file $outfile")
+            continue
+        end
         
         # Debug
         println("writing $(outfile)")
@@ -644,32 +689,16 @@ function run(wc::WrapContext)
         ostrm = getfile(outfile)
         println(ostrm, "# Julia wrapper for header: $hfile")
         println(ostrm, "# Automatically generated using Clang.jl wrap_c, version $version\n")
-        println(ostrm)
-        for e in obuf
-            if isa(e, Expr) && e.head==:function
-                println(ostrm)
-                println(ostrm, e)
-            else
-                println(ostrm, e)
-            end
-        end
+
+        print_buffer(ostrm, obuf)
     end
 
     # Apply user-supplied transformation
     wc.common_buf = wc.rewriter(unique(wc.common_buf))
 
     # Write "common" definitions: types, typealiases, etc.
-    open(wc.common_file, "w") do strm
-        for e in unique(wc.common_buf)
-            if isa(e, Expr) && (e.head==:type || e.head==:function)
-                println(strm)
-                println(strm, e)
-                e.head==:type && println(strm)
-            else
-                println(strm, e)
-            end
-        end
-    end
+    print_buffer(open(wc.common_file, "w"), unique(wc.common_buf))
+
     map(close, values(filehandles))
 end
 

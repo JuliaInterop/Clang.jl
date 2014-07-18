@@ -84,7 +84,8 @@ function init(;
     if (header_library == None)
         header_library = x->strip(splitext(basename(x))[1])
     elseif isa(header_library, ASCIIString)
-        header_library = x->header_library
+        libname = copy(header_library)
+        header_library = x->libname
     end
     if (header_outputfile == None)
         header_outputfile = x->output_file

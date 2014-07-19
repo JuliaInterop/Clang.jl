@@ -60,6 +60,7 @@ function init(;
             index                           = None,
             output_file::ASCIIString        = "",
             common_file::ASCIIString        = "",
+            output_dir::ASCIIString         = "",
             clang_args::Array{ASCIIString,1}
                                             = ASCIIString[],
             clang_includes::Array{ASCIIString,1}
@@ -76,10 +77,11 @@ function init(;
     (index == None)         && ( index = cindex.idx_create(0, (clang_diagnostics ? 1 : 0)) )
 
     if (output_file == "" && header_outputfile == None)
-        header_outputfile = x->joinpath(strip(splitext(basename(x))[1]) * ".jl")
+        header_outputfile = x->joinpath(output_dir, strip(splitext(basename(x))[1]) * ".jl")
     end
 
     (common_file == "")    && ( common_file = output_file )
+    common_file = joinpath(output_dir, common_file)
     
     if (header_library == None)
         header_library = x->strip(splitext(basename(x))[1])
@@ -88,7 +90,7 @@ function init(;
         header_library = x->libname
     end
     if (header_outputfile == None)
-        header_outputfile = x->output_file
+        header_outputfile = x->joinpath(output_dir, output_file)
     end
 
     # Instantiate and return the WrapContext

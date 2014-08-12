@@ -31,6 +31,16 @@ type InternalOptions
 end
 InternalOptions() = InternalOptions(true, false)
 
+type ExprUnit
+    items::Array{Any}
+    deps::OrderedSet{Symbol}
+    state::Symbol
+end
+
+ExprUnit() = ExprUnit(Any[], OrderedSet{Symbol}(), :new)
+ExprUnit(e::Union(Expr,Symbol,ASCIIString), deps={}; state::Symbol=:new) = ExprUnit({e}, OrderedSet{Symbol}([target_type(dep) for dep in deps]...), state)
+ExprUnit(a::Array, deps={}; state::Symbol=:new) = ExprUnit(a, OrderedSet{Symbol}([target_type(dep) for dep in deps]...), state)
+
 ### WrapContext
 # stores shared information about the wrapping session
 type WrapContext
@@ -44,9 +54,8 @@ type WrapContext
     header_library::Function                     # called to determine shared library for given header
     header_outfile::Function                     # called to determine output file group for given header
     cursor_wrapped::Function                     # called to determine cursor inclusion status
-    common_buf::Array                            # output buffer for common items: typedefs, enums, etc.
-    cache_wrapped::Set{ASCIIString}
-    cache_empty_structs::Dict{ASCIIString,Int}
+    common_buf::OrderedDict{Symbol, ExprUnit}    # output buffer for common items: typedefs, enums, etc.
+    empty_structs::Set{ASCIIString}
     output_bufs::DefaultOrderedDict{ASCIIString, Array{Any}}
     options::InternalOptions
     anon_count::Int
@@ -104,9 +113,8 @@ function init(;
                                  header_library,
                                  header_outputfile,
                                  cursor_wrapped,
-                                 {},
+                                 OrderedDict(Symbol, ExprUnit),
                                  Set{ASCIIString}(),
-                                 Dict{ASCIIString,Int}(),
                                  DefaultOrderedDict(ASCIIString, Array{Any}, ()->{}),
                                  InternalOptions(),
                                  0,
@@ -179,7 +187,7 @@ int_conversion = {
 # libclang objects to Julia representation
 #
 # each repr_jl function takes one or more CLCursor or CLType objects,
-# and returns the appropriate string representation.
+# and returns the appropriate representation.
 #
 ################################################################################
 
@@ -223,30 +231,28 @@ function repr_jl(t::ConstantArray)
     
     # Grab the WrapContext in order to add bitstype
     global context::WrapContext
-    buf = context.common_buf
 
     arrsize = cindex.getArraySize(t)
     eltype = cindex.getArrayElementType(t)
     typename = string("Array_", arrsize, "_", repr_short(eltype))
-    if !(typename in context.cache_wrapped)
+    typesym = symbol(typename)
+
+    if !(typesym in keys(context.common_buf))
         b = Expr(:block)
         e = Expr(:type, false, symbol(typename), b)
         repr = repr_jl(eltype)
         for i = 1:arrsize
             push!(b.args, Expr(:(::), symbol("d$i"), repr))
         end
-        push!(buf, e)
 
-        # Add zero function for this type
-        b = :($(symbol(typename))())
-        for i = 1:arrsize
-            push!(b.args, :(zero($repr)))
-        end
+        # Create a zero function for this type
+        b = :($(symbol(typename))(fill(zero($repr), $arrsize)...))
         zero_call = :(zero(::Type{$(symbol(typename))}) = $b)
-        push!(buf, zero_call)
+
+        context.common_buf[typesym] = ExprUnit({e, zero_call})
     end
-    push!(context.cache_wrapped, typename)
-    return symbol(typename)
+
+    return typesym
 end
 
 function repr_jl(t::IncompleteArray)
@@ -265,6 +271,16 @@ function repr_jl(arg::cindex.CLType)
     rep == nothing && error("No CLType translation available for: ", arg)
     return rep
 end
+
+target_type(s::Symbol) = s
+function target_type(e::Expr)
+    if e.head == :curly && e.args[1] == :Ptr
+        return target_type(e.args[2])
+    else
+        error("target_type: don't know how to handle $e")
+    end
+end
+target_type(q) = error("target_type: don't know how to handle $q")
 
 ###############################################################################
 # Get field decl sizes
@@ -294,101 +310,8 @@ function fieldsize(cu::FieldDecl)
 end
 
 ################################################################################
-# Handle declarations
+# Handle function declarations
 ################################################################################
-
-function wrap(context::WrapContext, buf::Array, cursor::EnumDecl; usename="")
-    if (usename == "" && (usename = name(cursor)) == "")
-        usename = name_anon()
-    end
-    enumname = usename
-    push!(buf, "# begin enum $enumname")
-    enumtype = repr_jl(cindex.getEnumDeclIntegerType(cursor))
-    _int = int_conversion[enumtype]
-    push!(buf, :(typealias $(symbol(enumname)) $enumtype))
-    for enumitem in children(cursor)
-        cur_name = cindex.spelling(enumitem)
-        if (length(cur_name) < 1) continue end
-        push!(buf, :(const $(symbol(cur_name)) = $_int($(value(enumitem)))))
-    end
-    push!(buf, "# end enum $enumname")
-end
-
-function wrap(context::WrapContext, buf::Array, sd::StructDecl; usename = "")
-    !context.options.wrap_structs && return
-
-    if (usename == "" && (usename = name(sd)) == "")
-        warn("Skipping unnamed StructDecl")
-        return
-    end
-
-    struct_fields = children(sd)
-
-    # Generate type declaration
-    b = Expr(:block)
-    e = Expr(:type, !context.options.immutable_structs, symbol(usename), b)
-    for cu in struct_fields
-        cur_name = spelling(cu)
-        if (isa(cu, StructDecl) || isa(cu, UnionDecl))
-            continue
-        elseif !(isa(cu, FieldDecl) || isa(cu, TypeRef))
-            warn("Skipping struct: \"$usename\" due to unsupported field: $cur_name")
-            return
-        elseif (length(cur_name) < 1)
-            error("Unnamed struct member in: $usename ... cursor: ", string(cu)) 
-        end
-        if ((cur_name in reserved_words)) cur_name = "_"*cur_name end
-
-        repr = repr_jl(cu_type(cu))
-        push!(b.args, Expr(:(::), symbol(cur_name), repr))
-    end
-
-    # Check for a previous forward ordering
-    if length(struct_fields) > 0 && (idx = get(context.cache_empty_structs, usename, 0)) > 0
-        # We previously saw a forward declaration
-        # Replace that definition with the current struct
-        buf[idx] = e
-        delete!(context.cache_empty_structs, usename)
-    elseif !(usename in context.cache_wrapped)
-        push!(buf, e)
-        push!(context.cache_wrapped, usename)
-        if length(struct_fields) == 0
-            # Possible forward definition
-            # Store the name and the location in buf
-            context.cache_empty_structs[usename] = length(buf)
-        end
-    end
-    return
-end
-
-function wrap(context::WrapContext, buf::Array, ud::UnionDecl; usename = "")
-    if (usename == "" && (usename = name(ud)) == "")
-        warn("Skipping unnamed UnionDecl")
-        return
-    end
-    
-    b = Expr(:block)
-    e = Expr(:type, !context.options.immutable_structs, symbol(usename), b)
-    max_cu = largestfield(ud)
-    push!(b.args, Expr(:(::), symbol("_"*usename), repr_jl(cu_type(max_cu))))
-    
-    push!(buf, e)
-
-    push!(context.cache_wrapped, usename)
-end
-
-function efunsig(name::Symbol, args::Vector{Symbol}, types)
-    x = { Expr(:(::), a, t) for (a,t) in zip(args,types) }
-    Expr(:call, name, x...)
-end
-
-function eccall(funcname::Symbol, libname::Symbol, rtype, args, types)
-    Expr(:ccall,
-         Expr(:tuple, QuoteNode(funcname), libname),
-         rtype,
-         Expr(:tuple, types...),
-         args...)
-end
 
 function wrap(context::WrapContext, buf::Array, func_decl::FunctionDecl, libname)
     func_type = cindex.cu_type(func_decl)
@@ -401,7 +324,7 @@ function wrap(context::WrapContext, buf::Array, func_decl::FunctionDecl, libname
     ret_type = repr_jl(return_type(func_decl))
 
     args = cindex.function_args(func_decl)
-   
+
     arg_types = [cindex.getArgType(func_type, uint32(i)) for i in 0:length(args)-1]
     arg_reps = [repr_jl(x) for x in arg_types]
 
@@ -428,7 +351,111 @@ function wrap(context::WrapContext, buf::Array, func_decl::FunctionDecl, libname
     push!(buf, e)
 end
 
-function wrap(context::WrapContext, buf::Array, tdecl::TypedefDecl; usename="")
+################################################################################
+# Handle all other declarations
+################################################################################
+
+function wrap(context::WrapContext, expr_buf::OrderedDict, cursor::EnumDecl; usename="")
+    if (usename == "" && (usename = name(cursor)) == "")
+        usename = name_anon()
+    end
+    enumname = usename
+
+    buf = {}
+    enum_exprs = ExprUnit(buf)
+    expr_buf[symbol_safe(enumname)] = enum_exprs
+
+    push!(buf, "# begin enum $enumname")
+    enumtype = repr_jl(cindex.getEnumDeclIntegerType(cursor))
+    _int = int_conversion[enumtype]
+    push!(buf, :(typealias $(symbol(enumname)) $enumtype))
+    for enumitem in children(cursor)
+        cur_name = cindex.spelling(enumitem)
+        if (length(cur_name) < 1) continue end
+        cur_sym = symbol_safe(cur_name)
+        push!(buf, :(const $cur_sym = $_int($(value(enumitem)))))
+        expr_buf[cur_sym] = enum_exprs
+    end
+    push!(buf, "# end enum $enumname")
+
+end
+
+function wrap(context::WrapContext, expr_buf::OrderedDict, sd::StructDecl; usename = "")
+    !context.options.wrap_structs && return
+
+    if (usename == "" && (usename = name(sd)) == "")
+        warn("Skipping unnamed StructDecl")
+        return
+    end
+    usesym = symbol(usename)
+
+    struct_fields = children(sd)
+
+    # Generate type declaration
+    b = Expr(:block)
+    e = Expr(:type, !context.options.immutable_structs, usesym, b)
+    deps = OrderedSet{Symbol}()
+    for cu in struct_fields
+        cur_name = spelling(cu)
+        if (isa(cu, StructDecl) || isa(cu, UnionDecl))
+            continue
+        elseif !(isa(cu, FieldDecl) || isa(cu, TypeRef))
+            warn("Skipping struct: \"$usename\" due to unsupported field: $cur_name")
+            return
+        elseif (length(cur_name) < 1)
+            error("Unnamed struct member in: $usename ... cursor: ", string(cu)) 
+        end
+
+        repr = repr_jl(cu_type(cu))
+        push!(b.args, Expr(:(::), symbol_safe(cur_name), repr))
+        push!(deps, target_type(repr))
+    end
+
+    # Check for a previous forward ordering
+    if !(usesym in keys(expr_buf)) || (expr_buf[usesym].state == :empty)
+        if length(struct_fields) > 0
+            expr_buf[usesym] = ExprUnit(e, deps)
+        else
+            # Possible forward definition
+            expr_buf[usesym] = ExprUnit(e, deps, state=:empty)
+        end
+    end
+    return
+end
+
+function wrap(context::WrapContext, expr_buf::OrderedDict, ud::UnionDecl; usename = "")
+    if (usename == "" && (usename = name(ud)) == "")
+        warn("Skipping unnamed UnionDecl")
+        return
+    end
+    
+    b = Expr(:block)
+    e = Expr(:type, !context.options.immutable_structs, symbol(usename), b)
+    max_cu = largestfield(ud)
+    cur_sym = symbol("_"*usename)
+    target = repr_jl(cu_type(max_cu))
+    push!(b.args, Expr(:(::), cur_sym, target))
+
+    # TODO: add other dependencies
+    expr_buf[cur_sym] = ExprUnit(e,{target})
+
+    return
+end
+
+function efunsig(name::Symbol, args::Vector{Symbol}, types)
+    x = { Expr(:(::), a, t) for (a,t) in zip(args,types) }
+    Expr(:call, name, x...)
+end
+
+function eccall(funcname::Symbol, libname::Symbol, rtype, args, types)
+    Expr(:ccall,
+         Expr(:tuple, QuoteNode(funcname), libname),
+         rtype,
+         Expr(:tuple, types...),
+         args...)
+end
+
+function wrap(context::WrapContext, expr_buf::OrderedDict, tdecl::TypedefDecl; usename="")
     cursor_type = cindex.cu_type(tdecl)
     td_type = cindex.getTypedefDeclUnderlyingType(tdecl)
     
@@ -437,14 +464,16 @@ function wrap(context::WrapContext, buf::Array, tdecl::TypedefDecl; usename="")
         if isa(tdunxp, TypeRef)
             td_type = tdunxp
         else
-            wrap(context, buf, tdunxp; usename=name(tdecl))
+            wrap(context, expr_buf, tdunxp; usename=name(tdecl))
             return # TODO.. ugly flow
         end
     elseif isa(td_type, FunctionProto)
-        return string("# Skipping Typedef: FunctionProto", spelling(tdecl))
+        return string("# Skipping Typedef: FunctionProto ", spelling(tdecl))
     end
 
-    push!(buf, Expr(:typealias, symbol(spelling(tdecl)), repr_jl(td_type)))
+    td_sym = symbol(spelling(tdecl))
+    td_target = repr_jl(td_type)
+    expr_buf[td_sym] = ExprUnit(Expr(:typealias, td_sym, td_target), {td_target})
 end
 
 ################################################################################
@@ -500,41 +529,59 @@ function handle_macro_exprn(tokens::TokenList, pos::Int)
         exprn = exprn * literally(tok)
     end
     return (exprn,pos)
-end 
+end
 
-function wrap(context::WrapContext, buf::Array, md::cindex.MacroDefinition)
+# TODO: This really returns many more symbols than we want,
+# Functionally, it shouldn't matter, but eventually, we
+# might want something more sophisticated.
+# (Check: Does this functionality already exist elsewhere?)
+get_symbols(s) = {}
+get_symbols(s::Symbol) = {s}
+get_symbols(e::Expr) = vcat(get_symbols(e.head), get_symbols(e.args))
+get_symbols(xs::Array) = reduce(vcat, [get_symbols(x) for x in xs])
+
+function wrap(context::WrapContext, expr_buf::OrderedDict, md::cindex.MacroDefinition)
     tokens = tokenize(md)
     # Skip any empty definitions
-    if(tokens.size < 2) return end
-    if(beginswith(name(md), "_")) return end
+    tokens.size < 2 && return
+    beginswith(name(md), "_") && return
 
     pos = 1; exprn = ""
-    if(tokens[2].text == "(")
+    if tokens[2].text == "("
         exprn,pos = handle_macro_exprn(tokens, 3)
         if (pos != endof(tokens) || tokens[pos].text != ")")
-            push!(buf, string("# Skipping MacroDefinition: ", join([c.text for c in tokens], " ")))
+            mdef_str = join([c.text for c in tokens], " ")
+            expr_buf[symbol(mdef_str)] = ExprUnit(string("# Skipping MacroDefinition: ", mdef_str))
             return
         end
         exprn = "(" * exprn * ")"
     else
         (exprn,pos) = handle_macro_exprn(tokens, 2)
-        if (pos != endof(tokens))
-            push!(buf, string("# Skipping MacroDefinition: ", join([c.text for c in tokens], " ")))
+        if pos != endof(tokens)
+            mdef_str = join([c.text for c in tokens], " ")
+            expr_buf[symbol(mdef_str)] = ExprUnit(string("# Skipping MacroDefinition: ", mdef_str))
             return
         end
     end
-    e = Expr(:const, Expr(:(=), symbol(tokens[1].text), parse(exprn)))
-    push!(buf, e)
+
+    use_sym = symbol_safe(tokens[1].text)
+    target = parse(exprn)
+    e = Expr(:const, Expr(:(=), use_sym, target))
+
+    deps = get_symbols(target)
+    expr_buf[use_sym] = ExprUnit(e, deps)
 end
 
 # Does this actually occur in header files???
-function wrap(context::WrapContext, buf::Array, cursor::TypeRef; usename="")
+function wrap(context::WrapContext, expr_buf::OrderedDict, cursor::TypeRef; usename="")
     usename == "" && (usename = name(cursor))
+    error("Found typeref: ", cursor)
     println("Printing typeref: ", cursor)
-    push!(buf, symbol(usename))
+    usesym = symbol(usename)
+    expr_buf[usesym] = ExprUnit(usesym)
 end
 
-function wrap(context::WrapContext, buf::Array, cursor; usename="")
+function wrap(context::WrapContext, buf, cursor; usename="")
     warn("Not wrapping $(typeof(cursor))  $usename $(name(cursor))")
 end
 
@@ -568,8 +615,8 @@ function wrap_header(wc::WrapContext, topcu::CLCursor, top_hdr, obuf::Array)
         end
 
         if beginswith(cursor_name, "__")                    ||      # skip compiler definitions
-           (cursor_name in wc.cache_wrapped &&
-            !(cursor_name in keys(wc.cache_empty_structs))) ||      # already wrapped
+           (cursor_name in keys(wc.common_buf) &&
+            !(cursor_name in keys(wc.empty_structs)))       ||      # already wrapped
            !(cursor_hdr in wc.headers)                      || 
            !wc.cursor_wrapped(cursor_name, cursor)                  # client callback
 
@@ -588,7 +635,6 @@ function wrap_header(wc::WrapContext, topcu::CLCursor, top_hdr, obuf::Array)
             push!(debug_cursors::Array{CLCursor,1}, cursor)
             rethrow(err)
         end
-        push!(wc.cache_wrapped, cursor_name)
     end
 
     cindex.cl_dispose(topcl)
@@ -620,6 +666,69 @@ end
 # Wrapping driver
 ################################################################################
 
+# Pretty-print a buffer of expressions (and comments) to an output stream
+# Adds blank lines at appropriate places for readability
+function print_buffer(ostrm, obuf)
+
+    state = :comment
+    in_enum = false
+
+    for e in obuf
+        prev_state = state
+        if state != :enum
+            state = (isa(e, String) ? :string :
+                     isa(e, Expr)   ? e.head :
+                     error("output: can't handle type $(typeof(e))"))
+        end
+
+        if state == :string
+            if beginswith(e, "# begin enum")
+                state = :enum
+                println(ostrm)
+            elseif beginswith(e, "# Skipping")
+                state = :skipping
+            end
+        end
+
+        if state != :enum
+            if ((state != prev_state && prev_state != :string) ||
+                (state == prev_state && (state == :function ||
+                                         state == :type)))
+                println(ostrm)
+            end
+        end
+
+        println(ostrm, e)
+
+        if state == :enum && isa(e, String) && beginswith(e, "# end enum")
+            state = :end_enum
+        end
+    end
+end
+
+function dump_to_buf!(buf::Array, expr_buf::OrderedDict{Symbol, ExprUnit}, item::ExprUnit)
+    (item.state == :done || item.state == :processing) && return
+    item.state = :processing
+
+    for dep in item.deps
+        (dep_expr = get(expr_buf, dep, nothing)) == nothing && continue
+        dump_to_buf!(buf, expr_buf, dep_expr)
+    end
+
+    append!(buf, item.items)
+    item.state = :done
+end
+
+
+function dump_to_buf(expr_buf::OrderedDict{Symbol, ExprUnit})
+    buf = {}
+    for item in values(expr_buf)
+        item.state == :done && continue
+        dump_to_buf!(buf, expr_buf, item)
+    end
+    buf
+end
+
 function run(wc::WrapContext) 
     # Parse headers
     parsed = parse_c_headers(wc)
@@ -647,32 +756,18 @@ function run(wc::WrapContext)
         ostrm = getfile(outfile)
         println(ostrm, "# Julia wrapper for header: $hfile")
         println(ostrm, "# Automatically generated using Clang.jl wrap_c, version $version\n")
-        println(ostrm)
-        for e in obuf
-            if isa(e, Expr) && e.head==:function
-                println(ostrm)
-                println(ostrm, e)
-            else
-                println(ostrm, e)
-            end
-        end
+
+        print_buffer(ostrm, obuf)
     end
+
+    common_buf = dump_to_buf(wc.common_buf)
 
     # Apply user-supplied transformation
-    wc.common_buf = wc.rewriter(unique(wc.common_buf))
+    common_buf = wc.rewriter(common_buf)
 
     # Write "common" definitions: types, typealiases, etc.
-    open(wc.common_file, "w") do strm
-        for e in unique(wc.common_buf)
-            if isa(e, Expr) && (e.head==:type || e.head==:function)
-                println(strm)
-                println(strm, e)
-                e.head==:type && println(strm)
-            else
-                println(strm, e)
-            end
-        end
-    end
+    print_buffer(open(wc.common_file, "w"), common_buf)
+
     map(close, values(filehandles))
 end
 

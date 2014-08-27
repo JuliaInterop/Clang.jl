@@ -1,5 +1,3 @@
-using BinDeps
-
 ENV["JULIA_ROOT"] = abspath(JULIA_HOME, "../../")
 
 cd(joinpath(Pkg.dir(), "Clang", "deps", "src") )
@@ -10,4 +8,4 @@ end
 if (!ispath("../usr/lib")) 
   run(`mkdir ../usr/lib`)
 end
-run(`mv libwrapclang.$(BinDeps.shlib_ext) ../usr/lib`)
+run(`mv libwrapclang.$(Base.Sys.shlib_ext) ../usr/lib`)

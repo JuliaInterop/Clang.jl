@@ -79,6 +79,7 @@ function init(;
             header_library                  = None,
             header_outputfile               = None,
             cursor_wrapped                  = (cursorname, cursor) -> true,
+            options                         = InternalOptions(),
             rewriter                        = x -> x)
 
     # Set up some optional args if they are not explicitly passed.
@@ -116,7 +117,7 @@ function init(;
                                  OrderedDict(Symbol, ExprUnit),
                                  Set{ASCIIString}(),
                                  DefaultOrderedDict(ASCIIString, Array{Any}, ()->{}),
-                                 InternalOptions(),
+                                 options,
                                  0,
                                  rewriter)
     return context

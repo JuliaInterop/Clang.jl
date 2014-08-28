@@ -58,10 +58,10 @@ endif
 
 default: libwrapclang.$(SHLIB_EXT)
 
-%.c.o: %.c
+%.c.o: %.c %.h
 	$(CC) $< -fPIC -c -o $@ $(INC) $(CFLAGS) $(FLAGS)
 
-%.cpp.o: %.cpp
+%.cpp.o: %.cpp %.h
 	$(CXX) $< -fPIC -c -o $@ $(INC) $(CXXFLAGS) $(FLAGS)
 
 libwrapclang.$(SHLIB_EXT): $(OBJS)

@@ -32,6 +32,9 @@ from a collection of header files. The following declarations are currently supp
 
 ## Users
 
+Clang.jl tends to be used on large codebases, often with multiple API versions to support. Building a generator requires some customization effort, so
+for small libraries the initial investment may not pay off.
+
 * [Gtk.jl](https://github.com/JuliaLang/Gtk.jl): Julia Gtk bindings (uses heavily customized generator)
 * [CUDArt.jl](https://github.com/JuliaGPU/CUDArt.jl): Bindings to the CUDA Runtime library
 * [CUFFT.jl](https://github.com/JuliaGPU/CUFFT.jl): Bindings to CUDA FFT library

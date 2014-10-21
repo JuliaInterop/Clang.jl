@@ -565,6 +565,9 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, md::cindex.MacroDefin
         end
     end
 
+    # Occasionally, skipped definitions slip through
+    exprn == "" && return
+
     use_sym = symbol_safe(tokens[1].text)
     target = parse(exprn)
     e = Expr(:const, Expr(:(=), use_sym, target))

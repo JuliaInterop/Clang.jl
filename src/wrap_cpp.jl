@@ -261,7 +261,7 @@ function wrap(out::IO, top::cindex.ClassDecl)
     println(out, "}//extern C")
 end
 
-cl_to_c = {
+cl_to_c = Dict{Any,Any}(
     cindex.VoidType       => "void",
     cindex.FirstBuiltin   => "void",
     cindex.BoolType       => "bool",
@@ -287,7 +287,7 @@ cl_to_c = {
     cindex.NullPtr        => "NULL",
     cindex.UInt128        => "uint128_t",
     cindex.LValueReference=> "LVAL"
-    }
+    )
 
 ################################################################################
 # Construction of Julia wrapper
@@ -448,7 +448,7 @@ function wrapjl(out::IO, libname::ASCIIString, class::cindex.ClassDecl)
     end
 end
 
-cl_to_jl = {
+cl_to_jl = Dict{Any,Any}(
     cindex.VoidType         => Void,
     cindex.BoolType         => Bool,
     cindex.Char_U           => Uint8,
@@ -475,7 +475,7 @@ cl_to_jl = {
     cindex.FirstBuiltin     => Void,
     "size_t"                => :Csize_t,
     "ptrdiff_t"             => :Cptrdiff_t
-    }
+    )
 
 
 ################################################################################

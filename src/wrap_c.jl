@@ -38,8 +38,8 @@ type ExprUnit
 end
 
 ExprUnit() = ExprUnit(Any[], OrderedSet{Symbol}(), :new)
-ExprUnit(e::Union(Expr,Symbol,ASCIIString), deps={}; state::Symbol=:new) = ExprUnit({e}, OrderedSet{Symbol}([target_type(dep) for dep in deps]...), state)
-ExprUnit(a::Array, deps={}; state::Symbol=:new) = ExprUnit(a, OrderedSet{Symbol}([target_type(dep) for dep in deps]...), state)
+ExprUnit(e::Union(Expr,Symbol,ASCIIString), deps=[]; state::Symbol=:new) = ExprUnit(Any[e], OrderedSet{Symbol}([target_type(dep) for dep in deps]...), state)
+ExprUnit(a::Array, deps=[]; state::Symbol=:new) = ExprUnit(a, OrderedSet{Symbol}([target_type(dep) for dep in deps]...), state)
 
 ### WrapContext
 # stores shared information about the wrapping session
@@ -116,7 +116,7 @@ function init(;
                                  cursor_wrapped,
                                  OrderedDict(Symbol, ExprUnit),
                                  Set{ASCIIString}(),
-                                 DefaultOrderedDict(ASCIIString, Array{Any}, ()->{}),
+                                 DefaultOrderedDict(ASCIIString, Array{Any}, ()->[]),
                                  options,
                                  0,
                                  rewriter)
@@ -132,7 +132,7 @@ end
 #   Julia entities, for example "size_t" -> :Csize_t
 #
 ##############################################################################
-cl_to_jl = {
+cl_to_jl = Dict{Any,Any}(
     cindex.VoidType         => :Void,
     cindex.BoolType         => :Bool,
     cindex.Char_U           => :Uint8,
@@ -167,9 +167,9 @@ cl_to_jl = {
     :int32_t                => :Int32,
     :int16_t                => :Int16,
     :int8_t                 => :Int8
-    }
+    )
 
-int_conversion = {
+int_conversion = Dict{Any,Any}(
     :Cint   => int32,
     :Cuint  => uint32,
     :Uint64 => uint64,
@@ -180,7 +180,7 @@ int_conversion = {
     :Int32  => int32,
     :Int16  => int16,
     :Int8   => int8
-    }
+    )
 
 
 ################################################################################
@@ -250,7 +250,7 @@ function repr_jl(t::ConstantArray)
         b = :($(symbol(typename))(fill(zero($repr), $arrsize)...))
         zero_call = :(zero(::Type{$(symbol(typename))}) = $b)
 
-        context.common_buf[typesym] = ExprUnit({e, zero_call})
+        context.common_buf[typesym] = ExprUnit(Any[e, zero_call])
     end
 
     return typesym
@@ -362,7 +362,7 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, cursor::EnumDecl; use
     end
     enumname = usename
 
-    buf = {}
+    buf = []
     enum_exprs = ExprUnit(buf)
     expr_buf[symbol_safe(enumname)] = enum_exprs
 
@@ -438,13 +438,13 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, ud::UnionDecl; usenam
     push!(b.args, Expr(:(::), cur_sym, target))
 
     # TODO: add other dependencies
-    expr_buf[cur_sym] = ExprUnit(e,{target})
+    expr_buf[cur_sym] = ExprUnit(e, Any[target])
 
     return
 end
 
 function efunsig(name::Symbol, args::Vector{Symbol}, types)
-    x = { Expr(:(::), a, t) for (a,t) in zip(args,types) }
+    x = Any[ Expr(:(::), a, t) for (a,t) in zip(args,types) ]
     Expr(:call, name, x...)
 end
 
@@ -474,7 +474,7 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, tdecl::TypedefDecl; u
 
     td_sym = symbol(spelling(tdecl))
     td_target = repr_jl(td_type)
-    expr_buf[td_sym] = ExprUnit(Expr(:typealias, td_sym, td_target), {td_target})
+    expr_buf[td_sym] = ExprUnit(Expr(:typealias, td_sym, td_target), Any[td_target])
 end
 
 ################################################################################
@@ -536,8 +536,8 @@ end
 # Functionally, it shouldn't matter, but eventually, we
 # might want something more sophisticated.
 # (Check: Does this functionality already exist elsewhere?)
-get_symbols(s) = {}
-get_symbols(s::Symbol) = {s}
+get_symbols(s) = []
+get_symbols(s::Symbol) = Any[s]
 get_symbols(e::Expr) = vcat(get_symbols(e.head), get_symbols(e.args))
 get_symbols(xs::Array) = reduce(vcat, [get_symbols(x) for x in xs])
 
@@ -725,7 +725,7 @@ end
 
 
 function dump_to_buf(expr_buf::OrderedDict{Symbol, ExprUnit})
-    buf = {}
+    buf = []
     for item in values(expr_buf)
         item.state == :done && continue
         dump_to_buf!(buf, expr_buf, item)

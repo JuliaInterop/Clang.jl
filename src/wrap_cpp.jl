@@ -2,6 +2,7 @@
 module wt
 
 using Clang.cindex
+using Compat
 
 export
     CustomArg,
@@ -261,7 +262,7 @@ function wrap(out::IO, top::cindex.ClassDecl)
     println(out, "}//extern C")
 end
 
-cl_to_c = Dict{Any,Any}(
+cl_to_c = @compat Dict{Any,Any}(
     cindex.VoidType       => "void",
     cindex.FirstBuiltin   => "void",
     cindex.BoolType       => "bool",
@@ -448,7 +449,7 @@ function wrapjl(out::IO, libname::ASCIIString, class::cindex.ClassDecl)
     end
 end
 
-cl_to_jl = Dict{Any,Any}(
+cl_to_jl = @compat Dict{Any,Any}(
     cindex.VoidType         => Void,
     cindex.BoolType         => Bool,
     cindex.Char_U           => Uint8,

@@ -7,6 +7,7 @@ module wrap_c
 
 using Clang.cindex
 using DataStructures
+using Compat
 
 export wrap_c_headers
 export WrapContext
@@ -38,8 +39,8 @@ type ExprUnit
 end
 
 ExprUnit() = ExprUnit(Any[], OrderedSet{Symbol}(), :new)
-ExprUnit(e::Union(Expr,Symbol,ASCIIString), deps=[]; state::Symbol=:new) = ExprUnit(Any[e], OrderedSet{Symbol}([target_type(dep) for dep in deps]...), state)
-ExprUnit(a::Array, deps=[]; state::Symbol=:new) = ExprUnit(a, OrderedSet{Symbol}([target_type(dep) for dep in deps]...), state)
+ExprUnit(e::Union(Expr,Symbol,ASCIIString), deps=Any[]; state::Symbol=:new) = ExprUnit(Any[e], OrderedSet{Symbol}([target_type(dep) for dep in deps]...), state)
+ExprUnit(a::Array, deps=Any[]; state::Symbol=:new) = ExprUnit(a, OrderedSet{Symbol}([target_type(dep) for dep in deps]...), state)
 
 ### WrapContext
 # stores shared information about the wrapping session
@@ -116,7 +117,7 @@ function init(;
                                  cursor_wrapped,
                                  OrderedDict(Symbol, ExprUnit),
                                  Set{ASCIIString}(),
-                                 DefaultOrderedDict(ASCIIString, Array{Any}, ()->[]),
+                                 DefaultOrderedDict(ASCIIString, Array{Any}, ()->Any[]),
                                  options,
                                  0,
                                  rewriter)
@@ -132,7 +133,7 @@ end
 #   Julia entities, for example "size_t" -> :Csize_t
 #
 ##############################################################################
-cl_to_jl = Dict{Any,Any}(
+cl_to_jl = @compat Dict{Any,Any}(
     cindex.VoidType         => :Void,
     cindex.BoolType         => :Bool,
     cindex.Char_U           => :Uint8,
@@ -169,7 +170,7 @@ cl_to_jl = Dict{Any,Any}(
     :int8_t                 => :Int8
     )
 
-int_conversion = Dict{Any,Any}(
+int_conversion = @compat Dict{Any,Any}(
     :Cint   => int32,
     :Cuint  => uint32,
     :Uint64 => uint64,
@@ -362,7 +363,7 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, cursor::EnumDecl; use
     end
     enumname = usename
 
-    buf = []
+    buf = Any[]
     enum_exprs = ExprUnit(buf)
     expr_buf[symbol_safe(enumname)] = enum_exprs
 
@@ -536,7 +537,7 @@ end
 # Functionally, it shouldn't matter, but eventually, we
 # might want something more sophisticated.
 # (Check: Does this functionality already exist elsewhere?)
-get_symbols(s) = []
+get_symbols(s) = Any[]
 get_symbols(s::Symbol) = Any[s]
 get_symbols(e::Expr) = vcat(get_symbols(e.head), get_symbols(e.args))
 get_symbols(xs::Array) = reduce(vcat, [get_symbols(x) for x in xs])
@@ -725,7 +726,7 @@ end
 
 
 function dump_to_buf(expr_buf::OrderedDict{Symbol, ExprUnit})
-    buf = []
+    buf = Any[]
     for item in values(expr_buf)
         item.state == :done && continue
         dump_to_buf!(buf, expr_buf, item)

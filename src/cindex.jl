@@ -11,6 +11,8 @@ export function_return_modifiers, function_arg_modifiers
 import Base.getindex, Base.start, Base.next, Base.done, Base.search, Base.show
 import Base.endof, Base.length
 
+using Compat
+
 ###############################################################################
 
 # Name of the helper library
@@ -89,7 +91,7 @@ search(cu::CLCursor, name::ASCIIString) = search(cu, x->(cindex.spelling(x) == n
 # Returns a Dict{ DataType => CLCursor
 
 function matchchildren(cu::CLCursor, types::Array{DataType,1})
-    ret = { t => CLCursor[] for t in types}
+    ret = @compat Dict{Any,Any}([ t => CLCursor[] for t in types])
     for child in children(cu)
         for t in types
             isa(child, t) && push!(ret[t], child)
@@ -101,7 +103,7 @@ end
 ###############################################################################
 
 # TODO: macro version should be more efficient.
-anymatch(first, args...) = any({==(first, a) for a in args})
+anymatch(first, args...) = any([==(first, a) for a in args])
 
 cu_type(c::CLCursor) = getCursorType(c)
 ty_kind(c::CLType) = convert(Int, c.data[1].kind)

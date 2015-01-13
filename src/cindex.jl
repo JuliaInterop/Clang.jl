@@ -47,6 +47,9 @@ function parse_header(header::String;
                 args                            = ASCIIString[""],
                 includes                        = ASCIIString[],
                 flags                           = TranslationUnit_Flags.None)
+    if !isfile(header)
+        error(header, " not found")
+    end
     if (index == None)
         index = idx_create(0, (diagnostics ? 1 : 0))
     end

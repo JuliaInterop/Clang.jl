@@ -734,7 +734,7 @@ function dump_to_buf(expr_buf::OrderedDict{Symbol, ExprUnit})
     buf
 end
 
-function run(wc::WrapContext) 
+function Base.run(wc::WrapContext)
     # Parse headers
     parsed = parse_c_headers(wc)
     # Sort includes by requirement order
@@ -777,10 +777,7 @@ function run(wc::WrapContext)
 end
 
 # Deprecated interface
-wrap_c_headers(wc::WrapContext, headers) = begin
-    warn("wrap_c_headers: deprecated")
-    wc.headers = headers; run(wc)
-end
+@deprecate wrap_c_headers(wc::WrapContext, headers)   (wc.headers = headers; run(wc))
 
 ###############################################################################
 # Utilities

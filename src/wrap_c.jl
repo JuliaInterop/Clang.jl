@@ -38,8 +38,11 @@ type ExprUnit
     state::Symbol
 end
 
+immutable Poisoned
+end
+
 ExprUnit() = ExprUnit(Any[], OrderedSet{Symbol}(), :new)
-ExprUnit(e::Union(Expr,Symbol,ASCIIString), deps=Any[]; state::Symbol=:new) = ExprUnit(Any[e], OrderedSet{Symbol}([target_type(dep) for dep in deps]...), state)
+ExprUnit(e::Union(Expr,Symbol,ASCIIString,Poisoned), deps=Any[]; state::Symbol=:new) = ExprUnit(Any[e], OrderedSet{Symbol}([target_type(dep) for dep in deps]...), state)
 ExprUnit(a::Array, deps=Any[]; state::Symbol=:new) = ExprUnit(a, OrderedSet{Symbol}([target_type(dep) for dep in deps]...), state)
 
 ### WrapContext
@@ -402,6 +405,7 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, sd::StructDecl; usena
         if (isa(cu, StructDecl) || isa(cu, UnionDecl))
             continue
         elseif !(isa(cu, FieldDecl) || isa(cu, TypeRef))
+            expr_buf[usesym] = ExprUnit(Poisoned())
             warn("Skipping struct: \"$usename\" due to unsupported field: $cur_name")
             return
         elseif (length(cur_name) < 1)
@@ -475,7 +479,9 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, tdecl::TypedefDecl; u
 
     td_sym = symbol(spelling(tdecl))
     td_target = repr_jl(td_type)
-    expr_buf[td_sym] = ExprUnit(Expr(:typealias, td_sym, td_target), Any[td_target])
+    if !haskey(expr_buf, td_sym)
+        expr_buf[td_sym] = ExprUnit(Expr(:typealias, td_sym, td_target), Any[td_target])
+    end
 end
 
 ################################################################################
@@ -679,6 +685,7 @@ function print_buffer(ostrm, obuf)
     in_enum = false
 
     for e in obuf
+        isa(e, Poisoned) && continue
         prev_state = state
         if state != :enum
             state = (isa(e, String) ? :string :
@@ -734,7 +741,7 @@ function dump_to_buf(expr_buf::OrderedDict{Symbol, ExprUnit})
     buf
 end
 
-function run(wc::WrapContext) 
+function Base.run(wc::WrapContext)
     # Parse headers
     parsed = parse_c_headers(wc)
     # Sort includes by requirement order
@@ -777,10 +784,7 @@ function run(wc::WrapContext)
 end
 
 # Deprecated interface
-wrap_c_headers(wc::WrapContext, headers) = begin
-    warn("wrap_c_headers: deprecated")
-    wc.headers = headers; run(wc)
-end
+@deprecate wrap_c_headers(wc::WrapContext, headers)   (wc.headers = headers; run(wc))
 
 ###############################################################################
 # Utilities

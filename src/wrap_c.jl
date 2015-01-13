@@ -546,7 +546,7 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, md::cindex.MacroDefin
     tokens = tokenize(md)
     # Skip any empty definitions
     tokens.size < 2 && return
-    beginswith(name(md), "_") && return
+    startswith(name(md), "_") && return
 
     pos = 1; exprn = ""
     if tokens[2].text == "("
@@ -619,7 +619,7 @@ function wrap_header(wc::WrapContext, topcu::CLCursor, top_hdr, obuf::Array)
            continue
         end
 
-        if beginswith(cursor_name, "__")                    ||      # skip compiler definitions
+        if startswith(cursor_name, "__")                    ||      # skip compiler definitions
            (cursor_name in keys(wc.common_buf) &&
             !(cursor_name in keys(wc.empty_structs)))       ||      # already wrapped
            !(cursor_hdr in wc.headers)                      || 
@@ -687,10 +687,10 @@ function print_buffer(ostrm, obuf)
         end
 
         if state == :string
-            if beginswith(e, "# begin enum")
+            if startswith(e, "# begin enum")
                 state = :enum
                 println(ostrm)
-            elseif beginswith(e, "# Skipping")
+            elseif startswith(e, "# Skipping")
                 state = :skipping
             end
         end
@@ -705,7 +705,7 @@ function print_buffer(ostrm, obuf)
 
         println(ostrm, e)
 
-        if state == :enum && isa(e, String) && beginswith(e, "# end enum")
+        if state == :enum && isa(e, String) && startswith(e, "# end enum")
             state = :end_enum
         end
     end

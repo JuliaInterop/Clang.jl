@@ -10,6 +10,7 @@ env:
 before_install:
   # Clang.jl
   - sudo apt-get install libclang-3.3
+  - sudo apt-get install libclang-3.3-dev
   # Julia test setup
   - sudo add-apt-repository ppa:staticfloat/julia-deps -y
   - sudo add-apt-repository ppa:staticfloat/${JULIAVERSION} -y

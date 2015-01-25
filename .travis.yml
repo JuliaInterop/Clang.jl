@@ -9,8 +9,7 @@ env:
     - JULIAVERSION="julianightlies"
 before_install:
   # Clang.jl
-  - sudo apt-get install libclang-3.3
-  - sudo apt-get install libclang-3.3-dev
+  - sudo apt-get install libclang-3.3 libclang-3.3-dev llvm-3.3 libllvm3.3
   # Julia test setup
   - sudo add-apt-repository ppa:staticfloat/julia-deps -y
   - sudo add-apt-repository ppa:staticfloat/${JULIAVERSION} -y

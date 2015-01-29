@@ -632,7 +632,6 @@ function wrap_header(wc::WrapContext, topcu::CLCursor, top_hdr, obuf::Array)
         if startswith(cursor_name, "__")                    ||      # skip compiler definitions
            (cursor_name in keys(wc.common_buf) &&
             !(cursor_name in keys(wc.empty_structs)))       ||      # already wrapped
-           !(cursor_hdr in wc.headers)                      || 
            !wc.cursor_wrapped(cursor_name, cursor)                  # client callback
 
             continue

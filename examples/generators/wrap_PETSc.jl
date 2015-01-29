@@ -34,7 +34,7 @@ function wrap_cursor(name::ASCIIString, cursor)
 end
 
 const wc = wrap_c.init(;
-                        headers = petsc_header
+                        headers = petsc_header,
                         output_file = "libPETSc_h.jl",
                         common_file = "libPETSc_common.jl",
                         clang_includes      = clang_includes,

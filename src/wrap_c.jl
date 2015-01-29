@@ -163,6 +163,7 @@ cl_to_jl = @compat Dict{Any,Any}(
     cindex.LongDouble       => :Float64,
     cindex.Enum             => :Cint,
     cindex.NullPtr          => :C_NULL,
+    cindex.Int128           => :Int128,
     cindex.UInt128          => :Uint128,
     cindex.FirstBuiltin     => :Void,
     :size_t                 => :Csize_t,

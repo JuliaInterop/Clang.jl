@@ -55,9 +55,13 @@ type WrapContext
     clang_includes::Array{ASCIIString,1}         # clang include paths
     clang_args::Array{ASCIIString,1}             # additional {"-Arg", "value"} pairs for clang
     header_wrapped::Function                     # called to determine header inclusion status
+                                                 #   (top_header, cursor_header) -> Bool
     header_library::Function                     # called to determine shared library for given header
+                                                 #   (header_name) -> library_name::String
     header_outfile::Function                     # called to determine output file group for given header
+                                                 #   (header_name) -> output_file::String
     cursor_wrapped::Function                     # called to determine cursor inclusion status
+                                                 #   (cursor_name, cursor) -> Bool
     common_buf::OrderedDict{Symbol, ExprUnit}    # output buffer for common items: typedefs, enums, etc.
     empty_structs::Set{ASCIIString}
     output_bufs::DefaultOrderedDict{ASCIIString, Array{Any}}
@@ -96,7 +100,7 @@ function init(;
 
     (common_file == "")    && ( common_file = output_file )
     common_file = joinpath(output_dir, common_file)
-    
+
     if (header_library == None)
         header_library = x->strip(splitext(basename(x))[1])
     elseif isa(header_library, ASCIIString)
@@ -233,7 +237,7 @@ function repr_jl(t::ConstantArray)
 
     # Override pointer representation so pointee type is not written
     repr_short(t::CLType) = isa(t, Pointer) ? "Ptr" : repr_jl(t)
-    
+
     # Grab the WrapContext in order to add bitstype
     global context::WrapContext
 
@@ -292,7 +296,7 @@ target_type(q) = error("target_type: don't know how to handle $q")
 #   - used for hacky union inclusion: we find the largest union field and
 #     declare a block of bytes to match.
 ###############################################################################
- 
+
 typesize(t::CLType) = sizeof(eval(cl_to_jl[typeof(t)]))
 typesize(t::Record) = begin warn("  incorrect typesize for Record field"); 0 end
 typesize(t::Unexposed) = begin warn("  incorrect typesize for Unexposed field"); 0 end
@@ -300,7 +304,7 @@ typesize(t::ConstantArray) = cindex.getArraySize(t)
 typesize(t::TypedefDecl) = typesize(cindex.getTypedefDeclUnderlyingType(t))
 typesize(t::Typedef) = typesize(cindex.getTypeDeclaration(t))
 typesize(t::Invalid) = begin warn("  incorrect typesize for Invalid field"); 0 end
-    
+
 function largestfield(cu::UnionDecl)
     maxsize,maxelem = 0,0
     fields = children(cu)
@@ -434,7 +438,7 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, ud::UnionDecl; usenam
         warn("Skipping unnamed UnionDecl")
         return
     end
-    
+
     b = Expr(:block)
     e = Expr(:type, !context.options.immutable_structs, symbol(usename), b)
     max_cu = largestfield(ud)
@@ -464,7 +468,7 @@ end
 function wrap(context::WrapContext, expr_buf::OrderedDict, tdecl::TypedefDecl; usename="")
     cursor_type = cindex.cu_type(tdecl)
     td_type = cindex.getTypedefDeclUnderlyingType(tdecl)
-    
+
     if isa(td_type, Unexposed)
         tdunxp = children(tdecl)[1]
         if isa(tdunxp, TypeRef)
@@ -521,7 +525,7 @@ function handle_macro_exprn(tokens::TokenList, pos::Int)
         end
         return txt
     end
-    
+
     # check whether identifiers and literals alternate
     # with punctuation
     exprn = ""
@@ -606,7 +610,7 @@ debug_cursors = CLCursor[]
 
 function wrap_header(wc::WrapContext, topcu::CLCursor, top_hdr, obuf::Array)
     println("WRAPPING HEADER: $top_hdr")
-    
+
     topcl = children(topcu)
 
     # Loop over all of the child cursors and wrap them, if appropriate.
@@ -644,6 +648,7 @@ function wrap_header(wc::WrapContext, topcu::CLCursor, top_hdr, obuf::Array)
             end
         catch err
             push!(debug_cursors::Array{CLCursor,1}, cursor)
+            info("Error thrown. Last cursor available in Clang.wrap_c.debug_cursors")
             rethrow(err)
         end
     end
@@ -653,7 +658,7 @@ end
 
 function parse_c_headers(wc::WrapContext)
     parsed = Dict{ASCIIString, CLCursor}()
-    
+
     # Parse the headers
     for header in unique(wc.headers)
         topcu = cindex.parse_header(header; 
@@ -670,7 +675,7 @@ end
 function sort_includes(wc::WrapContext, parsed)
     includes = mapreduce(x->search(parsed[x], InclusionDirective), append!, keys(parsed))
     header_paths = unique(map(x->cindex.getIncludedFile(x), includes))
-    unique([filter(x -> x in header_paths, wc.headers), wc.headers])
+    return unique([filter(x -> x in header_paths, wc.headers), wc.headers])
 end
 
 ################################################################################
@@ -757,10 +762,10 @@ function Base.run(wc::WrapContext)
 
         # Extract header to Expr[] array
         wrap_header(wc, parsed[hfile], hfile, obuf)
-    
+
         # Apply user-supplied transformation
-        obuf = wc.rewriter(obuf)
-        
+        wc.output_bufs[hfile] = wc.rewriter(obuf)
+
         # Debug
         println("writing $(outfile)")
 
@@ -769,7 +774,7 @@ function Base.run(wc::WrapContext)
         println(ostrm, "# Julia wrapper for header: $hfile")
         println(ostrm, "# Automatically generated using Clang.jl wrap_c, version $version\n")
 
-        print_buffer(ostrm, obuf)
+        print_buffer(ostrm, wc.output_bufs[hfile])
     end
 
     common_buf = dump_to_buf(wc.common_buf)

@@ -577,7 +577,7 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, md::cindex.MacroDefin
     end
 
     # Occasionally, skipped definitions slip through
-    exprn == "" && return
+    (exprn == "" || exprn == "()") && return
 
     use_sym = symbol_safe(tokens[1].text)
     target = parse(exprn)
@@ -620,20 +620,16 @@ function wrap_header(wc::WrapContext, topcu::CLCursor, top_hdr, obuf::Array)
         cursor_name = name(cursor)
 
         # what should be wrapped:
-        #    1. always wrap things in the current top header (ie not includes)
-        #    2. wrap things that are in other includes
-        #    3. wrap includes if wc.header_wrapped(header, cursor_name) == True
+        #   1. wrap if context.header_wrapped(top_header, cursor_header) == True
+        #   2. wrap if context.cursor_wrapped(cursor_name, cursor) == True
+        #   3. skip compiler defs and cursors already wrapped
         if cursor_hdr == top_hdr
             # pass
-        elseif !wc.header_wrapped(top_hdr, cursor_hdr)
-           continue
-        end
-
-        if startswith(cursor_name, "__")                    ||      # skip compiler definitions
-           (cursor_name in keys(wc.common_buf) &&
-            !(cursor_name in keys(wc.empty_structs)))       ||      # already wrapped
-           !wc.cursor_wrapped(cursor_name, cursor)                  # client callback
-
+        elseif !wc.header_wrapped(top_hdr, cursor_hdr) ||
+               !wc.cursor_wrapped(cursor_name, cursor)          # client callbacks
+               (startswith(cursor_name, "__")          ||       # skip compiler definitions
+               (cursor_name in keys(wc.common_buf)) &&          # already wrapped
+                    !(cursor_name in keys(wc.empty_structs)))
             continue
         end
 

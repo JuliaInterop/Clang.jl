@@ -174,7 +174,8 @@ cl_to_jl = @compat Dict{Any,Any}(
     :int64_t                => :Int64,
     :int32_t                => :Int32,
     :int16_t                => :Int16,
-    :int8_t                 => :Int8
+    :int8_t                 => :Int8,
+    :uintptr_t              => :Csize_t
     )
 
 int_conversion = @compat Dict{Any,Any}(

@@ -419,7 +419,7 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, sd::StructDecl; usena
             warn("Skipping struct: \"$usename\" due to unsupported field: $cur_name")
             return
         elseif (length(cur_name) < 1)
-            error("Unnamed struct member in: $usename ... cursor: ", string(cu)) 
+            error("Unnamed struct member in: $usename ... cursor: ", string(cu))
         end
 
         repr = repr_jl(cu_type(cu))
@@ -522,7 +522,7 @@ end
 function handle_macro_exprn(tokens::TokenList, pos::Int)
     function trans(tok)
         ops = ["+" "-" "*" ">>" "<<" "/" "\\" "%" "|" "||" "^" "&" "&&"]
-        if (isa(tok, cindex.Literal) || 
+        if (isa(tok, cindex.Literal) ||
             (isa(tok,cindex.Identifier))) return 0
         elseif (isa(tok, cindex.Punctuation) && tok.text in ops) return 1
         else return -1
@@ -561,7 +561,7 @@ function handle_macro_exprn(tokens::TokenList, pos::Int)
             prev = state
         else
             break
-        end 
+        end
         exprn = exprn * literally(tok)
     end
     return (exprn,pos)
@@ -678,7 +678,7 @@ function parse_c_headers(wc::WrapContext)
 
     # Parse the headers
     for header in unique(wc.headers)
-        topcu = cindex.parse_header(header; 
+        topcu = cindex.parse_header(header;
                                     index = wc.index,
                                     args  = wc.clang_args,
                                     includes = wc.clang_includes,
@@ -769,7 +769,7 @@ function Base.run(wc::WrapContext)
     # Sort includes by requirement order
     wc.headers = sort_includes(wc, parsed)
 
-    # Helper to store file handles 
+    # Helper to store file handles
     filehandles = Dict{ASCIIString,IOStream}()
     getfile(f) = (f in keys(filehandles)) ? filehandles[f] : (filehandles[f] = open(f, "w"))
 
@@ -786,7 +786,7 @@ function Base.run(wc::WrapContext)
         # Debug
         println("writing $(outfile)")
 
-        # Write output 
+        # Write output
         ostrm = getfile(outfile)
         println(ostrm, "# Julia wrapper for header: $hfile")
         println(ostrm, "# Automatically generated using Clang.jl wrap_c, version $version\n")

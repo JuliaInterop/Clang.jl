@@ -311,7 +311,11 @@ function largestfield(cu::UnionDecl)
     maxsize,maxelem = 0,0
     fields = children(cu)
     for i in 1:length(fields)
-        maxelem = ( (maxsize > (typesize(cu_type(fields[i])))) ? maxelem : i )
+        field_size = typesize(cu_type(fields[i]))
+        if field_size > maxsize
+            maxsize = field_size
+            maxelem = i
+        end
     end
     fields[maxelem]
 end
@@ -446,6 +450,12 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, ud::UnionDecl; usenam
     max_cu = largestfield(ud)
     cur_sym = symbol("_"*usename)
     target = repr_jl(cu_type(max_cu))
+
+	if string(target) == ""
+        warn("Skipping UnionDecl $(usename) because largest field '$(name(max_cu))' could not be typed", string(target))
+        return
+	end
+
     push!(b.args, Expr(:(::), cur_sym, target))
 
     # TODO: add other dependencies

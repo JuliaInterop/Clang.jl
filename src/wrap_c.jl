@@ -635,12 +635,10 @@ function wrap_header(wc::WrapContext, topcu::CLCursor, top_hdr, obuf::Array)
         #   1. wrap if context.header_wrapped(top_header, cursor_header) == True
         #   2. wrap if context.cursor_wrapped(cursor_name, cursor) == True
         #   3. skip compiler defs and cursors already wrapped
-        if cursor_hdr == top_hdr
-            # pass
-        elseif !wc.header_wrapped(top_hdr, cursor_hdr) ||
-               !wc.cursor_wrapped(cursor_name, cursor)          # client callbacks
-               (startswith(cursor_name, "__")          ||       # skip compiler definitions
-               (cursor_name in keys(wc.common_buf)) &&          # already wrapped
+        if !wc.header_wrapped(top_hdr, cursor_hdr) ||
+           !wc.cursor_wrapped(cursor_name, cursor) ||       # client callbacks
+           startswith(cursor_name, "__")           ||       # skip compiler definitions
+           ((cursor_name in keys(wc.common_buf)) &&         # already wrapped
                     !(cursor_name in keys(wc.empty_structs)))
             continue
         end

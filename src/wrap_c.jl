@@ -58,7 +58,7 @@ type WrapContext
                                                  #   (top_header, cursor_header) -> Bool
     header_library::Function                     # called to determine shared library for given header
                                                  #   (header_name) -> library_name::String
-    header_outfile::Function                     # called to determine output file group for given header
+    header_outputfile::Function                  # called to determine output file group for given header
                                                  #   (header_name) -> output_file::String
     cursor_wrapped::Function                     # called to determine cursor inclusion status
                                                  #   (cursor_name, cursor) -> Bool
@@ -764,7 +764,7 @@ function Base.run(wc::WrapContext)
     getfile(f) = (f in keys(filehandles)) ? filehandles[f] : (filehandles[f] = open(f, "w"))
 
     for hfile in wc.headers
-        outfile = wc.header_outfile(hfile)
+        outfile = wc.header_outputfile(hfile)
         obuf = wc.output_bufs[hfile]
 
         # Extract header to Expr[] array

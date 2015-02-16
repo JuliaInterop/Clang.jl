@@ -482,7 +482,19 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, tdecl::TypedefDecl; u
     td_type = cindex.getTypedefDeclUnderlyingType(tdecl)
 
     if isa(td_type, Unexposed)
-        tdunxp = children(tdecl)[1]
+        decl_parts = children(tdecl)
+
+        local tdunxp
+
+        for part in decl_parts
+            # skip any leading non-type cursors
+            # Attributes, ...
+            if !isa(part, FirstAttr)
+                tdunxp = part
+                break
+            end
+        end
+
         if isa(tdunxp, TypeRef)
             td_type = tdunxp
         else

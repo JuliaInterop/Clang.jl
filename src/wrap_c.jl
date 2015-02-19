@@ -58,7 +58,7 @@ type WrapContext
                                                  #   (top_header, cursor_header) -> Bool
     header_library::Function                     # called to determine shared library for given header
                                                  #   (header_name) -> library_name::String
-    header_outfile::Function                     # called to determine output file group for given header
+    header_outputfile::Function                  # called to determine output file group for given header
                                                  #   (header_name) -> output_file::String
     cursor_wrapped::Function                     # called to determine cursor inclusion status
                                                  #   (cursor_name, cursor) -> Bool
@@ -311,7 +311,11 @@ function largestfield(cu::UnionDecl)
     maxsize,maxelem = 0,0
     fields = children(cu)
     for i in 1:length(fields)
-        maxelem = ( (maxsize > (typesize(cu_type(fields[i])))) ? maxelem : i )
+        field_size = typesize(cu_type(fields[i]))
+        if field_size > maxsize
+            maxsize = field_size
+            maxelem = i
+        end
     end
     fields[maxelem]
 end
@@ -326,8 +330,10 @@ end
 
 function wrap(context::WrapContext, buf::Array, func_decl::FunctionDecl, libname)
     func_type = cindex.cu_type(func_decl)
-    if cindex.isFunctionTypeVariadic(func_type) == 1
-        # skip vararg functions
+    if isa(func_type, FunctionNoProto)
+        warn("No Prototype for $(func_decl) - assuming no arguments")
+	elseif cindex.isFunctionTypeVariadic(func_type) == 1
+        warn("Skipping VarArg Function $(func_decl)")
         return
     end
 
@@ -415,7 +421,7 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, sd::StructDecl; usena
             warn("Skipping struct: \"$usename\" due to unsupported field: $cur_name")
             return
         elseif (length(cur_name) < 1)
-            error("Unnamed struct member in: $usename ... cursor: ", string(cu)) 
+            error("Unnamed struct member in: $usename ... cursor: ", string(cu))
         end
 
         repr = repr_jl(cu_type(cu))
@@ -446,6 +452,12 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, ud::UnionDecl; usenam
     max_cu = largestfield(ud)
     cur_sym = symbol("_"*usename)
     target = repr_jl(cu_type(max_cu))
+
+	if string(target) == ""
+        warn("Skipping UnionDecl $(usename) because largest field '$(name(max_cu))' could not be typed", string(target))
+        return
+	end
+
     push!(b.args, Expr(:(::), cur_sym, target))
 
     # TODO: add other dependencies
@@ -472,7 +484,19 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, tdecl::TypedefDecl; u
     td_type = cindex.getTypedefDeclUnderlyingType(tdecl)
 
     if isa(td_type, Unexposed)
-        tdunxp = children(tdecl)[1]
+        decl_parts = children(tdecl)
+
+        local tdunxp
+
+        for part in decl_parts
+            # skip any leading non-type cursors
+            # Attributes, ...
+            if !isa(part, FirstAttr)
+                tdunxp = part
+                break
+            end
+        end
+
         if isa(tdunxp, TypeRef)
             td_type = tdunxp
         else
@@ -500,7 +524,7 @@ end
 function handle_macro_exprn(tokens::TokenList, pos::Int)
     function trans(tok)
         ops = ["+" "-" "*" ">>" "<<" "/" "\\" "%" "|" "||" "^" "&" "&&"]
-        if (isa(tok, cindex.Literal) || 
+        if (isa(tok, cindex.Literal) ||
             (isa(tok,cindex.Identifier))) return 0
         elseif (isa(tok, cindex.Punctuation) && tok.text in ops) return 1
         else return -1
@@ -539,7 +563,7 @@ function handle_macro_exprn(tokens::TokenList, pos::Int)
             prev = state
         else
             break
-        end 
+        end
         exprn = exprn * literally(tok)
     end
     return (exprn,pos)
@@ -625,12 +649,10 @@ function wrap_header(wc::WrapContext, topcu::CLCursor, top_hdr, obuf::Array)
         #   1. wrap if context.header_wrapped(top_header, cursor_header) == True
         #   2. wrap if context.cursor_wrapped(cursor_name, cursor) == True
         #   3. skip compiler defs and cursors already wrapped
-        if cursor_hdr == top_hdr
-            # pass
-        elseif !wc.header_wrapped(top_hdr, cursor_hdr) ||
-               !wc.cursor_wrapped(cursor_name, cursor)          # client callbacks
-               (startswith(cursor_name, "__")          ||       # skip compiler definitions
-               (cursor_name in keys(wc.common_buf)) &&          # already wrapped
+        if !wc.header_wrapped(top_hdr, cursor_hdr) ||
+           !wc.cursor_wrapped(cursor_name, cursor) ||       # client callbacks
+           startswith(cursor_name, "__")           ||       # skip compiler definitions
+           ((cursor_name in keys(wc.common_buf)) &&         # already wrapped
                     !(cursor_name in keys(wc.empty_structs)))
             continue
         end
@@ -658,7 +680,7 @@ function parse_c_headers(wc::WrapContext)
 
     # Parse the headers
     for header in unique(wc.headers)
-        topcu = cindex.parse_header(header; 
+        topcu = cindex.parse_header(header;
                                     index = wc.index,
                                     args  = wc.clang_args,
                                     includes = wc.clang_includes,
@@ -749,12 +771,12 @@ function Base.run(wc::WrapContext)
     # Sort includes by requirement order
     wc.headers = sort_includes(wc, parsed)
 
-    # Helper to store file handles 
+    # Helper to store file handles
     filehandles = Dict{ASCIIString,IOStream}()
     getfile(f) = (f in keys(filehandles)) ? filehandles[f] : (filehandles[f] = open(f, "w"))
 
     for hfile in wc.headers
-        outfile = wc.header_outfile(hfile)
+        outfile = wc.header_outputfile(hfile)
         obuf = wc.output_bufs[hfile]
 
         # Extract header to Expr[] array
@@ -766,7 +788,7 @@ function Base.run(wc::WrapContext)
         # Debug
         println("writing $(outfile)")
 
-        # Write output 
+        # Write output
         ostrm = getfile(outfile)
         println(ostrm, "# Julia wrapper for header: $hfile")
         println(ostrm, "# Automatically generated using Clang.jl wrap_c, version $version\n")

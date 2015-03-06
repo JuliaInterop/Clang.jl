@@ -75,9 +75,9 @@ init(;args...) = init(ASCIIString[]; args...)
 function init(;
             headers                         = ASCIIString[],
             index                           = None,
-            output_file::ASCIIString        = "",
-            common_file::ASCIIString        = "",
-            output_dir::ASCIIString         = "",
+            output_file::ByteString        = "",
+            common_file::ByteString        = "",
+            output_dir::ByteString         = "",
             clang_args::Array{ASCIIString,1}
                                             = ASCIIString[],
             clang_includes::Array{ASCIIString,1}

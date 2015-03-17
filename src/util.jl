@@ -10,7 +10,7 @@ function find_sym(name,liblist)
     dl = C_NULL
     for dl in keys(libs)
         try
-            dlsym_e(dl, name)
+            Libdl.dlsym_e(dl, name)
         catch
             continue
         end

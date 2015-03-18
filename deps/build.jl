@@ -11,7 +11,7 @@ if !haskey(ENV, "LLVM_CONFIG") ENV["LLVM_CONFIG"] = find_llvm() end
 
 # on travis and some other systems, the llvm lib may not be in the
 # default path.
-push!(DL_LOAD_PATH, readchomp(`$(ENV["LLVM_CONFIG"]) --libdir`))
+push!(Libdl.DL_LOAD_PATH, readchomp(`$(ENV["LLVM_CONFIG"]) --libdir`))
 
 cd(joinpath(Pkg.dir(), "Clang", "deps", "src") )
 run(`make`)
@@ -22,4 +22,4 @@ if (!ispath("../usr/lib"))
   run(`mkdir ../usr/lib`)
 end
 
-run(`mv libwrapclang.$(Base.Sys.shlib_ext) ../usr/lib`)
+run(`mv libwrapclang.$(Libdl.dlext) ../usr/lib`)

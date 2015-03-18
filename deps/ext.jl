@@ -1,5 +1,5 @@
 if haskey(ENV, "TRAVIS")
-    push!(DL_LOAD_PATH, "/usr/lib/llvm-3.3/lib")
+    push!(Libdl.DL_LOAD_PATH, "/usr/lib/llvm-3.3/lib")
     const libwci = joinpath(Pkg.dir("Clang","deps","usr","lib"), "libwrapclang.so")
 else
     const libwci = find_library(["libwrapclang",],[Pkg.dir("Clang", "deps", "usr", "lib"),])

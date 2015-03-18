@@ -8,6 +8,7 @@ env:
     #- JULIAVERSION="juliareleases"
     - JULIAVERSION="julianightlies"
 before_install:
+  - export LD_LIBRARY_PATH=/usr/lib/llvm-3.3/lib
   # Clang.jl
   - sudo apt-get install libclang-3.3 libclang-3.3-dev llvm-3.3 libllvm3.3
   # Julia test setup

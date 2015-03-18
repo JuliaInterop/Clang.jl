@@ -378,7 +378,7 @@ for sym in names(CursorKind, true)
         immutable $(sym) <: CLCursor
             data::Array{CXCursor,1}
         end
-        CXCursorMap[int32($rval)] = $sym
+        CXCursorMap[Int32($rval)] = $sym
     end
 end
 
@@ -414,7 +414,7 @@ for sym in names(TypeKind, true)
         immutable $(sym) <: CLType
             data::Array{CXType,1}
         end
-        CLTypeMap[int32($rval)] = $sym
+        CLTypeMap[Int32($rval)] = $sym
     end
 end
 

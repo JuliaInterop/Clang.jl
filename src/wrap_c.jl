@@ -42,8 +42,8 @@ immutable Poisoned
 end
 
 ExprUnit() = ExprUnit(Any[], OrderedSet{Symbol}(), :new)
-ExprUnit(e::Union(Expr,Symbol,ASCIIString,Poisoned), deps=Any[]; state::Symbol=:new) = ExprUnit(Any[e], OrderedSet{Symbol}([target_type(dep) for dep in deps]...), state)
-ExprUnit(a::Array, deps=Any[]; state::Symbol=:new) = ExprUnit(a, OrderedSet{Symbol}([target_type(dep) for dep in deps]...), state)
+ExprUnit(e::Union(Expr,Symbol,ASCIIString,Poisoned), deps=Any[]; state::Symbol=:new) = ExprUnit(Any[e], OrderedSet{Symbol}([target_type(dep) for dep in deps]), state)
+ExprUnit(a::Array, deps=Any[]; state::Symbol=:new) = ExprUnit(a, OrderedSet{Symbol}([target_type(dep) for dep in deps]), state)
 
 ### WrapContext
 # stores shared information about the wrapping session
@@ -694,7 +694,7 @@ end
 function sort_includes(wc::WrapContext, parsed)
     includes = mapreduce(x->search(parsed[x], InclusionDirective), append!, keys(parsed))
     header_paths = unique(map(x->cindex.getIncludedFile(x), includes))
-    return unique([filter(x -> x in header_paths, wc.headers), wc.headers])
+    return unique(vcat(filter(x -> x in header_paths, wc.headers), wc.headers))
 end
 
 ################################################################################

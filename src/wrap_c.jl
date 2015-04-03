@@ -180,16 +180,20 @@ cl_to_jl = @compat Dict{Any,Any}(
     )
 
 int_conversion = @compat Dict{Any,Any}(
-    :Cint   => int32,
-    :Cuint  => uint32,
-    :Uint64 => uint64,
-    :Uint32 => uint32,
-    :Uint16 => uint16,
-    :Uint8  => uint8,
-    :Int64  => int64,
-    :Int32  => int32,
-    :Int16  => int16,
-    :Int8   => int8
+    :Cint   => Int32,
+    :Cuint  => UInt32,
+    :Uint64 => UInt64,
+    :Uint32 => UInt32,
+    :Uint16 => UInt16,
+    :Uint8  => UInt8,
+    :UInt64 => UInt64,
+    :UInt32 => UInt32,
+    :UInt16 => UInt16,
+    :UInt8  => UInt8,
+    :Int64  => Int64,
+    :Int32  => Int32,
+    :Int16  => Int16,
+    :Int8   => Int8
     )
 
 
@@ -390,7 +394,7 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, cursor::EnumDecl; use
         cur_name = cindex.spelling(enumitem)
         if (length(cur_name) < 1) continue end
         cur_sym = symbol_safe(cur_name)
-        push!(buf, :(const $cur_sym = $_int($(value(enumitem)))))
+        push!(buf, :(const $cur_sym = @compat $_int($(value(enumitem)))))
         expr_buf[cur_sym] = enum_exprs
     end
     push!(buf, "# end enum $enumname")
@@ -802,7 +806,12 @@ function Base.run(wc::WrapContext)
     common_buf = wc.rewriter(common_buf)
 
     # Write "common" definitions: types, typealiases, etc.
-    print_buffer(open(wc.common_file, "w"), common_buf)
+    open(wc.common_file, "w") do f
+        println(f, "# Automatically generated using Clang.jl wrap_c, version $version\n")
+        println(f, "using Compat")
+
+        print_buffer(f, common_buf)
+    end
 
     map(close, values(filehandles))
 end

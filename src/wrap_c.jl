@@ -261,7 +261,11 @@ function repr_jl(t::ConstantArray)
         end
 
         # Create a zero function for this type
-        b = :($(symbol(typename))(fill(zero($repr), $arrsize)...))
+        if isa(eltype, Pointer)
+            b = :($(symbol(typename))(fill(C_NULL, $arrsize)...))
+        else
+            b = :($(symbol(typename))(fill(zero($repr), $arrsize)...))
+        end
         zero_call = :(zero(::Type{$(symbol(typename))}) = $b)
 
         context.common_buf[typesym] = ExprUnit(Any[e, zero_call])

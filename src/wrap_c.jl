@@ -140,7 +140,7 @@ end
 #   Julia entities, for example "size_t" -> :Csize_t
 #
 ##############################################################################
-cl_to_jl = @compat Dict{Any,Any}(
+cl_to_jl = Dict{Any,Any}(
     cindex.VoidType         => :Void,
     cindex.BoolType         => :Bool,
     cindex.Char_U           => :Uint8,
@@ -179,7 +179,7 @@ cl_to_jl = @compat Dict{Any,Any}(
     :uintptr_t              => :Csize_t
     )
 
-int_conversion = @compat Dict{Any,Any}(
+int_conversion = Dict{Any,Any}(
     :Cint   => Int32,
     :Cuint  => UInt32,
     :Uint64 => UInt64,
@@ -394,7 +394,7 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, cursor::EnumDecl; use
         cur_name = cindex.spelling(enumitem)
         if (length(cur_name) < 1) continue end
         cur_sym = symbol_safe(cur_name)
-        push!(buf, :(const $cur_sym = @compat $_int($(value(enumitem)))))
+        push!(buf, :(const $cur_sym = $_int($(value(enumitem)))))
         expr_buf[cur_sym] = enum_exprs
     end
     push!(buf, "# end enum $enumname")

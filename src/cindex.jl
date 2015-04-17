@@ -11,8 +11,6 @@ export function_return_modifiers, function_arg_modifiers
 import Base.getindex, Base.start, Base.next, Base.done, Base.search, Base.show
 import Base.endof, Base.length
 
-using Compat
-
 ###############################################################################
 
 # Name of the helper library

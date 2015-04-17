@@ -7,7 +7,6 @@ module wrap_c
 
 using Clang.cindex
 using DataStructures
-using Compat
 
 export wrap_c_headers
 export WrapContext

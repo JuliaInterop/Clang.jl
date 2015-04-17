@@ -2,7 +2,6 @@ module wrap_cpp
 # module wt
 
 using Clang.cindex
-using Compat
 
 export
     CustomArg,

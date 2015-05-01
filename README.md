@@ -6,6 +6,10 @@ provides background on the functionality available through libclang, and thus
 through the Julia wrapper. The Clang.jl repository also hosts related tools built
 on top of libclang functionality.
 
+If you are unfamiliar with the Clang AST and plan to access the internals of this library
+(as opposed to accessing the 'wrap-c' bindings), a good starting point is the
+[Introduction to the Clang AST](http://clang.llvm.org/docs/IntroductionToTheClangAST.html).
+
 ## Getting Started
 
 Installation requirements are listed down page.

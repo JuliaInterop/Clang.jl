@@ -350,7 +350,7 @@ function tu_cursor(tu::CXTranslationUnit)
 end
  
 function tu_parse(CXIndex,
-                  source_filename::ASCIIString, 
+                  source_filename::AbstractString, 
                   cl_args::Array{ASCIIString,1},
                   num_clargs,
                   unsaved_files::CXUnsavedFile,

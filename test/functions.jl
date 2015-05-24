@@ -1,7 +1,8 @@
 using Clang.cindex
 using Base.Test
 
-top = cindex.parse_header("cxx/cxxbasic.h"; cplusplus = true)
+top = cindex.parse_header(joinpath(dirname(@__FILE__), "cxx/cxxbasic.h");
+                          cplusplus = true)
 
 funcs = cindex.search(top, "func")
 @test length(funcs) == 1

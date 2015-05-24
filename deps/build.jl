@@ -13,13 +13,13 @@ if !haskey(ENV, "LLVM_CONFIG") ENV["LLVM_CONFIG"] = find_llvm() end
 # default path.
 push!(Libdl.DL_LOAD_PATH, readchomp(`$(ENV["LLVM_CONFIG"]) --libdir`))
 
-cd(joinpath(Pkg.dir(), "Clang", "deps", "src") )
+cd(joinpath(dirname(@__FILE__), "src"))
 run(`make`)
-if (!ispath("../usr")) 
-  run(`mkdir ../usr`)
+if (!ispath("../usr"))
+    run(`mkdir ../usr`)
 end
-if (!ispath("../usr/lib")) 
-  run(`mkdir ../usr/lib`)
+if (!ispath("../usr/lib"))
+    run(`mkdir ../usr/lib`)
 end
 
 run(`mv libwrapclang.$(Libdl.dlext) ../usr/lib`)

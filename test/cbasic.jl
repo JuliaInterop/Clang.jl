@@ -1,7 +1,7 @@
 using Clang.cindex
 using Base.Test
 
-top = cindex.parse_header("cxx/cbasic.h",
+top = cindex.parse_header(joinpath(dirname(@__FILE__), "cxx/cbasic.h"),
                           flags = TranslationUnit_Flags.DetailedPreprocessingRecord |
                           TranslationUnit_Flags.SkipFunctionBodies)
 

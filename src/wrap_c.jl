@@ -335,7 +335,7 @@ function wrap(context::WrapContext, buf::Array, func_decl::FunctionDecl, libname
     func_type = cindex.cu_type(func_decl)
     if isa(func_type, FunctionNoProto)
         warn("No Prototype for $(func_decl) - assuming no arguments")
-	elseif cindex.isFunctionTypeVariadic(func_type) == 1
+    elseif cindex.isFunctionTypeVariadic(func_type) == 1
         warn("Skipping VarArg Function $(func_decl)")
         return
     end

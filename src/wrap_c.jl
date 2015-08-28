@@ -165,6 +165,7 @@ cl_to_jl = Dict{Any,Any}(
     cindex.Int128           => :Int128,
     cindex.UInt128          => :Uint128,
     cindex.FirstBuiltin     => :Void,
+    cindex.Complex          => :Complex,
     :size_t                 => :Csize_t,
     :ptrdiff_t              => :Cptrdiff_t,
     :uint64_t               => :Uint64,

@@ -593,7 +593,7 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, md::cindex.MacroDefin
         exprn,pos = handle_macro_exprn(tokens, 3)
         if (pos != endof(tokens) || tokens[pos].text != ")")
             mdef_str = join([c.text for c in tokens], " ")
-            expr_buf[symbol(mdef_str)] = ExprUnit(string("# Skipping MacroDefinition: ", mdef_str))
+            expr_buf[symbol(mdef_str)] = ExprUnit(string("# Skipping MacroDefinition: ", replace(mdef_str, "\n", "\n#")))
             return
         end
         exprn = "(" * exprn * ")"
@@ -601,7 +601,7 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, md::cindex.MacroDefin
         (exprn,pos) = handle_macro_exprn(tokens, 2)
         if pos != endof(tokens)
             mdef_str = join([c.text for c in tokens], " ")
-            expr_buf[symbol(mdef_str)] = ExprUnit(string("# Skipping MacroDefinition: ", mdef_str))
+            expr_buf[symbol(mdef_str)] = ExprUnit(string("# Skipping MacroDefinition: ", replace(mdef_str, "\n", "#\n")))
             return
         end
     end
@@ -738,8 +738,7 @@ function print_buffer(ostrm, obuf)
             end
         end
 
-        print_escaped(ostrm, string(e), "")
-        println(ostrm)
+        println(ostrm, e)
 
         if state == :enum && isa(e, String) && startswith(e, "# end enum")
             state = :end_enum

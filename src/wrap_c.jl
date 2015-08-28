@@ -738,7 +738,8 @@ function print_buffer(ostrm, obuf)
             end
         end
 
-        println(ostrm, e)
+        print_escaped(ostrm, string(e), "")
+        println(ostrm)
 
         if state == :enum && isa(e, String) && startswith(e, "# end enum")
             state = :end_enum

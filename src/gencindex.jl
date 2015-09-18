@@ -23,9 +23,9 @@ abstract PointerArg
 
 c_types = {
   Int32 => "int",
-  Uint32 => "unsigned int",
+  UInt32 => "unsigned int",
   Int64 => "long long",
-  Uint64 => "unsigned long long",
+  UInt64 => "unsigned long long",
   CXUnsavedFile => "char*",
   CXSourceLocation => "char*",
   CXSourceRange => "char*",
@@ -49,8 +49,8 @@ is_struct(x) = (super(x) == StructArg ? true : false)
 is_enum(x) = (super(x) == EnumArg ? true : false)
 
 type Arg
-  cname::String
-  ctype::String
+  cname::AbstractString
+  ctype::AbstractString
 end
 
 function flatten(f...)
@@ -64,10 +64,10 @@ end
 function to_c(io::IOStream, rtype, fname, args)
   c_ret = is_struct(rtype) ? "void " : c_types[rtype]
   c_args = map(x->ref(c_types,x), is_struct(rtype) ? flatten(args,{rtype}) : args )
-  
+
   named_args = { Arg("a$i", a) for (i,a) in enumerate(c_args) }
   declargs = join( [x.ctype*" "*x.cname*"," for x in named_args])[1:end-1]
-  
+
   println(io, "$c_ret wci_$fname($declargs) {")
 
   cl_args = {}
@@ -80,7 +80,7 @@ function to_c(io::IOStream, rtype, fname, args)
     end
   end
   cl_fargs = join( ["$a," for a in cl_args])[1:end-1]
-  
+
   if is_struct(rtype)
     println(io, "  $rtype rx = clang_$fname($cl_fargs);")
     println(io, "  wci_save_$rtype(rx,a", string(length(args)+1), ");")
@@ -128,10 +128,10 @@ function write_output()
   flush(c_bfr)
   seek(jl_bfr,0)
   seek(c_bfr,0)
-  
+
   # Write Julia wrapper functions
   f_base = open("../src/cindex_base.jl", "w")
-  
+
   for line in EachLine(jl_bfr)
     print(f_base, line)
   end
@@ -148,7 +148,7 @@ end
 
 macro cx(rtype, fname, args)
   r,f,a = eval(rtype),string(fname),eval(args)
-  to_c(c_bfr, r, f, a) 
+  to_c(c_bfr, r, f, a)
   to_jl(jl_bfr, r,f,a)
 end
 
@@ -168,15 +168,15 @@ end
 
 #TODO: enable
   #298 UInt clang_isFileMultipleIncludeGuarded(CXTranslationUnit, CXFile)
-  #@cx Uint32 isFileMultipleIncludeGuarded {CXTranslationUnit, CXFile}
-  
+  #@cx UInt32 isFileMultipleIncludeGuarded {CXTranslationUnit, CXFile}
+
     #299 Typedef{"Pointer CXFile"} clang_getFile(CXTranslationUnit, const char *)
 
 #304 Typedef{"Record CXSourceLocation"} clang_getNullLocation()
 @cx CXSourceLocation getNullLocation {}
 #305 UInt clang_equalLocations(CXSourceLocation, CXSourceLocation)
-@cx Uint32 equalLocations {CXSourceLocation, CXSourceLocation}
-  
+@cx UInt32 equalLocations {CXSourceLocation, CXSourceLocation}
+
     #306 Typedef{"Record CXSourceLocation"} clang_getLocation(CXTranslationUnit, CXFile, unsigned int, unsigned int)
     #307 Typedef{"Record CXSourceLocation"} clang_getLocationForOffset(CXTranslationUnit, CXFile, unsigned int)
 
@@ -185,7 +185,7 @@ end
 #309 Typedef{"Record CXSourceRange"} clang_getRange(CXSourceLocation, CXSourceLocation)
 @cx CXSourceRange getRange {CXSourceLocation, CXSourceLocation}
 #310 UInt clang_equalRanges(CXSourceRange, CXSourceRange)
-@cx Uint32 equalRanges {CXSourceRange, CXSourceRange}
+@cx UInt32 equalRanges {CXSourceRange, CXSourceRange}
 #311 Int clang_Range_isNull(CXSourceRange)
 @cx Int32 Range_isNull {CXSourceRange}
 
@@ -220,7 +220,7 @@ end
     #344 Typedef{"Record CXString"} clang_getDiagnosticFixIt(CXDiagnostic, unsigned int, CXSourceRange *)
     #345 Typedef{"Record CXString"} clang_getTranslationUnitSpelling(CXTranslationUnit)
     #346 Typedef{"Pointer CXTranslationUnit"} clang_createTranslationUnitFromSourceFile(CXIndex, const char *, int, const char *const *, unsigned int, struct CXUnsavedFile *)
-# TODO: enable here, move all to jl  
+# TODO: enable here, move all to jl
   #347 Typedef{"Pointer CXTranslationUnit"} clang_createTranslationUnit(CXIndex, const char *)
   #349 UInt clang_defaultEditingTranslationUnitOptions()
   #350 Typedef{"Pointer CXTranslationUnit"} clang_parseTranslationUnit(CXIndex, const char *, const char *const *, int, struct CXUnsavedFile *, unsigned int, unsigned int)
@@ -239,18 +239,18 @@ end
 @cx CXCursor getTranslationUnitCursor {CXTranslationUnit}
 
 #372 UInt clang_equalCursors(CXCursor, CXCursor)
-@cx Uint32 equalCursors {CXCursor, CXCursor}
+@cx UInt32 equalCursors {CXCursor, CXCursor}
 #373 Int clang_Cursor_isNull(CXCursor)
 @cx Int32 Cursor_isNull {CXCursor}
 #374 UInt clang_hashCursor(CXCursor)
-@cx Uint32 hashCursor {CXCursor}
+@cx UInt32 hashCursor {CXCursor}
 #375 Enum{"CXCursorKind"} clang_getCursorKind(CXCursor)
-@cx Uint32 getCursorKind {CXCursor}
+@cx UInt32 getCursorKind {CXCursor}
 #376 UInt clang_isDeclaration(enum CXCursorKind)
-@cx Uint32 isDeclaration {CXCursorKind}
+@cx UInt32 isDeclaration {CXCursorKind}
 #377 UInt clang_isReference(enum CXCursorKind)
-@cx Uint32 isReference {CXCursorKind}
-    
+@cx UInt32 isReference {CXCursorKind}
+
     # these should be called directly...
     #378 UInt clang_isExpression(enum CXCursorKind)
     #379 UInt clang_isStatement(enum CXCursorKind)
@@ -270,7 +270,7 @@ end
   #390 Typedef{"Pointer CXTranslationUnit"} clang_Cursor_getTranslationUnit(CXCursor)
   #393 Typedef{"Pointer CXCursorSet"} clang_createCXCursorSet()
   #394 Void clang_disposeCXCursorSet(CXCursorSet)
-    
+
     # don't think this is useful...
     #395 UInt clang_CXCursorSet_contains(CXCursorSet, CXCursor)
     #396 UInt clang_CXCursorSet_insert(CXCursorSet, CXCursor)
@@ -286,7 +286,7 @@ end
   # maybes..
   #401 Typedef{"Pointer CXFile"} clang_getIncludedFile(CXCursor)
   #402 Typedef{"Record CXCursor"} clang_getCursor(CXTranslationUnit, CXSourceLocation)
-    
+
     # probably not
     #403 Typedef{"Record CXSourceLocation"} clang_getCursorLocation(CXCursor)
     #404 Typedef{"Record CXSourceRange"} clang_getCursorExtent(CXCursor)
@@ -300,21 +300,21 @@ end
 #412 LongLong clang_getEnumConstantDeclValue(CXCursor)
 @cx Int64 getEnumConstantDeclValue {CXCursor}
 #413 ULongLong clang_getEnumConstantDeclUnsignedValue(CXCursor)
-@cx Uint64 getEnumConstantDeclUnsignedValue {CXCursor}
+@cx UInt64 getEnumConstantDeclUnsignedValue {CXCursor}
 #414 Int clang_Cursor_getNumArguments(CXCursor)
 @cx Int32 Cursor_getNumArguments {CXCursor}
 #415 Typedef{"Record CXCursor"} clang_Cursor_getArgument(CXCursor, unsigned int)
 @cx CXCursor Cursor_getArgument {CXCursor, Int32}
 #416 UInt clang_equalTypes(CXType, CXType)
-@cx Uint32 equalTypes {CXType, CXType}
+@cx UInt32 equalTypes {CXType, CXType}
 #417 Typedef{"Record CXType"} clang_getCanonicalType(CXType)
 @cx CXType getCanonicalType {CXType}
-#418 Uint32 clang_isConstQualifiedType(CXType)
-@cx Uint32 isConstQualifiedType {CXType}
+#418 UInt32 clang_isConstQualifiedType(CXType)
+@cx UInt32 isConstQualifiedType {CXType}
 #419 UInt clang_isVolatileQualifiedType(CXType)
-@cx Uint32 isVolatileQualifiedType {CXType}
+@cx UInt32 isVolatileQualifiedType {CXType}
 #420 UInt clang_isRestrictQualifiedType(CXType)
-@cx Uint32 isRestrictQualifiedType {CXType}
+@cx UInt32 isRestrictQualifiedType {CXType}
 #421 Typedef{"Record CXType"} clang_getPointeeType(CXType)
 @cx CXType getPointeeType {CXType}
 #422 Typedef{"Record CXCursor"} clang_getTypeDeclaration(CXType)
@@ -330,13 +330,13 @@ end
 #427 Int clang_getNumArgTypes(CXType)
 @cx Int32 getNumArgTypes {CXType}
 #428 Typedef{"Record CXType"} clang_getArgType(CXType, unsigned int)
-@cx CXType getArgType {CXType, Uint}
+@cx CXType getArgType {CXType, UInt64}
 #429 UInt clang_isFunctionTypeVariadic(CXType)
-@cx Uint32 isFunctionTypeVariadic {CXType}
+@cx UInt32 isFunctionTypeVariadic {CXType}
 #430 Typedef{"Record CXType"} clang_getCursorResultType(CXCursor)
 @cx CXType getCursorResultType {CXCursor}
 #431 UInt clang_isPODType(CXType)
-@cx Uint32 isPODType {CXType}
+@cx UInt32 isPODType {CXType}
 #432 Typedef{"Record CXType"} clang_getElementType(CXType)
 @cx CXType getElementType {CXType}
 #433 LongLong clang_getNumElements(CXType)
@@ -346,20 +346,20 @@ end
 #435 LongLong clang_getArraySize(CXType)
 @cx Int64 getArraySize {CXType}
 #436 UInt clang_isVirtualBase(CXCursor)
-@cx Uint32 isVirtualBase {CXCursor}
+@cx UInt32 isVirtualBase {CXCursor}
 #438 Enum{"CX_CXXAccessSpecifier"} clang_getCXXAccessSpecifier(CXCursor)
 @cx Int getCXXAccessSpecifier {CXCursor}
 #439 UInt clang_getNumOverloadedDecls(CXCursor)
-@cx Uint32 getNumOverloadedDecls {CXCursor}
+@cx UInt32 getNumOverloadedDecls {CXCursor}
 #440 Typedef{"Record CXCursor"} clang_getOverloadedDecl(CXCursor, unsigned int)
-@cx CXCursor getOverloadedDecl {CXCursor, Uint32}
+@cx CXCursor getOverloadedDecl {CXCursor, UInt32}
     # what is this?
     #441 Typedef{"Record CXType"} clang_getIBOutletCollectionType(CXCursor)
     # Do not wrap.
     #444 UInt clang_visitChildren(CXCursor, CXCursorVisitor, CXClientData)
 #445 Typedef{"Record CXString"} clang_getCursorUSR(CXCursor)
 @cx CXString getCursorUSR {CXCursor}
-    
+
     #446 Typedef{"Record CXString"} clang_constructUSR_ObjCClass(const char *)
     #447 Typedef{"Record CXString"} clang_constructUSR_ObjCCategory(const char *, const char *)
     #448 Typedef{"Record CXString"} clang_constructUSR_ObjCProtocol(const char *)
@@ -378,14 +378,14 @@ end
 #456 Typedef{"Record CXCursor"} clang_getCursorDefinition(CXCursor)
 @cx CXCursor getCursorDefinition {CXCursor}
 #457 UInt clang_isCursorDefinition(CXCursor)
-@cx Uint32 isCursorDefinition {CXCursor}
+@cx UInt32 isCursorDefinition {CXCursor}
 #458 Typedef{"Record CXCursor"} clang_getCanonicalCursor(CXCursor)
 @cx CXCursor getCanonicalCursor {CXCursor}
     #459 Int clang_Cursor_getObjCSelectorIndex(CXCursor)
 #460 UInt clang_CXXMethod_isStatic(CXCursor)
-@cx Uint32 CXXMethod_isStatic {CXCursor}
+@cx UInt32 CXXMethod_isStatic {CXCursor}
 #461 UInt clang_CXXMethod_isVirtual(CXCursor)
-@cx Uint32 CXXMethod_isVirtual {CXCursor}
+@cx UInt32 CXXMethod_isVirtual {CXCursor}
 #462 Enum{"CXCursorKind"} clang_getTemplateCursorKind(CXCursor)
 @cx Int32 getTemplateCursorKind {CXCursor}
 #463 Typedef{"Record CXCursor"} clang_getSpecializedCursorTemplate(CXCursor)
@@ -398,7 +398,7 @@ end
     @cx Int32 getTokenKind {CXToken}
     #471 Typedef{"Record CXString"} clang_getTokenSpelling(CXTranslationUnit, CXToken)
     @cx CXString getTokenSpelling {CXTranslationUnit, CXToken}
-    
+
     #472 Typedef{"Record CXSourceLocation"} clang_getTokenLocation(CXTranslationUnit, CXToken)
     #473 Typedef{"Record CXSourceRange"} clang_getTokenExtent(CXTranslationUnit, CXToken)
     #474 Void clang_tokenize(CXTranslationUnit, CXSourceRange, CXToken **, unsigned int *)
@@ -409,7 +409,7 @@ end
 @cx CXString getCursorKindSpelling {CXCursorKind}
 
     #478 Void clang_getDefinitionSpellingAndExtent(CXCursor, const char **, const char **, unsigned int *, unsigned int *, unsigned int *, unsigned int *)
-  
+
   # these sound useful..
   #479 Void clang_enableStackTraces()
   #480 Void clang_executeOnThread(void (*)(void *), void *, unsigned int)
@@ -438,7 +438,7 @@ end
 
 #509 Typedef{"Record CXString"} clang_getClangVersion()
 @cx CXString getClangVersion {}
-  
+
   # TODO: useful?
   #510 Void clang_toggleCrashRecovery(unsigned int)
   #512 Void clang_getInclusions(CXTranslationUnit, CXInclusionVisitor, CXClientData)
@@ -448,7 +448,7 @@ end
     #516 UInt clang_remap_getNumFiles(CXRemapping)
     #517 Void clang_remap_getFilenames(CXRemapping, unsigned int, CXString *, CXString *)
     #518 Void clang_remap_dispose(CXRemapping)
-  
+
   # TODO: useful?
   #522 Void clang_findReferencesInFile(CXCursor, CXFile, CXCursorAndRangeVisitor)
 

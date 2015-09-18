@@ -37,12 +37,12 @@ function method_vt_index(cursor::cindex.CXCursor)
         return -1
     end
     ccall(("wci_getCXXMethodVTableIndex", :libwrapclang), Int32,
-		  (Ptr{Uint8},), cursor.data)
+		  (Ptr{UInt8},), cursor.data)
 end
 
 function method_mangled_name(cursor::cindex.CXCursor)
-    bufr = zeros(Uint8, 1024)
+    bufr = zeros(UInt8, 1024)
     ccall(("wci_getCXXMethodMangledName", :libwrapclang), Int32,
-		 (Ptr{Uint8},Ptr{Uint8}), cursor.data, bufr)
-    bytestring(convert(Ptr{Uint8},bufr))
+		 (Ptr{UInt8},Ptr{UInt8}), cursor.data, bufr)
+    bytestring(convert(Ptr{UInt8},bufr))
 end

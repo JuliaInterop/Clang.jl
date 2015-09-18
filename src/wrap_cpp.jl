@@ -55,10 +55,10 @@ end
 
 abstract TypeProxy <: CLType
 
-typealias __TypeProxiesType Dict{String, Type}
-const TypeProxies = Dict{String, Type}()
+typealias __TypeProxiesType Dict{AbstractString, Type}
+const TypeProxies = Dict{AbstractString, Type}()
 
-function get_proxy(typename::String)
+function get_proxy(typename::AbstractString)
     get(TypeProxies::__TypeProxiesType, typename, None)
 end
 
@@ -85,7 +85,7 @@ function emit(out::IO, t::cindex.ConstantArray)
     arrsize = cindex.getArraySize(t)
     emit(out, arrtype)
     opensquare(out); print(out, arrsize); closesquare(out)
-end    
+end
 
 function emit(out::IO, t::cindex.Pointer)
     pointee = cindex.pointee_type(t)
@@ -141,7 +141,7 @@ function wrap(out::IO, method::cindex.CXXMethod, nameid::Int)
         warn("could not wrap $(spelling(method)) because of arguments")
         return false
     end
- 
+
     methodname = spelling(method)
     parentdecl = cindex.getCursorLexicalParent(method)
     parentname = spelling(parentdecl)
@@ -150,17 +150,17 @@ function wrap(out::IO, method::cindex.CXXMethod, nameid::Int)
     # emit return type and name
     rettype = return_type(method)
     modifs = function_return_modifiers(method)
-    
+
     print(buf, join(map(x->x.text, modifs), " "))
     space(buf)
 
     emit(buf, rettype)
     space(buf)
     print(buf, parentname, "_", methodname, nameid)
-    
+
     # check for a return value
     hasreturn = returns_value(rettype)
-   
+
     # emit arguments
     openparen(buf)
         print(buf, parentname, "* __obj")
@@ -169,7 +169,7 @@ function wrap(out::IO, method::cindex.CXXMethod, nameid::Int)
         emit_args(buf, args)
     closeparen(buf)
     space(buf)
-    
+
     opencurly(buf)
     newline(buf)
     print(buf, "  ")
@@ -178,14 +178,14 @@ function wrap(out::IO, method::cindex.CXXMethod, nameid::Int)
     if(hasreturn)
         print(buf, "return")
         space(buf)
-    end    
+    end
     print(buf, "__obj->", methodname)
     openparen(buf)
         #emit_args(buf, args)
         emit_args_vals(buf, args)
     closeparen(buf)
     print(buf, ";")
-    
+
     # close
     newline(buf)
     closecurly(buf)
@@ -206,7 +206,7 @@ function wrap(out::IO, method::cindex.Constructor, nameid::Int)
         warn("could not wrap $(spelling(method)) because of arguments")
         return false
     end
- 
+
     methodname = spelling(method)
     parentdecl = cindex.getCursorLexicalParent(method)
     parentname = spelling(parentdecl)
@@ -217,13 +217,13 @@ function wrap(out::IO, method::cindex.Constructor, nameid::Int)
 
     space(buf)
     print(buf, parentname, "_", methodname, nameid)
-    
+
     # emit arguments
     openparen(buf)
         emit_args(buf, args)
     closeparen(buf)
     space(buf)
-    
+
     opencurly(buf)
     newline(buf)
     print(buf, "  ")
@@ -236,7 +236,7 @@ function wrap(out::IO, method::cindex.Constructor, nameid::Int)
         emit_args_vals(buf, args)
     closeparen(buf)
     print(buf, ";")
-    
+
     # close
     newline(buf)
     closecurly(buf)
@@ -256,7 +256,7 @@ function wrap(out::IO, top::cindex.ClassDecl)
         if isa(decl, cindex.CXXMethod) && cindex.getCXXAccessSpecifier(decl)==1
             id = (MethodCount[declname] = get(MethodCount, declname, 0) + 1)
             wrap(out, decl, id)
-        end 
+        end
     end
     println(out, "}//extern C")
 end
@@ -363,7 +363,7 @@ function wrapjl(out::IO, libname::ASCIIString, method::cindex.CXXMethod, id::Int
     methodname = spelling(method)
     parentdecl = cindex.getCursorLexicalParent(method)
     parentname = spelling(parentdecl)
-    
+
     args = get_args(method)
     defs = cindex.function_arg_defaults(method)
     #println("wrapjl: args=", join(args, ","))
@@ -405,7 +405,7 @@ function wrapjl(out::IO, libname::ASCIIString, method::cindex.Constructor, id::I
     methodname = spelling(method)
     parentdecl = cindex.getCursorLexicalParent(method)
     parentname = spelling(parentdecl)
-    
+
     args = get_args(method)
     defs = cindex.function_arg_defaults(method)
     if (!check_args(args)) return end                       # TODO: warning?
@@ -440,7 +440,7 @@ function wrapjl(out::IO, libname::ASCIIString, class::cindex.ClassDecl)
         if isa(decl, cindex.CXXMethod)
             id = (MethodCount[declname] = get(MethodCount, declname, 0) + 1)
             wrapjl(out, libname, decl, id)
-        end 
+        end
     end
 
     for sup in class_supers(class)
@@ -451,16 +451,16 @@ end
 cl_to_jl = Dict{Any,Any}(
     cindex.VoidType         => Void,
     cindex.BoolType         => Bool,
-    cindex.Char_U           => Uint8,
+    cindex.Char_U           => UInt8,
     cindex.UChar            => :Cuchar,
-    cindex.Char16           => Uint16,
-    cindex.Char32           => Uint32,
-    cindex.UShort           => Uint16,
-    cindex.UInt             => Uint32,
+    cindex.Char16           => UInt16,
+    cindex.Char32           => UInt32,
+    cindex.UShort           => UInt16,
+    cindex.UInt             => UInt32,
     cindex.ULong            => :Culong,
     cindex.ULongLong        => :Culonglong,
-    cindex.Char_S           => Uint8,
-    cindex.SChar            => Uint8,
+    cindex.Char_S           => UInt8,
+    cindex.SChar            => UInt8,
     cindex.WChar            => Char,
     cindex.Short            => Int16,
     cindex.IntType          => :Cint,
@@ -471,7 +471,7 @@ cl_to_jl = Dict{Any,Any}(
     cindex.LongDouble       => Float64,
     cindex.Enum             => :Cint,
     cindex.NullPtr          => C_NULL,
-    cindex.UInt128          => Uint128,
+    cindex.UInt128          => UInt128,
     cindex.FirstBuiltin     => Void,
     "size_t"                => :Csize_t,
     "ptrdiff_t"             => :Cptrdiff_t

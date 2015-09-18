@@ -1,3 +1,10 @@
+if VERSION >= v"0.4.0-dev+6521"
+    using Base.Libdl
+    dlext = Base.Libdl.dlext
+else
+    dlext = Base.Sys.shlib_ext
+end
+
 find_llvm() = begin
     if haskey(ENV, "TRAVIS")
         return readchomp(`which llvm-config-3.3`)
@@ -22,4 +29,4 @@ if (!ispath("../usr/lib"))
     run(`mkdir ../usr/lib`)
 end
 
-run(`mv libwrapclang.$(Libdl.dlext) ../usr/lib`)
+run(`mv libwrapclang.$(dlext) ../usr/lib`)

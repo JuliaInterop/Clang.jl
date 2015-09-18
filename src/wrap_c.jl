@@ -162,8 +162,9 @@ cl_to_jl = Dict{Any,Any}(
     cindex.LongDouble       => :Float64,
     cindex.Enum             => :Cint,
     cindex.NullPtr          => :C_NULL,
-    cindex.Int128           => :UInt128,
     cindex.UInt128          => :UInt128,
+    cindex.Int128           => :UInt128,
+
     cindex.FirstBuiltin     => :Void,
     cindex.Complex          => :Complex,
     :size_t                 => :Csize_t,
@@ -179,7 +180,6 @@ cl_to_jl = Dict{Any,Any}(
     :uintptr_t              => :Csize_t
     )
 
-<<<<<<< HEAD
 int_conversion = Dict{Any,Any}(
     :Cint   => Int32,
     :Cuint  => UInt32,
@@ -195,19 +195,6 @@ int_conversion = Dict{Any,Any}(
     :Int32  => Int32,
     :Int16  => Int16,
     :Int8   => Int8
-=======
-int_conversion = @compat Dict{Any,Any}(
-    :Cint   => int32,
-    :Cuint  => uint32,
-    :UInt64 => uint64,
-    :UInt32 => uint32,
-    :UInt16 => uint16,
-    :UInt8  => uint8,
-    :Int64  => int64,
-    :Int32  => int32,
-    :Int16  => int16,
-    :Int8   => int8
->>>>>>> FIxes for v0.4 compat
     )
 
 

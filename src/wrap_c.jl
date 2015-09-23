@@ -362,9 +362,10 @@ function wrap(context::WrapContext, buf::Array, func_decl::FunctionDecl, libname
     arg_count = 0
     arg_names = convert(Vector{Symbol},
                         map(x-> symbol(begin
-                            nm = name_safe(cindex.name(x))
-                            nm != "" ? nm : "arg"*string(arg_count+=1)
-                        end), args))
+                                         nm = name_safe(cindex.name(x))
+                                         nm != "" ? nm : "arg"*string(arg_count+=1)
+                                       end),
+                                args))
 
     sig = efunsig(funcname, arg_names, arg_reps)
     body = eccall(funcname, symbol(libname), ret_type, arg_names, arg_reps)

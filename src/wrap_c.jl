@@ -56,9 +56,9 @@ type WrapContext
     header_wrapped::Function                     # called to determine header inclusion status
                                                  #   (top_header, cursor_header) -> Bool
     header_library::Function                     # called to determine shared library for given header
-                                                 #   (header_name) -> library_name::String
-    header_outputfile::Function                  # called to determine output file group for given header
-                                                 #   (header_name) -> output_file::String
+                                                 #   (header_name) -> library_name::AbstractString
+    header_outputfile::Function                     # called to determine output file group for given header
+                                                 #   (header_name) -> output_file::AbstractString
     cursor_wrapped::Function                     # called to determine cursor inclusion status
                                                  #   (cursor_name, cursor) -> Bool
     common_buf::OrderedDict{Symbol, ExprUnit}    # output buffer for common items: typedefs, enums, etc.
@@ -142,16 +142,16 @@ end
 cl_to_jl = Dict{Any,Any}(
     cindex.VoidType         => :Void,
     cindex.BoolType         => :Bool,
-    cindex.Char_U           => :Uint8,
+    cindex.Char_U           => :UInt8,
     cindex.UChar            => :Cuchar,
-    cindex.Char16           => :Uint16,
-    cindex.Char32           => :Uint32,
-    cindex.UShort           => :Uint16,
-    cindex.UInt             => :Uint32,
+    cindex.Char16           => :UInt16,
+    cindex.Char32           => :UInt32,
+    cindex.UShort           => :UInt16,
+    cindex.UInt             => :UInt32,
     cindex.ULong            => :Culong,
     cindex.ULongLong        => :Culonglong,
-    cindex.Char_S           => :Uint8,
-    cindex.SChar            => :Uint8,
+    cindex.Char_S           => :UInt8,
+    cindex.SChar            => :UInt8,
     cindex.WChar            => :Char,
     cindex.Short            => :Int16,
     cindex.IntType          => :Cint,
@@ -162,16 +162,17 @@ cl_to_jl = Dict{Any,Any}(
     cindex.LongDouble       => :Float64,
     cindex.Enum             => :Cint,
     cindex.NullPtr          => :C_NULL,
-    cindex.Int128           => :Int128,
-    cindex.UInt128          => :Uint128,
+    cindex.UInt128          => :UInt128,
+    cindex.Int128           => :UInt128,
+
     cindex.FirstBuiltin     => :Void,
     cindex.Complex          => :Complex,
     :size_t                 => :Csize_t,
     :ptrdiff_t              => :Cptrdiff_t,
-    :uint64_t               => :Uint64,
-    :uint32_t               => :Uint32,
-    :uint16_t               => :Uint16,
-    :uint8_t                => :Uint8,
+    :uint64_t               => :UInt64,
+    :uint32_t               => :UInt32,
+    :uint16_t               => :UInt16,
+    :uint8_t                => :UInt8,
     :int64_t                => :Int64,
     :int32_t                => :Int32,
     :int16_t                => :Int16,
@@ -275,7 +276,7 @@ function repr_jl(t::IncompleteArray)
     Expr(:curly, :Ptr, repr_jl(eltype))
 end
 
-function repr_jl(t::UnionType)
+function repr_jl(t::Union)
     tdecl = cindex.getTypeDeclaration(t)
     maxelem = largestfield(tdecl)
     return repr_jl(maxelem)
@@ -716,7 +717,7 @@ function print_buffer(ostrm, obuf)
         isa(e, Poisoned) && continue
         prev_state = state
         if state != :enum
-            state = (isa(e, String) ? :string :
+            state = (isa(e, AbstractString) ? :string :
                      isa(e, Expr)   ? e.head :
                      error("output: can't handle type $(typeof(e))"))
         end
@@ -740,7 +741,7 @@ function print_buffer(ostrm, obuf)
 
         println(ostrm, e)
 
-        if state == :enum && isa(e, String) && startswith(e, "# end enum")
+        if state == :enum && isa(e, AbstractString) && startswith(e, "# end enum")
             state = :end_enum
         end
     end
@@ -828,10 +829,10 @@ function name_anon()
     "ANONYMOUS_"*string(context.anon_count += 1)
 end
 
-function name_safe(cursor_name::String)
+function name_safe(cursor_name::AbstractString)
     return (cursor_name in reserved_words) ? "_"*cursor_name : cursor_name
 end
-symbol_safe(cursor_name::String) = symbol(name_safe(cursor_name))
+symbol_safe(cursor_name::AbstractString) = symbol(name_safe(cursor_name))
 
 ###############################################################################
 

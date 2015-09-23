@@ -2,7 +2,7 @@
 
 export CLType, CLCursor
 
-export # TypeKind 
+export # TypeKind
     Invalid,
     Unexposed,
     VoidType,
@@ -15,7 +15,7 @@ export # TypeKind
     UInt,
     ULong,
     ULongLong,
-    UInt128,
+    #UInt128,
     Char_S,
     SChar,
     WChar,
@@ -290,9 +290,9 @@ immutable CXCursor
 end
 
 immutable CXString
-    data::Array{Uint8,1}
+    data::Array{UInt8,1}
     str::ASCIIString
-    CXString() = new(Array(Uint8, CXString_size), "")
+    CXString() = new(Array(UInt8, CXString_size), "")
 end
 
 immutable CursorList
@@ -301,8 +301,8 @@ immutable CursorList
 end
 
 function get_string(cx::CXString)
-    p::Ptr{Uint8} = ccall( (:wci_getCString, libwci), 
-        Ptr{Uint8}, (Ptr{Void},), cx.data)
+    p::Ptr{UInt8} = ccall( (:wci_getCString, libwci),
+        Ptr{UInt8}, (Ptr{Void},), cx.data)
     if (p == C_NULL)
         return ""
     end

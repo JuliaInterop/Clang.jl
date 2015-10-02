@@ -76,7 +76,7 @@ function emit(out::IO, t::CLType)
     end
 end
 
-function emit(out::IO, t::Union(Record, Typedef))
+function emit(out::IO, t::Union{Record, Typedef})
     print(out, spelling(cindex.getTypeDeclaration(t)))
 end
 
@@ -307,7 +307,7 @@ function wrapjl(out::IO, t::cindex.ConstantArray)
     print(out, "FIXEDARRAY")
 end
 
-function wrapjl(out::IO, t::Union(cindex.Record, cindex.Typedef))
+function wrapjl(out::IO, t::Union{cindex.Record, cindex.Typedef})
     print(out, spelling(cindex.getTypeDeclaration(t)))
 end
 
@@ -505,7 +505,7 @@ function returns_value(rtype::CLType)
     return hasret
 end
 
-function get_args(method::Union(cindex.CXXMethod, cindex.Constructor))
+function get_args(method::Union{cindex.CXXMethod, cindex.Constructor})
     args = CLCursor[]
     for c in children(method)
         if isa(c,cindex.ParmDecl)

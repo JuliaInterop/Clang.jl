@@ -128,7 +128,7 @@ function resolve_type(rt::CLType)
     return rt
 end
 
-function return_type(c::Union(FunctionDecl, CXXMethod), resolve::Bool)
+function return_type(c::Union{FunctionDecl, CXXMethod}, resolve::Bool)
     if (resolve)
         return resolve_type( getCursorResultType(c) )
     else
@@ -243,14 +243,14 @@ end
 ################################################################################
 
 # Retrieve function arguments for a given cursor
-function function_args(cursor::Union(FunctionDecl, CXXMethod))
+function function_args(cursor::Union{FunctionDecl, CXXMethod})
     search(cursor, ParmDecl)
 end
 
 
 #returns a tuple with the default argument values for a C++ function
 #only seems to work if cplusplus=true in parse_header
-function function_arg_defaults(method::Union(cindex.CXXMethod, cindex.FunctionDecl, cindex.Constructor))
+function function_arg_defaults(method::Union{cindex.CXXMethod, cindex.FunctionDecl, cindex.Constructor})
     defvals = Any[]
     for c in children(method)
         if isa(c,cindex.ParmDecl)
@@ -289,7 +289,7 @@ function function_arg_defaults(method::Union(cindex.CXXMethod, cindex.FunctionDe
 end
 
 #returns an array of the function return type modifiers
-function function_return_modifiers(f::Union(FunctionDecl, CXXMethod))
+function function_return_modifiers(f::Union{FunctionDecl, CXXMethod})
     modifs = Any[]
     for tok in tokenize(f)
         if isa(tok, cindex.Keyword)

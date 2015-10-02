@@ -41,7 +41,7 @@ immutable Poisoned
 end
 
 ExprUnit() = ExprUnit(Any[], OrderedSet{Symbol}(), :new)
-ExprUnit(e::Union(Expr,Symbol,ASCIIString,Poisoned), deps=Any[]; state::Symbol=:new) = ExprUnit(Any[e], OrderedSet{Symbol}([target_type(dep) for dep in deps]), state)
+ExprUnit(e::Union{Expr,Symbol,ASCIIString,Poisoned}, deps=Any[]; state::Symbol=:new) = ExprUnit(Any[e], OrderedSet{Symbol}([target_type(dep) for dep in deps]), state)
 ExprUnit(a::Array, deps=Any[]; state::Symbol=:new) = ExprUnit(a, OrderedSet{Symbol}([target_type(dep) for dep in deps]), state)
 
 ### WrapContext
@@ -207,7 +207,7 @@ int_conversion = Dict{Any,Any}(
 #
 ################################################################################
 
-function repr_jl(t::Union(cindex.Record, cindex.Typedef))
+function repr_jl(t::Union{cindex.Record, cindex.Typedef})
     tname = symbol(spelling(cindex.getTypeDeclaration(t)))
     return get(cl_to_jl, tname, tname)
 end

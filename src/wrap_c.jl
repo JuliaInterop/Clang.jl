@@ -73,7 +73,7 @@ end
 init(;args...) = init(ASCIIString[]; args...)
 function init(;
             headers                         = ASCIIString[],
-            index                           = None,
+            index                           = Union{},
             output_file::ByteString        = "",
             common_file::ByteString        = "",
             output_dir::ByteString         = "",
@@ -83,30 +83,30 @@ function init(;
                                             = ASCIIString[],
             clang_diagnostics::Bool         = true,
             header_wrapped                  = (header, cursorname) -> true,
-            header_library                  = None,
-            header_outputfile               = None,
+            header_library                  = Union{},
+            header_outputfile               = Union{},
             cursor_wrapped                  = (cursorname, cursor) -> true,
             options                         = InternalOptions(),
             rewriter                        = x -> x)
 
     # Set up some optional args if they are not explicitly passed.
 
-    (index == None)         && ( index = cindex.idx_create(0, (clang_diagnostics ? 1 : 0)) )
+    (index == Union{})         && ( index = cindex.idx_create(0, (clang_diagnostics ? 1 : 0)) )
 
-    if (output_file == "" && header_outputfile == None)
+    if (output_file == "" && header_outputfile == Union{})
         header_outputfile = x->joinpath(output_dir, strip(splitext(basename(x))[1]) * ".jl")
     end
 
     (common_file == "")    && ( common_file = output_file )
     common_file = joinpath(output_dir, common_file)
 
-    if (header_library == None)
+    if (header_library == Union{})
         header_library = x->strip(splitext(basename(x))[1])
     elseif isa(header_library, ASCIIString)
         libname = copy(header_library)
         header_library = x->libname
     end
-    if (header_outputfile == None)
+    if (header_outputfile == Union{})
         header_outputfile = x->joinpath(output_dir, output_file)
     end
 

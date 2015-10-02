@@ -1,7 +1,7 @@
 using Clang.cindex
 
 function base_classes(c)
-	search(c, isa(c, CursorKind.CXXBaseSpecifier))
+    search(c, isa(c, CursorKind.CXXBaseSpecifier))
 end
 
 function find_sym(name,liblist)
@@ -20,7 +20,7 @@ function find_sym(name,liblist)
         println("symbol $name found in ", libs[dl])
         return splitdir(libs[dl])[end]
     else
-        return None
+        return Union{}
         println("NOT FOUND")
     end
 end

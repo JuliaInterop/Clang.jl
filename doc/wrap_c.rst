@@ -16,7 +16,7 @@ However, it is usually necessary to set compiler arguments or customize output. 
 
     ``init``: Create wrapping context. Keyword args are available to specify options, but all options are given sane defaults.
 
-    :param index: None
+    :param index: Union{}
     :param output_file:
     :type output_file: ASCIIString
     :param common_file: Name of common output file (types, constants, typealiases)

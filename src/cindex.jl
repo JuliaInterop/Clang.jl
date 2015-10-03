@@ -39,7 +39,7 @@ include("cindex/base.jl")
 #   flags:              Bitwise OR of TranslationUnitFlags
 #
 function parse_header(header::AbstractString;
-                index                           = None,
+                index                           = Union{},
                 diagnostics::Bool               = true,
                 cplusplus::Bool                 = false,
                 args                            = ASCIIString[""],
@@ -48,7 +48,7 @@ function parse_header(header::AbstractString;
     if !isfile(header)
         error(header, " not found")
     end
-    if (index == None)
+    if (index == Union{})
         index = idx_create(0, (diagnostics ? 1 : 0))
     end
     if (cplusplus)
@@ -395,7 +395,7 @@ end
 
 function cl_dispose(cl::CursorList)
     ccall( (:wci_disposeCursorList, libwci),
-            None,
+            Void,
             (Ptr{Void},),
                 cl.ptr)
 end

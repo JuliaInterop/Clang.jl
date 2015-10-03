@@ -36,7 +36,7 @@ function analyze_method(method::CXXMethod)
     args = Any[]
     for arg in arg_list
         proxy = get_proxy(spelling(cu_type(arg)))
-        (proxy == None) ? push!(args, arg) : push!(args, proxy)
+        (proxy == Union{}) ? push!(args, arg) : push!(args, proxy)
     end
     return WrappedMethod(spelling(method),
                          method,
@@ -59,7 +59,7 @@ typealias __TypeProxiesType Dict{AbstractString, Type}
 const TypeProxies = Dict{AbstractString, Type}()
 
 function get_proxy(typename::AbstractString)
-    get(TypeProxies::__TypeProxiesType, typename, None)
+    get(TypeProxies::__TypeProxiesType, typename, Union{})
 end
 
 ################################################################################

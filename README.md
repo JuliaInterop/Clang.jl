@@ -59,6 +59,9 @@ BUILD_LLVM_CLANG=1 in `julia/Make.user`.
 When using a distribution packaged version, note the latest version 
 may only be available from an optional pre-release archive (e.g. Ubuntu PPA).
 
+On OS X, you can use the [Homebrew](http://brew.sh/) package manager to install
+libclang.  First install Xcode if necessary, then ```brew install llvm --with-clang```.  
+The LLVM_CONFIG path will be ```/usr/local/Cellar/llvm/<version>/bin/llvm-config```.
 
 ### Install
 

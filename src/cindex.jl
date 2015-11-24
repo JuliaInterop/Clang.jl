@@ -78,23 +78,27 @@ end
 #   IsMatch(CXCursor)
 #                   Predicate Function, accepting a CXCursor argument
 #
-function search(cl::CursorList, ismatch::Function)
-    ret = CLCursor[]
+
+# TODO:
+# expose the children as an iterator to avoid getting the whole list every time
+
+function search(cl::Array{CXCursor,1}, ismatch::Function)
+    ret = CXCursor[]
     for cu in cl
         ismatch(cu) && push!(ret, cu)
     end
     ret
 end
-search(cu::CLCursor, ismatch::Function) = search(children(cu), ismatch)
-search(cu::CLCursor, T::DataType) = search(cu, x->isa(x, T))
-search(cu::CLCursor, name::String) = search(cu, x->(cindex.spelling(x) == name))
+search(cu::CXCursor, ismatch::Function) = search(children(cu), ismatch)
+search(cu::CXCursor, T::DataType) = search(cu, x->isa(x, T))
+search(cu::CXCursor, name::ASCIIString) = search(cu, x->(cindex.spelling(x) == name))
 
 ###############################################################################
 # Extended search function
 # Returns a Dict{ DataType => CLCursor
 
-function matchchildren(cu::CLCursor, types::Array{DataType,1})
-    ret = Dict{Any,Any}([(t, CLCursor[]) for t in types])
+function matchchildren(cu::CXCursor, types::Array{DataType,1})
+    ret = Dict{Any,Any}([ t => CXCursor[] for t in types])
     for child in children(cu)
         for t in types
             isa(child, t) && push!(ret[t], child)
@@ -108,12 +112,12 @@ end
 # TODO: macro version should be more efficient.
 anymatch(first, args...) = any([==(first, a) for a in args])
 
-cu_type(c::CLCursor) = getCursorType(c)
-ty_kind(c::CLType) = convert(Int, c.data[1].kind)
-name(c::CLCursor) = getCursorDisplayName(c)
-spelling(c::CLType) = getTypeKindSpelling(convert(Int32, ty_kind(c)))
-spelling(c::CLCursor) = getCursorSpelling(c)
-is_null(c::CLCursor) = (Cursor_isNull(c) != 0)
+cu_type(c::CXCursor) = getCursorType(c)
+ty_kind(c::CXType) = convert(Int, c.data[1].kind)
+name(c::CXCursor) = getCursorDisplayName(c)
+spelling(c::CXType) = getTypeKindSpelling(convert(Int32, ty_kind(c)))
+spelling(c::CXCursor) = getCursorSpelling(c)
+is_null(c::CXCursor) = (Cursor_isNull(c) != 0)
 
 function resolve_type(rt::CLType)
     # This helper attempts to work around some limitations of the
@@ -137,12 +141,12 @@ function return_type(c::Union{FunctionDecl, CXXMethod}, resolve::Bool)
         return getCursorResultType(c)
     end
 end
-return_type(c::CLCursor) = return_type(c, true)
+return_type(c::CXCursor) = return_type(c, true)
 
 function pointee_type(t::Pointer)
     return cindex.getPointeeType(t)
 end
-pointee_type(cu::CLCursor) = error("pointee_type(CLCursor) is discontinued, please use pointee_type(cindex.cu_type(cu))")
+pointee_type(cu::CXCursor) = error("pointee_type(CXCursor) is discontinued, please use pointee_type(cindex.cu_type(cu))")
 
 function typedef_type(c::TypedefDecl)
     t = cindex.getTypedefDeclUnderlyingType(c)
@@ -162,53 +166,49 @@ function value(c::EnumConstantDecl)
     error("Unknown EnumConstantDecl type: ", t, " cursor: ", c)
 end
 
-function getindex(cl::CursorList, clid::Int, default::Union)
-    try
-        getindex(cl, clid)
-    catch
-        return default
-    end
+function cu_children_visitor(cursor::CXCursor, parent::CXCursor, client_data::Ptr{Void})
+    list = unsafe_pointer_to_objref(client_data)
+    push!(list, cursor)
+    return Cuint(1) # CXChildVisit_Continue TODO: use enum
 end
-function getindex(cl::CursorList, clid::Int)
-    if (clid < 1 || clid > cl.size) error("Index out of range or empty list") end
-    cu = TmpCursor()
-    ccall( (:wci_getCLCursor, libwci),
-            Void,
-            (Ptr{Void}, Ptr{Void}, Int),
-            cu.data, cl.ptr, clid-1)
-    return CXCursor(cu)
+const cu_visitor_cb = cfunction(cu_children_visitor, Cuint, (CXCursor, CXCursor, Ptr{Void}))
+
+# TODO implement -- reduce allocations
+#=
+function cu_children_search(cursor::CXCursor, parent::CXCursor, client_data::Ptr{Void})
+    # expect ("target", store::Array{CXCursor,1}, findfirst::Bool)
+    target,store,findfirst = unsafe_pointer_to_objref(client_data)
+end
+=#
+
+function children(cu::CXCursor)
+    # TODO: possible to use sizehint! here?
+    list = CXCursor[]
+    ccall( (:clang_visitChildren, libwci), Void,
+           (CXCursor, Ptr{Void}, Ptr{Void}),
+           cu, cu_visitor_cb, pointer_from_objref(list))
+    list
 end
 
-function children(cu::CLCursor)
-    cl = cl_create()
-    ccall(  (:wci_getChildren, libwci),
-            Ptr{Void},
-            (Ptr{CXCursor}, Ptr{Void}),
-            cu.data, cl.ptr)
-    size = cl_size(cl.ptr)
-    return CursorList(cl.ptr,size)
+# TODO: split up
+function cu_file(cu::CXCursor)
+    loc = ccall( (:clang_getCursorLocation, libwci),
+            CXSourceLocation,
+            (CXCursor,),
+            cu)
+    cxfile = Ref{CXFile}(C_NULL)
+    exp = ccall( (:clang_getExpansionLocation, libwci), Void,
+                 (CXSourceLocation, Ref{CXFile}, Cuint, Cuint, Cuint),
+                 loc, cxfile, 0, 0, 0)
+    getFileName(cxfile[])
 end
-
-function cu_file(cu::CLCursor)
-    str = CXString()
-    ccall( (:wci_getCursorFile, libwci),
-            Void,
-            (Ptr{Void}, Ptr{Void}),
-            cu.data, str.data)
-    return get_string(str)
-end
-
-start(cl::CursorList) = 1
-done(cl::CursorList, i) = (i > cl.size)
-next(cl::CursorList, i) = (cl[i], i+1)
-length(cl::CursorList) = cl.size
 
 ################################################################################
 # Tokenizer access
 ################################################################################
 
 # Returns TokenList
-function tokenize(cursor::CLCursor)
+function tokenize(cursor::CXCursor)
     tu = Cursor_getTranslationUnit(cursor)
     sourcerange = getCursorExtent(cursor)
     return cindex.tokenize(tu, sourcerange)
@@ -328,7 +328,7 @@ end
 
 show(io::IO, tk::CLToken)   = print(io, typeof(tk), "(\"", tk.text, "\")")
 show(io::IO, ty::CLType)    = print(io, "CLType (", typeof(ty), ") ")
-show(io::IO, cu::CLCursor)    = print(io, "CLCursor (", typeof(cu), ") ", name(cu))
+show(io::IO, cu::CXCursor)    = print(io, "CXCursor (", typeof(cu), ") ", name(cu))
 
 ###############################################################################
 # Internal functions
@@ -387,27 +387,5 @@ function getFile(tu::CXTranslationUnit, file::String)
                 tu,
                 file)
 end
-
-function cl_create()
-    ptr = ccall( (:wci_createCursorList, libwci),
-                Ptr{Void},
-                () )
-    return CursorList(ptr,0)
-end
-
-function cl_dispose(cl::CursorList)
-    ccall( (:wci_disposeCursorList, libwci),
-            Void,
-            (Ptr{Void},),
-                cl.ptr)
-end
-
-function cl_size(clptr::Ptr{Void})
-    ccall( (:wci_sizeofCursorList, libwci),
-            Int,
-            (Ptr{Void},),
-                clptr)
-end
-cl_size(cl::CursorList) = cl.size
 
 end # module

@@ -1,291 +1,242 @@
-function getFileName(a1::CXFile,)
-    c = CXString()
-    ccall( (:wci_getFileName, libwci), Void, (CXFile,Ptr{Void},), a1, c.data,)
-    return get_string(c)
+# TODO test
+function getFileName(cxf::CXFile)
+    c = ccall( (:clang_getFileName, libwci), CXString, (CXFile,), cxf)
+    !(c.data == C_NULL) ? bytestring(c.data) : ""
 end
+
+# TODO move this to straight call
 function getIncludedFile(cu::InclusionDirective)
     getFileName(ccall( (:wci_getIncludedFile, libwci),
             Ptr{Void},
             (Ptr{UInt8},),
             pointer(cu.data)))
 end
+
 function getNullLocation()
-    c = CXSourceLocation()
-    ccall( (:wci_getNullLocation, libwci), Void, (Ptr{Void},),    c.data,)
-    return c
+    ccall( (:clang_getNullLocation, libwci), CXSourceLocation, ())
 end
-function equalLocations(a1::CXSourceLocation,a2::CXSourceLocation,)
-    ccall( (:wci_equalLocations, libwci), UInt32, (Ptr{Void},Ptr{Void},), a1.data,a2.data, )
+function equalLocations(l1::CXSourceLocation, l2::CXSourceLocation)
+    ccall( (:clang_equalLocations, libwci), Uint32, (CXSourceLocation,CXSourceLocation), l1,l2 ) == 1
 end
 function getNullRange()
-    c = CXSourceRange()
-    ccall( (:wci_getNullRange, libwci), Void, (Ptr{Void},),    c.data,)
-    return c
+    ccall( (:clang_getNullRange, libwci), CXSourceRange, ())
 end
-function getRange(a1::CXSourceLocation,a2::CXSourceLocation,)
-    c = CXSourceRange()
-    ccall( (:wci_getRange, libwci), Void, (Ptr{Void},Ptr{Void},Ptr{Void},), a1.data,a2.data, c.data,)
-    return c
+
+# returns CXSourceRange
+function getRange(l1::CXSourceLocation,l2::CXSourceLocation,)
+    ccall( (:clang_getRange, libwci), CXSourceRange, (CXSourceLocation,CXSourceLocation), l1, l2)
 end
-function equalRanges(a1::CXSourceRange,a2::CXSourceRange,)
-    ccall( (:wci_equalRanges, libwci), UInt32, (Ptr{Void},Ptr{Void},), a1.data,a2.data, )
+function equalRanges(r1::CXSourceRange,r2::CXSourceRange)
+    ccall( (:clang_equalRanges, libwci), Uint32, (CXSourceRange, CXSourceRange), r1, r2) == 1
 end
-function Range_isNull(a1::CXSourceRange,)
-    ccall( (:wci_Range_isNull, libwci), Int32, (Ptr{Void},), a1.data, )
+function Range_isNull(cxr::CXSourceRange,)
+    ccall( (:clang_Range_isNull, libwci), Int32, (CXSourceRange,), cxr)
 end
 function getNullCursor()
-    c = TmpCursor()
-    ccall( (:wci_getNullCursor, libwci), Void, (Ptr{Void},),    c.data,)
-    return CXCursor(c)
+    ccall( (:clang_getNullCursor, libwci), CXCursorBase, () )
 end
-function getTranslationUnitCursor(a1::CXTranslationUnit,)
-    c = TmpCursor()
-    ccall( (:wci_getTranslationUnitCursor, libwci), Void, (CXTranslationUnit,Ptr{Void},), a1, c.data,)
-    return CXCursor(c)
+function getTranslationUnitCursor(tu::CXTranslationUnit)
+    ccall( (:clang_getTranslationUnitCursor, libwci), CXCursorBase, (CXTranslationUnit,), tu)
 end
-function equalCursors(a1::CLCursor,a2::CLCursor,)
-    ccall( (:wci_equalCursors, libwci), UInt32, (Ptr{Void},Ptr{Void},), a1.data,a2.data, )
+function equalCursors(cu1::CXCursor,cu2::CXCursor)
+    ccall( (:clang_equalCursors, libwci), UInt32, (CXCursor, CXCursor), cu1, cu2) == 1
 end
-function Cursor_isNull(a1::CLCursor,)
-    ccall( (:wci_Cursor_isNull, libwci), Int32, (Ptr{Void},), a1.data, )
+function Cursor_isNull(cu::CXCursor)
+    ccall( (:clang_Cursor_isNull, libwci), Int32, (CXCursor,), cu) == 1
 end
-function hashCursor(a1::CLCursor,)
-    ccall( (:wci_hashCursor, libwci), UInt32, (Ptr{Void},), a1.data, )
+function hashCursor(cu::CXCursor)
+    ccall( (:clang_hashCursor, libwci), UInt32, (CXCursor,), cu)
 end
-function getCursorKind(a1::CLCursor,)
-    ccall( (:wci_getCursorKind, libwci), UInt32, (Ptr{Void},), a1.data, )
+function getCursorKind(cu::CXCursor)
+    ccall( (:clang_getCursorKind, libwci), Uint32, (CXCursor,), cu)
 end
-function isDeclaration(a1::CXCursorKind,)
-    ccall( (:wci_isDeclaration, libwci), UInt32, (CXCursorKind,), a1, )
+
+# TODO test
+function isDeclaration(k::CXCursorKind)
+    ccall( (:clang_isDeclaration, libwci), Uint32, (CXCursorKind,), k) == 1
 end
-function isReference(a1::CXCursorKind,)
-    ccall( (:wci_isReference, libwci), UInt32, (CXCursorKind,), a1, )
+function isReference(k::CXCursorKind,)
+    ccall( (:clang_isReference, libwci), Uint32, (CXCursorKind,), k) == 1
 end
-function getCursorLinkage(a1::CLCursor,)
-    ccall( (:wci_getCursorLinkage, libwci), CXLinkageKind, (Ptr{Void},), a1.data, )
+function getCursorLinkage(cu::CXCursor)
+    ccall( (:clang_getCursorLinkage, libwci), CXLinkageKind, (CXCursor,), cu)
 end
-function getCursorAvailability(a1::CLCursor,)
-    ccall( (:wci_getCursorAvailability, libwci), CXAvailabilityKind, (Ptr{Void},), a1.data, )
+function getCursorAvailability(cu::CXCursor,)
+    ccall( (:clang_getCursorAvailability, libwci), CXAvailabilityKind, (CXCursor,), cu)
 end
-function getCursorLanguage(a1::CLCursor,)
-    ccall( (:wci_getCursorLanguage, libwci), CXLanguageKind, (Ptr{Void},), a1.data, )
+
+function getCursorLanguage(cu::CXCursor)
+    ccall( (:clang_getCursorLanguage, libwci), CXLanguageKind, (CXCursor,), cu)
 end
-function getCursorSemanticParent(a1::CLCursor,)
-    c = TmpCursor()
-    ccall( (:wci_getCursorSemanticParent, libwci), Void, (Ptr{Void},Ptr{Void},), a1.data, c.data,)
-    return CXCursor(c)
+function getCursorSemanticParent(cu::CXCursor,)
+    ccall( (:clang_getCursorSemanticParent, libwci), CXCursorBase, (CXCursor,), cu)
 end
-function getCursorLexicalParent(a1::CLCursor,)
-    c = TmpCursor()
-    ccall( (:wci_getCursorLexicalParent, libwci), Void, (Ptr{Void},Ptr{Void},), a1.data, c.data,)
-    return CXCursor(c)
+function getCursorLexicalParent(cu::CXCursor)
+    ccall( (:clang_getCursorLexicalParent, libwci), CXCursorBase, (CXCursor,), cu)
 end
-function getCursorType(a1::CLCursor,)
-    c = TmpType()
-    ccall( (:wci_getCursorType, libwci), Void, (Ptr{Void},Ptr{Void},), a1.data, c.data,)
-    return CXType(c)
+function getCursorType(cu::CXCursor)
+    ccall( (:clang_getCursorType, libwci), CXType, (CXCursor,), cu)
 end
-function getTypedefDeclUnderlyingType(a1::CLCursor,)
-    c = TmpType()
-    ccall( (:wci_getTypedefDeclUnderlyingType, libwci), Void, (Ptr{Void},Ptr{Void},), a1.data, c.data,)
-    return CXType(c)
+
+function getTypedefDeclUnderlyingType(cu::CXCursor)
+    ccall( (:clang_getTypedefDeclUnderlyingType, libwci), CXType, (CXCursor,), cu)
 end
-function getEnumDeclIntegerType(a1::CLCursor,)
-    c = TmpType()
-    ccall( (:wci_getEnumDeclIntegerType, libwci), Void, (Ptr{Void},Ptr{Void},), a1.data, c.data,)
-    return CXType(c)
+function getEnumDeclIntegerType(cu::CXCursor)
+    ccall( (:clang_getEnumDeclIntegerType, libwci), CXType, (CXCursor,), cu)
 end
-function getEnumConstantDeclValue(a1::CLCursor,)
-    ccall( (:wci_getEnumConstantDeclValue, libwci), Int64, (Ptr{Void},), a1.data, )
+function getEnumConstantDeclValue(cu::CXCursor)
+    ccall( (:clang_getEnumConstantDeclValue, libwci), Int64, (CXCursor,), cu)
 end
-function getEnumConstantDeclUnsignedValue(a1::CLCursor,)
-    ccall( (:wci_getEnumConstantDeclUnsignedValue, libwci), UInt64, (Ptr{Void},), a1.data, )
+function getEnumConstantDeclUnsignedValue(cu::CXCursor)
+    ccall( (:clang_getEnumConstantDeclUnsignedValue, libwci), Uint64, (CXCursor,), cu)
 end
-function Cursor_getNumArguments(a1::CLCursor,)
-    ccall( (:wci_Cursor_getNumArguments, libwci), Int32, (Ptr{Void},), a1.data, )
+function Cursor_getNumArguments(cu::CXCursor)
+    ccall( (:clang_Cursor_getNumArguments, libwci), Int32, (CXCursor,), cu)
 end
-function Cursor_getArgument(a1::CLCursor,a2::Int32,)
-    c = TmpCursor()
-    ccall( (:wci_Cursor_getArgument, libwci), Void, (Ptr{Void},Int32,Ptr{Void},), a1.data,a2, c.data,)
-    return CXCursor(c)
+function Cursor_getArgument(cu::CXCursor,arg::Int32)
+    ccall( (:clang_Cursor_getArgument, libwci), CXCursorBase, (CXCursor,Int32), cu, arg)
 end
-function equalTypes(a1::CLType,a2::CLType,)
-    ccall( (:wci_equalTypes, libwci), UInt32, (Ptr{Void},Ptr{Void},), a1.data,a2.data, )
+function equalTypes(t1::CXType,t2::CXType)
+    ccall( (:clang_equalTypes, libwci), Uint32, (CXType,CXType), t1, t2)
 end
-function getCanonicalType(a1::CLType,)
-    c = TmpType()
-    ccall( (:wci_getCanonicalType, libwci), Void, (Ptr{Void},Ptr{Void},), a1.data, c.data,)
-    return CXType(c)
+function getCanonicalType(t::CXType)
+    ccall( (:clang_getCanonicalType, libwci), CXType, (CXType,), t)
 end
-function isConstQualifiedType(a1::CLType,)
-    ccall( (:wci_isConstQualifiedType, libwci), UInt32, (Ptr{Void},), a1.data, )
+function isConstQualifiedType(t::CXType)
+    ccall( (:clang_isConstQualifiedType, libwci), Uint32, (CXType,), t) == 1
 end
-function isVolatileQualifiedType(a1::CLType,)
-    ccall( (:wci_isVolatileQualifiedType, libwci), UInt32, (Ptr{Void},), a1.data, )
+function isVolatileQualifiedType(t::CXType)
+    ccall( (:clang_isVolatileQualifiedType, libwci), Uint32, (CXType,), t) == 1
 end
-function isRestrictQualifiedType(a1::CLType,)
-    ccall( (:wci_isRestrictQualifiedType, libwci), UInt32, (Ptr{Void},), a1.data, )
+function isRestrictQualifiedType(t::CXType,)
+    ccall( (:clang_isRestrictQualifiedType, libwci), Uint32, (CXType,), t)
 end
-function getPointeeType(a1::CLType,)
-    c = TmpType()
-    ccall( (:wci_getPointeeType, libwci), Void, (Ptr{Void},Ptr{Void},), a1.data, c.data,)
-    return CXType(c)
+function getPointeeType(t::CXType)
+    ccall( (:clang_getPointeeType, libwci), CXType, (CXType,), t)
 end
-function getTypeDeclaration(a1::CLType,)
-    c = TmpCursor()
-    ccall( (:wci_getTypeDeclaration, libwci), Void, (Ptr{Void},Ptr{Void},), a1.data, c.data,)
-    return CXCursor(c)
+function getTypeDeclaration(t::CXType,)
+    ccall( (:clang_getTypeDeclaration, libwci), Void, (CXType,), t)
 end
-function getDeclObjCTypeEncoding(a1::CLCursor,)
-    c = CXString()
-    ccall( (:wci_getDeclObjCTypeEncoding, libwci), Void, (Ptr{Void},Ptr{Void},), a1.data, c.data,)
-    return get_string(c)
+function getDeclObjCTypeEncoding(cu::CXCursor)
+    ccall( (:clang_getDeclObjCTypeEncoding, libwci), CXString, (CXCursor,), cu)
 end
-function getTypeKindSpelling(a1::CXTypeKind,)
-    c = CXString()
-    ccall( (:wci_getTypeKindSpelling, libwci), Void, (CXTypeKind,Ptr{Void},), a1, c.data,)
-    return get_string(c)
+function getTypeKindSpelling(tk::CXTypeKind)
+    s = ccall( (:clang_getTypeKindSpelling, libwci), CXString, (CXTypeKind,), tk)
+    bytestring(s.data)
 end
-function getFunctionTypeCallingConv(a1::CLType,)
-    ccall( (:wci_getFunctionTypeCallingConv, libwci), Int32, (Ptr{Void},), a1.data, )
+function getFunctionTypeCallingConv(t::CXType)
+    ccall( (:clang_getFunctionTypeCallingConv, libwci), Int32, (CXType,), t)
 end
-function getResultType(a1::CLType,)
-    c = TmpType()
-    ccall( (:wci_getResultType, libwci), Void, (Ptr{Void},Ptr{Void},), a1.data, c.data,)
-    return CXType(c)
+function getResultType(t::CXType)
+    ccall( (:clang_getResultType, libwci), CXType, (CXType,), t)
 end
-function getNumArgTypes(a1::CLType,)
-    ccall( (:wci_getNumArgTypes, libwci), Int32, (Ptr{Void},), a1.data, )
+function getNumArgTypes(t::CXType)
+    ccall( (:clang_getNumArgTypes, libwci), Int32, (CXType,), t)
 end
-function getArgType(a1::CLType,a2::UInt32,)
-    c = TmpType()
-    ccall( (:wci_getArgType, libwci), Void, (Ptr{Void},UInt32,Ptr{Void},), a1.data,a2, c.data,)
-    return CXType(c)
+function getArgType(t::CXType,arg::Uint32)
+    ccall( (:clang_getArgType, libwci), CXType, (CXType,Uint32), t, arg)
 end
 function isFunctionTypeVariadic(a1::CLType,)
-    ccall( (:wci_isFunctionTypeVariadic, libwci), UInt32, (Ptr{Void},), a1.data, )
+    ccall( (:clang_isFunctionTypeVariadic, libwci), Uint32, (Ptr{Void},), a1.data, )
 end
-function getCursorResultType(a1::CLCursor,)
-    c = TmpType()
-    ccall( (:wci_getCursorResultType, libwci), Void, (Ptr{Void},Ptr{Void},), a1.data, c.data,)
-    return CXType(c)
+function getCursorResultType(cu::CXCursor,)
+    ccall( (:clang_getCursorResultType, libwci), CXType, (CXCursor,), cu)
 end
-function isPODType(a1::CLType,)
-    ccall( (:wci_isPODType, libwci), UInt32, (Ptr{Void},), a1.data, )
+function isPODType(t::CXType)
+    ccall( (:clang_isPODType, libwci), Uint32, (CXType,), t)
 end
-function getElementType(a1::CLType,)
-    c = TmpType()
-    ccall( (:wci_getElementType, libwci), Void, (Ptr{Void},Ptr{Void},), a1.data, c.data,)
-    return CXType(c)
+function getElementType(t::CXType)
+    ccall( (:clang_getElementType, libwci), CXType, (CXType,), t)
 end
-function getNumElements(a1::CLType,)
-    ccall( (:wci_getNumElements, libwci), Int64, (Ptr{Void},), a1.data, )
+function getNumElements(t::CXType,)
+    ccall( (:clang_getNumElements, libwci), Int64, (CXType,), t)
 end
-function getArrayElementType(a1::CLType,)
-    c = TmpType()
-    ccall( (:wci_getArrayElementType, libwci), Void, (Ptr{Void},Ptr{Void},), a1.data, c.data,)
-    return CXType(c)
+function getArrayElementType(t::CXType)
+    ccall( (:clang_getArrayElementType, libwci), CXType, (CXType,), t)
 end
-function getArraySize(a1::CLType,)
-    ccall( (:wci_getArraySize, libwci), Int64, (Ptr{Void},), a1.data, )
+function getArraySize(t::CXType)
+    ccall( (:clang_getArraySize, libwci), Int64, (CXType,), t)
 end
-function isVirtualBase(a1::CLCursor,)
-    ccall( (:wci_isVirtualBase, libwci), UInt32, (Ptr{Void},), a1.data, )
+function isVirtualBase(cu::CXCursor)
+    ccall( (:clang_isVirtualBase, libwci), Uint32, (CXCursor,), cu) == 1
 end
-function getCXXAccessSpecifier(a1::CLCursor,)
-    ccall( (:wci_getCXXAccessSpecifier, libwci), Int64, (Ptr{Void},), a1.data, )
+function getCXXAccessSpecifier(cu::CXCursor)
+    ccall( (:clang_getCXXAccessSpecifier, libwci), Int64, (CXCursor,), cu)
 end
-function getNumOverloadedDecls(a1::CLCursor,)
-    ccall( (:wci_getNumOverloadedDecls, libwci), UInt32, (Ptr{Void},), a1.data, )
+function getNumOverloadedDecls(cu::CXCursor)
+    ccall( (:clang_getNumOverloadedDecls, libwci), Uint32, (CXCursor,), cu)
 end
-function getOverloadedDecl(a1::CLCursor,a2::UInt32,)
-    c = TmpCursor()
-    ccall( (:wci_getOverloadedDecl, libwci), Void, (Ptr{Void},UInt32,Ptr{Void},), a1.data,a2, c.data,)
-    return CXCursor(c)
+function getOverloadedDecl(cu::CXCursor,arg::Uint32)
+    ccall( (:clang_getOverloadedDecl, libwci), CXCursorBase, (CXCursor,Uint32), cu, arg)
 end
-function getCursorUSR(a1::CLCursor,)
-    c = CXString()
-    ccall( (:wci_getCursorUSR, libwci), Void, (Ptr{Void},Ptr{Void},), a1.data, c.data,)
+function getCursorUSR(cu::CXCursor)
+    c = ccall( (:clang_getCursorUSR, libwci), CXString, (CXCursor,), cu)
+    bytestring(c.data)
+end
+function getCursorSpelling(cu::CXCursor)
+    c = ccall( (:clang_getCursorSpelling, libwci), CXString, (CXString,), cu)
+    bytestring(c.data)
+end
+function getCursorDisplayName(cu::CXCursor)
+    c = ccall( (:clang_getCursorDisplayName, libwci), CXString, (CXCursor,), cu)
+    bytestring(c.data)
+end
+function getCursorReferenced(cu::CXCursor)
+    ccall( (:clang_getCursorReferenced, libwci), CXCursorBase, (CXCursor,), cu)
+end
+function getCursorDefinition(cu::CXCursor)
+    ccall( (:clang_getCursorDefinition, libwci), CXCursorBase, (CXCursor,), cu)
+end
+function isCursorDefinition(cu::CXCursor)
+    ccall( (:clang_isCursorDefinition, libwci), Uint32, (CXCursor,), cu)
+end
+function getCanonicalCursor(cu::CXCursor)
+    ccall( (:clang_getCanonicalCursor, libwci), CXCursorBase, (CXCursor,), cu)
+end
+function CXXMethod_isStatic(cu::CXCursor,)
+    ccall( (:clang_CXXMethod_isStatic, libwci), Uint32, (CXCursor,), cu)
+end
+function CXXMethod_isVirtual(cu::CXCursor,)
+    ccall( (:clang_CXXMethod_isVirtual, libwci), Uint32, (CXCursor,), cu)
+end
+function CXXMethod_isProtected(cu::CXCursor)
+    ccall( (:clang_CXXMethod_isProtected, libwci), Uint32, (CXCursor,), cu)
+end
+function getTemplateCursorKind(cu::CXCursor,)
+    ccall( (:clang_getTemplateCursorKind, libwci), Int32, (CXCursor,), cu)
+end
+function getSpecializedCursorTemplate(cu::CXCursor)
+    ccall( (:clang_getSpecializedCursorTemplate, libwci), CXCursorBase, (CXCursor,), cu)
+end
+function getTokenKind(cu::CXCursor)
+    ccall( (:clang_getTokenKind, libwci), Int32, (CXCursor,), cu)
+end
+function getTokenSpelling(tu::CXTranslationUnit,tk::CXToken)
+    c = ccall( (:clang_getTokenSpelling, libwci), CXString, (CXTranslationUnit,CXToken), tu, tk)
     return get_string(c)
 end
-function getCursorSpelling(a1::CLCursor,)
-    c = CXString()
-    ccall( (:wci_getCursorSpelling, libwci), Void, (Ptr{Void},Ptr{Void},), a1.data, c.data,)
-    return get_string(c)
-end
-function getCursorDisplayName(a1::CLCursor,)
-    c = CXString()
-    ccall( (:wci_getCursorDisplayName, libwci), Void, (Ptr{Void},Ptr{Void},), a1.data, c.data,)
-    return get_string(c)
-end
-function getCursorReferenced(a1::CLCursor,)
-    c = TmpCursor()
-    ccall( (:wci_getCursorReferenced, libwci), Void, (Ptr{Void},Ptr{Void},), a1.data, c.data,)
-    return CXCursor(c)
-end
-function getCursorDefinition(a1::CLCursor,)
-    c = TmpCursor()
-    ccall( (:wci_getCursorDefinition, libwci), Void, (Ptr{Void},Ptr{Void},), a1.data, c.data,)
-    return CXCursor(c)
-end
-function isCursorDefinition(a1::CLCursor,)
-    ccall( (:wci_isCursorDefinition, libwci), UInt32, (Ptr{Void},), a1.data, )
-end
-function getCanonicalCursor(a1::CLCursor,)
-    c = TmpCursor()
-    ccall( (:wci_getCanonicalCursor, libwci), Void, (Ptr{Void},Ptr{Void},), a1.data, c.data,)
-    return CXCursor(c)
-end
-function CXXMethod_isStatic(a1::CLCursor,)
-    ccall( (:wci_CXXMethod_isStatic, libwci), UInt32, (Ptr{Void},), a1.data, )
-end
-function CXXMethod_isVirtual(a1::CLCursor,)
-    ccall( (:wci_CXXMethod_isVirtual, libwci), UInt32, (Ptr{Void},), a1.data, )
-end
-function CXXMethod_isProtected(a1::CLCursor,)
-    ccall( (:wci_CXXMethod_isProtected, libwci), UInt32, (Ptr{Void},), a1.data, )
-end
-function getTemplateCursorKind(a1::CLCursor,)
-    ccall( (:wci_getTemplateCursorKind, libwci), Int32, (Ptr{Void},), a1.data, )
-end
-function getSpecializedCursorTemplate(a1::CLCursor,)
-    c = TmpCursor()
-    ccall( (:wci_getSpecializedCursorTemplate, libwci), Void, (Ptr{Void},Ptr{Void},), a1.data, c.data,)
-    return CXCursor(c)
-end
-function getTokenKind(a1::CXToken,)
-    ccall( (:wci_getTokenKind, libwci), Int32, (Ptr{Void},), a1.data, )
-end
-function getTokenSpelling(a1::CXTranslationUnit,a2::CXToken,)
-    c = CXString()
-    ccall( (:wci_getTokenSpelling, libwci), Void, (CXTranslationUnit,Ptr{Void},Ptr{Void},), a1,a2.data, c.data,)
-    return get_string(c)
-end
-function getCursorKindSpelling(a1::CXCursorKind,)
-    c = CXString()
-    ccall( (:wci_getCursorKindSpelling, libwci), Void, (CXCursorKind,Ptr{Void},), a1, c.data,)
-    return get_string(c)
+function getCursorKindSpelling(ck::CXCursorKind)
+    c = ccall( (:clang_getCursorKindSpelling, libwci), CXString, (CXCursorKind,), ck)
+    bytestring(c.data)
 end
 function getClangVersion()
-    c = CXString()
-    ccall( (:wci_getClangVersion, libwci), Void, (Ptr{Void},),    c.data,)
-    return get_string(c)
+    c = ccall( (:wci_getClangVersion, libwci), CXString, ())
+    bytestring(c.data)
 end
-function getCursorExtent(a1::CLCursor)
-    c = CXSourceRange()
-    ccall( (:wci_getCursorExtent, libwci), Void, (Ptr{Void},Ptr{Void}), a1.data, c.data)
-    return c
+function getCursorExtent(cu::CXCursor)
+    ccall( (:wci_getCursorExtent, libwci), CXSourceRange, (CXCursor,), cu)
 end
-function disposeTokens(tu::CXTranslationUnit, tokens::Ptr{_CXToken}, numtokens::Cuint)
-    ccall( (:clang_disposeTokens, :libclang), Void, (Ptr{Void}, Ptr{_CXToken}, Cuint),
+function disposeTokens(tu::CXTranslationUnit, tokens::Ptr{CXToken}, numtokens::Cuint)
+    ccall( (:clang_disposeTokens, :libclang), Void, (Ptr{Void}, Ptr{CXToken}, Cuint),
            tu, tokens, numtokens)
 end
 function tokenize(tu::CXTranslationUnit, sr::CXSourceRange)
-    tokens = Ptr{_CXToken}[C_NULL]
-    numtokens = ccall( (:wci_tokenize, libwci), Cuint, (Ptr{Void}, Ptr{Void}, Ptr{_CXToken}),
-            tu, sr.data, pointer(tokens))
-    return TokenList(tokens[1], convert(Cuint, numtokens - 1), tu)
+    tokens = Ptr{CXToken}[C_NULL]
+    numtokens = Ref{Cuint}()
+    numtokens = ccall( (:clang_tokenize, libwci), Cuint, (CXTranslationUnit, CXSourceRange, Ptr{Ptr{CXToken}}, Ref{Cuint}),
+            tu, sr, tokens, numtokens)
+#    return TokenList(tokens[1], convert(Cuint, numtokens - 1), tu)
 end
-function Cursor_getTranslationUnit(cu::CLCursor)
-    ccall( (:wci_Cursor_getTranslationUnit, libwci), CXTranslationUnit, (Ptr{Void},), cu.data)
+function Cursor_getTranslationUnit(cu::CXCursor)
+    ccall( (:clang_Cursor_getTranslationUnit, libwci), CXTranslationUnit, (CXCursor,), cu)
 end

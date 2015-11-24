@@ -235,19 +235,17 @@ get_sz(sym) = @eval ccall( ($(string("wci_size_", sym)), :($(libwci))), Int, ())
 #   for now we use these as the element type of the target array
 ###############################################################################
 
-immutable _CXSourceLocation
-    ptr_data1::Cptrdiff_t
-    ptr_data2::Cptrdiff_t
+immutable CXSourceLocation
+    ptr_data::NTuple{2, Csize_t}
     int_data::Cuint
-    _CXSourceLocation() = new(0,0,0)
+    CXSourceLocation() = new(0,0)
 end
 
-immutable _CXSourceRange
-    ptr_data1::Cptrdiff_t
-    ptr_data2::Cptrdiff_t
+immutable CXSourceRange
+    ptr_data::NTuple{2, Csize_t}
     begin_int_data::Cuint
     end_int_data::Cuint
-    _CXSourceRange() = new(0,0,0,0)
+    CXSourceRange() = new(0,0,0)
 end
 
 immutable _CXTUResourceUsageEntry
@@ -265,7 +263,6 @@ end
 
 # Generate container types
 for st in Any[
-        :CXSourceLocation, :CXSourceRange,
         :CXTUResourceUsageEntry, :CXTUResourceUsage ]
     sz_name = symbol(string(st,"_size"))
     st_base = symbol(string("_", st))
@@ -283,16 +280,14 @@ end
 immutable CXCursor
     kind::Cint
     xdata::Cint
-    data1::Cptrdiff_t
-    data2::Cptrdiff_t
-    data3::Cptrdiff_t
-    CXCursor() = new(0,0,0,0,0)
+    data::NTuple{3, Csize_t}
+    CXCursor() = new(0,0,0)
 end
 
 immutable CXString
-    data::Array{UInt8,1}
-    str::ASCIIString
-    CXString() = new(Array(UInt8, CXString_size), "")
+    data::Ptr{Uint8}
+    private_flags::Cuint
+    CXString() = new(C_NULL,0)
 end
 
 immutable CursorList
@@ -317,26 +312,25 @@ end
 #   The high-level TokenList[] and CLToken interface is preferred.
 ###############################################################################
 
-immutable _CXToken
-    int_data1::Cuint
-    int_data2::Cuint
-    int_data3::Cuint
-    int_data4::Cuint
-    ptr_data::Cptrdiff_t
-    _CXToken() = new(0,0,0,0,C_NULL)
+immutable CXToken
+    int_data::NTuple{4, Csize_t}
+    ptr_data::Csize_t
+    CXToken() = new(0,0)
 end
 
 # We generate this here manually because it has an extra field to keep
 # track of the TranslationUnit.
+#=
 immutable CXToken
     data::Array{_CXToken,1}
     CXToken(d) = new(d)
 end
 CXToken() = CXToken(Array(_CXToken, 1))
 CXToken(d::_CXToken) = CXToken([d])
+=#
 
 immutable TokenList
-    ptr::Ptr{_CXToken}
+    ptr::Ptr{CXToken}
     size::Cuint
     tunit::CXTranslationUnit
 end
@@ -398,10 +392,10 @@ CLTypeMap = Dict{Int32,Any}()
 
 immutable CXType
     kind::Int32
-    data1::Cptrdiff_t
-    data2::Cptrdiff_t
-    CXType() = new(0,0,0)
+    data::NTuple{2, Csize_t}
+    CXType() = new(0,0)
 end
+
 immutable TmpType
     data::Array{CXType,1}
     TmpType() = new(Array(CXType,1))
@@ -412,7 +406,7 @@ for sym in names(TypeKind, true)
     rval = eval(TypeKind.(sym))
     @eval begin
         immutable $(sym) <: CLType
-            data::Array{CXType,1}
+            data::CXType
         end
         CLTypeMap[Int32($rval)] = $sym
     end

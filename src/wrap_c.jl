@@ -780,13 +780,14 @@ function Base.run(wc::WrapContext)
     # Helper to store file handles
     filehandles = Dict{ASCIIString,IOStream}()
     getfile(f) = (f in keys(filehandles)) ? filehandles[f] : (filehandles[f] = open(f, "w"))
-
     for hfile in wc.headers
         outfile = wc.header_outputfile(hfile)
         obuf = wc.output_bufs[hfile]
-
         # Extract header to Expr[] array
         wrap_header(wc, parsed[hfile], hfile, obuf)
+        common_buf = dump_to_buf(wc.common_buf)
+        # Apply user-supplied transformation
+        common_buf = wc.rewriter(common_buf)
 
         # Apply user-supplied transformation
         wc.output_bufs[hfile] = wc.rewriter(obuf)
@@ -800,20 +801,15 @@ function Base.run(wc::WrapContext)
         println(ostrm, "# Automatically generated using Clang.jl wrap_c, version $version\n")
 
         print_buffer(ostrm, wc.output_bufs[hfile])
+        # Write "common" definitions: types, typealiases, etc.
+        open(wc.common_file, "w") do f
+            println(f, "# Automatically generated using Clang.jl wrap_c, version $version\n")
+            println(f, "using Compat")
+
+            print_buffer(f, common_buf)
+        end
     end
-
-    common_buf = dump_to_buf(wc.common_buf)
-
-    # Apply user-supplied transformation
-    common_buf = wc.rewriter(common_buf)
-
-    # Write "common" definitions: types, typealiases, etc.
-    open(wc.common_file, "w") do f
-        println(f, "# Automatically generated using Clang.jl wrap_c, version $version\n")
-        println(f, "using Compat")
-
-        print_buffer(f, common_buf)
-    end
+    println("last c_b:\n",wc.common_buf)
 
     map(close, values(filehandles))
 end

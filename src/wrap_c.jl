@@ -226,6 +226,8 @@ end
 
 function repr_jl(ptr::cindex.Pointer)
     ptee = pointee_type(ptr)
+    (isa(ptee, cindex.Char_U) || isa(ptee, cindex.Char_S)) && return :Cstring
+    isa(ptee, cindex.WChar) && return :Cwstring
     Expr(:curly, :Ptr, repr_jl(ptee))
 end
 
@@ -459,10 +461,10 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, ud::UnionDecl; usenam
     cur_sym = symbol("_"*usename)
     target = repr_jl(cu_type(max_cu))
 
-	if string(target) == ""
+    if string(target) == ""
         warn("Skipping UnionDecl $(usename) because largest field '$(name(max_cu))' could not be typed", string(target))
         return
-	end
+    end
 
     push!(b.args, Expr(:(::), cur_sym, target))
 
@@ -472,8 +474,16 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, ud::UnionDecl; usenam
     return
 end
 
+function is_ptr_type_expr(t::ANY)
+    (t === :Cstring || t === :Cwstring) && return true
+    isa(t, Expr) || return false
+    t = t::Expr
+    t.head === :curly && t.args[1] === :Ptr
+end
+
 function efunsig(name::Symbol, args::Vector{Symbol}, types)
-    x = Any[ Expr(:(::), a, t) for (a,t) in zip(args,types) ]
+    x = Any[is_ptr_type_expr(t) ? a : Expr(:(::), a, t)
+            for (a,t) in zip(args,types)]
     Expr(:call, name, x...)
 end
 

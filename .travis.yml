@@ -8,14 +8,14 @@ env:
     #- JULIAVERSION="juliareleases"
     - JULIAVERSION="julianightlies"
 before_install:
-  - export LD_LIBRARY_PATH=/usr/lib/llvm-3.3/lib
-  # Clang.jl
-  - sudo apt-get install libclang-3.3 libclang-3.3-dev llvm-3.3 libllvm3.3
-  # Julia test setup
   - sudo add-apt-repository ppa:staticfloat/julia-deps -y
   - sudo add-apt-repository ppa:staticfloat/${JULIAVERSION} -y
+
   - sudo apt-get update -qq -y
+  
+  - sudo apt-get install libclang-3.4-dev llvm-3.4
   - sudo apt-get install libpcre3-dev julia -y
   - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
+  - export LD_LIBRARY_PATH=/usr/lib/llvm-3.4/lib
 script:
   - julia -e 'Pkg.init(); Pkg.clone(pwd()); Pkg.build("Clang"); Pkg.test("Clang")'

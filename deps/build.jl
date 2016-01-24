@@ -2,7 +2,7 @@
 
 find_llvm() = begin
     if haskey(ENV, "TRAVIS")
-        return readchomp(`which llvm-config-3.3`)
+        return readchomp(`which llvm-config-3.4`)
     end
     tmp = joinpath(JULIA_HOME, "llvm-config")
     isfile(tmp) && return tmp

@@ -781,12 +781,21 @@ function Base.run(wc::WrapContext)
     filehandles = Dict{ASCIIString,IOStream}()
     getfile(f) = (f in keys(filehandles)) ? filehandles[f] : (filehandles[f] = open(f, "w"))
 
+    common_buf = Any[1]  # declare common_buf at this scope
     for hfile in wc.headers
         outfile = wc.header_outputfile(hfile)
         obuf = wc.output_bufs[hfile]
 
         # Extract header to Expr[] array
         wrap_header(wc, parsed[hfile], hfile, obuf)
+
+        # process the common_buf before obuf.
+        # Because wc.common_buf gets updated with every new header,
+        # the same definitions might get processed multiple times
+        common_buf = dump_to_buf(wc.common_buf)
+
+        # apply user supplied transformation to common_buf
+        common_buf = wc.rewriter(common_buf)
 
         # Apply user-supplied transformation
         wc.output_bufs[hfile] = wc.rewriter(obuf)
@@ -802,10 +811,6 @@ function Base.run(wc::WrapContext)
         print_buffer(ostrm, wc.output_bufs[hfile])
     end
 
-    common_buf = dump_to_buf(wc.common_buf)
-
-    # Apply user-supplied transformation
-    common_buf = wc.rewriter(common_buf)
 
     # Write "common" definitions: types, typealiases, etc.
     open(wc.common_file, "w") do f

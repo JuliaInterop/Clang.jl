@@ -16,7 +16,31 @@ if !haskey(ENV, "LLVM_CONFIG") ENV["LLVM_CONFIG"] = find_llvm() end
 push!(Libdl.DL_LOAD_PATH, readchomp(`$(ENV["LLVM_CONFIG"]) --libdir`))
 
 cd(joinpath(dirname(@__FILE__), "src"))
-run(`make`)
+try
+    run(`make`)
+catch
+    has_build_clang_flag=false
+    julia_make_user = joinpath(JULIA_HOME, "..", "..", "Make.user")
+
+    if isfile(julia_make_user)
+        open(julia_make_user) do f
+            for l in eachline(f)
+                if startswith(l, "BUILD_LLVM_CLANG=1")
+                    has_build_clang_flag = true
+                    break
+                end
+            end
+        end
+    end
+
+    if !has_build_clang_flag
+        error("""clang headers could not be found and BUILD_LLVM_CLANG=1 not specified in Make.user
+Try setting BUILD_LLVM_CLANG=1 in Make.user in $JULIA_HOME and try again.""")
+    else
+        exit()
+    end
+end
+
 if (!ispath("../usr"))
     run(`mkdir ../usr`)
 end

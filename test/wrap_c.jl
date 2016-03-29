@@ -13,7 +13,7 @@ buf = Any[]
 wrap_c.wrap(wc, buf, func1, "test")
 
 exc = :(
-    function func1(a::Cint,b::Cdouble,c::Ptr{Cdouble},d::Ptr{Void})
+    function func1(a::Cint,b::Cdouble,c,d)
         ccall((:func1,test),Cint,(Cint,Cdouble,Ptr{Cdouble},Ptr{Void}),a,b,c,d)
     end)
 

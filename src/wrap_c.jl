@@ -241,36 +241,12 @@ function repr_jl(unxp::Unexposed)
 end
 
 function repr_jl(t::ConstantArray)
-    # For ConstantArray declarations, we make an immutable
-    # array with that many members of the appropriate type.
-
-    # Override pointer representation so pointee type is not written
-    repr_short(t::CLType) = isa(t, Pointer) ? "Ptr" : repr_jl(t)
-
-    # Grab the WrapContext in order to add bitstype
-    global context::WrapContext
-
+    # For ConstantArray declarations,
+    # we use NTuples
     arrsize = cindex.getArraySize(t)
-    eltype = cindex.getArrayElementType(t)
-    typename = string("Array_", arrsize, "_", repr_short(eltype))
-    typesym = symbol(typename)
+    eltype = repr_jl(cindex.getArrayElementType(t))
 
-    if !(typesym in keys(context.common_buf))
-        b = Expr(:block)
-        e = Expr(:type, false, symbol(typename), b)
-        repr = repr_jl(eltype)
-        for i = 1:arrsize
-            push!(b.args, Expr(:(::), symbol("d$i"), repr))
-        end
-
-        # Create a zero function for this type
-        b = :($(symbol(typename))(fill(zero($repr), $arrsize)...))
-        zero_call = :(zero(::Type{$(symbol(typename))}) = $b)
-
-        context.common_buf[typesym] = ExprUnit(Any[e, zero_call])
-    end
-
-    return typesym
+    return :(NTuple{$arrsize, $eltype})
 end
 
 function repr_jl(t::IncompleteArray)
@@ -294,6 +270,8 @@ target_type(s::Symbol) = s
 function target_type(e::Expr)
     if e.head == :curly && e.args[1] == :Ptr
         return target_type(e.args[2])
+    elseif  e.head == :curly && e.args[1] == :NTuple
+        return target_type(e.args[3])
     else
         error("target_type: don't know how to handle $e")
     end

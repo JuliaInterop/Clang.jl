@@ -529,7 +529,7 @@ end
 
 function handle_macro_exprn(tokens::TokenList, pos::Int)
     function trans(tok)
-        ops = ["+" "-" "*" ">>" "<<" "/" "\\" "%" "|" "||" "^" "&" "&&"]
+        ops = ["+" "-" "*" "~" ">>" "<<" "/" "\\" "%" "|" "||" "^" "&" "&&"]
         if (isa(tok, cindex.Literal) ||
             (isa(tok,cindex.Identifier))) return 0
         elseif (isa(tok, cindex.Punctuation) && tok.text in ops) return 1

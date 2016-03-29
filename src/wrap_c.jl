@@ -543,6 +543,25 @@ function handle_macro_exprn(tokens::TokenList, pos::Int)
         literalsuffixes = ["ULL", "Ull", "uLL", "ull", "LLU", "LLu", "llU", "llu",
                            "LL", "ll", "UL", "Ul", "uL", "ul", "LU", "Lu", "lU", "lu",
                            "U", "u", "L", "l", "F", "f"]
+
+        function literal_totype(literal, txt)
+          literal = lowercase(literal)
+
+          # Floats following http://en.cppreference.com/w/cpp/language/floating_literal
+          float64 = contains(txt, ".") && contains(literal, "l")
+          float32 = contains(literal, "f")
+
+          if float64 || float32
+            float64 && return "Float64"
+            float32 && return "Float32"
+          end
+
+          # Integers following http://en.cppreference.com/w/cpp/language/integer_literal
+          unsigned = contains(literal, "u")
+          nbits = count(x -> x == 'l', literal) == 2 ? 64 : 32
+          return "$(unsigned ? "U":"")Int$nbits"
+        end
+
         txt = tok.text
         if isa(tok,cindex.Identifier) || isa(tok,cindex.Punctuation)
             # pass
@@ -550,7 +569,9 @@ function handle_macro_exprn(tokens::TokenList, pos::Int)
             txt = strip(tok.text)
             for sfx in literalsuffixes
                 if endswith(txt, sfx)
+                    _type = literal_totype(sfx, txt)
                     txt = txt[1:end-length(sfx)]
+                    txt = "$(_type)($txt)"
                     break
                 end
             end

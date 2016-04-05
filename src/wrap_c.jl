@@ -362,25 +362,24 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, cursor::EnumDecl; use
     if (usename == "" && (usename = name(cursor)) == "")
         usename = name_anon()
     end
-    enumname = usename
-
-    buf = Any[]
-    enum_exprs = ExprUnit(buf)
-    expr_buf[symbol_safe(enumname)] = enum_exprs
-
-    push!(buf, "# begin enum $enumname")
+    enumname = symbol_safe(usename)
     enumtype = repr_jl(cindex.getEnumDeclIntegerType(cursor))
     _int = int_conversion[enumtype]
-    push!(buf, :(typealias $(symbol(enumname)) $enumtype))
+    name_values = Tuple{Symbol, Int}[]
+    # exctract values and names
     for enumitem in children(cursor)
         cur_name = cindex.spelling(enumitem)
         if (length(cur_name) < 1) continue end
         cur_sym = symbol_safe(cur_name)
-        push!(buf, :(const $cur_sym = $_int($(value(enumitem)))))
-        expr_buf[cur_sym] = enum_exprs
+        push!(name_values, (cur_sym, Int(value(enumitem))))
     end
-    push!(buf, "# end enum $enumname")
 
+    enum_expr = :(@cenum($enumname{$_int}))
+    expr_buf[enumname] = ExprUnit(enum_expr)
+    for (name, value) in name_values
+        push!(enum_expr.args, :($name = $value))
+    end
+    return
 end
 
 function wrap(context::WrapContext, expr_buf::OrderedDict, sd::StructDecl; usename = "")
@@ -726,34 +725,31 @@ function print_buffer(ostrm, obuf)
     for e in obuf
         isa(e, Poisoned) && continue
         prev_state = state
-        if state != :enum
-            state = (isa(e, AbstractString) ? :string :
-                     isa(e, Expr)   ? e.head :
-                     error("output: can't handle type $(typeof(e))"))
-        end
+        state = (isa(e, AbstractString) ? :string :
+                 isa(e, Expr)   ? e.head :
+                 error("output: can't handle type $(typeof(e))"))
 
         if state == :string
-            if startswith(e, "# begin enum")
-                state = :enum
-                println(ostrm)
-            elseif startswith(e, "# Skipping")
+            if startswith(e, "# Skipping")
                 state = :skipping
             end
         end
 
-        if state != :enum
-            if ((state != prev_state && prev_state != :string) ||
-                (state == prev_state && (state == :function ||
-                                         state == :type)))
-                println(ostrm)
+        if ((state != prev_state && prev_state != :string) ||
+            (state == prev_state && (state == :function ||
+                                     state == :type)))
+            println(ostrm)
+        end
+
+        if isa(e, Expr) && e.head == :macrocall && first(e.args) == symbol("@cenum")
+            println(ostrm, "@cenum($(e.args[2]),")
+            for elem in e.args[3:end]
+                println(ostrm, "    $elem,")
             end
+            println(ostrm, ")")
+            continue
         end
-
         println(ostrm, e)
-
-        if state == :enum && isa(e, AbstractString) && startswith(e, "# end enum")
-            state = :end_enum
-        end
     end
 end
 

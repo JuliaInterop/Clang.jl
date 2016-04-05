@@ -378,8 +378,13 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, cursor::EnumDecl; use
         cur_sym = symbol_safe(cur_name)
         push!(name_values, (cur_sym, Int(value(enumitem))))
     end
+    int_size = sizeof(_int)*8
+    if int_size == 32 # only add size if != 32
+        enum_expr = :(@cenum($enumname))
+    else
+        enum_expr = :(@cenum($enumname{$int_size}))
+    end
 
-    enum_expr = :(@cenum($enumname{$_int}))
     expr_buf[enumname] = ExprUnit(enum_expr)
     for (name, value) in name_values
         push!(enum_expr.args, :($name = $value))

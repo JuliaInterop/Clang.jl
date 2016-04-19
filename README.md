@@ -55,6 +55,7 @@ for small libraries the initial investment may not pay off.
 libclang and libclang-dev (versions >= 3.1) are required. libclang may
 optionally be built by the Julia build system by setting 
 BUILD_LLVM_CLANG=1 in `julia/Make.user`.
+You might also install clang manually, e.g. via `sudo apt-get install clang-3.7`.
 
 When using a distribution packaged version, note the latest version 
 may only be available from an optional pre-release archive (e.g. Ubuntu PPA).
@@ -62,7 +63,7 @@ may only be available from an optional pre-release archive (e.g. Ubuntu PPA).
 
 ### Install
 
-To install using the Julia package manager, use: Pkg.add("Clang"). Note that Clang.jl must be built against the same LLVM version used in Julia.
+To install using the Julia package manager, use: Pkg.add("Clang"). Note that you first need to make sure, that the following are in your `PATH` variable: `libclang`, `llvm-config` and `clang`.
 
 ## Background Information
 

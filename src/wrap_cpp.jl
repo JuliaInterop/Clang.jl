@@ -10,14 +10,15 @@ export
     #emitc_init,
     #emitc_post
 
-
+using Compat
+import Compat.String
 
 ################################################################################
 # Method entry point
 ################################################################################
 
 immutable WrappedMethod
-    name::ASCIIString
+    name::Compat.ASCIIString
     method::CXXMethod
     parent::ClassDecl
     args::Array{Any,1}
@@ -248,7 +249,7 @@ end
 
 function wrap(out::IO, top::cindex.ClassDecl)
     println("Wrapping class: ", name(top))
-    MethodCount = Dict{ASCIIString, Int}()
+    MethodCount = Dict{String, Int}()
 
     println(out, "extern \"C\" {")
     for decl in [c for c in children(top)]
@@ -357,7 +358,7 @@ function wrapjl_args(out::IO, args, defs=Any[])
     end
 end
 
-function wrapjl(out::IO, libname::ASCIIString, method::cindex.CXXMethod, id::Int)
+function wrapjl(out::IO, libname::String, method::cindex.CXXMethod, id::Int)
     buf = IOBuffer()
 
     methodname = spelling(method)
@@ -399,7 +400,7 @@ end
 #     return cindex.getCursorLexicalParent(method)
 # end
 
-function wrapjl(out::IO, libname::ASCIIString, method::cindex.Constructor, id::Int)
+function wrapjl(out::IO, libname::String, method::cindex.Constructor, id::Int)
     buf = IOBuffer()
 
     methodname = spelling(method)
@@ -432,8 +433,8 @@ function wrapjl(out::IO, libname::ASCIIString, method::cindex.Constructor, id::I
     print(out, takebuf_string(buf))
 end
 
-function wrapjl(out::IO, libname::ASCIIString, class::cindex.ClassDecl)
-    MethodCount = Dict{ASCIIString, Int}()
+function wrapjl(out::IO, libname::String, class::cindex.ClassDecl)
+    MethodCount = Dict{String, Int}()
 
     for decl in [c for c in children(class)]
         declname = spelling(decl)

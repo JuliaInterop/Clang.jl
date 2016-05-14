@@ -17,10 +17,10 @@ CONSTADD = tokenize(cindex.search(
 @test (typeof(CONST[1]) == cindex.Identifier && typeof(CONST[2]) == cindex.Literal)
 @test (CONSTADD[1].text == "CONSTADD" && CONSTADD[2].text == "CONST" &&
        CONSTADD[3].text == "+" && CONSTADD[4].text == "2")
- 
+
 # Function arguments
 
 func1 = cindex.search(top, "func1")[1]
 @test cindex.getNumArgTypes(cu_type(func1)) == 4
 func1_args = cindex.function_args(func1)
-@test map(spelling, func1_args) == ASCIIString["a","b","c","d"]
+@test map(spelling, func1_args) == ["a","b","c","d"]

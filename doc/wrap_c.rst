@@ -18,9 +18,9 @@ However, it is usually necessary to set compiler arguments or customize output. 
 
     :param index: Union{}
     :param output_file:
-    :type output_file: ASCIIString
+    :type output_file: String
     :param common_file: Name of common output file (types, constants, typealiases)
-    :type common_file: ASCIIString
+    :type common_file: String
     :param clang_args:  
     :type clang_args: Vector{String}
     :param clang_includes: List of include paths for Clang to search.
@@ -28,10 +28,10 @@ However, it is usually necessary to set compiler arguments or customize output. 
     :param clang_diagnostics: Display Clang diagnostics
     :type clang_diagnostics: Bool
     :param header_wrapped: Function called to determine whether a header should be wrapped.
-    :type header_wrapped: Function(header_file::ASCIIString, cursor_name::ASCIIString) -> Bool
+    :type header_wrapped: Function(header_file::String, cursor_name::String) -> Bool
     :param header_library: Function called to determine the library name for a given header.
     :param header_outputfile: Function called to determine the output filename for a given header.
-    :type header_outputfile: Function(header::ASCIIString) -> Bool
+    :type header_outputfile: Function(header::String) -> Bool
     :param rewriter: Function to rewrite generated expressions
     :type rewriter: Function(Expr)
 
@@ -53,8 +53,8 @@ However, it is usually necessary to set compiler arguments or customize output. 
     :field header_library: called to determine shared library for given header
     :field header_outfile: called to determine output file group for given header
     :field common_buf: Array
-    :field cache_wrapped: [Internal] Set{ASCIIString}
-    :field output_bufs: [Internal] DefaultOrderedDict{ASCIIString, Array{Any}}
+    :field cache_wrapped: [Internal] Set{String}
+    :field output_bufs: [Internal] DefaultOrderedDict{String, Array{Any}}
     :field options: InternalOptions
 
 

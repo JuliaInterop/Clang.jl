@@ -10,6 +10,8 @@ export function_return_modifiers, function_arg_modifiers
 
 import Base.getindex, Base.start, Base.next, Base.done, Base.search, Base.show
 import Base.endof, Base.length
+using Compat
+import Compat.String
 
 ###############################################################################
 
@@ -42,8 +44,8 @@ function parse_header(header::AbstractString;
                 index                           = Union{},
                 diagnostics::Bool               = true,
                 cplusplus::Bool                 = false,
-                args                            = ASCIIString[""],
-                includes                        = ASCIIString[],
+                args                            = [""],
+                includes                        = String[],
                 flags                           = TranslationUnit_Flags.None)
     if !isfile(header)
         error(header, " not found")
@@ -85,7 +87,7 @@ function search(cl::CursorList, ismatch::Function)
 end
 search(cu::CLCursor, ismatch::Function) = search(children(cu), ismatch)
 search(cu::CLCursor, T::DataType) = search(cu, x->isa(x, T))
-search(cu::CLCursor, name::ASCIIString) = search(cu, x->(cindex.spelling(x) == name))
+search(cu::CLCursor, name::String) = search(cu, x->(cindex.spelling(x) == name))
 
 ###############################################################################
 # Extended search function
@@ -349,13 +351,13 @@ function tu_cursor(tu::CXTranslationUnit)
     getTranslationUnitCursor(tu)
 end
 
-function tu_parse(CXIndex,
-                  source_filename::AbstractString,
-                  cl_args::Array{ASCIIString,1},
-                  num_clargs,
-                  unsaved_files::CXUnsavedFile,
-                  num_unsaved_files,
-                  options)
+function tu_parse{S<:String}(CXIndex,
+                             source_filename::AbstractString,
+                             cl_args::Array{S,1},
+                             num_clargs,
+                             unsaved_files::CXUnsavedFile,
+                             num_unsaved_files,
+                             options)
 
     ccall(  (:clang_parseTranslationUnit, "libclang"),
             CXTranslationUnit,
@@ -378,7 +380,7 @@ function idx_create(excludeDeclsFromPCH::Int, displayDiagnostics::Int)
 end
 idx_create() = idx_create(0,0)
 
-function getFile(tu::CXTranslationUnit, file::ASCIIString)
+function getFile(tu::CXTranslationUnit, file::String)
     ccall( (:clang_getFile, "libclang"),
             CXFile,
             (Ptr{Void}, Ptr{UInt8}),

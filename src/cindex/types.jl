@@ -227,8 +227,19 @@ typealias CXCursorKind Int32
 typealias CXTranslationUnit Ptr{Void}
 const CXString_size = ccall( ("wci_size_CXString", libwci), Int, ())
 
-# Work-around: ccall followed by composite_type in @eval gives error.
-get_sz(sym) = @eval ccall( ($(string("wci_size_", sym)), :($(libwci))), Int, ())
+# The content is not valid after deserializing and before `__init__` is called.
+const libwci_hdl = Ref{Ptr{Void}}(Libdl.dlopen(libwci))
+
+function __init__()
+    libwci_hdl[] = Libdl.dlopen(libwci)
+    nothing
+end
+
+function get_sz(sym)
+    fsym = Symbol("wci_size_", sym)
+    fptr = Libdl.dlsym(libwci_hdl[], fsym)
+    ccall(fptr, Int, ())
+end
 
 ###############################################################################
 # Container types
@@ -267,8 +278,8 @@ end
 for st in Any[
         :CXSourceLocation, :CXSourceRange,
         :CXTUResourceUsageEntry, :CXTUResourceUsage ]
-    sz_name = symbol(string(st,"_size"))
-    st_base = symbol(string("_", st))
+    sz_name = Symbol(st, "_size")
+    st_base = Symbol("_", st)
     @eval begin
         const $sz_name = get_sz($("$st"))
         immutable $(st)
@@ -291,7 +302,7 @@ end
 
 immutable CXString
     data::Array{UInt8,1}
-    str::ASCIIString
+    str::Compat.ASCIIString
     CXString() = new(Array(UInt8, CXString_size), "")
 end
 
@@ -346,7 +357,7 @@ for sym in names(TokenKind, true)
     if(sym == :TokenKind) continue end
     @eval begin
         immutable $sym <: CLToken
-            text::ASCIIString
+            text::Compat.ASCIIString
         end
     end
 end
@@ -373,7 +384,7 @@ end
 
 for sym in names(CursorKind, true)
     if(sym == :CursorKind) continue end
-    rval = eval(CursorKind.(sym))
+    rval = getfield(CursorKind, sym)
     @eval begin
         immutable $(sym) <: CLCursor
             data::Array{CXCursor,1}
@@ -409,7 +420,7 @@ end
 
 for sym in names(TypeKind, true)
     if(sym == :TypeKind) continue end
-    rval = eval(TypeKind.(sym))
+    rval = getfield(TypeKind, sym)
     @eval begin
         immutable $(sym) <: CLType
             data::Array{CXType,1}

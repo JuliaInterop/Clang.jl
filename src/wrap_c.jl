@@ -7,6 +7,8 @@ module wrap_c
 
 using Clang.cindex
 using DataStructures
+using Compat
+import Compat.String
 
 export wrap_c_headers
 export WrapContext
@@ -41,46 +43,45 @@ immutable Poisoned
 end
 
 ExprUnit() = ExprUnit(Any[], OrderedSet{Symbol}(), :new)
-ExprUnit(e::Union{Expr,Symbol,ASCIIString,Poisoned}, deps=Any[]; state::Symbol=:new) = ExprUnit(Any[e], OrderedSet{Symbol}([target_type(dep) for dep in deps]), state)
+ExprUnit(e::Union{Expr,Symbol,String,Poisoned}, deps=Any[]; state::Symbol=:new) = ExprUnit(Any[e], OrderedSet{Symbol}([target_type(dep) for dep in deps]), state)
 ExprUnit(a::Array, deps=Any[]; state::Symbol=:new) = ExprUnit(a, OrderedSet{Symbol}([target_type(dep) for dep in deps]), state)
 
 ### WrapContext
 # stores shared information about the wrapping session
 type WrapContext
     index::cindex.CXIndex
-    headers::Array{ASCIIString,1}
-    output_file::ASCIIString
-    common_file::ASCIIString
-    clang_includes::Array{ASCIIString,1}         # clang include paths
-    clang_args::Array{ASCIIString,1}             # additional {"-Arg", "value"} pairs for clang
+    headers::Array{Compat.ASCIIString,1}
+    output_file::Compat.ASCIIString
+    common_file::Compat.ASCIIString
+    clang_includes::Array{Compat.ASCIIString,1}  # clang include paths
+    clang_args::Array{Compat.ASCIIString,1}      # additional {"-Arg", "value"} pairs for clang
     header_wrapped::Function                     # called to determine header inclusion status
                                                  #   (top_header, cursor_header) -> Bool
     header_library::Function                     # called to determine shared library for given header
                                                  #   (header_name) -> library_name::AbstractString
-    header_outputfile::Function                     # called to determine output file group for given header
+    header_outputfile::Function                  # called to determine output file group for given header
                                                  #   (header_name) -> output_file::AbstractString
     cursor_wrapped::Function                     # called to determine cursor inclusion status
                                                  #   (cursor_name, cursor) -> Bool
     common_buf::OrderedDict{Symbol, ExprUnit}    # output buffer for common items: typedefs, enums, etc.
-    empty_structs::Set{ASCIIString}
-    output_bufs::DefaultOrderedDict{ASCIIString, Array{Any}}
+    empty_structs::Set{Compat.ASCIIString}
+    output_bufs::DefaultOrderedDict{Compat.ASCIIString, Array{Any}}
     options::InternalOptions
     anon_count::Int
     rewriter::Function
 end
 
 ### Convenience function to initialize wrapping context with defaults
-init(;args...) = init(ASCIIString[]; args...)
 function init(;
-            headers                         = ASCIIString[],
+            headers                         = Compat.ASCIIString[],
             index                           = Union{},
-            output_file::ByteString        = "",
-            common_file::ByteString        = "",
-            output_dir::ByteString         = "",
-            clang_args::Array{ASCIIString,1}
-                                            = ASCIIString[],
-            clang_includes::Array{ASCIIString,1}
-                                            = ASCIIString[],
+            output_file::String             = "",
+            common_file::String             = "",
+            output_dir::String              = "",
+            clang_args::Array{Compat.ASCIIString,1}
+                                            = Compat.ASCIIString[],
+            clang_includes::Array{Compat.ASCIIString,1}
+                                            = Compat.ASCIIString[],
             clang_diagnostics::Bool         = true,
             header_wrapped                  = (header, cursorname) -> true,
             header_library                  = Union{},
@@ -102,7 +103,7 @@ function init(;
 
     if (header_library == Union{})
         header_library = x->strip(splitext(basename(x))[1])
-    elseif isa(header_library, ASCIIString)
+    elseif isa(header_library, String)
         libname = copy(header_library)
         header_library = x->libname
     end
@@ -122,8 +123,8 @@ function init(;
                                  header_outputfile,
                                  cursor_wrapped,
                                  OrderedDict{Symbol,ExprUnit}(),
-                                 Set{ASCIIString}(),
-                                 DefaultOrderedDict(ASCIIString, Array{Any}, ()->Any[]),
+                                 Set{Compat.ASCIIString}(),
+                                 DefaultOrderedDict(Compat.ASCIIString, Array{Any}, ()->Any[]),
                                  options,
                                  0,
                                  rewriter)
@@ -208,7 +209,7 @@ int_conversion = Dict{Any,Any}(
 ################################################################################
 
 function repr_jl(t::Union{cindex.Record, cindex.Typedef})
-    tname = symbol(spelling(cindex.getTypeDeclaration(t)))
+    tname = Symbol(spelling(cindex.getTypeDeclaration(t)))
     return get(cl_to_jl, tname, tname)
 end
 
@@ -220,7 +221,7 @@ function repr_jl(t::TypeRef)
        isa(refdef, cindex.Invalid)
         return :Void
     else
-        return symbol(spelling(reftype))
+        return Symbol(spelling(reftype))
     end
 end
 
@@ -237,7 +238,7 @@ end
 
 function repr_jl(unxp::Unexposed)
     r = spelling(cindex.getTypeDeclaration(unxp))
-    r == "" ? :Void : symbol(r)
+    r == "" ? :Void : Symbol(r)
 end
 
 function repr_jl(t::ConstantArray)
@@ -284,7 +285,7 @@ target_type(q) = error("target_type: don't know how to handle $q")
 #     declare a block of bytes to match.
 ###############################################################################
 
-typesize(t::CLType) = sizeof(eval(cl_to_jl[typeof(t)]))
+typesize(t::CLType) = sizeof(getfield(Base, cl_to_jl[typeof(t)])::DataType)
 typesize(t::Record) = begin warn("  incorrect typesize for Record field"); 0 end
 typesize(t::Unexposed) = begin warn("  incorrect typesize for Unexposed field"); 0 end
 typesize(t::ConstantArray) = cindex.getArraySize(t)
@@ -322,7 +323,7 @@ function wrap(context::WrapContext, buf::Array, func_decl::FunctionDecl, libname
         return
     end
 
-    funcname = symbol(spelling(func_decl))
+    funcname = Symbol(spelling(func_decl))
     ret_type = repr_jl(return_type(func_decl))
 
     args = cindex.function_args(func_decl)
@@ -341,14 +342,14 @@ function wrap(context::WrapContext, buf::Array, func_decl::FunctionDecl, libname
     # Handle unnamed args and convert names to symbols
     arg_count = 0
     arg_names = convert(Vector{Symbol},
-                        map(x-> symbol(begin
+                        map(x-> Symbol(begin
                                          nm = name_safe(cindex.name(x))
                                          nm != "" ? nm : "arg"*string(arg_count+=1)
                                        end),
                                 args))
 
     sig = efunsig(funcname, arg_names, arg_reps)
-    body = eccall(funcname, symbol(libname), ret_type, arg_names, arg_reps)
+    body = eccall(funcname, Symbol(libname), ret_type, arg_names, arg_reps)
     e = Expr(:function, sig, Expr(:block, body))
 
     push!(buf, e)
@@ -371,7 +372,7 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, cursor::EnumDecl; use
     push!(buf, "# begin enum $enumname")
     enumtype = repr_jl(cindex.getEnumDeclIntegerType(cursor))
     _int = int_conversion[enumtype]
-    push!(buf, :(typealias $(symbol(enumname)) $enumtype))
+    push!(buf, :(typealias $(Symbol(enumname)) $enumtype))
     for enumitem in children(cursor)
         cur_name = cindex.spelling(enumitem)
         if (length(cur_name) < 1) continue end
@@ -390,7 +391,7 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, sd::StructDecl; usena
         warn("Skipping unnamed StructDecl")
         return
     end
-    usesym = symbol(usename)
+    usesym = Symbol(usename)
 
     struct_fields = children(sd)
 
@@ -434,9 +435,9 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, ud::UnionDecl; usenam
     end
 
     b = Expr(:block)
-    e = Expr(:type, !context.options.immutable_structs, symbol(usename), b)
+    e = Expr(:type, !context.options.immutable_structs, Symbol(usename), b)
     max_cu = largestfield(ud)
-    cur_sym = symbol("_"*usename)
+    cur_sym = Symbol("_", usename)
     target = repr_jl(cu_type(max_cu))
 
     if string(target) == ""
@@ -501,7 +502,7 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, tdecl::TypedefDecl; u
         return string("# Skipping Typedef: FunctionProto ", spelling(tdecl))
     end
 
-    td_sym = symbol(spelling(tdecl))
+    td_sym = Symbol(spelling(tdecl))
     td_target = repr_jl(td_type)
     if !haskey(expr_buf, td_sym)
         expr_buf[td_sym] = ExprUnit(Expr(:typealias, td_sym, td_target), Any[td_target])
@@ -604,7 +605,7 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, md::cindex.MacroDefin
         exprn,pos = handle_macro_exprn(tokens, 3)
         if (pos != endof(tokens) || tokens[pos].text != ")")
             mdef_str = join([c.text for c in tokens], " ")
-            expr_buf[symbol(mdef_str)] = ExprUnit(string("# Skipping MacroDefinition: ", replace(mdef_str, "\n", "\n#")))
+            expr_buf[Symbol(mdef_str)] = ExprUnit(string("# Skipping MacroDefinition: ", replace(mdef_str, "\n", "\n#")))
             return
         end
         exprn = "(" * exprn * ")"
@@ -612,7 +613,7 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, md::cindex.MacroDefin
         (exprn,pos) = handle_macro_exprn(tokens, 2)
         if pos != endof(tokens)
             mdef_str = join([c.text for c in tokens], " ")
-            expr_buf[symbol(mdef_str)] = ExprUnit(string("# Skipping MacroDefinition: ", replace(mdef_str, "\n", "#\n")))
+            expr_buf[Symbol(mdef_str)] = ExprUnit(string("# Skipping MacroDefinition: ", replace(mdef_str, "\n", "#\n")))
             return
         end
     end
@@ -633,7 +634,7 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, cursor::TypeRef; usen
     usename == "" && (usename = name(cursor))
     error("Found typeref: ", cursor)
     println("Printing typeref: ", cursor)
-    usesym = symbol(usename)
+    usesym = Symbol(usename)
     expr_buf[usesym] = ExprUnit(usesym)
 end
 
@@ -691,7 +692,7 @@ function wrap_header(wc::WrapContext, topcu::CLCursor, top_hdr, obuf::Array)
 end
 
 function parse_c_headers(wc::WrapContext)
-    parsed = Dict{ASCIIString, CLCursor}()
+    parsed = Dict{Compat.ASCIIString, CLCursor}()
 
     # Parse the headers
     for header in unique(wc.headers)
@@ -787,7 +788,7 @@ function Base.run(wc::WrapContext)
     wc.headers = sort_includes(wc, parsed)
 
     # Helper to store file handles
-    filehandles = Dict{ASCIIString,IOStream}()
+    filehandles = Dict{Compat.ASCIIString,IOStream}()
     getfile(f) = (f in keys(filehandles)) ? filehandles[f] : (filehandles[f] = open(f, "w"))
 
     for hfile in wc.headers
@@ -842,7 +843,7 @@ end
 function name_safe(cursor_name::AbstractString)
     return (cursor_name in reserved_words) ? "_"*cursor_name : cursor_name
 end
-symbol_safe(cursor_name::AbstractString) = symbol(name_safe(cursor_name))
+symbol_safe(cursor_name::AbstractString) = Symbol(name_safe(cursor_name))
 
 ###############################################################################
 

@@ -13,7 +13,7 @@ endif
 
 CXX = g++
 FLAGS = -Wall -Wno-strict-aliasing -fno-omit-frame-pointer -fPIC 
-CXXFLAGS = -g
+CXXFLAGS = -g $(shell $(LLVM_CONFIG) --cxxflags)
 
 INC += -I$(shell $(LLVM_CONFIG) --includedir)
 LLVM_LIB = $(shell $(LLVM_CONFIG) --libdir)
@@ -21,10 +21,10 @@ LLVM_SRC = $(shell $(LLVM_CONFIG) --src-root)
 LIBS = -L$(LLVM_LIB)
 
 ifdef USE_CLANG_CPP
-  INC += -I"$(LLVM_SRC)/tools/clang/tools/libclang"
-  LIBS += -Wl,--whole-archive					\
-          $(addprefix $(LLVM_LIB)/,$(shell $(LLVM_CONFIG) --libnames))	\
-          -Wl,--no-whole-archive
+  INC      += -I"$(LLVM_SRC)/tools/clang/tools/libclang"
+  LIBS     += -Wl,--whole-archive											\
+              $(addprefix $(LLVM_LIB)/,$(shell $(LLVM_CONFIG) --libnames))	\
+              -Wl,--no-whole-archive
   CXXFLAGS += -DUSE_CLANG_CPP
 endif
 

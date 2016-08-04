@@ -317,7 +317,7 @@ function get_string(cx::CXString)
     if (p == C_NULL)
         return ""
     end
-    bytestring(p)
+    unsafe_string(p)
 end
 
 ###############################################################################

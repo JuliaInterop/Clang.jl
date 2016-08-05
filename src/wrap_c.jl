@@ -836,8 +836,7 @@ end
 ###############################################################################
 
 function name_anon()
-    global context::WrapContext
-    "ANONYMOUS_"*string(context.anon_count += 1)
+    "ANONYMOUS_"*string((context::WrapContext).anon_count += 1)
 end
 
 function name_safe(cursor_name::AbstractString)

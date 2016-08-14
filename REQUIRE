@@ -1,3 +1,4 @@
-julia 0.4
+julia 0.5-
 DataStructures
 Compat 0.8.0
+@osx Homebrew 0.3.4

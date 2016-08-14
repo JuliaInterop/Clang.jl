@@ -1,15 +1,37 @@
-#
-
-find_llvm() = begin
+#Returns the path as determined by llvm-config, or throws an error if LLVM
+#could not be found
+function find_llvm()
     if haskey(ENV, "TRAVIS")
         return readchomp(`which llvm-config-3.4`)
     end
     tmp = joinpath(JULIA_HOME, "llvm-config")
     isfile(tmp) && return tmp
-    tmp = readchomp(`which llvm-config`)
+    #Get path from llvm-config
+    try
+        tmp = readchomp(`which llvm-config`)
+    end
     isfile(tmp) && return tmp
+    error("No useable llvm-config found")
 end
-if !haskey(ENV, "LLVM_CONFIG") ENV["LLVM_CONFIG"] = find_llvm() end
+
+#On OSX, install llvm automatically through Homebrew.jl if no llvm installation
+#is found
+@static if is_apple()
+    using Homebrew
+
+    try
+        find_llvm()
+    catch #Not installed on system
+        info("Installing llvm through Homebrew.jl")
+        if !Homebrew.installed("llvm")
+            Homebrew.add("llvm")
+        end
+    end
+end
+
+if !haskey(ENV, "LLVM_CONFIG")
+    ENV["LLVM_CONFIG"] = find_llvm()
+end
 
 # on travis and some other systems, the llvm lib may not be in the
 # default path.

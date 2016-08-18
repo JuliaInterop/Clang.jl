@@ -1,21 +1,16 @@
-language: cpp
-compiler:
-  - clang
+language: julia
+addons:
+  apt:
+    packages:
+      llvm-3.4
+      libclang-3.4-dev
+julia:
+  - 0.5
+  - nightly
 notifications:
   email: false
-env:
-  matrix:
-    #- JULIAVERSION="juliareleases"
-    - JULIAVERSION="julianightlies"
 before_install:
-  - sudo add-apt-repository ppa:staticfloat/julia-deps -y
-  - sudo add-apt-repository ppa:staticfloat/${JULIAVERSION} -y
-
-  - sudo apt-get update -qq -y
-  
-  - sudo apt-get install libclang-3.4-dev llvm-3.4
-  - sudo apt-get install libpcre3-dev julia -y
-  - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
   - export LD_LIBRARY_PATH=/usr/lib/llvm-3.4/lib
-script:
-  - julia -e 'Pkg.init(); Pkg.clone(pwd()); Pkg.build("Clang"); Pkg.test("Clang")'
+after_success:
+  - julia -e 'cd(Pkg.dir("Clang")); Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())';
+

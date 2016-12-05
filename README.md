@@ -63,7 +63,7 @@ may only be available from an optional pre-release archive (e.g. Ubuntu PPA).
 
 ### Install
 
-To install using the Julia package manager, use: Pkg.add("Clang"). Note that you first need to make sure, that the following are in your `PATH` variable: `libclang`, `llvm-config` and `clang`.
+To install using the Julia package manager, use: Pkg.add("Clang"). Note that you first need to make sure, that the following are in your `PATH` variable: `llvm-config` and `clang`. If not present in a default Julia location, `libclang` needs to be in `PATH` (on Windows), or `LD_LIBRARY_PATH` (Linux), or `DYLD_LIBRARY_PATH` (OS X).
 
 ## Background Information
 

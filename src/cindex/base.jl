@@ -133,7 +133,7 @@ end
 function getNumArgTypes(t::CXType)
     ccall( (:clang_getNumArgTypes, libwci), Int32, (CXType,), t)
 end
-function getArgType(t::CXType,arg::Uint32)
+function getArgType(t::CXType,arg::UInt32)
     ccall( (:clang_getArgType, libwci), CXType, (CXType,Uint32), t, arg)
 end
 function isFunctionTypeVariadic(a1::CLType,)
@@ -166,7 +166,7 @@ end
 function getNumOverloadedDecls(cu::CXCursor)
     ccall( (:clang_getNumOverloadedDecls, libwci), Uint32, (CXCursor,), cu)
 end
-function getOverloadedDecl(cu::CXCursor,arg::Uint32)
+function getOverloadedDecl(cu::CXCursor,arg::UInt32)
     ccall( (:clang_getOverloadedDecl, libwci), CXCursorBase, (CXCursor,Uint32), cu, arg)
 end
 function getCursorUSR(cu::CXCursor)

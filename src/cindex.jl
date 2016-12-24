@@ -91,14 +91,14 @@ function search(cl::Array{CXCursor,1}, ismatch::Function)
 end
 search(cu::CXCursor, ismatch::Function) = search(children(cu), ismatch)
 search(cu::CXCursor, T::DataType) = search(cu, x->isa(x, T))
-search(cu::CXCursor, name::ASCIIString) = search(cu, x->(cindex.spelling(x) == name))
+search(cu::CXCursor, name::String) = search(cu, x->(cindex.spelling(x) == name))
 
 ###############################################################################
 # Extended search function
 # Returns a Dict{ DataType => CLCursor
 
 function matchchildren(cu::CXCursor, types::Array{DataType,1})
-    ret = Dict{Any,Any}([ t => CXCursor[] for t in types])
+    ret = Dict{Any,Any}(t => CXCursor[] for t in types)
     for child in children(cu)
         for t in types
             isa(child, t) && push!(ret[t], child)

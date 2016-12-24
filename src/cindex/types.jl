@@ -296,7 +296,7 @@ immutable CXCursor
 end
 
 immutable CXString
-    data::Ptr{Uint8}
+    data::Ptr{UInt8}
     private_flags::Cuint
     CXString() = new(C_NULL,0)
 end

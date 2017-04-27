@@ -203,7 +203,7 @@ int_conversion = Dict{Any,Any}(
 #
 # libclang objects to Julia representation
 #
-# each repr_jl function takes one or more CLCursor or CLType objects,
+# each repr_jl function takes one or more CXCursor or CXType objects,
 # and returns the appropriate representation.
 #
 ################################################################################
@@ -648,9 +648,9 @@ end
 ################################################################################
 
 # Any failed cursor in the loop below is put in this global for debugging
-debug_cursors = CLCursor[]
+debug_cursors = CXCursor[]
 
-function wrap_header(wc::WrapContext, topcu::CLCursor, top_hdr, obuf::Array)
+function wrap_header(wc::WrapContext, topcu::Cursor, top_hdr, obuf::Array)
     println("WRAPPING HEADER: $top_hdr")
 
     topcl = children(topcu)
@@ -682,7 +682,7 @@ function wrap_header(wc::WrapContext, topcu::CLCursor, top_hdr, obuf::Array)
                 continue
             end
         catch err
-            push!(debug_cursors::Array{CLCursor,1}, cursor)
+            push!(debug_cursors::Array{CXCursor,1}, cursor)
             info("Error thrown. Last cursor available in Clang.wrap_c.debug_cursors")
             rethrow(err)
         end
@@ -692,7 +692,7 @@ function wrap_header(wc::WrapContext, topcu::CLCursor, top_hdr, obuf::Array)
 end
 
 function parse_c_headers(wc::WrapContext)
-    parsed = Dict{Compat.ASCIIString, CLCursor}()
+    parsed = Dict{Compat.ASCIIString, CXCursor}()
 
     # Parse the headers
     for header in unique(wc.headers)

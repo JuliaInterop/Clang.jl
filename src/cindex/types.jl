@@ -1,6 +1,7 @@
 # Types and global definitions
 
-export CLType, CLCursor
+export Cursor, CXCursor
+export CXType
 
 export # TypeKind
     Invalid,
@@ -225,21 +226,22 @@ typealias CXFile Ptr{Void}
 typealias CXTypeKind Int32
 typealias CXCursorKind Int32
 typealias CXTranslationUnit Ptr{Void}
-const CXString_size = ccall( ("wci_size_CXString", libwci), Int, ())
 
-# The content is not valid after deserializing and before `__init__` is called.
-const libwci_hdl = Ref{Ptr{Void}}(Libdl.dlopen(libwci))
+#const CXString_size = ccall( ("wci_size_CXString", libwci), Int, ())
+#
+## The content is not valid after deserializing and before `__init__` is called.
+#const libwci_hdl = Ref{Ptr{Void}}(Libdl.dlopen(libwci))
 
-function __init__()
-    libwci_hdl[] = Libdl.dlopen(libwci)
-    nothing
-end
+#function __init__()
+#    libwci_hdl[] = Libdl.dlopen(libwci)
+#    nothing
+#end
 
-function get_sz(sym)
-    fsym = Symbol("wci_size_", sym)
-    fptr = Libdl.dlsym(libwci_hdl[], fsym)
-    ccall(fptr, Int, ())
-end
+#function get_sz(sym)
+#    fsym = Symbol("wci_size_", sym)
+#    fptr = Libdl.dlsym(libwci_hdl[], fsym)
+#    ccall(fptr, Int, ())
+#end
 
 ###############################################################################
 # Container types
@@ -273,27 +275,20 @@ immutable _CXTUResourceUsage
 end
 
 # Generate container types
-for st in Any[
-        :CXTUResourceUsageEntry, :CXTUResourceUsage ]
-    sz_name = Symbol(st, "_size")
-    st_base = Symbol("_", st)
-    @eval begin
-        const $sz_name = get_sz($("$st"))
-        immutable $(st)
-            data::Array{$st_base,1}
-            $st(d) = new(d)
-        end
-        $st() = $st(Array($st_base, 1))
-        $st(d::$st_base) = $st([d])
-    end
-end
-
-immutable CXCursor
-    kind::Cint
-    xdata::Cint
-    data::NTuple{3, Csize_t}
-    CXCursor() = new(0,0,0)
-end
+#for st in Any[
+#        :CXTUResourceUsageEntry, :CXTUResourceUsage ]
+#    sz_name = Symbol(st, "_size")
+#    st_base = Symbol("_", st)
+#    @eval begin
+#        const $sz_name = get_sz($("$st"))
+#        immutable $(st)
+#            data::Array{$st_base,1}
+#            $st(d) = new(d)
+#        end
+#        $st() = $st(Array($st_base, 1))
+#        $st(d::$st_base) = $st([d])
+#    end
+#end
 
 immutable CXString
     data::Ptr{UInt8}
@@ -367,28 +362,36 @@ end
 #   so that we can dispatch directly on node kinds.
 ###############################################################################
 
-abstract CLCursor
-CXCursorMap = Dict{Int32,Any}()
-const CXCursor_size = get_sz(:CXCursor)
+abstract Cursor
 
-immutable TmpCursor <: CLCursor
-    data::Array{CXCursor,1}
-    TmpCursor() = new(Array(CXCursor,1))
+immutable _CXCursor <: Cursor
+    kind::Cint
+    xdata::Cint
+    data::NTuple{3, Csize_t}
+    _CXCursor() = new(0,0,0)
 end
+
+const CXCursorMap = Dict{Int32,Any}()
 
 for sym in names(CursorKind, true)
     if(sym == :CursorKind) continue end
     rval = getfield(CursorKind, sym)
     @eval begin
-        immutable $(sym) <: CLCursor
-            data::Array{CXCursor,1}
+        immutable $(sym) <: Cursor
+            data::_CXCursor
         end
         CXCursorMap[Int32($rval)] = $sym
     end
 end
 
-function CXCursor(c::TmpCursor)
-    return CXCursorMap[c.data[1].kind](c.data)
+immutable CXCursor <: Cursor
+    data::_CXCursor
+    CXCursor(x::_CXCursor) = CXCursorMap[x.kind](x)
+end
+
+
+function CXCursor(c::CXCursor)
+    return CXCursorMap[c.kind](c)
 end
 
 ###############################################################################

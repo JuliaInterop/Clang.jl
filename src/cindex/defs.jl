@@ -338,6 +338,17 @@ baremodule TypeKind
     const ConstantArray = 112
     const CLVector = 113
     const IncompleteArray = 114
+    const VariableArray = 115
+    const DependentSizedArray = 116
+    const MemberPointer = 117
+    const Auto = 118
+
+    #=
+    * \brief Represents a type that was referred to using an elaborated type keyword.
+    *
+    * E.g., struct S, or via a qualified name, e.g., N::M::type, or both.
+    =#
+    const CXType_Elaborated = 119
 end
 baremodule CallingConv
     const Default = 0

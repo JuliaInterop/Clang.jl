@@ -124,7 +124,7 @@ function init(;
                                  cursor_wrapped,
                                  OrderedDict{Symbol,ExprUnit}(),
                                  Set{Compat.ASCIIString}(),
-                                 DefaultOrderedDict(Compat.ASCIIString, Array{Any}, ()->Any[]),
+                                 DefaultOrderedDict{Compat.ASCIIString, Array{Any}}(()->Any[]),
                                  options,
                                  0,
                                  rewriter)

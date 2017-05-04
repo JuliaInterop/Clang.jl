@@ -215,7 +215,8 @@ baremodule CursorKind
     const LambdaExpr = 144
     const ObjCBoolLiteralExpr = 145
     const ObjCSelfExpr = 146
-    # const LastExpr = 146 dup
+    const ObjCAvailabilityCheckExpr     = 148
+    # const LastExpr = ObjCAvailabilityCheckExpr #dupe
     const FirstStmt = 200
     const UnexposedStmt = 200
     const LabelStmt = 201
@@ -233,7 +234,7 @@ baremodule CursorKind
     const BreakStmt = 213
     const ReturnStmt = 214
     const GCCAsmStmt = 215
-    # const AsmStmt = 215 dup
+    # const AsmStmt = GCCAsmStmt # dupe
     const ObjCAtTryStmt = 216
     const ObjCAtCatchStmt = 217
     const ObjCAtFinallyStmt = 218
@@ -250,10 +251,11 @@ baremodule CursorKind
     const MSAsmStmt = 229
     const NullStmt = 230
     const DeclStmt = 231
-    const LastStmt = 231
+    const OMPTargetTeamsDistributeSimdDirective = 279
+    const LastStmt = OMPTargetTeamsDistributeSimdDirective #dupe
     const TranslationUnit = 300
     const FirstAttr = 400
-    # const UnexposedAttr = 400 dupe
+    # const UnexposedAttr = 400 #dupe
     const IBActionAttr = 401
     const IBOutletAttr = 402
     const IBOutletCollectionAttr = 403
@@ -265,17 +267,29 @@ baremodule CursorKind
     const PureAttr = 409
     const ConstAttr = 410
     const NoDuplicateAttr = 411
-    const LastAttr = NoDuplicateAttr
+    const CUDAConstantAttr              = 412
+    const CUDADeviceAttr                = 413
+    const CUDAGlobalAttr                = 414
+    const CUDAHostAttr                  = 415
+    const CUDASharedAttr                = 416
+    const VisibilityAttr                = 417
+    const DLLExport                     = 418
+    const DLLImport                     = 419
+    const LastAttr = DLLImport #dupe
     const PreprocessingDirective = 500
     const MacroDefinition = 501
     const MacroExpansion = 502
     const MacroInstantiation = 502
     const InclusionDirective = 503
     const FirstPreprocessing = 500
-    # const LastPreprocessing = 503 dup
+    # const LastPreprocessing = InclusionDirective #dupe
     const ModuleImportDecl = 600
-    const FirstExtraDecl = 600
-    const LastExtraDecl = 600
+    const TypeAliasTemplateDecl         = 601
+    const StaticAssert                  = 602
+    const FriendDecl                    = 603
+    const FirstExtraDecl = ModuleImportDecl
+    const LastExtraDecl = FriendDecl
+    const OverloadCandidate             = 700
 end
 baremodule LinkageKind
     const Invalid = 0

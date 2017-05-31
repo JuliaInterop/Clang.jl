@@ -284,7 +284,7 @@ function tokenize(tu::CXTranslationUnit, sr::CXSourceRange)
     tokens = Ptr{_CXToken}[C_NULL]
     numtokens = ccall( (:wci_tokenize, libwci), Cuint, (Ptr{Void}, Ptr{Void}, Ptr{_CXToken}),
             tu, sr.data, pointer(tokens))
-    return TokenList(tokens[1], convert(Cuint, numtokens - 1), tu)
+    return TokenList(tokens[1], convert(Cuint, numtokens), tu)
 end
 function Cursor_getTranslationUnit(cu::CLCursor)
     ccall( (:wci_Cursor_getTranslationUnit, libwci), CXTranslationUnit, (Ptr{Void},), cu.data)

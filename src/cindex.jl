@@ -221,7 +221,11 @@ endof(tl::TokenList) = length(tl)
 done(tl::TokenList, i) = (i > length(tl))
 
 function getindex(tl::TokenList, i::Int)
-    if (i < 1 || i > length(tl)) throw(BoundsError()) end
+    if (i < 1 || i > length(tl))
+        # throw(BoundsError())
+        warn("TokenList miss at index ", i)
+        return Comment(string("TokenList miss at index ", i))
+    end
 
     c = CXToken(unsafe_load(tl.ptr, i))
     kind = c.data[1].int_data1
@@ -314,8 +318,7 @@ function function_arg_modifiers(p::ParmDecl)
         #read up to variable identifier
         isa(tok, cindex.Identifier) && break
 
-        const tt = tok.text
-        if tt in ["const", "virtual"]
+        if tok.text in ["const", "virtual"]
             push!(modifs, tok)
         end
     end

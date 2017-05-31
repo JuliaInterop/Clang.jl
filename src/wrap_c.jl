@@ -124,7 +124,7 @@ function init(;
                                  cursor_wrapped,
                                  OrderedDict{Symbol,ExprUnit}(),
                                  Set{Compat.ASCIIString}(),
-                                 DefaultOrderedDict(Compat.ASCIIString, Array{Any}, ()->Any[]),
+                                 DefaultOrderedDict{Compat.ASCIIString, Array{Any}}(()->Any[]),
                                  options,
                                  0,
                                  rewriter)
@@ -167,7 +167,11 @@ cl_to_jl = Dict{Any,Any}(
     cindex.Int128           => :UInt128,
 
     cindex.FirstBuiltin     => :Void,
+    cindex.CXType_Elaborated => :Void,
     cindex.Complex          => :Complex,
+    cindex.BlockPointer     => :Void,
+    cindex.Pointer          => :Void,
+    cindex.Invalid          => :Void,
     :size_t                 => :Csize_t,
     :ptrdiff_t              => :Cptrdiff_t,
     :uint64_t               => :UInt64,
@@ -571,6 +575,10 @@ function handle_macro_exprn(tokens::TokenList, pos::Int)
     # check whether identifiers and literals alternate
     # with punctuation
     exprn = ""
+    if pos > length(tokens)
+        return (exprn,pos)
+    end
+
     prev = 1 >> trans(tokens[pos])
     for pos = pos:length(tokens)
         tok = tokens[pos]
@@ -603,7 +611,7 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, md::cindex.MacroDefin
     pos = 1; exprn = ""
     if tokens[2].text == "("
         exprn,pos = handle_macro_exprn(tokens, 3)
-        if (pos != endof(tokens) || tokens[pos].text != ")")
+        if (pos != endof(tokens) || tokens[pos].text != ")" || exprn == "")
             mdef_str = join([c.text for c in tokens], " ")
             expr_buf[Symbol(mdef_str)] = ExprUnit(string("# Skipping MacroDefinition: ", replace(mdef_str, "\n", "\n#")))
             return

@@ -2,8 +2,9 @@ language: julia
 addons:
   apt:
     packages:
-      llvm-3.4
-      libclang-3.4-dev
+      llvm-3.9
+      libclang-3.9-dev
+
 julia:
   - 0.5
   - nightly

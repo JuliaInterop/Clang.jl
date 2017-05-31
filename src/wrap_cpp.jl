@@ -98,7 +98,6 @@ function emit(out::IO, parm::cindex.ParmDecl)
     modifs = function_arg_modifiers(parm)
     print(out, join(map(x->x.text, modifs), " "))
     space(out)
-
     emit(out, cu_type(parm))
 end
 
@@ -133,7 +132,7 @@ end
 # end
 
 
-function wrap(out::IO, method::cindex.CXXMethod, nameid::Int)
+function wrap(out::IO, method::cindex.CXXMethod, nameid::Int=0)
     buf = IOBuffer()
 
     # bail out if any argument is not supported
@@ -198,7 +197,7 @@ function wrap(out::IO, method::cindex.CXXMethod, nameid::Int)
 end
 
 
-function wrap(out::IO, method::cindex.Constructor, nameid::Int)
+function wrap(out::IO, method::cindex.Constructor, nameid::Int=0)
     buf = IOBuffer()
 
     # bail out if any argument is not supported
@@ -284,7 +283,7 @@ cl_to_c = Dict{Any,Any}(
     cindex.Float          => "float",
     cindex.Double         => "double",
     cindex.LongDouble     => "long double",
-    cindex.Enum           => "int",
+    cindex.Enum           => "unsigned int",
     cindex.NullPtr        => "NULL",
     cindex.UInt128        => "uint128_t",
     cindex.LValueReference=> "LVAL"
@@ -470,7 +469,7 @@ cl_to_jl = Dict{Any,Any}(
     cindex.Float            => :Cfloat,
     cindex.Double           => :Cdouble,
     cindex.LongDouble       => Float64,
-    cindex.Enum             => :Cint,
+    cindex.Enum             => :Cuint,
     cindex.NullPtr          => C_NULL,
     cindex.UInt128          => UInt128,
     cindex.FirstBuiltin     => Void,
@@ -515,5 +514,30 @@ function get_args(method::Union{cindex.CXXMethod, cindex.Constructor})
     end
     return args
 end
+
+#enums are passed through the C wrapper with no special sauce
+function wrap(buf::IO, cursor::EnumDecl, id::Int64=0; usename="")
+end
+
+#copy-pasted from wrap_c. TODO: unify
+function wrapjl(buf::IO, libname, cursor::EnumDecl, id::Int64=0; usename="")
+    if (usename == "" && (usename = get_name_namespace(cursor)) == "")
+        usename = name_anon()
+    end
+    enumname = usename
+    println(buf, "# begin enum $enumname")
+    print(buf, "typealias $enumname ")
+    wrapjl(buf, cindex.getEnumDeclIntegerType(cursor))
+    println(buf)
+    for enumitem in children(cursor)
+        #cur_name = string(enumname, "_", cindex.spelling(enumitem))
+        cur_name = cindex.spelling(enumitem)
+        if (length(cur_name) < 1) continue end
+
+        println(buf, "const ", cur_name, " = ", value(enumitem))
+    end
+    println(buf, "# end enum $enumname")
+end
+
 
 end # module wrap_cpp

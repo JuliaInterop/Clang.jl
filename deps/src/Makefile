@@ -42,6 +42,7 @@ ifeq ($(OS), WINNT)
   SHLIB_EXT = dll 
 else ifeq ($(OS), Darwin)
   SHLIB_EXT = dylib
+  LIBS += -stdlib=libstdc++ -lc++
 else
   SHLIB_EXT = so
 endif

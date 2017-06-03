@@ -60,6 +60,9 @@ You might also install clang manually, e.g. via `sudo apt-get install clang-3.7`
 When using a distribution packaged version, note the latest version 
 may only be available from an optional pre-release archive (e.g. Ubuntu PPA).
 
+On OS X, you can use the [Homebrew](http://brew.sh/) package manager to install
+libclang.  First install Xcode if necessary, then ```brew install llvm --with-clang```.  
+The LLVM_CONFIG path will be ```/usr/local/Cellar/llvm/<version>/bin/llvm-config```.
 
 ### Install
 

@@ -1,17 +1,23 @@
+sudo: false
+dist: trusty
+
 language: julia
+
 addons:
   apt:
     packages:
       llvm-3.9
+      llvm-3.9-tools
       libclang-3.9-dev
+
 
 julia:
   - 0.5
-  - nightly
+    #  - nightly
 notifications:
   email: false
-before_install:
-  - export LD_LIBRARY_PATH=/usr/lib/llvm-3.4/lib
 after_success:
   - julia -e 'cd(Pkg.dir("Clang")); Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())';
 
+script:
+    - julia --compilecache=no -e 'Pkg.clone(pwd()); Pkg.build("Clang"); Pkg.test("Clang"; coverage=true)';

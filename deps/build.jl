@@ -5,7 +5,13 @@
 function find_llvm()
     info("Called Clang.jl:find_llvm")
     if haskey(ENV, "TRAVIS")
-        return readchomp(`which llvm-config-3.4`)
+        tmp = readchomp(Cmd(`which llvm-config-3.9`, ignorestatus=true))
+        isfile(tmp) &&
+            return tmp
+
+        tmp = readchomp(Cmd(`which llvm-config-39`, ignorestatus=true))
+        isfile(tmp) &&
+            return tmp
     end
 
     # TODO improve this
@@ -15,8 +21,12 @@ function find_llvm()
     #Get path from system llvm-config
     try
         tmp = readchomp(`which llvm-config`)
+        isfile(tmp) &&
+            return tmp
+    catch err
+        info("No system llvm-config: ")
+        info(err)
     end
-    isfile(tmp) && return tmp
 
     # look for system Homebrew
     @static if is_apple()
@@ -92,3 +102,8 @@ if (!ispath("../usr/lib"))
 end
 
 run(`mv libwrapclang.$(Libdl.dlext) ../usr/lib`)
+open(Pkg.dir("Clang", "deps", "deps.jl"), "w") do f
+    LLVM_CONFIG = ENV["LLVM_CONFIG"]
+    write(f, "LLVM_CONFIG=\"$(LLVM_CONFIG)\"")
+    write(f, "LIBCLANG=\"$(LIBCLANG)\"")
+end

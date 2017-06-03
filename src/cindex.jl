@@ -282,7 +282,16 @@ function function_arg_defaults(method::Union{cindex.CXXMethod, cindex.FunctionDe
             end
 
             #parse default value as Julia code
-            pl = lit != nothing ? parse(lit) : lit
+            pl = if (lit != nothing)
+                    try
+                        parse(lit)
+                    catch err
+                        info("Error parsing function_default_arg value: ", lit)
+                        return tuple(Any[])
+                    end
+                 else
+                     lit
+                 end
 
             #for empty string, need to add quotes
             if pl == ""

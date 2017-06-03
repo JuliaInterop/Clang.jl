@@ -8,3 +8,7 @@ else
                                                 "usr", "lib")])
     @assert(libwci != "", "Failed to find required library libwrapclang. Try re-running the package script using Pkg.build(\"Clang\")")
 end
+
+println("libwci: ", libwci)
+println("DLLP: ", DL_LOAD_PATH)
+run(`bash -c "ls /usr/lib/llvm-3.3/lib/libclang*"`)

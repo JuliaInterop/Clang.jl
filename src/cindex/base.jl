@@ -61,15 +61,15 @@ end
 function isReference(a1::CXCursorKind,)
     ccall( (:wci_isReference, libwci), UInt32, (CXCursorKind,), a1, )
 end
-function getCursorLinkage(a1::CLCursor,)
-    ccall( (:wci_getCursorLinkage, libwci), CXLinkageKind, (Ptr{Void},), a1.data, )
-end
-function getCursorAvailability(a1::CLCursor,)
-    ccall( (:wci_getCursorAvailability, libwci), CXAvailabilityKind, (Ptr{Void},), a1.data, )
-end
-function getCursorLanguage(a1::CLCursor,)
-    ccall( (:wci_getCursorLanguage, libwci), CXLanguageKind, (Ptr{Void},), a1.data, )
-end
+#function getCursorLinkage(a1::CLCursor,)
+#    ccall( (:wci_getCursorLinkage, libwci), CXLinkageKind, (Ptr{Void},), a1.data, )
+#end
+#function getCursorAvailability(a1::CLCursor,)
+#    ccall( (:wci_getCursorAvailability, libwci), CXAvailabilityKind, (Ptr{Void},), a1.data, )
+#end
+#function getCursorLanguage(a1::CLCursor,)
+#    ccall( (:wci_getCursorLanguage, libwci), CXLanguageKind, (Ptr{Void},), a1.data, )
+#end
 function getCursorSemanticParent(a1::CLCursor,)
     c = TmpCursor()
     ccall( (:wci_getCursorSemanticParent, libwci), Void, (Ptr{Void},Ptr{Void},), a1.data, c.data,)

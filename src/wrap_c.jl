@@ -355,7 +355,6 @@ function wrap(context::WrapContext, buf::Array, func_decl::FunctionDecl, libname
     sig = efunsig(funcname, arg_names, arg_reps)
     body = eccall(funcname, Symbol(libname), ret_type, arg_names, arg_reps)
     e = Expr(:function, sig, Expr(:block, body))
-
     push!(buf, e)
 end
 
@@ -471,7 +470,7 @@ function efunsig(name::Symbol, args::Vector{Symbol}, types)
 end
 
 function eccall(funcname::Symbol, libname::Symbol, rtype, args, types)
-    Expr(:ccall,
+    Expr(:call, :ccall,
          Expr(:tuple, QuoteNode(funcname), libname),
          rtype,
          Expr(:tuple, types...),

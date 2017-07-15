@@ -105,5 +105,4 @@ run(`mv libwrapclang.$(Libdl.dlext) ../usr/lib`)
 open(Pkg.dir("Clang", "deps", "deps.jl"), "w") do f
     LLVM_CONFIG = ENV["LLVM_CONFIG"]
     write(f, "LLVM_CONFIG=\"$(LLVM_CONFIG)\"")
-    write(f, "LIBCLANG=\"$(LIBCLANG)\"")
 end

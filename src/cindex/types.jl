@@ -286,7 +286,7 @@ for st in Any[
             data::Array{$st_base,1}
             $st(d) = new(d)
         end
-        $st() = $st(Array($st_base, 1))
+        $st() = $st(Array{$st_base}(1))
         $st(d::$st_base) = $st([d])
     end
 end
@@ -303,7 +303,7 @@ end
 immutable CXString
     data::Array{UInt8,1}
     str::Compat.ASCIIString
-    CXString() = new(Array(UInt8, CXString_size), "")
+    CXString() = new(Array{UInt8}(CXString_size), "")
 end
 
 immutable CursorList
@@ -379,7 +379,7 @@ const CXCursor_size = get_sz(:CXCursor)
 
 immutable TmpCursor <: CLCursor
     data::Array{CXCursor,1}
-    TmpCursor() = new(Array(CXCursor,1))
+    TmpCursor() = new(Array{CXCursor}(1))
 end
 
 for sym in names(CursorKind, true)
@@ -415,7 +415,7 @@ immutable CXType
 end
 immutable TmpType
     data::Array{CXType,1}
-    TmpType() = new(Array(CXType,1))
+    TmpType() = new(Array{CXType}(1))
 end
 
 for sym in names(TypeKind, true)

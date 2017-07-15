@@ -219,12 +219,12 @@ export # CursorKind
     LastExtraDecl
 
 # Type definitions for wrapped types
-typealias CXIndex Ptr{Void}
-typealias CXUnsavedFile Ptr{Void}
-typealias CXFile Ptr{Void}
-typealias CXTypeKind Int32
-typealias CXCursorKind Int32
-typealias CXTranslationUnit Ptr{Void}
+const CXIndex = Ptr{Void}
+const CXUnsavedFile = Ptr{Void}
+const CXFile = Ptr{Void}
+const CXTypeKind = Int32
+const CXCursorKind = Int32
+const CXTranslationUnit = Ptr{Void}
 const CXString_size = ccall( ("wci_size_CXString", libwci), Int, ())
 
 # The content is not valid after deserializing and before `__init__` is called.
@@ -352,7 +352,7 @@ immutable TokenList
     tunit::CXTranslationUnit
 end
 
-abstract CLToken
+abstract type CLToken end
 for sym in names(TokenKind, true)
     if(sym == :TokenKind) continue end
     @eval begin
@@ -373,7 +373,7 @@ end
 #   so that we can dispatch directly on node kinds.
 ###############################################################################
 
-abstract CLCursor
+abstract type CLCursor end
 CXCursorMap = Dict{Int32,Any}()
 const CXCursor_size = get_sz(:CXCursor)
 
@@ -404,7 +404,7 @@ end
 #   so that we can dispatch directly on node kinds.
 ###############################################################################
 
-abstract CLType
+abstract type CLType end
 CLTypeMap = Dict{Int32,Any}()
 
 immutable CXType

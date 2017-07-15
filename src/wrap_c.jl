@@ -375,7 +375,7 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, cursor::EnumDecl; use
     push!(buf, "# begin enum $enumname")
     enumtype = repr_jl(cindex.getEnumDeclIntegerType(cursor))
     _int = int_conversion[enumtype]
-    push!(buf, :(typealias $(Symbol(enumname)) $enumtype))
+    push!(buf, :(const $(Symbol(enumname)) = $enumtype))
     for enumitem in children(cursor)
         cur_name = cindex.spelling(enumitem)
         if (length(cur_name) < 1) continue end

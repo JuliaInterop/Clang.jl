@@ -54,9 +54,9 @@ end
 #   - write emitc_init and emitc_post for that type
 #   - set TypeProxies[type_spelling] = ArgType
 
-abstract TypeProxy <: CLType
+abstract type TypeProxy <: CLType end
 
-typealias __TypeProxiesType Dict{AbstractString, Type}
+const __TypeProxiesType = Dict{AbstractString, Type}
 const TypeProxies = Dict{AbstractString, Type}()
 
 function get_proxy(typename::AbstractString)

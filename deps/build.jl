@@ -102,7 +102,7 @@ if (!ispath("../usr/lib"))
 end
 
 run(`mv libwrapclang.$(Libdl.dlext) ../usr/lib`)
-open(Pkg.dir("Clang", "deps", "deps.jl"), "w") do f
+open(joinpath(dirname(@__FILE__), "deps.jl"), "w") do f
     LLVM_CONFIG = ENV["LLVM_CONFIG"]
     write(f, "LLVM_CONFIG=\"$(LLVM_CONFIG)\"")
 end

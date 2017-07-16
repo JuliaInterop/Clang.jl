@@ -470,11 +470,11 @@ function efunsig(name::Symbol, args::Vector{Symbol}, types)
 end
 
 function eccall(funcname::Symbol, libname::Symbol, rtype, args, types)
-    Expr(:call, :ccall,
-         Expr(:tuple, QuoteNode(funcname), libname),
-         rtype,
-         Expr(:tuple, types...),
-         args...)
+  :(ccall(($(QuoteNode(funcname)), $libname),
+            $rtype,
+            $(Expr(:tuple, types...)),
+            $(args...))
+    )
 end
 
 function wrap(context::WrapContext, expr_buf::OrderedDict, tdecl::TypedefDecl; usename="")

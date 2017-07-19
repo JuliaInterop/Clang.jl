@@ -508,7 +508,7 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, tdecl::TypedefDecl; u
     td_sym = Symbol(spelling(tdecl))
     td_target = repr_jl(td_type)
     if !haskey(expr_buf, td_sym)
-        expr_buf[td_sym] = ExprUnit(Expr(:typealias, td_sym, td_target), Any[td_target])
+        expr_buf[td_sym] = ExprUnit(:(const $td_sym = $td_target), Any[td_target])
     end
 end
 

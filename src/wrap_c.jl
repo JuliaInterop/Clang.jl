@@ -50,11 +50,11 @@ ExprUnit(a::Array, deps=Any[]; state::Symbol=:new) = ExprUnit(a, OrderedSet{Symb
 # stores shared information about the wrapping session
 type WrapContext
     index::cindex.CXIndex
-    headers::Array{Compat.ASCIIString,1}
-    output_file::Compat.ASCIIString
-    common_file::Compat.ASCIIString
-    clang_includes::Array{Compat.ASCIIString,1}  # clang include paths
-    clang_args::Array{Compat.ASCIIString,1}      # additional {"-Arg", "value"} pairs for clang
+    headers::Array{String,1}
+    output_file::String
+    common_file::String
+    clang_includes::Array{String,1}  # clang include paths
+    clang_args::Array{String,1}      # additional {"-Arg", "value"} pairs for clang
     header_wrapped::Function                     # called to determine header inclusion status
                                                  #   (top_header, cursor_header) -> Bool
     header_library::Function                     # called to determine shared library for given header
@@ -64,8 +64,8 @@ type WrapContext
     cursor_wrapped::Function                     # called to determine cursor inclusion status
                                                  #   (cursor_name, cursor) -> Bool
     common_buf::OrderedDict{Symbol, ExprUnit}    # output buffer for common items: typedefs, enums, etc.
-    empty_structs::Set{Compat.ASCIIString}
-    output_bufs::DefaultOrderedDict{Compat.ASCIIString, Array{Any}}
+    empty_structs::Set{String}
+    output_bufs::DefaultOrderedDict{String, Array{Any}}
     options::InternalOptions
     anon_count::Int
     rewriter::Function
@@ -73,15 +73,15 @@ end
 
 ### Convenience function to initialize wrapping context with defaults
 function init(;
-            headers                         = Compat.ASCIIString[],
+            headers                         = String[],
             index                           = Union{},
             output_file::String             = "",
             common_file::String             = "",
             output_dir::String              = "",
-            clang_args::Array{Compat.ASCIIString,1}
-                                            = Compat.ASCIIString[],
-            clang_includes::Array{Compat.ASCIIString,1}
-                                            = Compat.ASCIIString[],
+            clang_args::Array{String,1}
+                                            = String[],
+            clang_includes::Array{String,1}
+                                            = String[],
             clang_diagnostics::Bool         = true,
             header_wrapped                  = (header, cursorname) -> true,
             header_library                  = Union{},
@@ -123,8 +123,8 @@ function init(;
                                  header_outputfile,
                                  cursor_wrapped,
                                  OrderedDict{Symbol,ExprUnit}(),
-                                 Set{Compat.ASCIIString}(),
-                                 DefaultOrderedDict{Compat.ASCIIString, Array{Any}}(()->Any[]),
+                                 Set{String}(),
+                                 DefaultOrderedDict{String, Array{Any}}(()->Any[]),
                                  options,
                                  0,
                                  rewriter)
@@ -582,7 +582,7 @@ function handle_macro_exprn(tokens::TokenList, pos::Int)
     for pos = pos:length(tokens)
         tok = tokens[pos]
         state = trans(tok)
-        if ( state $ prev  == 1)
+        if (xor(state, prev)  == 1)
             prev = state
         else
             break
@@ -699,7 +699,7 @@ function wrap_header(wc::WrapContext, topcu::CLCursor, top_hdr, obuf::Array)
 end
 
 function parse_c_headers(wc::WrapContext)
-    parsed = Dict{Compat.ASCIIString, CLCursor}()
+    parsed = Dict{String, CLCursor}()
 
     # Parse the headers
     for header in unique(wc.headers)
@@ -795,7 +795,7 @@ function Base.run(wc::WrapContext)
     wc.headers = sort_includes(wc, parsed)
 
     # Helper to store file handles
-    filehandles = Dict{Compat.ASCIIString,IOStream}()
+    filehandles = Dict{String,IOStream}()
     getfile(f) = (f in keys(filehandles)) ? filehandles[f] : (filehandles[f] = open(f, "w"))
 
     for hfile in wc.headers

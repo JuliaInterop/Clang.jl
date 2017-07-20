@@ -51,9 +51,9 @@ function find_llvm()
                      Homebrew.add("llvm")
                    end
                  end)
-            if (lcf = isfile(joinpath(prefix, "llvm-config")))
-                return lcf
-            end
+            tmp = readchomp(`which llvm-config`)
+            isfile(tmp) &&
+                return tmp
         end
     end
 

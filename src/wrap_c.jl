@@ -551,7 +551,7 @@ function handle_macro_exprn(tokens::TokenList, pos::Int)
           # Integers following http://en.cppreference.com/w/cpp/language/integer_literal
           unsigned = contains(literal, "u")
           nbits = count(x -> x == 'l', literal) == 2 ? 64 : 32
-          return "$(unsigned ? "U":"")Int$nbits"
+          return "$(unsigned ? "U" : "")Int$nbits"
         end
 
         txt = tok.text

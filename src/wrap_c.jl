@@ -307,6 +307,11 @@ function largestfield(cu::UnionDecl)
             maxelem = i
         end
     end
+    if maxelem == 0
+        warn("  all field sizes are unknown.")
+        maxelem = 1
+    end
+
     fields[maxelem]
 end
 

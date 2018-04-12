@@ -302,7 +302,7 @@ end
 
 immutable CXString
     data::Array{UInt8,1}
-    str::Compat.ASCIIString
+    str::Compat.String
     CXString() = new(Array{UInt8}(CXString_size), "")
 end
 
@@ -357,7 +357,7 @@ for sym in names(TokenKind, true)
     if(sym == :TokenKind) continue end
     @eval begin
         immutable $sym <: CLToken
-            text::Compat.ASCIIString
+            text::Compat.String
         end
     end
 end

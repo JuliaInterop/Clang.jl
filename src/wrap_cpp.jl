@@ -18,7 +18,7 @@ import Compat.String
 ################################################################################
 
 immutable WrappedMethod
-    name::Compat.ASCIIString
+    name::Compat.String
     method::CXXMethod
     parent::ClassDecl
     args::Array{Any,1}

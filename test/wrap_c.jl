@@ -1,4 +1,4 @@
-using Base.Test
+using Test
 using Clang.wrap_c
 include("strip_line_numbers.jl")
 

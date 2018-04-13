@@ -16,7 +16,7 @@ export WrapContext
 # Reserved Julia identifiers will be prepended with "_"
 reserved_words = [ "abstract", "baremodule", "begin", "bitstype", "break", "catch", "ccall",
                    "const", "continue", "do", "else", "elseif", "end", "export", "finally",
-                   "for", "function", "global", "if", "immutable", "import", "importall", "in",
+                   "for", "function", "global", "if", "struct", "import", "importall", "in",
                    "let", "local", "macro", "module", "quote", "return", "try", "type",
                    "typealias", "using", "while"]
 
@@ -27,19 +27,19 @@ reserved_argtypes = ["va_list"]
 untyped_argtypes = [IncompleteArray]
 
 ### InternalOptions
-type InternalOptions
+mutable struct InternalOptions
     wrap_structs::Bool
     immutable_structs::Bool
 end
 InternalOptions() = InternalOptions(true, false)
 
-type ExprUnit
+mutable struct ExprUnit
     items::Array{Any}
     deps::OrderedSet{Symbol}
     state::Symbol
 end
 
-immutable Poisoned
+struct Poisoned
 end
 
 ExprUnit() = ExprUnit(Any[], OrderedSet{Symbol}(), :new)
@@ -48,7 +48,7 @@ ExprUnit(a::Array, deps=Any[]; state::Symbol=:new) = ExprUnit(a, OrderedSet{Symb
 
 ### WrapContext
 # stores shared information about the wrapping session
-type WrapContext
+mutable struct WrapContext
     index::cindex.CXIndex
     headers::Array{Compat.String,1}
     output_file::Compat.String
@@ -456,7 +456,7 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, ud::UnionDecl; usenam
     return
 end
 
-function is_ptr_type_expr(t::ANY)
+function is_ptr_type_expr(@nospecialize t)
     (t === :Cstring || t === :Cwstring) && return true
     isa(t, Expr) || return false
     t = t::Expr
@@ -579,8 +579,9 @@ function handle_macro_exprn(tokens::TokenList, pos::Int)
     end
 
     prev = 1 >> trans(tokens[pos])
-    for pos = pos:length(tokens)
-        tok = tokens[pos]
+    for lpos = pos:length(tokens)
+        pos = lpos
+        tok = tokens[lpos]
         state = trans(tok)
         if ( state $ prev  == 1)
             prev = state

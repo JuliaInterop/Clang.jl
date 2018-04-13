@@ -1,5 +1,5 @@
 using Clang.cindex
-using Base.Test
+using Test
 
 top = cindex.parse_header(joinpath(dirname(@__FILE__), "cxx/cbasic.h"),
                           flags = TranslationUnit_Flags.DetailedPreprocessingRecord |

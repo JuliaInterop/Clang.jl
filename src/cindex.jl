@@ -173,8 +173,8 @@ function getindex(cl::CursorList, clid::Int)
     if (clid < 1 || clid > cl.size) error("Index out of range or empty list") end
     cu = TmpCursor()
     ccall( (:wci_getCLCursor, libwci),
-            Void,
-            (Ptr{Void}, Ptr{Void}, Int),
+            Nothing,
+            (Ptr{Nothing}, Ptr{Nothing}, Int),
             cu.data, cl.ptr, clid-1)
     return CXCursor(cu)
 end
@@ -182,8 +182,8 @@ end
 function children(cu::CLCursor)
     cl = cl_create()
     ccall(  (:wci_getChildren, libwci),
-            Ptr{Void},
-            (Ptr{CXCursor}, Ptr{Void}),
+            Ptr{Nothing},
+            (Ptr{CXCursor}, Ptr{Nothing}),
             cu.data, cl.ptr)
     size = cl_size(cl.ptr)
     return CursorList(cl.ptr,size)
@@ -192,8 +192,8 @@ end
 function cu_file(cu::CLCursor)
     str = CXString()
     ccall( (:wci_getCursorFile, libwci),
-            Void,
-            (Ptr{Void}, Ptr{Void}),
+            Nothing,
+            (Ptr{Nothing}, Ptr{Nothing}),
             cu.data, str.data)
     return get_string(str)
 end
@@ -284,7 +284,7 @@ function function_arg_defaults(method::Union{cindex.CXXMethod, cindex.FunctionDe
             #parse default value as Julia code
             pl = if (lit != nothing)
                     try
-                        parse(lit)
+                        Meta.parse(lit)
                     catch err
                         info("Error parsing function_default_arg value: ", lit)
                         return tuple(Any[])
@@ -354,7 +354,7 @@ function tu_init(hdrfile::Any, diagnostics, cpp::Bool, opts::Int)
 end
 
 
-tu_dispose(tu::CXTranslationUnit) = ccall( (:clang_disposeTranslationUnit, "libclang"), Void, (Ptr{Void},), tu)
+tu_dispose(tu::CXTranslationUnit) = ccall( (:clang_disposeTranslationUnit, "libclang"), Nothing, (Ptr{Nothing},), tu)
 
 function tu_cursor(tu::CXTranslationUnit)
     if (tu == C_NULL)
@@ -363,17 +363,17 @@ function tu_cursor(tu::CXTranslationUnit)
     getTranslationUnitCursor(tu)
 end
 
-function tu_parse{S<:String}(CXIndex,
-                             source_filename::AbstractString,
-                             cl_args::Array{S,1},
-                             num_clargs,
-                             unsaved_files::CXUnsavedFile,
-                             num_unsaved_files,
-                             options)
+function tu_parse(CXIndex,
+                  source_filename::AbstractString,
+                  cl_args::Array{S,1},
+                  num_clargs,
+                  unsaved_files::CXUnsavedFile,
+                  num_unsaved_files,
+                  options) where S <: String
 
     ccall(  (:clang_parseTranslationUnit, "libclang"),
             CXTranslationUnit,
-            (Ptr{Void}, Ptr{UInt8}, Ptr{Ptr{UInt8}}, UInt32, Ptr{Void}, UInt32, UInt32),
+            (Ptr{Nothing}, Ptr{UInt8}, Ptr{Ptr{UInt8}}, UInt32, Ptr{Nothing}, UInt32, UInt32),
                 CXIndex,
                 source_filename,
                 cl_args,
@@ -395,29 +395,29 @@ idx_create() = idx_create(0,0)
 function getFile(tu::CXTranslationUnit, file::String)
     ccall( (:clang_getFile, "libclang"),
             CXFile,
-            (Ptr{Void}, Ptr{UInt8}),
+            (Ptr{Nothing}, Ptr{UInt8}),
                 tu,
                 file)
 end
 
 function cl_create()
     ptr = ccall( (:wci_createCursorList, libwci),
-                Ptr{Void},
+                Ptr{Nothing},
                 () )
     return CursorList(ptr,0)
 end
 
 function cl_dispose(cl::CursorList)
     ccall( (:wci_disposeCursorList, libwci),
-            Void,
-            (Ptr{Void},),
+            Nothing,
+            (Ptr{Nothing},),
                 cl.ptr)
 end
 
-function cl_size(clptr::Ptr{Void})
+function cl_size(clptr::Ptr{Nothing})
     ccall( (:wci_sizeofCursorList, libwci),
             Int,
-            (Ptr{Void},),
+            (Ptr{Nothing},),
                 clptr)
 end
 cl_size(cl::CursorList) = cl.size

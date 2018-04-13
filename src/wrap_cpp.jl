@@ -17,7 +17,7 @@ import Compat.String
 # Method entry point
 ################################################################################
 
-immutable WrappedMethod
+struct WrappedMethod
     name::Compat.String
     method::CXXMethod
     parent::ClassDecl
@@ -450,7 +450,7 @@ function wrapjl(out::IO, libname::String, class::cindex.ClassDecl)
 end
 
 cl_to_jl = Dict{Any,Any}(
-    cindex.VoidType         => Void,
+    cindex.VoidType         => Nothing,
     cindex.BoolType         => Bool,
     cindex.Char_U           => UInt8,
     cindex.UChar            => :Cuchar,
@@ -473,7 +473,7 @@ cl_to_jl = Dict{Any,Any}(
     cindex.Enum             => :Cint,
     cindex.NullPtr          => C_NULL,
     cindex.UInt128          => UInt128,
-    cindex.FirstBuiltin     => Void,
+    cindex.FirstBuiltin     => Nothing,
     "size_t"                => :Csize_t,
     "ptrdiff_t"             => :Cptrdiff_t
     )

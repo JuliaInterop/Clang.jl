@@ -1,3 +1,5 @@
+using Libdl
+
 include("deps.jl")
 
 push!(Libdl.DL_LOAD_PATH, readchomp(`$(LLVM_CONFIG) --libdir`))

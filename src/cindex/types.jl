@@ -1,3 +1,5 @@
+using Libdl
+
 # Types and global definitions
 
 export CLType, CLCursor
@@ -219,16 +221,16 @@ export # CursorKind
     LastExtraDecl
 
 # Type definitions for wrapped types
-const CXIndex = Ptr{Void}
-const CXUnsavedFile = Ptr{Void}
-const CXFile = Ptr{Void}
+const CXIndex = Ptr{Nothing}
+const CXUnsavedFile = Ptr{Nothing}
+const CXFile = Ptr{Nothing}
 const CXTypeKind = Int32
 const CXCursorKind = Int32
-const CXTranslationUnit = Ptr{Void}
+const CXTranslationUnit = Ptr{Nothing}
 const CXString_size = ccall( ("wci_size_CXString", libwci), Int, ())
 
 # The content is not valid after deserializing and before `__init__` is called.
-const libwci_hdl = Ref{Ptr{Void}}(Libdl.dlopen(libwci))
+const libwci_hdl = Ref{Ptr{Nothing}}(Libdl.dlopen(libwci))
 
 function __init__()
     libwci_hdl[] = Libdl.dlopen(libwci)
@@ -246,14 +248,14 @@ end
 #   for now we use these as the element type of the target array
 ###############################################################################
 
-immutable _CXSourceLocation
+struct _CXSourceLocation
     ptr_data1::Cptrdiff_t
     ptr_data2::Cptrdiff_t
     int_data::Cuint
     _CXSourceLocation() = new(0,0,0)
 end
 
-immutable _CXSourceRange
+struct _CXSourceRange
     ptr_data1::Cptrdiff_t
     ptr_data2::Cptrdiff_t
     begin_int_data::Cuint
@@ -261,14 +263,14 @@ immutable _CXSourceRange
     _CXSourceRange() = new(0,0,0,0)
 end
 
-immutable _CXTUResourceUsageEntry
+struct _CXTUResourceUsageEntry
     kind::Cint
     amount::Culong
     _CXTUResourceUsageEntry() = new(0,0)
 end
 
-immutable _CXTUResourceUsage
-    data::Void
+struct _CXTUResourceUsage
+    data::Nothing
     numEntries::Cuint
     entries::Ptr{Cptrdiff_t}
     _CXTUResourceUsage() = new(0,0,0)
@@ -282,16 +284,16 @@ for st in Any[
     st_base = Symbol("_", st)
     @eval begin
         const $sz_name = get_sz($("$st"))
-        immutable $(st)
+        struct $(st)
             data::Array{$st_base,1}
             $st(d) = new(d)
         end
-        $st() = $st(Array{$st_base}(1))
+        $st() = $st(Array{$st_base}(undef, 1))
         $st(d::$st_base) = $st([d])
     end
 end
 
-immutable CXCursor
+struct CXCursor
     kind::Cint
     xdata::Cint
     data1::Cptrdiff_t
@@ -300,20 +302,20 @@ immutable CXCursor
     CXCursor() = new(0,0,0,0,0)
 end
 
-immutable CXString
+struct CXString
     data::Array{UInt8,1}
     str::Compat.String
-    CXString() = new(Array{UInt8}(CXString_size), "")
+    CXString() = new(Array{UInt8}(undef, CXString_size), "")
 end
 
-immutable CursorList
-    ptr::Ptr{Void}
+struct CursorList
+    ptr::Ptr{Nothing}
     size::Int
 end
 
 function get_string(cx::CXString)
     p::Ptr{UInt8} = ccall( (:wci_getCString, libwci),
-        Ptr{UInt8}, (Ptr{Void},), cx.data)
+        Ptr{UInt8}, (Ptr{Nothing},), cx.data)
     if (p == C_NULL)
         return ""
     end
@@ -328,7 +330,7 @@ end
 #   The high-level TokenList[] and CLToken interface is preferred.
 ###############################################################################
 
-immutable _CXToken
+struct _CXToken
     int_data1::Cuint
     int_data2::Cuint
     int_data3::Cuint
@@ -339,24 +341,24 @@ end
 
 # We generate this here manually because it has an extra field to keep
 # track of the TranslationUnit.
-immutable CXToken
+struct CXToken
     data::Array{_CXToken,1}
     CXToken(d) = new(d)
 end
 CXToken() = CXToken(Array(_CXToken, 1))
 CXToken(d::_CXToken) = CXToken([d])
 
-immutable TokenList
+struct TokenList
     ptr::Ptr{_CXToken}
     size::Cuint
     tunit::CXTranslationUnit
 end
 
 abstract type CLToken end
-for sym in names(TokenKind, true)
+for sym in names(TokenKind, all=true)
     if(sym == :TokenKind) continue end
     @eval begin
-        immutable $sym <: CLToken
+        struct $sym <: CLToken
             text::Compat.String
         end
     end
@@ -377,16 +379,16 @@ abstract type CLCursor end
 CXCursorMap = Dict{Int32,Any}()
 const CXCursor_size = get_sz(:CXCursor)
 
-immutable TmpCursor <: CLCursor
+struct TmpCursor <: CLCursor
     data::Array{CXCursor,1}
-    TmpCursor() = new(Array{CXCursor}(1))
+    TmpCursor() = new(Array{CXCursor}(undef, 1))
 end
 
-for sym in names(CursorKind, true)
+for sym in names(CursorKind, all=true)
     if(sym == :CursorKind) continue end
     rval = getfield(CursorKind, sym)
     @eval begin
-        immutable $(sym) <: CLCursor
+        struct $(sym) <: CLCursor
             data::Array{CXCursor,1}
         end
         CXCursorMap[Int32($rval)] = $sym
@@ -407,22 +409,22 @@ end
 abstract type CLType end
 CLTypeMap = Dict{Int32,Any}()
 
-immutable CXType
+struct CXType
     kind::Int32
     data1::Cptrdiff_t
     data2::Cptrdiff_t
     CXType() = new(0,0,0)
 end
-immutable TmpType
+struct TmpType
     data::Array{CXType,1}
-    TmpType() = new(Array{CXType}(1))
+    TmpType() = new(Array{CXType}(undef, 1))
 end
 
-for sym in names(TypeKind, true)
+for sym in names(TypeKind, all=true)
     if(sym == :TypeKind) continue end
     rval = getfield(TypeKind, sym)
     @eval begin
-        immutable $(sym) <: CLType
+        struct $(sym) <: CLType
             data::Array{CXType,1}
         end
         CLTypeMap[Int32($rval)] = $sym

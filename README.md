@@ -137,22 +137,6 @@ All testing and development so far has been on Ubuntu 12.04.1 (64-bit)
 
   http://eli.thegreenplace.net/2011/07/03/parsing-c-in-python-with-clang/
 
-### Implementation
-
-Most libclang functions accept and return small 
-structs by value. As Julia does not (yet) have full struct 
-support, the current Clang.jl implementation includes a 
-C++ wrapper. clang functions are wrapped by a C++ function
-that memcpys data to/from a Julia-owned memory array 
-(passed by pointer)
-
-see src/cindex_base.jl and deps/src/wrapclang.h for generated wrappers.
-
-Some functions are manually wrapped for convenience and ease of
-implementation, or to provide a more Julia-friendly API.
-
-see src/Clang.jl and deps/src/wrapclang.cpp
-
 ### License
 
 Clang.jl is licensed under the MIT license.

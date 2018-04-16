@@ -290,12 +290,12 @@ target_type(q) = error("target_type: don't know how to handle $q")
 ###############################################################################
 
 typesize(t::CLType) = sizeof(getfield(Base, cl_to_jl[typeof(t)])::DataType)
-typesize(t::Record) = begin warn("  incorrect typesize for Record field"); 0 end
-typesize(t::Unexposed) = begin warn("  incorrect typesize for Unexposed field"); 0 end
+typesize(t::Record) = begin @warn("  incorrect typesize for Record field"); 0 end
+typesize(t::Unexposed) = begin @warn("  incorrect typesize for Unexposed field"); 0 end
 typesize(t::ConstantArray) = cindex.getArraySize(t)
 typesize(t::TypedefDecl) = typesize(cindex.getTypedefDeclUnderlyingType(t))
 typesize(t::Typedef) = typesize(cindex.getTypeDeclaration(t))
-typesize(t::Invalid) = begin warn("  incorrect typesize for Invalid field"); 0 end
+typesize(t::Invalid) = begin @warn("  incorrect typesize for Invalid field"); 0 end
 
 function largestfield(cu::UnionDecl)
     maxsize,maxelem = 0,0
@@ -321,9 +321,9 @@ end
 function wrap(context::WrapContext, buf::Array, func_decl::FunctionDecl, libname)
     func_type = cindex.cu_type(func_decl)
     if isa(func_type, FunctionNoProto)
-        warn("No Prototype for $(func_decl) - assuming no arguments")
+        @warn("No Prototype for $(func_decl) - assuming no arguments")
     elseif cindex.isFunctionTypeVariadic(func_type) == 1
-        warn("Skipping VarArg Function $(func_decl)")
+        @warn("Skipping VarArg Function $(func_decl)")
         return
     end
 
@@ -391,7 +391,7 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, sd::StructDecl; usena
     !context.options.wrap_structs && return
 
     if (usename == "" && (usename = name(sd)) == "")
-        warn("Skipping unnamed StructDecl")
+        @warn("Skipping unnamed StructDecl")
         return
     end
     usesym = Symbol(usename)
@@ -408,7 +408,7 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, sd::StructDecl; usena
             continue
         elseif !(isa(cu, FieldDecl) || isa(cu, TypeRef))
             expr_buf[usesym] = ExprUnit(Poisoned())
-            warn("Skipping struct: \"$usename\" due to unsupported field: $cur_name")
+            @warn("Skipping struct: \"$usename\" due to unsupported field: $cur_name")
             return
         elseif (length(cur_name) < 1)
             error("Unnamed struct member in: $usename ... cursor: ", string(cu))
@@ -433,7 +433,7 @@ end
 
 function wrap(context::WrapContext, expr_buf::OrderedDict, ud::UnionDecl; usename = "")
     if (usename == "" && (usename = name(ud)) == "")
-        warn("Skipping unnamed UnionDecl")
+        @warn("Skipping unnamed UnionDecl")
         return
     end
 
@@ -444,7 +444,7 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, ud::UnionDecl; usenam
     target = repr_jl(cu_type(max_cu))
 
     if string(target) == ""
-        warn("Skipping UnionDecl $(usename) because largest field '$(name(max_cu))' could not be typed", string(target))
+        @warn("Skipping UnionDecl $(usename) because largest field '$(name(max_cu))' could not be typed", string(target))
         return
     end
 
@@ -647,7 +647,7 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, cursor::TypeRef; usen
 end
 
 function wrap(context::WrapContext, buf, cursor; usename="")
-    warn("Not wrapping $(typeof(cursor))  $usename $(name(cursor))")
+    @warn("Not wrapping $(typeof(cursor))  $usename $(name(cursor))")
 end
 
 

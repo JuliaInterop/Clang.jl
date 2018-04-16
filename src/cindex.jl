@@ -15,11 +15,6 @@ import Compat.String
 
 ###############################################################################
 
-# Name of the helper library
-import ..libwci
-
-###############################################################################
-
 include("cindex/defs.jl")
 include("cindex/types.jl")
 include("cindex/base.jl")
@@ -78,7 +73,7 @@ end
 #   IsMatch(CXCursor)
 #                   Predicate Function, accepting a CXCursor argument
 #
-function search(cl::CursorList, ismatch::Function)
+function search(cl::Vector{CLCursor}, ismatch::Function)
     ret = CLCursor[]
     for cu in cl
         ismatch(cu) && push!(ret, cu)
@@ -109,7 +104,7 @@ end
 anymatch(first, args...) = any([==(first, a) for a in args])
 
 cu_type(c::CLCursor) = getCursorType(c)
-ty_kind(c::CLType) = convert(Int, c.data[1].kind)
+ty_kind(c::CLType) = convert(Int, c.typ.kind)
 name(c::CLCursor) = getCursorDisplayName(c)
 spelling(c::CLType) = getTypeKindSpelling(convert(Int32, ty_kind(c)))
 spelling(c::CLCursor) = getCursorSpelling(c)
@@ -162,46 +157,44 @@ function value(c::EnumConstantDecl)
     error("Unknown EnumConstantDecl type: ", t, " cursor: ", c)
 end
 
-function getindex(cl::CursorList, clid::Int, default::Union)
-    try
-        getindex(cl, clid)
-    catch
-        return default
-    end
+function cu_children_visitor(cursor::CXCursor, parent::CXCursor, client_data::Ptr{Nothing})
+    list = unsafe_pointer_to_objref(client_data)
+    push!(list, CLCursor(cursor))
+    return Cuint(1) # CXChildVisit_Continue TODO: use enum
 end
-function getindex(cl::CursorList, clid::Int)
-    if (clid < 1 || clid > cl.size) error("Index out of range or empty list") end
-    cu = TmpCursor()
-    ccall( (:wci_getCLCursor, libwci),
-            Nothing,
-            (Ptr{Nothing}, Ptr{Nothing}, Int),
-            cu.data, cl.ptr, clid-1)
-    return CXCursor(cu)
+const cu_visitor_cb = @cfunction(cu_children_visitor, Cuint, (CXCursor, CXCursor, Ptr{Nothing}))
+
+# TODO implement -- reduce allocations
+#=
+function cu_children_search(cursor::CXCursor, parent::CXCursor, client_data::Ptr{Nothing})
+    # expect ("target", store::Array{CXCursor,1}, findfirst::Bool)
+    target,store,findfirst = unsafe_pointer_to_objref(client_data)
 end
+=#
 
 function children(cu::CLCursor)
-    cl = cl_create()
-    ccall(  (:wci_getChildren, libwci),
-            Ptr{Nothing},
-            (Ptr{CXCursor}, Ptr{Nothing}),
-            cu.data, cl.ptr)
-    size = cl_size(cl.ptr)
-    return CursorList(cl.ptr,size)
+    # TODO: possible to use sizehint! here?
+    list = CLCursor[]
+    ccall( (:clang_visitChildren, :libclang), Nothing,
+           (CXCursor, Ptr{Nothing}, Ptr{Nothing}),
+           cu, cu_visitor_cb, pointer_from_objref(list))
+    list
 end
 
 function cu_file(cu::CLCursor)
-    str = CXString()
-    ccall( (:wci_getCursorFile, libwci),
-            Nothing,
-            (Ptr{Nothing}, Ptr{Nothing}),
-            cu.data, str.data)
-    return get_string(str)
-end
+    # TODO turn this in to a normal wrapper
+    loc = ccall(:clang_getCursorLocation, CXSourceLocation,
+                (CXCursor,), cu)
 
-start(cl::CursorList) = 1
-done(cl::CursorList, i) = (i > cl.size)
-next(cl::CursorList, i) = (cl[i], i+1)
-length(cl::CursorList) = cl.size
+    cxfile = Ref{CXFile}()
+    line = Ref{Cuint}; col = Ref{Cuint}; offset = Ref{Cuint}()
+
+    ccall(:clang_getExpansionLocation, (Nothing),
+            (CXSourceLocation, Ref{CXFile}, Ref{Cuint}, Ref{Cuint}, Ref{Cuint}),
+            loc,               cxfile,       line,       col,        offset)
+
+    (getFileName(cxfile), line, col, offset)
+end
 
 ################################################################################
 # Tokenizer access
@@ -223,12 +216,12 @@ done(tl::TokenList, i) = (i > length(tl))
 function getindex(tl::TokenList, i::Int)
     if (i < 1 || i > length(tl))
         # throw(BoundsError())
-        warn("TokenList miss at index ", i)
+        @warn("TokenList miss at index ", i)
         return Comment(string("TokenList miss at index ", i))
     end
 
-    c = CXToken(unsafe_load(tl.ptr, i))
-    kind = c.data[1].int_data1
+    c = unsafe_load(tl.ptr, i)
+    kind = c.int_data[1]
     spelling = cindex.getTokenSpelling(tl.tunit, c)
 
     if (kind == TokenKind.Punctuation)
@@ -242,6 +235,7 @@ function getindex(tl::TokenList, i::Int)
     elseif (kind == TokenKind.Comment)
         return Comment(spelling)
     end
+    throw("Unknown TokenKind: $kind")
 end
 
 ################################################################################
@@ -399,27 +393,5 @@ function getFile(tu::CXTranslationUnit, file::String)
                 tu,
                 file)
 end
-
-function cl_create()
-    ptr = ccall( (:wci_createCursorList, libwci),
-                Ptr{Nothing},
-                () )
-    return CursorList(ptr,0)
-end
-
-function cl_dispose(cl::CursorList)
-    ccall( (:wci_disposeCursorList, libwci),
-            Nothing,
-            (Ptr{Nothing},),
-                cl.ptr)
-end
-
-function cl_size(clptr::Ptr{Nothing})
-    ccall( (:wci_sizeofCursorList, libwci),
-            Int,
-            (Ptr{Nothing},),
-                clptr)
-end
-cl_size(cl::CursorList) = cl.size
 
 end # module

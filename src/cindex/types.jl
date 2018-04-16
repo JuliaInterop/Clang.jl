@@ -2,7 +2,8 @@ using Libdl
 
 # Types and global definitions
 
-export CLType, CLCursor
+export Cursor, CXCursor
+export CXType
 
 export # TypeKind
     Invalid,
@@ -227,100 +228,73 @@ const CXFile = Ptr{Nothing}
 const CXTypeKind = Int32
 const CXCursorKind = Int32
 const CXTranslationUnit = Ptr{Nothing}
-const CXString_size = ccall( ("wci_size_CXString", libwci), Int, ())
-
-# The content is not valid after deserializing and before `__init__` is called.
-const libwci_hdl = Ref{Ptr{Nothing}}(Libdl.dlopen(libwci))
-
-function __init__()
-    libwci_hdl[] = Libdl.dlopen(libwci)
-    nothing
-end
-
-function get_sz(sym)
-    fsym = Symbol("wci_size_", sym)
-    fptr = Libdl.dlsym(libwci_hdl[], fsym)
-    ccall(fptr, Int, ())
-end
 
 ###############################################################################
 # Container types
 #   for now we use these as the element type of the target array
 ###############################################################################
 
-struct _CXSourceLocation
-    ptr_data1::Cptrdiff_t
-    ptr_data2::Cptrdiff_t
+struct CXSourceLocation
+    ptr_data::NTuple{2, Csize_t}
     int_data::Cuint
-    _CXSourceLocation() = new(0,0,0)
+    CXSourceLocation() = new(0,0)
 end
 
-struct _CXSourceRange
-    ptr_data1::Cptrdiff_t
-    ptr_data2::Cptrdiff_t
+struct CXSourceRange
+    ptr_data::NTuple{2, Csize_t}
     begin_int_data::Cuint
     end_int_data::Cuint
-    _CXSourceRange() = new(0,0,0,0)
+    CXSourceRange() = new(0,0,0)
 end
 
-struct _CXTUResourceUsageEntry
+struct CXTUResourceUsageEntry
     kind::Cint
     amount::Culong
-    _CXTUResourceUsageEntry() = new(0,0)
+    CXTUResourceUsageEntry() = new(0,0)
 end
 
-struct _CXTUResourceUsage
+struct CXTUResourceUsage
     data::Nothing
     numEntries::Cuint
     entries::Ptr{Cptrdiff_t}
-    _CXTUResourceUsage() = new(0,0,0)
+    CXTUResourceUsage() = new(0,0,0)
 end
 
 # Generate container types
-for st in Any[
-        :CXSourceLocation, :CXSourceRange,
-        :CXTUResourceUsageEntry, :CXTUResourceUsage ]
-    sz_name = Symbol(st, "_size")
-    st_base = Symbol("_", st)
-    @eval begin
-        const $sz_name = get_sz($("$st"))
-        struct $(st)
-            data::Array{$st_base,1}
-            $st(d) = new(d)
-        end
-        $st() = $st(Array{$st_base}(undef, 1))
-        $st(d::$st_base) = $st([d])
-    end
-end
+#for st in Any[
+#        :CXTUResourceUsageEntry, :CXTUResourceUsage ]
+#    sz_name = Symbol(st, "_size")
+#    st_base = Symbol("_", st)
+#    @eval begin
+#        const $sz_name = get_sz($("$st"))
+#        struct $(st)
+#            data::Array{$st_base,1}
+#            $st(d) = new(d)
+#        end
+#        $st() = $st(Array($st_base, 1))
+#        $st(d::$st_base) = $st([d])
+#    end
+#end
 
 struct CXCursor
     kind::Cint
     xdata::Cint
-    data1::Cptrdiff_t
-    data2::Cptrdiff_t
-    data3::Cptrdiff_t
-    CXCursor() = new(0,0,0,0,0)
+    data::NTuple{3, Csize_t}
+    CXCursor() = new(0,0,0)
+end
+
+struct CXType
+    kind::Int32
+    data::NTuple{2, Csize_t}
+    CXType() = new(0,(0,0))
 end
 
 struct CXString
-    data::Array{UInt8,1}
-    str::Compat.String
-    CXString() = new(Array{UInt8}(undef, CXString_size), "")
+    data::Ptr{UInt8}
+    private_flags::Cuint
+    CXString() = new(C_NULL,0)
 end
-
-struct CursorList
-    ptr::Ptr{Nothing}
-    size::Int
-end
-
-function get_string(cx::CXString)
-    p::Ptr{UInt8} = ccall( (:wci_getCString, libwci),
-        Ptr{UInt8}, (Ptr{Nothing},), cx.data)
-    if (p == C_NULL)
-        return ""
-    end
-    unsafe_string(p)
-end
+Base.convert(::Type{String}, x::CXString) = unsafe_string(x.data)
 
 ###############################################################################
 # Set up CXToken wrapping
@@ -330,26 +304,14 @@ end
 #   The high-level TokenList[] and CLToken interface is preferred.
 ###############################################################################
 
-struct _CXToken
-    int_data1::Cuint
-    int_data2::Cuint
-    int_data3::Cuint
-    int_data4::Cuint
-    ptr_data::Cptrdiff_t
-    _CXToken() = new(0,0,0,0,C_NULL)
-end
-
-# We generate this here manually because it has an extra field to keep
-# track of the TranslationUnit.
 struct CXToken
-    data::Array{_CXToken,1}
-    CXToken(d) = new(d)
+    int_data::NTuple{4, Cuint}
+    ptr_data::Csize_t
+    CXToken() = new((0,0,0,0),0)
 end
-CXToken() = CXToken(Array(_CXToken, 1))
-CXToken(d::_CXToken) = CXToken([d])
 
 struct TokenList
-    ptr::Ptr{_CXToken}
+    ptr::Ptr{CXToken}
     size::Cuint
     tunit::CXTranslationUnit
 end
@@ -359,7 +321,7 @@ for sym in names(TokenKind, all=true)
     if(sym == :TokenKind) continue end
     @eval begin
         struct $sym <: CLToken
-            text::Compat.String
+            text::String
         end
     end
 end
@@ -376,27 +338,28 @@ end
 ###############################################################################
 
 abstract type CLCursor end
-CXCursorMap = Dict{Int32,Any}()
-const CXCursor_size = get_sz(:CXCursor)
+const CXCursorMap = Dict{Int32,Any}()
 
-struct TmpCursor <: CLCursor
-    data::Array{CXCursor,1}
-    TmpCursor() = new(Array{CXCursor}(undef, 1))
-end
-
+# create the typed wrapper cursors
 for sym in names(CursorKind, all=true)
     if(sym == :CursorKind) continue end
+
     rval = getfield(CursorKind, sym)
+
     @eval begin
         struct $(sym) <: CLCursor
-            data::Array{CXCursor,1}
+            cursor::CXCursor
         end
         CXCursorMap[Int32($rval)] = $sym
     end
 end
 
-function CXCursor(c::TmpCursor)
-    return CXCursorMap[c.data[1].kind](c.data)
+function CLCursor(c::CXCursor)
+    return CXCursorMap[c.kind](c)
+end
+
+function Base.convert(::Type{CXCursor}, x::T) where T <: CLCursor
+    return x.cursor
 end
 
 ###############################################################################
@@ -409,30 +372,29 @@ end
 abstract type CLType end
 CLTypeMap = Dict{Int32,Any}()
 
-struct CXType
-    kind::Int32
-    data1::Cptrdiff_t
-    data2::Cptrdiff_t
-    CXType() = new(0,0,0)
-end
-struct TmpType
-    data::Array{CXType,1}
-    TmpType() = new(Array{CXType}(undef, 1))
-end
-
 for sym in names(TypeKind, all=true)
     if(sym == :TypeKind) continue end
+
     rval = getfield(TypeKind, sym)
+
     @eval begin
         struct $(sym) <: CLType
-            data::Array{CXType,1}
+            typ::CXType
         end
-        CLTypeMap[Int32($rval)] = $sym
+        CLTypeMap[Int32($rval)] = $sym;
     end
 end
 
-function CXType(c::TmpType)
-    return CLTypeMap[c.data[1].kind](c.data)
+function CLType(t::CXType)
+    return CLTypeMap[t.kind](t)
+end
+
+function Base.convert(::Type{CXType}, x::T) where T <: CLType
+    return x.typ
+end
+
+function Base.convert(::Type{CLType}, x::CXType)
+    return CLType(x)
 end
 
 # Duplicates

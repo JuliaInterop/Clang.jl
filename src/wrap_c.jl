@@ -664,7 +664,7 @@ function wrap_header(wc::WrapContext, topcu::CLCursor, top_hdr, obuf::Array)
     topcl = children(topcu)
 
     # Loop over all of the child cursors and wrap them, if appropriate.
-    for i=1:topcl.size
+    for i = 1:length(topcl)
         cursor = topcl[i]
         cursor_hdr = cu_file(cursor)
         cursor_name = name(cursor)

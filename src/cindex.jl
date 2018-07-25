@@ -183,13 +183,13 @@ end
 
 function cu_file(cu::CLCursor)
     # TODO turn this in to a normal wrapper
-    loc = ccall(:clang_getCursorLocation, CXSourceLocation,
+    loc = ccall( (:clang_getCursorLocation, :libclang), CXSourceLocation,
                 (CXCursor,), cu)
 
     cxfile = Ref{CXFile}()
-    line = Ref{Cuint}; col = Ref{Cuint}; offset = Ref{Cuint}()
+    line = Ref{Cuint}(); col = Ref{Cuint}(); offset = Ref{Cuint}()
 
-    ccall(:clang_getExpansionLocation, (Nothing),
+    ccall( (:clang_getExpansionLocation, :libclang), (Nothing),
             (CXSourceLocation, Ref{CXFile}, Ref{Cuint}, Ref{Cuint}, Ref{Cuint}),
             loc,               cxfile,       line,       col,        offset)
 

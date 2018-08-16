@@ -24,3 +24,6 @@ func1 = cindex.search(top, "func1")[1]
 @test cindex.getNumArgTypes(cu_type(func1)) == 4
 func1_args = cindex.function_args(func1)
 @test map(spelling, func1_args) == ["a","b","c","d"]
+
+# cindex
+@test cu_file(top) == "cxx/cbasic.h"

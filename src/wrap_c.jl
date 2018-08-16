@@ -656,12 +656,13 @@ end
 ################################################################################
 
 # Any failed cursor in the loop below is put in this global for debugging
-debug_cursors = CLCursor[]
+debug_cursors = []
 
 function wrap_header(wc::WrapContext, topcu::CLCursor, top_hdr, obuf::Array)
     println("WRAPPING HEADER: $top_hdr")
 
     topcl = children(topcu)
+    push!(debug_cursors, topcu)
 
     # Loop over all of the child cursors and wrap them, if appropriate.
     for i = 1:length(topcl)

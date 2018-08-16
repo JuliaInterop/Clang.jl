@@ -42,15 +42,17 @@ function find_llvm()
             warn("Error using system Homebrew: ", err)
         end
 
-        @info("Attempting install through Homebrew.jl")
-        eval(quote
-               using Homebrew
-               if !Homebrew.installed("llvm")
-                 Homebrew.add("llvm")
-               end
-             end)
-        if (lcf = isfile(joinpath(prefix, "llvm-config")))
-            return lcf
+        try
+            @info("Attempting install through Homebrew.jl")
+            eval(quote
+                   using Homebrew
+                   if !Homebrew.installed("llvm")
+                     Homebrew.add("llvm")
+                   end
+                 end)
+            if (lcf = isfile(joinpath(prefix, "llvm-config")))
+                return lcf
+            end
         end
     end
 

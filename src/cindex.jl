@@ -193,7 +193,7 @@ function cu_file(cu::CLCursor)
             (CXSourceLocation, Ref{CXFile}, Ref{Cuint}, Ref{Cuint}, Ref{Cuint}),
             loc,               cxfile,       line,       col,        offset)
 
-    (getFileName(cxfile), line, col, offset)
+    (getFileName(cxfile[]), line[], col[], offset[])
 end
 
 ################################################################################

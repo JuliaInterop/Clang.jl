@@ -1,9 +1,14 @@
+using Clang
 using Clang.cindex
+
 using Test
 
 top = cindex.parse_header(joinpath(@__DIR__, "cxx/cbasic.h"),
                           flags = TranslationUnit_Flags.DetailedPreprocessingRecord |
                           TranslationUnit_Flags.SkipFunctionBodies)
+
+# CursorList visiting
+
 
 # Tokenizer
 
@@ -25,5 +30,5 @@ func1 = cindex.search(top, "func1")[1]
 func1_args = cindex.function_args(func1)
 @test map(spelling, func1_args) == ["a","b","c","d"]
 
-# cindex
-@test cu_file(top) == "cxx/cbasic.h"
+# TODO should return a structure or namedtuple
+@test endswith( cu_file(func1)[1], "cxx/cbasic.h")

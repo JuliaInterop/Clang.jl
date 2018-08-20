@@ -583,7 +583,7 @@ function handle_macro_exprn(tokens::TokenList, pos::Int)
         pos = lpos
         tok = tokens[lpos]
         state = trans(tok)
-        if ( state $ prev  == 1)
+        if ( xor(state, prev)  == 1)
             prev = state
         else
             break
@@ -630,7 +630,7 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, md::cindex.MacroDefin
     (exprn == "" || exprn == "()") && return
 
     use_sym = symbol_safe(tokens[1].text)
-    target = parse(exprn)
+    target = Meta.parse(exprn)
     e = Expr(:const, Expr(:(=), use_sym, target))
 
     deps = get_symbols(target)
@@ -692,7 +692,7 @@ function wrap_header(wc::WrapContext, topcu::CLCursor, top_hdr, obuf::Array)
             end
         catch err
             push!(debug_cursors, cursor)
-            info("Error thrown. Last cursor available in Clang.wrap_c.debug_cursors")
+            @info("Error thrown. Last cursor available in Clang.wrap_c.debug_cursors")
             rethrow(err)
         end
     end

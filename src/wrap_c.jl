@@ -691,7 +691,7 @@ function wrap_header(wc::WrapContext, topcu::CLCursor, top_hdr, obuf::Array)
                 continue
             end
         catch err
-            push!(debug_cursors::Array{CLCursor,1}, cursor)
+            push!(debug_cursors, cursor)
             info("Error thrown. Last cursor available in Clang.wrap_c.debug_cursors")
             rethrow(err)
         end

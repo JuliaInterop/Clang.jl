@@ -362,6 +362,10 @@ function Base.convert(::Type{CXCursor}, x::T) where T <: CLCursor
     return x.cursor
 end
 
+function Base.convert(::Type{CLCursor}, x::CXCursor)
+    return CLCursor(x)
+end
+
 ###############################################################################
 # Set up CXType wrapping
 #

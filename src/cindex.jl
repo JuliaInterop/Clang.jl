@@ -6,10 +6,11 @@ export parse_header, cu_type, ty_kind, name, spelling,
 export CLType, CLCursor, CXString, CXTypeKind, CursorList, TokenList
 export getindex, start, next, done, search, show, endof
 
-export function_return_modifiers, function_arg_modifiers
+export function_return_modifiers, function_arg_modifiers, cu_visitor_cb
 
 import Base.getindex, Base.start, Base.next, Base.done, Base.search, Base.show
 import Base.endof, Base.length
+import ..libclang
 using Compat
 import Compat.String
 
@@ -44,6 +45,10 @@ function parse_header(header::AbstractString;
                 flags                           = TranslationUnit_Flags.None)
     if !isfile(header)
         error(header, " not found")
+        
+        # TODO: support parsing in-memory with CXUnsavedFile arg
+        #       to _parseTranslationUnit.jj
+        #unsaved_file = CXUnsavedFile()
     end
     if (index == Union{})
         index = idx_create(0, (diagnostics ? 1 : 0))
@@ -159,10 +164,9 @@ end
 
 function cu_children_visitor(cursor::CXCursor, parent::CXCursor, client_data::Ptr{Nothing})
     list = unsafe_pointer_to_objref(client_data)
-    push!(list, CLCursor(cursor))
+    push!(list, cursor)
     return Cuint(1) # CXChildVisit_Continue TODO: use enum
 end
-const cu_visitor_cb = @cfunction(cu_children_visitor, Cuint, (CXCursor, CXCursor, Ptr{Nothing}))
 
 # TODO implement -- reduce allocations
 #=
@@ -175,21 +179,22 @@ end
 function children(cu::CLCursor)
     # TODO: possible to use sizehint! here?
     list = CLCursor[]
-    ccall( (:clang_visitChildren, :libclang), Nothing,
+    ccall( (:clang_visitChildren, libclang), Nothing,
            (CXCursor, Ptr{Nothing}, Ptr{Nothing}),
            cu, cu_visitor_cb, pointer_from_objref(list))
     list
 end
 
 function cu_file(cu::CLCursor)
+    # TODO should return a struct or namedtuple 
     # TODO turn this in to a normal wrapper
-    loc = ccall( (:clang_getCursorLocation, :libclang), CXSourceLocation,
-                (CXCursor,), cu)
+    loc = ccall( (:clang_getCursorLocation, libclang), CXSourceLocation,
+                 (CXCursor,), cu)
 
     cxfile = Ref{CXFile}()
     line = Ref{Cuint}(); col = Ref{Cuint}(); offset = Ref{Cuint}()
 
-    ccall( (:clang_getExpansionLocation, :libclang), (Nothing),
+    ccall( (:clang_getExpansionLocation, libclang), (Nothing),
             (CXSourceLocation, Ref{CXFile}, Ref{Cuint}, Ref{Cuint}, Ref{Cuint}),
             loc,               cxfile,       line,       col,        offset)
 
@@ -348,7 +353,9 @@ function tu_init(hdrfile::Any, diagnostics, cpp::Bool, opts::Int)
 end
 
 
-tu_dispose(tu::CXTranslationUnit) = ccall( (:clang_disposeTranslationUnit, "libclang"), Nothing, (Ptr{Nothing},), tu)
+function tu_dispose(tu::CXTranslationUnit)
+    ccall( (:clang_disposeTranslationUnit, libclang), Nothing, (Ptr{Nothing},), tu)
+end
 
 function tu_cursor(tu::CXTranslationUnit)
     if (tu == C_NULL)
@@ -365,7 +372,7 @@ function tu_parse(CXIndex,
                   num_unsaved_files,
                   options) where S <: String
 
-    ccall(  (:clang_parseTranslationUnit, "libclang"),
+    ccall(  (:clang_parseTranslationUnit, libclang),
             CXTranslationUnit,
             (Ptr{Nothing}, Ptr{UInt8}, Ptr{Ptr{UInt8}}, UInt32, Ptr{Nothing}, UInt32, UInt32),
                 CXIndex,
@@ -378,7 +385,7 @@ function tu_parse(CXIndex,
 end
 
 function idx_create(excludeDeclsFromPCH::Int, displayDiagnostics::Int)
-    ccall(  (:clang_createIndex, "libclang"),
+    ccall(  (:clang_createIndex, libclang),
             CXTranslationUnit,
             (Int32, Int32),
                 excludeDeclsFromPCH,
@@ -387,11 +394,15 @@ end
 idx_create() = idx_create(0,0)
 
 function getFile(tu::CXTranslationUnit, file::String)
-    ccall( (:clang_getFile, "libclang"),
+    ccall( (:clang_getFile, libclang),
             CXFile,
             (Ptr{Nothing}, Ptr{UInt8}),
                 tu,
                 file)
+end
+
+function __init__()
+    global cu_visitor_cb = @cfunction(cu_children_visitor, Cuint, (CXCursor, CXCursor, Ptr{Nothing}))
 end
 
 end # module

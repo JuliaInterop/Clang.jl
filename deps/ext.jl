@@ -1,8 +1,14 @@
-using Libdl
+import Libdl
 
 include("deps.jl")
-println("hi")
-push!(Libdl.DL_LOAD_PATH, readchomp(`$(LLVM_CONFIG) --libdir`))
-println(Libdl.DL_LOAD_PATH)
-println("xi")
-Libdl.dlopen("libclang", Libdl.RTLD_DEEPBIND)
+
+llvm_libdir = readchomp(`$(LLVM_CONFIG) --libdir`)
+if !ispath(llvm_libdir)
+    error("llvm-config returned non-existent libdir path: '$(llvm_libdir)")
+end
+
+const libclang = joinpath(llvm_libdir, "libclang." * Libdl.dlext)
+
+if Libdl.dlopen_e(libclang, Libdl.RTLD_DEEPBIND) == C_NULL
+    error("Failed to open libclang library: $(libclang)")
+end

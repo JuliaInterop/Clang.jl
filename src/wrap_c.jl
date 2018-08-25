@@ -332,7 +332,7 @@ function wrap(context::WrapContext, buf::Array, func_decl::FunctionDecl, libname
 
     args = cindex.function_args(func_decl)
 
-    arg_types = [cindex.getArgType(func_type, UInt32(i)) for i in 0:length(args)-1]
+    arg_types = [cindex.getArgType(func_type.typ, UInt32(i)) for i in 0:length(args)-1]
     arg_reps = [repr_jl(x) for x in arg_types]
 
     # check whether any argument types are blocked

@@ -297,7 +297,7 @@ end
 
 function Base.convert(::Type{String}, x::CXString)
     ret = unsafe_string(x.data)
-    ccall( (:clang_disposeString, libclang), Void, (CXString,), x)
+    ccall( (:clang_disposeString, libclang), Nothing, (CXString,), x)
     return ret
 end
 
@@ -395,10 +395,6 @@ for sym in names(TypeKind, all=true)
 end
 
 function CLType(t::CXType)
-    if t == Nothing
-        return CLTypeMap[0]()
-    end
-
     return CLTypeMap[t.kind](t)
 end
 

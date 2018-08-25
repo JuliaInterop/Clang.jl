@@ -75,14 +75,14 @@ end
 function getCursorLexicalParent(cu)::CLCursor
     ccall( (:clang_getCursorLexicalParent, libclang), CXCursor, (CXCursor,), cu)
 end
-function getCursorType(cu)
+function getCursorType(cu)::CLType
     ccall( (:clang_getCursorType, libclang), CXType, (CXCursor,), cu)
 end
 
-function getTypedefDeclUnderlyingType(cu)
+function getTypedefDeclUnderlyingType(cu)::CLType
     ccall( (:clang_getTypedefDeclUnderlyingType, libclang), CXType, (CXCursor,), cu)
 end
-function getEnumDeclIntegerType(cu)
+function getEnumDeclIntegerType(cu)::CLType
     ccall( (:clang_getEnumDeclIntegerType, libclang), CXType, (CXCursor,), cu)
 end
 function getEnumConstantDeclValue(cu)
@@ -118,8 +118,8 @@ end
 function getPointeeType(t)::CLType
     ccall( (:clang_getPointeeType, libclang), CXType, (CXType,), t)
 end
-function getTypeDeclaration(t)::CLType
-    ccall( (:clang_getTypeDeclaration, libclang), Nothing, (CXType,), t)
+function getTypeDeclaration(t)::CLCursor
+    ccall( (:clang_getTypeDeclaration, libclang), CXCursor, (CXType,), t)
 end
 function getDeclObjCTypeEncoding(cu)::String
     ccall( (:clang_getDeclObjCTypeEncoding, libclang), CXString, (CXCursor,), cu)

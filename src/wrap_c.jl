@@ -391,7 +391,7 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, sd::StructDecl; usena
     !context.options.wrap_structs && return
 
     if (usename == "" && (usename = name(sd)) == "")
-        @warn("Skipping unnamed StructDecl")
+        print("Skipping unnamed StructDecl")
         return
     end
     usesym = Symbol(usename)
@@ -408,7 +408,7 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, sd::StructDecl; usena
             continue
         elseif !(isa(cu, FieldDecl) || isa(cu, TypeRef))
             expr_buf[usesym] = ExprUnit(Poisoned())
-            @warn("Skipping struct: \"$usename\" due to unsupported field: $cur_name")
+            print("Skipping struct: \"$usename\" due to unsupported field: $cur_name")
             return
         elseif (length(cur_name) < 1)
             error("Unnamed struct member in: $usename ... cursor: ", string(cu))
@@ -418,6 +418,7 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, sd::StructDecl; usena
         push!(b.args, Expr(:(::), symbol_safe(cur_name), repr))
         push!(deps, target_type(repr))
     end
+    println()
 
     # Check for a previous forward ordering
     if !(usesym in keys(expr_buf)) || (expr_buf[usesym].state == :empty)
@@ -696,8 +697,6 @@ function wrap_header(wc::WrapContext, topcu::CLCursor, top_hdr, obuf::Array)
             rethrow(err)
         end
     end
-
-    cindex.cl_dispose(topcl)
 end
 
 function parse_c_headers(wc::WrapContext)

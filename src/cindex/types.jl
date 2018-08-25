@@ -294,7 +294,12 @@ struct CXString
     private_flags::Cuint
     CXString() = new(C_NULL,0)
 end
-Base.convert(::Type{String}, x::CXString) = unsafe_string(x.data)
+
+function Base.convert(::Type{String}, x::CXString)
+    ret = unsafe_string(x.data)
+    ccall( (:clang_disposeString, libclang), Void, (CXString,), x)
+    return ret
+end
 
 ###############################################################################
 # Set up CXToken wrapping
@@ -390,6 +395,10 @@ for sym in names(TypeKind, all=true)
 end
 
 function CLType(t::CXType)
+    if t == Nothing
+        return CLTypeMap[0]()
+    end
+
     return CLTypeMap[t.kind](t)
 end
 

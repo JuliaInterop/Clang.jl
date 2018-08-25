@@ -136,7 +136,7 @@ end
 function getNumArgTypes(t::CXType)
     ccall( (:clang_getNumArgTypes, libclang), Int32, (CXType,), t)
 end
-function getArgType(t::CXType,arg::UInt32)::CLType
+function getArgType(t::CXType, arg::UInt32)::CLType
     ccall( (:clang_getArgType, libclang), CXType, (CXType,UInt32), t, arg)
 end
 function isFunctionTypeVariadic(t)

@@ -63,7 +63,7 @@ function parse_header(header::AbstractString;
     tu = tu_parse(index, header, args, length(args),
                   C_NULL, 0, flags)
     if (tu == C_NULL)
-        error("ParseTranslationUnit returned NULL; unable to create TranslationUnit")
+        error("ParseTranslationUnit returned NULL; unable to create TranslationUnit for header $(header)")
     end
 
     return tu_cursor(tu)
@@ -185,6 +185,7 @@ function children(cu::CLCursor)
     list
 end
 
+# TODO add cu_location
 function cu_file(cu::CLCursor)
     # TODO should return a struct or namedtuple 
     # TODO turn this in to a normal wrapper
@@ -198,7 +199,7 @@ function cu_file(cu::CLCursor)
             (CXSourceLocation, Ref{CXFile}, Ref{Cuint}, Ref{Cuint}, Ref{Cuint}),
             loc,               cxfile,       line,       col,        offset)
 
-    (getFileName(cxfile[]), line[], col[], offset[])
+    getFileName(cxfile[])
 end
 
 ################################################################################
@@ -285,7 +286,7 @@ function function_arg_defaults(method::Union{cindex.CXXMethod, cindex.FunctionDe
                     try
                         Meta.parse(lit)
                     catch err
-                        info("Error parsing function_default_arg value: ", lit)
+                        @info("Error parsing function_default_arg value: ", lit)
                         return tuple(Any[])
                     end
                  else

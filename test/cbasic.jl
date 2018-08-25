@@ -31,4 +31,4 @@ func1_args = cindex.function_args(func1)
 @test map(spelling, func1_args) == ["a","b","c","d"]
 
 # TODO should return a structure or namedtuple
-@test endswith( cu_file(func1)[1], "cxx/cbasic.h")
+@test endswith( cu_file(func1), "cxx/cbasic.h")

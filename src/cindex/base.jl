@@ -130,13 +130,13 @@ end
 function getFunctionTypeCallingConv(t::CXType)::CLCallingConv
     ccall( (:clang_getFunctionTypeCallingConv, libclang), Int32, (CXType,), t)
 end
-function getResultType(t::CXType)::CLType
+function getResultType(t)::CLType
     ccall( (:clang_getResultType, libclang), CXType, (CXType,), t)
 end
-function getNumArgTypes(t::CXType)
+function getNumArgTypes(t)
     ccall( (:clang_getNumArgTypes, libclang), Int32, (CXType,), t)
 end
-function getArgType(t::CXType, arg::UInt32)::CLType
+function getArgType(t, arg::UInt32)::CLType
     ccall( (:clang_getArgType, libclang), CXType, (CXType,UInt32), t, arg)
 end
 function isFunctionTypeVariadic(t)

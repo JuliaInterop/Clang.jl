@@ -14,7 +14,7 @@ wrap_c.wrap(wc, buf, func1, "test")
 
 exc = :(
     function func1(a::Cint,b::Cdouble,c,d)
-        ccall((:func1,test),Cint,(Cint,Cdouble,Ptr{Cdouble},Ptr{Void}),a,b,c,d)
+        ccall((:func1,test),Cint,(Cint,Cdouble,Ptr{Cdouble},Ptr{Cvoid}),a,b,c,d)
     end)
 
 strip_line_numbers!(exc)

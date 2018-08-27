@@ -141,7 +141,7 @@ end
 #
 ##############################################################################
 cl_to_jl = Dict{Any,Any}(
-    cindex.VoidType         => :Void,
+    cindex.VoidType         => :Cvoid,
     cindex.BoolType         => :Bool,
     cindex.Char_U           => :UInt8,
     cindex.UChar            => :Cuchar,
@@ -166,12 +166,12 @@ cl_to_jl = Dict{Any,Any}(
     cindex.UInt128          => :UInt128,
     cindex.Int128           => :UInt128,
 
-    cindex.FirstBuiltin     => :Void,
-    cindex.CXType_Elaborated => :Void,
+    cindex.FirstBuiltin     => :Cvoid,
+    cindex.CXType_Elaborated => :Cvoid,
     cindex.Complex          => :Complex,
-    cindex.BlockPointer     => :Void,
-    cindex.Pointer          => :Void,
-    cindex.Invalid          => :Void,
+    cindex.BlockPointer     => :Cvoid,
+    cindex.Pointer          => :Cvoid,
+    cindex.Invalid          => :Cvoid,
     :size_t                 => :Csize_t,
     :ptrdiff_t              => :Cptrdiff_t,
     :uint64_t               => :UInt64,
@@ -223,7 +223,7 @@ function repr_jl(t::TypeRef)
     if isa(refdef, cindex.InvalidFile) ||
        isa(refdef, cindex.FirstInvalid) ||
        isa(refdef, cindex.Invalid)
-        return :Void
+        return :Cvoid
     else
         return Symbol(spelling(reftype))
     end
@@ -242,7 +242,7 @@ end
 
 function repr_jl(unxp::Unexposed)
     r = spelling(cindex.getTypeDeclaration(unxp))
-    r == "" ? :Void : Symbol(r)
+    r == "" ? :Cvoid : Symbol(r)
 end
 
 function repr_jl(t::ConstantArray)

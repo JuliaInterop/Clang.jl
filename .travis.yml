@@ -10,15 +10,16 @@ addons:
       llvm-3.9-tools
       libclang-3.9-dev
 
-
 julia:
   - 0.7
   - 1.0
 
 notifications:
   email: false
-after_success:
-  - julia -e 'cd(Pkg.dir("Clang")); Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())';
 
-script:
-    - julia --compilecache=no -e 'Pkg.clone(pwd()); Pkg.build("Clang"); Pkg.test("Clang"; coverage=true)';
+## uncomment the following lines to override the default test script
+#script:
+#  - julia -e 'Pkg.build(); Pkg.test(; coverage=true)'
+after_success:
+  # push coverage results to Coveralls
+  - julia -e 'using Pkg; Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())'

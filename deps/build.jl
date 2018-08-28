@@ -3,7 +3,7 @@
 #Returns the path as determined by llvm-config, or throws an error if LLVM
 #could not be found
 function find_llvm()
-    @info("Called Clang.jl: find_llvm")
+    @info "Called Clang.jl: find_llvm"
     if haskey(ENV, "TRAVIS")
         tmp = readchomp(Cmd(`which llvm-config-3.9`, ignorestatus=true))
         isfile(tmp) &&
@@ -24,26 +24,26 @@ function find_llvm()
         isfile(tmp) &&
             return tmp
     catch err
-        @info("No system llvm-config: $err")
+        @info "No system llvm-config: $err"
     end
 
     # look for system Homebrew
     @static if Sys.isapple()
         try
-            @info("Searching for LLVM in system Homebrew")
+            @info "Searching for LLVM in system Homebrew"
             if success(`$SYSTEM_BREW ls llvm`)
                 llvmcf = filter(x -> occursin("bin/llvm-config", x),
                                 chomp.( readlines(`$SYSTEM_BREW ls llvm`) ))
                 length(llvmcf) >= 1 &&
                     return llvmcf[1]
             end
-            warn("No llvm or llvm-config found in system homebrew!")
+            @warn "No llvm or llvm-config found in system homebrew!"
         catch err
-            warn("Error using system Homebrew: ", err)
+            @warn "Error using system Homebrew: $err"
         end
 
         try
-            @info("Attempting install through Homebrew.jl")
+            @info "Attempting install through Homebrew.jl"
             eval(quote
                    using Homebrew
                    if !Homebrew.installed("llvm")
@@ -53,6 +53,7 @@ function find_llvm()
             if (lcf = isfile(joinpath(Homebrew.prefix(), "opt/llvm/bin/llvm-config")))
                 return lcf
             end
+        catch
         end
     end
 

@@ -1,7 +1,22 @@
-sudo: false
-dist: trusty
-
+## Documentation: http://docs.travis-ci.com/user/languages/julia/
 language: julia
+os:
+  - linux
+  - osx
+julia:
+  - 0.7
+  - 1.0
+  - nightly
+notifications:
+  email: false
+git:
+  depth: 99999999
+
+## uncomment the following lines to allow failures on nightly julia
+## (tests will run but not make your overall status red)
+matrix:
+ allow_failures:
+ - julia: nightly
 
 addons:
   apt:
@@ -9,13 +24,6 @@ addons:
       llvm-3.9
       llvm-3.9-tools
       libclang-3.9-dev
-
-julia:
-  - 0.7
-  - 1.0
-
-notifications:
-  email: false
 
 ## uncomment the following lines to override the default test script
 #script:

@@ -50,7 +50,7 @@ function find_llvm()
                      Homebrew.add("llvm")
                    end
                  end)
-            if (lcf = isfile(joinpath(prefix, "llvm-config")))
+            if (lcf = isfile(joinpath(Homebrew.prefix(), "opt/llvm/bin/llvm-config")))
                 return lcf
             end
         end

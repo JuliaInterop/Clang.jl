@@ -6,3 +6,4 @@
 *.kate-swp
 
 deps/deps.jl
+deps/build.log

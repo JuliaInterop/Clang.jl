@@ -49,11 +49,12 @@ function find_llvm()
                    if !Homebrew.installed("llvm")
                      Homebrew.add("llvm")
                    end
+                   const HOMEBREW_PREFIX = Homebrew.prefix()
                  end)
-            if (lcf = isfile(joinpath(Homebrew.prefix(), "opt/llvm/bin/llvm-config")))
-                return lcf
-            end
-        catch
+            lcf = joinpath(HOMEBREW_PREFIX, "opt/llvm/bin/llvm-config")
+            isfile(lcf) && return lcf
+        catch err
+            @warn "Error installing through Homebrew.jl: $err"
         end
     end
 

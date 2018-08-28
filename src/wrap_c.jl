@@ -612,7 +612,7 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, md::cindex.MacroDefin
     pos = 1; exprn = ""
     if tokens[2].text == "("
         exprn,pos = handle_macro_exprn(tokens, 3)
-        if (pos != endof(tokens) || tokens[pos].text != ")" || exprn == "")
+        if (pos != lastindex(tokens) || tokens[pos].text != ")" || exprn == "")
             mdef_str = join([c.text for c in tokens], " ")
             expr_buf[Symbol(mdef_str)] = ExprUnit(string("# Skipping MacroDefinition: ", replace(mdef_str, "\n", "\n#")))
             return
@@ -620,7 +620,7 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, md::cindex.MacroDefin
         exprn = "(" * exprn * ")"
     else
         (exprn,pos) = handle_macro_exprn(tokens, 2)
-        if pos != endof(tokens)
+        if pos != lastindex(tokens)
             mdef_str = join([c.text for c in tokens], " ")
             expr_buf[Symbol(mdef_str)] = ExprUnit(string("# Skipping MacroDefinition: ", replace(mdef_str, "\n", "#\n")))
             return

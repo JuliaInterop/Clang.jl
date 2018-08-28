@@ -4,12 +4,10 @@ export parse_header, cu_type, ty_kind, name, spelling,
        value, children, cu_file, resolve_type, return_type,
        tokenize, pointee_type, typedef_type
 export CLType, CLCursor, CXString, CXTypeKind, CursorList, TokenList
-export getindex, start, next, done, search, show, endof
+export search
 
 export function_return_modifiers, function_arg_modifiers, cu_visitor_cb
 
-import Base.getindex, Base.start, Base.next, Base.done, Base.search, Base.show
-import Base.endof, Base.length
 import ..libclang
 using Compat
 import Compat.String
@@ -45,7 +43,7 @@ function parse_header(header::AbstractString;
                 flags                           = TranslationUnit_Flags.None)
     if !isfile(header)
         error(header, " not found")
-        
+
         # TODO: support parsing in-memory with CXUnsavedFile arg
         #       to _parseTranslationUnit.jj
         #unsaved_file = CXUnsavedFile()
@@ -187,7 +185,7 @@ end
 
 # TODO add cu_location
 function cu_file(cu::CLCursor)
-    # TODO should return a struct or namedtuple 
+    # TODO should return a struct or namedtuple
     # TODO turn this in to a normal wrapper
     loc = ccall( (:clang_getCursorLocation, libclang), CXSourceLocation,
                  (CXCursor,), cu)
@@ -213,16 +211,13 @@ function tokenize(cursor::CLCursor)
     return cindex.tokenize(tu, sourcerange)
 end
 
-length(tl::TokenList) = tl.size
-start(tl::TokenList) = 1
-next(tl::TokenList, i) = (tl[i], i+1)
-endof(tl::TokenList) = length(tl)
-done(tl::TokenList, i) = (i > length(tl))
+Base.length(tl::TokenList) = tl.size
+Base.iterate(tl::TokenList, state=1) = state > tl.size ? nothing : (tl[state], state+1)
 
-function getindex(tl::TokenList, i::Int)
+function Base.getindex(tl::TokenList, i::Int)
     if (i < 1 || i > length(tl))
         # throw(BoundsError())
-        @warn("TokenList miss at index ", i)
+        @warn "TokenList miss at index ", i
         return Comment(string("TokenList miss at index ", i))
     end
 
@@ -286,7 +281,7 @@ function function_arg_defaults(method::Union{cindex.CXXMethod, cindex.FunctionDe
                     try
                         Meta.parse(lit)
                     catch err
-                        @info("Error parsing function_default_arg value: ", lit)
+                        @info "Error parsing function_default_arg value: $lit"
                         return tuple(Any[])
                     end
                  else
@@ -338,9 +333,9 @@ end
 # Display overrides
 ################################################################################
 
-show(io::IO, tk::CLToken)   = print(io, typeof(tk), "(\"", tk.text, "\")")
-show(io::IO, ty::CLType)    = print(io, "CLType (", typeof(ty), ") ")
-show(io::IO, cu::CLCursor)    = print(io, "CLCursor (", typeof(cu), ") ", name(cu))
+Base.show(io::IO, tk::CLToken)  = print(io, typeof(tk), "(\"", tk.text, "\")")
+Base.show(io::IO, ty::CLType)   = print(io, "CLType (", typeof(ty), ") ")
+Base.show(io::IO, cu::CLCursor) = print(io, "CLCursor (", typeof(cu), ") ", name(cu))
 
 ###############################################################################
 # Internal functions

@@ -4,6 +4,8 @@ export parse_header, cu_type, ty_kind, name, spelling,
        value, children, cu_file, resolve_type, return_type,
        tokenize, pointee_type, typedef_type
 export CLType, CLCursor, CXString, CXTypeKind, CursorList, TokenList
+
+import Base.search
 export search
 
 export function_return_modifiers, function_arg_modifiers, cu_visitor_cb

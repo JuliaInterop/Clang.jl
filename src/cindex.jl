@@ -213,6 +213,8 @@ function tokenize(cursor::CLCursor)
     return cindex.tokenize(tu, sourcerange)
 end
 
+Base.firstindex(tl::TokenList) = 1
+Base.lastindex(tl::TokenList) = length(tl)
 Base.length(tl::TokenList) = tl.size
 Base.iterate(tl::TokenList, state=1) = state > tl.size ? nothing : (tl[state], state+1)
 

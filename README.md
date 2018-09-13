@@ -45,7 +45,7 @@ for small libraries the initial investment may not pay off.
 * [CUDArt.jl](https://github.com/JuliaGPU/CUDArt.jl): Bindings to the CUDA Runtime library
 * [CUFFT.jl](https://github.com/JuliaGPU/CUFFT.jl): Bindings to CUDA FFT library
 * [Sundials.jl](https://github.com/tshort/Sundials.jl): interface to the LLNL "SUite of Nonlinear and DIfferential/ALgebraic equation Solvers" package
-* [libCURL.jl](https://github.com/amitmurthy/libCURL.jl): wrapper of cURL
+* [LibCURL.jl](https://github.com/JuliaWeb/LibCURL.jl): wrapper of cURL
 * [VideoIO.jl](https://github.com/kmsquire/VideoIO.jl): Julia bindings for libav/ffmpeg
 * [WCSLIB.jl](https://github.com/JuliaAstro/WCSLIB.jl)
 * [NIDAQ.jl](https://github.com/JaneliaSciComp/NIDAQ.jl): wrapper for NIDAQ data acquisition library

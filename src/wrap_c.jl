@@ -541,8 +541,8 @@ function handle_macro_exprn(tokens::TokenList, pos::Int)
           literal = lowercase(literal)
 
           # Floats following http://en.cppreference.com/w/cpp/language/floating_literal
-          float64 = contains(txt, ".") && contains(literal, "l")
-          float32 = contains(literal, "f")
+          float64 = occursin(".", txt) && occursin("l", literal)
+          float32 = occursin("f", literal)
 
           if float64 || float32
             float64 && return "Float64"
@@ -550,7 +550,7 @@ function handle_macro_exprn(tokens::TokenList, pos::Int)
           end
 
           # Integers following http://en.cppreference.com/w/cpp/language/integer_literal
-          unsigned = contains(literal, "u")
+          unsigned = occursin("u", literal)
           nbits = count(x -> x == 'l', literal) == 2 ? 64 : 32
           return "$(unsigned ? "U" : "")Int$nbits"
         end

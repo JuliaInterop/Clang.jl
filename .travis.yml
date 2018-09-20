@@ -20,10 +20,14 @@ matrix:
 
 addons:
   apt:
+    sources:
+    - ubuntu-toolchain-r-test
+    - sourceline: 'deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-6.0 main'
+      key_url: 'http://apt.llvm.org/llvm-snapshot.gpg.key'
     packages:
-      llvm-3.9
-      llvm-3.9-tools
-      libclang-3.9-dev
+      llvm-6.0
+      llvm-6.0-tools
+      libclang-6.0-dev
 
 ## uncomment the following lines to override the default test script
 #script:

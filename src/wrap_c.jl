@@ -3,7 +3,8 @@
 ################################################################################
 
 module wrap_c
-    version = v"0.0.0"
+
+version = v"0.0.0"
 
 using Clang.cindex
 using DataStructures
@@ -31,18 +32,21 @@ mutable struct InternalOptions
 end
 InternalOptions() = InternalOptions(true, false)
 
+struct Poisoned end
+
 mutable struct ExprUnit
     items::Array{Any}
     deps::OrderedSet{Symbol}
     state::Symbol
 end
 
-struct Poisoned
+function ExprUnit(a::Array, deps=Any[]; state::Symbol=:new)
+    ExprUnit(a, OrderedSet{Symbol}([target_type(dep) for dep in deps]), state)
 end
-
+function ExprUnit(e::Union{Expr,Symbol,String,Poisoned}, deps=Any[]; state::Symbol=:new)
+    ExprUnit(Any[e], OrderedSet{Symbol}([target_type(dep) for dep in deps]), state)
+end
 ExprUnit() = ExprUnit(Any[], OrderedSet{Symbol}(), :new)
-ExprUnit(e::Union{Expr,Symbol,String,Poisoned}, deps=Any[]; state::Symbol=:new) = ExprUnit(Any[e], OrderedSet{Symbol}([target_type(dep) for dep in deps]), state)
-ExprUnit(a::Array, deps=Any[]; state::Symbol=:new) = ExprUnit(a, OrderedSet{Symbol}([target_type(dep) for dep in deps]), state)
 
 ### WrapContext
 # stores shared information about the wrapping session
@@ -90,13 +94,13 @@ function init(;
 
     # Set up some optional args if they are not explicitly passed.
 
-    (index == Union{})         && ( index = cindex.idx_create(0, (clang_diagnostics ? 1 : 0)) )
+    (index == Union{}) && ( index = cindex.idx_create(0, (clang_diagnostics ? 1 : 0)) )
 
     if (output_file == "" && header_outputfile == Union{})
         header_outputfile = x->joinpath(output_dir, strip(splitext(basename(x))[1]) * ".jl")
     end
 
-    (common_file == "")    && ( common_file = output_file )
+    (common_file == "") && ( common_file = output_file )
     common_file = joinpath(output_dir, common_file)
 
     if (header_library == Union{})
@@ -308,9 +312,7 @@ function largestfield(cu::UnionDecl)
     fields[maxelem]
 end
 
-function fieldsize(cu::FieldDecl)
-    fieldsize(children(cu)[1])
-end
+fieldsize(cu::FieldDecl) = fieldsize(children(cu)[1])
 
 ################################################################################
 # Handle function declarations
@@ -321,8 +323,8 @@ function wrap(context::WrapContext, buf::Array, func_decl::FunctionDecl, libname
     if isa(func_type, FunctionNoProto)
         @warn "No Prototype for $(func_decl) - assuming no arguments"
     elseif cindex.isFunctionTypeVariadic(func_type) == 1
-        return
         @warn "Skipping VarArg Function $(func_decl)"
+        return nothing
     end
 
     funcname = Symbol(spelling(func_decl))
@@ -337,7 +339,7 @@ function wrap(context::WrapContext, buf::Array, func_decl::FunctionDecl, libname
     for arg_t in arg_types
         if spelling(arg_t) in reserved_argtypes
             warning("Skipping $(name(func_decl)) due to unsupported argument: $(name(arg_t))")
-            return
+            return nothing
         end
     end
 
@@ -376,9 +378,9 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, cursor::EnumDecl; use
     push!(buf, :(const $(Symbol(enumname)) = $enumtype))
     for enumitem in children(cursor)
         cur_name = cindex.spelling(enumitem)
-        if (length(cur_name) < 1) continue end
+        length(cur_name) < 1 && continue
         cur_sym = symbol_safe(cur_name)
-        push!(buf, :(const $cur_sym = $_int($(value(enumitem)))))
+        push!(buf, :(const $cur_sym = $(value(enumitem)) |> $_int))
         expr_buf[cur_sym] = enum_exprs
     end
     push!(buf, "# end enum $enumname")
@@ -386,11 +388,11 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, cursor::EnumDecl; use
 end
 
 function wrap(context::WrapContext, expr_buf::OrderedDict, sd::StructDecl; usename = "")
-    !context.options.wrap_structs && return
+    !context.options.wrap_structs && return nothing
 
-    if (usename == "" && (usename = name(sd)) == "")
+    if usename == "" && (usename = name(sd)) == ""
         print("Skipping unnamed StructDecl")
-        return
+        return nothing
     end
     usesym = Symbol(usename)
 
@@ -402,13 +404,13 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, sd::StructDecl; usena
     deps = OrderedSet{Symbol}()
     for cu in struct_fields
         cur_name = spelling(cu)
-        if (isa(cu, StructDecl) || isa(cu, UnionDecl))
+        if isa(cu, StructDecl) || isa(cu, UnionDecl)
             continue
         elseif !(isa(cu, FieldDecl) || isa(cu, TypeRef))
             expr_buf[usesym] = ExprUnit(Poisoned())
             print("Skipping struct: \"$usename\" due to unsupported field: $cur_name")
-            return
-        elseif (length(cur_name) < 1)
+            return nothing
+        elseif length(cur_name) < 1
             error("Unnamed struct member in: $usename ... cursor: ", string(cu))
         end
 
@@ -431,9 +433,9 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, sd::StructDecl; usena
 end
 
 function wrap(context::WrapContext, expr_buf::OrderedDict, ud::UnionDecl; usename = "")
-    if (usename == "" && (usename = name(ud)) == "")
-        @warn("Skipping unnamed UnionDecl")
-        return
+    if usename == "" && (usename = name(ud)) == ""
+        @warn "Skipping unnamed UnionDecl"
+        return nothing
     end
 
     b = Expr(:block)
@@ -443,8 +445,8 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, ud::UnionDecl; usenam
     target = repr_jl(cu_type(max_cu))
 
     if string(target) == ""
-        return
         @warn "Skipping UnionDecl $(usename) because largest field '$(name(max_cu))' could not be typed", string(target)
+        return nothing
     end
 
     push!(b.args, Expr(:(::), cur_sym, target))
@@ -452,7 +454,7 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, ud::UnionDecl; usenam
     # TODO: add other dependencies
     expr_buf[cur_sym] = ExprUnit(e, Any[target])
 
-    return
+    return nothing
 end
 
 function is_ptr_type_expr(@nospecialize t)
@@ -463,8 +465,7 @@ function is_ptr_type_expr(@nospecialize t)
 end
 
 function efunsig(name::Symbol, args::Vector{Symbol}, types)
-    x = Any[is_ptr_type_expr(t) ? a : Expr(:(::), a, t)
-            for (a,t) in zip(args,types)]
+    x = Any[is_ptr_type_expr(t) ? a : Expr(:(::), a, t) for (a,t) in zip(args,types)]
     Expr(:call, name, x...)
 end
 
@@ -573,16 +574,14 @@ function handle_macro_exprn(tokens::TokenList, pos::Int)
     # check whether identifiers and literals alternate
     # with punctuation
     exprn = ""
-    if pos > length(tokens)
-        return (exprn,pos)
-    end
+    pos > length(tokens) && return (exprn,pos)
 
     prev = 1 >> trans(tokens[pos])
     for lpos = pos:length(tokens)
         pos = lpos
         tok = tokens[lpos]
         state = trans(tok)
-        if ( xor(state, prev)  == 1)
+        if xor(state, prev) == 1
             prev = state
         else
             break
@@ -604,8 +603,8 @@ get_symbols(xs::Array) = reduce(vcat, [get_symbols(x) for x in xs])
 function wrap(context::WrapContext, expr_buf::OrderedDict, md::cindex.MacroDefinition)
     tokens = tokenize(md)
     # Skip any empty definitions
-    tokens.size < 2 && return
-    startswith(name(md), "_") && return
+    tokens.size < 2 && return nothing
+    startswith(name(md), "_") && return nothing
 
     pos = 1; exprn = ""
     if tokens[2].text == "("
@@ -613,7 +612,7 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, md::cindex.MacroDefin
         if (pos != lastindex(tokens) || tokens[pos].text != ")" || exprn == "")
             mdef_str = join([c.text for c in tokens], " ")
             expr_buf[Symbol(mdef_str)] = ExprUnit(string("# Skipping MacroDefinition: ", replace(mdef_str, "\n"=>"\n#")))
-            return
+            return nothing
         end
         exprn = "(" * exprn * ")"
     else
@@ -621,12 +620,12 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, md::cindex.MacroDefin
         if pos != lastindex(tokens)
             mdef_str = join([c.text for c in tokens], " ")
             expr_buf[Symbol(mdef_str)] = ExprUnit(string("# Skipping MacroDefinition: ", replace(mdef_str, "\n"=>"#\n")))
-            return
+            return nothing
         end
     end
 
     # Occasionally, skipped definitions slip through
-    (exprn == "" || exprn == "()") && return
+    (exprn == "" || exprn == "()") && return nothing
 
     use_sym = symbol_safe(tokens[1].text)
     target = Meta.parse(exprn)
@@ -645,9 +644,7 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, cursor::TypeRef; usen
     expr_buf[usesym] = ExprUnit(usesym)
 end
 
-function wrap(context::WrapContext, buf, cursor; usename="")
-    @warn("Not wrapping $(typeof(cursor))  $usename $(name(cursor))")
-end
+wrap(context::WrapContext, buf, cursor; usename="") = @warn "Not wrapping $(typeof(cursor))  $usename $(name(cursor))"
 
 
 ################################################################################
@@ -734,9 +731,8 @@ function print_buffer(ostrm, obuf)
         isa(e, Poisoned) && continue
         prev_state = state
         if state != :enum
-            state = (isa(e, AbstractString) ? :string :
-                     isa(e, Expr)   ? e.head :
-                     error("output: can't handle type $(typeof(e))"))
+            state = isa(e, AbstractString) ? :string :
+                    isa(e, Expr) ? e.head : error("output: can't handle type $(typeof(e))")
         end
 
         if state == :string
@@ -765,11 +761,12 @@ function print_buffer(ostrm, obuf)
 end
 
 function dump_to_buf!(buf::Array, expr_buf::OrderedDict{Symbol, ExprUnit}, item::ExprUnit)
-    (item.state == :done || item.state == :processing) && return
+    (item.state == :done || item.state == :processing) && return nothing
     item.state = :processing
 
     for dep in item.deps
-        (dep_expr = get(expr_buf, dep, nothing)) == nothing && continue
+        dep_expr = get(expr_buf, dep, nothing)
+        dep_expr == nothing && continue
         dump_to_buf!(buf, expr_buf, dep_expr)
     end
 
@@ -836,13 +833,8 @@ end
 # Utilities
 ###############################################################################
 
-function name_anon()
-    "ANONYMOUS_"*string((context::WrapContext).anon_count += 1)
-end
-
-function name_safe(cursor_name::AbstractString)
-    return (cursor_name in reserved_words) ? "_"*cursor_name : cursor_name
-end
+name_anon() = "ANONYMOUS_"*string((context::WrapContext).anon_count += 1)
+name_safe(cursor_name::AbstractString) = (cursor_name in reserved_words) ? "_"*cursor_name : cursor_name
 symbol_safe(cursor_name::AbstractString) = Symbol(name_safe(cursor_name))
 
 ###############################################################################

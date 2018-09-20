@@ -1,8 +1,6 @@
 using Clang.cindex
 
-function base_classes(c)
-    search(c, isa(c, CursorKind.CXXBaseSpecifier))
-end
+base_classes(c) = search(c, isa(c, CursorKind.CXXBaseSpecifier))
 
 function find_sym(name,liblist)
     libs = {dlopen(l)=>l for l in liblist}
@@ -33,9 +31,7 @@ end
 ###############################################################################
 
 function method_vt_index(cursor::cindex.CXCursor)
-    if !(cindex.CXXMethod_isVirtual(cursor) == 1)
-        return -1
-    end
+    !(cindex.CXXMethod_isVirtual(cursor) == 1) && return -1
     ccall(("wci_getCXXMethodVTableIndex", :libwrapclang), Int32,
 		  (Ptr{UInt8},), cursor.data)
 end

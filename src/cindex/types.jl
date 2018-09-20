@@ -331,9 +331,7 @@ for sym in names(TokenKind, all=true)
     end
 end
 
-function finalizer(l::TokenList)
-    cindex.disposeTokens(l)
-end
+finalizer(l::TokenList) = cindex.disposeTokens(l)
 
 ###############################################################################
 # Set up CXCursor wrapping
@@ -347,10 +345,8 @@ const CXCursorMap = Dict{Int32,Any}()
 
 # create the typed wrapper cursors
 for sym in names(CursorKind, all=true)
-    if(sym == :CursorKind) continue end
-
+    sym == :CursorKind && continue
     rval = getfield(CursorKind, sym)
-
     @eval begin
         struct $(sym) <: CLCursor
             cursor::CXCursor
@@ -359,17 +355,9 @@ for sym in names(CursorKind, all=true)
     end
 end
 
-function CLCursor(c::CXCursor)
-    return CXCursorMap[c.kind](c)
-end
-
-function Base.convert(::Type{CXCursor}, x::T) where T <: CLCursor
-    return x.cursor
-end
-
-function Base.convert(::Type{CLCursor}, x::CXCursor)
-    return CLCursor(x)
-end
+CLCursor(c::CXCursor) = CXCursorMap[c.kind](c)
+Base.convert(::Type{CXCursor}, x::T) where {T<:CLCursor} = x.cursor
+Base.convert(::Type{CLCursor}, x::CXCursor) = CLCursor(x)
 
 ###############################################################################
 # Set up CXType wrapping
@@ -382,10 +370,8 @@ abstract type CLType end
 CLTypeMap = Dict{Int32,Any}()
 
 for sym in names(TypeKind, all=true)
-    if(sym == :TypeKind) continue end
-
+    sym == :TypeKind && continue
     rval = getfield(TypeKind, sym)
-
     @eval begin
         struct $(sym) <: CLType
             typ::CXType
@@ -394,17 +380,9 @@ for sym in names(TypeKind, all=true)
     end
 end
 
-function CLType(t::CXType)
-    return CLTypeMap[t.kind](t)
-end
-
-function Base.convert(::Type{CXType}, x::T) where T <: CLType
-    return x.typ
-end
-
-function Base.convert(::Type{CLType}, x::CXType)
-    return CLType(x)
-end
+CLType(t::CXType) = CLTypeMap[t.kind](t)
+Base.convert(::Type{CXType}, x::T) where {T<:CLType} = x.typ
+Base.convert(::Type{CLType}, x::CXType) = CLType(x)
 
 # Duplicates
 const LastDecl = CXXAccessSpecifier

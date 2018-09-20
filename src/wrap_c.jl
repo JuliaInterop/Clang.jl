@@ -13,11 +13,10 @@ export wrap_c_headers
 export WrapContext
 
 # Reserved Julia identifiers will be prepended with "_"
-reserved_words = [ "abstract", "baremodule", "begin", "bitstype", "break", "catch", "ccall",
-                   "const", "continue", "do", "else", "elseif", "end", "export", "finally",
-                   "for", "function", "global", "if", "struct", "import", "importall", "in",
-                   "let", "local", "macro", "module", "quote", "return", "try", "type",
-                   "typealias", "using", "while"]
+reserved_words = ["begin", "while", "if", "for", "try", "return", "break", "continue",
+                  "function", "macro", "quote", "let", "local", "global", "const", "do",
+                  "struct", "module", "baremodule", "using", "import", "export", "end",
+                  "else", "catch", "finally", "true", "false"]
 
 # These argument types are unsupported
 reserved_argtypes = ["va_list"]

@@ -4,7 +4,6 @@
 
 using Clang.cindex
 using Clang.wrap_c
-using Compat
 
 PETSC_INCLUDE = "/usr/include/petsc"
 MPI_INCLUDE = "/usr/include/openmpi"

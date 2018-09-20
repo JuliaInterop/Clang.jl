@@ -7,8 +7,6 @@ module wrap_c
 
 using Clang.cindex
 using DataStructures
-using Compat
-import Compat.String
 
 export wrap_c_headers
 export WrapContext
@@ -50,11 +48,11 @@ ExprUnit(a::Array, deps=Any[]; state::Symbol=:new) = ExprUnit(a, OrderedSet{Symb
 # stores shared information about the wrapping session
 mutable struct WrapContext
     index::cindex.CXIndex
-    headers::Array{Compat.String,1}
-    output_file::Compat.String
-    common_file::Compat.String
-    clang_includes::Array{Compat.String,1}  # clang include paths
-    clang_args::Array{Compat.String,1}      # additional {"-Arg", "value"} pairs for clang
+    headers::Array{String,1}
+    output_file::String
+    common_file::String
+    clang_includes::Array{String,1}              # clang include paths
+    clang_args::Array{String,1}                  # additional {"-Arg", "value"} pairs for clang
     header_wrapped::Function                     # called to determine header inclusion status
                                                  #   (top_header, cursor_header) -> Bool
     header_library::Function                     # called to determine shared library for given header
@@ -64,8 +62,8 @@ mutable struct WrapContext
     cursor_wrapped::Function                     # called to determine cursor inclusion status
                                                  #   (cursor_name, cursor) -> Bool
     common_buf::OrderedDict{Symbol, ExprUnit}    # output buffer for common items: typedefs, enums, etc.
-    empty_structs::Set{Compat.String}
-    output_bufs::DefaultOrderedDict{Compat.String, Array{Any}}
+    empty_structs::Set{String}
+    output_bufs::DefaultOrderedDict{String, Array{Any}}
     options::InternalOptions
     anon_count::Int
     rewriter::Function
@@ -73,15 +71,15 @@ end
 
 ### Convenience function to initialize wrapping context with defaults
 function init(;
-            headers                         = Compat.String[],
+            headers                         = String[],
             index                           = Union{},
             output_file::String             = "",
             common_file::String             = "",
             output_dir::String              = "",
-            clang_args::Array{Compat.String,1}
-                                            = Compat.String[],
-            clang_includes::Array{Compat.String,1}
-                                            = Compat.String[],
+            clang_args::Array{String,1}
+                                            = String[],
+            clang_includes::Array{String,1}
+                                            = String[],
             clang_diagnostics::Bool         = true,
             header_wrapped                  = (header, cursorname) -> true,
             header_library                  = Union{},
@@ -123,8 +121,8 @@ function init(;
                                  header_outputfile,
                                  cursor_wrapped,
                                  OrderedDict{Symbol,ExprUnit}(),
-                                 Set{Compat.String}(),
-                                 DefaultOrderedDict{Compat.String, Array{Any}}(()->Any[]),
+                                 Set{String}(),
+                                 DefaultOrderedDict{String, Array{Any}}(()->Any[]),
                                  options,
                                  0,
                                  rewriter)
@@ -700,7 +698,7 @@ function wrap_header(wc::WrapContext, topcu::CLCursor, top_hdr, obuf::Array)
 end
 
 function parse_c_headers(wc::WrapContext)
-    parsed = Dict{Compat.String, CLCursor}()
+    parsed = Dict{String, CLCursor}()
 
     # Parse the headers
     for header in unique(wc.headers)
@@ -796,7 +794,7 @@ function Base.run(wc::WrapContext)
     wc.headers = sort_includes(wc, parsed)
 
     # Helper to store file handles
-    filehandles = Dict{Compat.String,IOStream}()
+    filehandles = Dict{String,IOStream}()
     getfile(f) = (f in keys(filehandles)) ? filehandles[f] : (filehandles[f] = open(f, "w"))
 
     for hfile in wc.headers
@@ -828,16 +826,11 @@ function Base.run(wc::WrapContext)
     # Write "common" definitions: types, typealiases, etc.
     open(wc.common_file, "w") do f
         println(f, "# Automatically generated using Clang.jl wrap_c, version $version\n")
-        println(f, "using Compat")
-
         print_buffer(f, common_buf)
     end
 
     map(close, values(filehandles))
 end
-
-# Deprecated interface
-@deprecate wrap_c_headers(wc::WrapContext, headers)   (wc.headers = headers; run(wc))
 
 ###############################################################################
 # Utilities

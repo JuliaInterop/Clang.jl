@@ -10,15 +10,12 @@ export
     #emitc_init,
     #emitc_post
 
-using Compat
-import Compat.String
-
 ################################################################################
 # Method entry point
 ################################################################################
 
 struct WrappedMethod
-    name::Compat.String
+    name::String
     method::CXXMethod
     parent::ClassDecl
     args::Array{Any,1}

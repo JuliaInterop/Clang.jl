@@ -319,10 +319,10 @@ end
 function wrap(context::WrapContext, buf::Array, func_decl::FunctionDecl, libname)
     func_type = cindex.cu_type(func_decl)
     if isa(func_type, FunctionNoProto)
-        @warn("No Prototype for $(func_decl) - assuming no arguments")
+        @warn "No Prototype for $(func_decl) - assuming no arguments"
     elseif cindex.isFunctionTypeVariadic(func_type) == 1
-        @warn("Skipping VarArg Function $(func_decl)")
         return
+        @warn "Skipping VarArg Function $(func_decl)"
     end
 
     funcname = Symbol(spelling(func_decl))
@@ -443,8 +443,8 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, ud::UnionDecl; usenam
     target = repr_jl(cu_type(max_cu))
 
     if string(target) == ""
-        @warn("Skipping UnionDecl $(usename) because largest field '$(name(max_cu))' could not be typed", string(target))
         return
+        @warn "Skipping UnionDecl $(usename) because largest field '$(name(max_cu))' could not be typed", string(target)
     end
 
     push!(b.args, Expr(:(::), cur_sym, target))

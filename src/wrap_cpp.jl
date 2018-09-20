@@ -136,7 +136,7 @@ function wrap(out::IO, method::cindex.CXXMethod, nameid::Int)
     # bail out if any argument is not supported
     args = get_args(method)
     if (!check_args(args))
-        warn("could not wrap $(spelling(method)) because of arguments")
+        @warn "could not wrap $(spelling(method)) because of arguments"
         return false
     end
 
@@ -201,7 +201,7 @@ function wrap(out::IO, method::cindex.Constructor, nameid::Int)
     # bail out if any argument is not supported
     args = get_args(method)
     if (!check_args(args))
-        warn("could not wrap $(spelling(method)) because of arguments")
+        @warn "could not wrap $(spelling(method)) because of arguments"
         return false
     end
 
@@ -313,7 +313,7 @@ function wrapjl(out::IO, arg::cindex.CLType)
     if haskey(cl_to_jl, typeof(arg))
         print(out, string(cl_to_jl[typeof(arg)]))
     else
-        warn("no cl_to_jl for $arg")
+        @warn "no cl_to_jl for $arg"
     end
 end
 

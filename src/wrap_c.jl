@@ -27,7 +27,7 @@ untyped_argtypes = [IncompleteArray]
 ### InternalOptions
 mutable struct InternalOptions
     wrap_structs::Bool
-    immutable_structs::Bool
+    ismutable::Bool
 end
 InternalOptions() = InternalOptions(true, false)
 
@@ -398,7 +398,7 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, sd::StructDecl; usena
 
     # Generate type declaration
     b = Expr(:block)
-    e = Expr(:type, !context.options.immutable_structs, usesym, b)
+    e = Expr(:struct, context.options.ismutable, usesym, b)
     deps = OrderedSet{Symbol}()
     for cu in struct_fields
         cur_name = spelling(cu)
@@ -437,7 +437,7 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, ud::UnionDecl; usenam
     end
 
     b = Expr(:block)
-    e = Expr(:type, !context.options.immutable_structs, Symbol(usename), b)
+    e = Expr(:struct, context.options.ismutable, Symbol(usename), b)
     max_cu = largestfield(ud)
     cur_sym = Symbol("_", usename)
     target = repr_jl(cu_type(max_cu))
@@ -751,7 +751,7 @@ function print_buffer(ostrm, obuf)
         if state != :enum
             if ((state != prev_state && prev_state != :string) ||
                 (state == prev_state && (state == :function ||
-                                         state == :type)))
+                                         state == :struct)))
                 println(ostrm)
             end
         end

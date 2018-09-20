@@ -1,4 +1,4 @@
 julia 0.7-
 DataStructures
 Compat
-@osx Homebrew
+BinaryProvider 0.3.0

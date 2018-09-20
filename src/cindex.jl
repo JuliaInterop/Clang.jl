@@ -11,8 +11,6 @@ export search
 export function_return_modifiers, function_arg_modifiers, cu_visitor_cb
 
 import ..libclang
-using Compat
-import Compat.String
 
 ###############################################################################
 

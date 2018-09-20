@@ -1,6 +1,6 @@
 ## Clang.jl
 
-Linux: [![Build status](https://api.travis-ci.org/ihnorton/Clang.jl.svg?branch=master)](https://travis-ci.org/ihnorton/Clang.jl)
+[![Build status](https://api.travis-ci.org/ihnorton/Clang.jl.svg?branch=master)](https://travis-ci.org/ihnorton/Clang.jl)
 
 Clang.jl provides a Julia language wrapper for libclang: the stable, C-exported
 interface to (a subset of) the LLVM Clang compiler. The [libclang API documentation](http://clang.llvm.org/doxygen/group__CINDEX.html)
@@ -12,8 +12,18 @@ If you are unfamiliar with the Clang AST and plan to access the internals of thi
 (as opposed to accessing the 'wrap-c' bindings), a good starting point is the
 [Introduction to the Clang AST](http://clang.llvm.org/docs/IntroductionToTheClangAST.html).
 
-## Getting Started
+## Installation
+Before installing Clang.jl, you might need to install `libclang` related packages(llvm-6.0,
+llvm-6.0-tools, libclang-6.0-dev) on Linux. To use your LLVM/Clang in other places, you could
+set an environment variable `LLVM_CONFIG` to that path. On Windows, you need to install [LLVM officially
+released prebuild binaries](http://releases.llvm.org/download.html) and the corresponding
+environment variable is `LLVM_WINDOWS`.
 
+```
+pkg> add Clang
+```
+
+## Getting Started
 Installation requirements are listed down page.
 
 [Clang.jl Documentation](http://clangjl.readthedocs.org/)
@@ -33,11 +43,9 @@ from a collection of header files. The following declarations are currently supp
 * function: translated to Julia ccall, with full type translation
 * typedef: translated to Julia typealias to underlying intrinsic type
 * enum: translated to const value symbol
-
 * struct: partial struct support may be enabled by setting WrapContext.options.wrap_structs = true
 
 ## Users
-
 Clang.jl tends to be used on large codebases, often with multiple API versions to support. Building a generator requires some customization effort, so
 for small libraries the initial investment may not pay off.
 
@@ -50,22 +58,6 @@ for small libraries the initial investment may not pay off.
 * [WCSLIB.jl](https://github.com/JuliaAstro/WCSLIB.jl)
 * [NIDAQ.jl](https://github.com/JaneliaSciComp/NIDAQ.jl): wrapper for NIDAQ data acquisition library
 
-## Installation
-
-### Prerequisites
-
-libclang and libclang-dev (versions >= 3.1) are required. libclang may
-optionally be built by the Julia build system by setting 
-BUILD_LLVM_CLANG=1 in `julia/Make.user`.
-You might also install clang manually, e.g. via `sudo apt-get install clang-3.7`.
-
-When using a distribution packaged version, note the latest version 
-may only be available from an optional pre-release archive (e.g. Ubuntu PPA).
-
-
-### Install
-
-To install using the Julia package manager, use: Pkg.add("Clang"). Note that you first need to make sure, that the following are in your `PATH` variable: `llvm-config` and `clang`. If not present in a default Julia location, `libclang` needs to be in `PATH` (on Windows), or `LD_LIBRARY_PATH` (Linux), or `DYLD_LIBRARY_PATH` (OS X).
 
 ## Background Information
 
@@ -76,67 +68,58 @@ and C++ related functions. A small convenience API is provided
 for basic tasks related to index generation, and retrieval of
 cursor kind and type information.
 
-All testing and development so far has been on Ubuntu 12.04.1 (64-bit)
-
-
-
 ### cindex.jl Usage
-  ```julia
-  using Clang.cindex
+```julia
+using Clang.cindex
 
-  julia> topcu = cindex.parse_header("Index.h") # Parse Index.h, returning the root cursor
-  julia> children(topcu).size
-  2148
+julia> topcu = cindex.parse_header("Index.h") # Parse Index.h, returning the root cursor
+julia> children(topcu).size
+2148
 
-  julia> cu = cindex.search(top, "clang_parseTranslationUnit")[1]
-  julia> cu_kind(cu) == CIndex.CurKind.FUNCTIONDECL
-  true
-  julia> name(cu)
-  "clang_parseTranslationUnit(CXIndex, const char *, const char *const *, int, struct CXUnsavedFile *, unsigned int, unsigned int)"
-  
-  julia> tkl = tokenize(cu)
-  julia> for tk in tkl
-         println(tk) # use tk.text to get underlying string
+julia> cu = cindex.search(top, "clang_parseTranslationUnit")[1]
+julia> cu_kind(cu) == CIndex.CurKind.FUNCTIONDECL
+true
+julia> name(cu)
+"clang_parseTranslationUnit(CXIndex, const char *, const char *const *, int, struct CXUnsavedFile *, unsigned int, unsigned int)"
+
+julia> tkl = tokenize(cu)
+julia> for tk in tkl
+           println(tk) # use tk.text to get underlying string
        end
-  Identifier("CXTranslationUnit")
-  Identifier("clang_parseTranslationUnit")
-  Punctuation("(")
-  Identifier("CXIndex")
-  Identifier("CIdx")
-  Punctuation(",")
-  Keyword("const")
-  Keyword("char")
-  Punctuation("*")
-  Identifier("source_filename")
-  ```
-  See the examples/ and util/ folders for further usage 
-  scenarios. Clang.jl is partially self-generating,
-  including parsing of the enums (util/genCIndex_h.jl)
+Identifier("CXTranslationUnit")
+Identifier("clang_parseTranslationUnit")
+Punctuation("(")
+Identifier("CXIndex")
+Identifier("CIdx")
+Punctuation(",")
+Keyword("const")
+Keyword("char")
+Punctuation("*")
+Identifier("source_filename")
+```
+See the examples folder for further usage scenarios. Clang.jl is partially self-generating,
+including parsing of the enums.
 
-  There is a small convenience API exported by CIndex:
-  
-    tu_init     # init and parse file to TranslationUnit
-    tu_cursor   # get top cursor from TranslationUnit
-    children    # gets CXCursor children; accessed by ref.
-    cu_kind     # CIndex.CurKind enum
-    ty_kind     # CIndex.TypKind enum
-    name        # get the DisplayName of a CXCursor
-    spelling    # get spelling of a CXCursor or CXType
-    cu_file     # file in which cursor was declared
-    is_function # CXCursor or CXType
-    is_null     # CXCursor
-    tokenize    # get tokens underlying given cursor
+There is a small convenience API exported by CIndex:
+```
+  tu_init     # init and parse file to TranslationUnit
+  tu_cursor   # get top cursor from TranslationUnit
+  children    # gets CXCursor children; accessed by ref.
+  cu_kind     # CIndex.CurKind enum
+  ty_kind     # CIndex.TypKind enum
+  name        # get the DisplayName of a CXCursor
+  spelling    # get spelling of a CXCursor or CXType
+  cu_file     # file in which cursor was declared
+  is_function # CXCursor or CXType
+  is_null     # CXCursor
+  tokenize    # get tokens underlying given cursor
+```
+For documentation of wrapped CIndex functions, see:
 
-  For documentation of wrapped CIndex functions, see:
+http://clang.llvm.org/doxygen/group__CINDEX.html
 
-  http://clang.llvm.org/doxygen/group__CINDEX.html
+For a nice introduction to some capabilities and
+limitations (fewer now) of the libclang API,
+see this post:
 
-  For a nice introduction to some capabilities and 
-  limitations (fewer now) of the libclang API,
-  see this post:
-
-  http://eli.thegreenplace.net/2011/07/03/parsing-c-in-python-with-clang/
-
-### License
-
-Clang.jl is licensed under the MIT license.
+http://eli.thegreenplace.net/2011/07/03/parsing-c-in-python-with-clang/

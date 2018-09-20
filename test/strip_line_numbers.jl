@@ -1,4 +1,5 @@
 strip_line_numbers!(arg) = arg
+
 function strip_line_numbers!(ex::Expr)
     keep = trues(length(ex.args))
     for i = 1:length(ex.args)

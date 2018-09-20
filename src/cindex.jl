@@ -246,10 +246,7 @@ end
 ################################################################################
 
 # Retrieve function arguments for a given cursor
-function function_args(cursor::Union{FunctionDecl, CXXMethod})
-    search(cursor, ParmDecl)
-end
-
+function_args(cursor::Union{FunctionDecl, CXXMethod}) = search(cursor, ParmDecl)
 
 #returns a tuple with the default argument values for a C++ function
 #only seems to work if cplusplus=true in parse_header
@@ -352,13 +349,11 @@ end
 
 
 function tu_dispose(tu::CXTranslationUnit)
-    ccall( (:clang_disposeTranslationUnit, libclang), Nothing, (Ptr{Nothing},), tu)
+    ccall( (:clang_disposeTranslationUnit, libclang), Nothing, (Ptr{Cvoid},), tu)
 end
 
 function tu_cursor(tu::CXTranslationUnit)
-    if (tu == C_NULL)
-        error("Invalid TranslationUnit!")
-    end
+    tu == C_NULL && error("Invalid TranslationUnit!")
     getTranslationUnitCursor(tu)
 end
 

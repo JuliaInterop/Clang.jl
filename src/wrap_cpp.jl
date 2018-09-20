@@ -56,9 +56,7 @@ abstract type TypeProxy <: CLType end
 const __TypeProxiesType = Dict{AbstractString, Type}
 const TypeProxies = Dict{AbstractString, Type}()
 
-function get_proxy(typename::AbstractString)
-    get(TypeProxies::__TypeProxiesType, typename, Union{})
-end
+get_proxy(typename::AbstractString) = get(TypeProxies::__TypeProxiesType, typename, Union{})
 
 ################################################################################
 # Generation of C wrapper
@@ -74,9 +72,7 @@ function emit(out::IO, t::CLType)
     end
 end
 
-function emit(out::IO, t::Union{Record, Typedef})
-    print(out, spelling(cindex.getTypeDeclaration(t)))
-end
+emit(out::IO, t::Union{Record, Typedef}) = print(out, spelling(cindex.getTypeDeclaration(t)))
 
 function emit(out::IO, t::cindex.ConstantArray)
     arrtype = cindex.getArrayElementType(t)
@@ -121,9 +117,7 @@ function emit_args(out::IO, args)
     end
 end
 
-function emit_args_vals(out::IO, args)
-    print(out, join(map(spelling, args), ", "))
-end
+emit_args_vals(out::IO, args) = print(out, join(map(spelling, args), ", "))
 
 # function wrap(out::IO, method::cindex.Constructor, nameid::Int)
 #     wrap(out, convert(cindex.CXXMethod, method), nameid)
@@ -173,7 +167,7 @@ function wrap(out::IO, method::cindex.CXXMethod, nameid::Int)
     print(buf, "  ")
 
     # emit method call
-    if(hasreturn)
+    if hasreturn
         print(buf, "return")
         space(buf)
     end
@@ -301,9 +295,7 @@ function class_supers(cl::ClassDecl)
 end
 
 # TODO: FIXME
-function wrapjl(out::IO, t::cindex.ConstantArray)
-    print(out, "FIXEDARRAY")
-end
+wrapjl(out::IO, t::cindex.ConstantArray) = print(out, "FIXEDARRAY")
 
 function wrapjl(out::IO, t::Union{cindex.Record, cindex.Typedef})
     print(out, spelling(cindex.getTypeDeclaration(t)))
@@ -406,7 +398,7 @@ function wrapjl(out::IO, libname::String, method::cindex.Constructor, id::Int)
 
     args = get_args(method)
     defs = cindex.function_arg_defaults(method)
-    if (!check_args(args)) return end                       # TODO: warning?
+    !check_args(args) && return nothing # TODO: warning?
 
     print(buf, "@constructor")                                   # emit Julia call
     space(buf)
@@ -420,11 +412,7 @@ function wrapjl(out::IO, libname::String, method::cindex.Constructor, id::Int)
     space(buf)
     print(buf, methodname, id)             # C name
     space(buf)
-    if length(defs)>0
-        s = ", "
-    else
-        s = ""
-    end
+    s = length(defs) > 0 ? ", " : ""
     print(buf, string("(", join(defs, ", "), "$s )"))
     newline(buf)
     print(out, String(take!(buf)))
@@ -491,10 +479,7 @@ comma(io::IO)      = print(io, ",")
 newline(io::IO)    = print(io, "\n")
 
 
-function base_classes(class::cindex.ClassDecl)
-    return [cindex.getCursorReferenced(c)
-            for c in cindex.search(class, cindex.CXXBaseSpecifier)]
-end
+base_classes(class::cindex.ClassDecl) = [cindex.getCursorReferenced(c) for c in cindex.search(class, cindex.CXXBaseSpecifier)]
 
 returns_value(m::CXXMethod) = returns_value(cu_type(m))
 function returns_value(rtype::CLType)

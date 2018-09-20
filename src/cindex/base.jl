@@ -224,7 +224,7 @@ function getCursorExtent(cu)
     ccall( (:clang_getCursorExtent, libclang), CXSourceRange, (CXCursor,), cu)
 end
 function disposeTokens(tu::CXTranslationUnit, tokens::Ptr{CXToken}, numtokens::Cuint)
-    ccall( (:clang_disposeTokens, libclang), Nothing, (Ptr{Nothing}, Ptr{CXToken}, Cuint),
+    ccall( (:clang_disposeTokens, libclang), Nothing, (Ptr{Cvoid}, Ptr{CXToken}, Cuint),
            tu, tokens, numtokens)
 end
 function tokenize(tu::CXTranslationUnit, sr::CXSourceRange)

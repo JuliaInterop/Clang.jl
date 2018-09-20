@@ -160,7 +160,7 @@ function value(c::EnumConstantDecl)
     error("Unknown EnumConstantDecl type: ", t, " cursor: ", c)
 end
 
-function cu_children_visitor(cursor::CXCursor, parent::CXCursor, client_data::Ptr{Nothing})
+function cu_children_visitor(cursor::CXCursor, parent::CXCursor, client_data::Ptr{Cvoid})
     list = unsafe_pointer_to_objref(client_data)
     push!(list, cursor)
     return Cuint(1) # CXChildVisit_Continue TODO: use enum
@@ -168,7 +168,7 @@ end
 
 # TODO implement -- reduce allocations
 #=
-function cu_children_search(cursor::CXCursor, parent::CXCursor, client_data::Ptr{Nothing})
+function cu_children_search(cursor::CXCursor, parent::CXCursor, client_data::Ptr{Cvoid})
     # expect ("target", store::Array{CXCursor,1}, findfirst::Bool)
     target,store,findfirst = unsafe_pointer_to_objref(client_data)
 end
@@ -178,7 +178,7 @@ function children(cu::CLCursor)
     # TODO: possible to use sizehint! here?
     list = CLCursor[]
     ccall( (:clang_visitChildren, libclang), Nothing,
-           (CXCursor, Ptr{Nothing}, Ptr{Nothing}),
+           (CXCursor, Ptr{Cvoid}, Ptr{Cvoid}),
            cu, cu_visitor_cb, pointer_from_objref(list))
     list
 end
@@ -372,7 +372,7 @@ function tu_parse(CXIndex,
 
     ccall(  (:clang_parseTranslationUnit, libclang),
             CXTranslationUnit,
-            (Ptr{Nothing}, Ptr{UInt8}, Ptr{Ptr{UInt8}}, UInt32, Ptr{Nothing}, UInt32, UInt32),
+            (Ptr{Cvoid}, Ptr{UInt8}, Ptr{Ptr{UInt8}}, UInt32, Ptr{Cvoid}, UInt32, UInt32),
                 CXIndex,
                 source_filename,
                 cl_args,
@@ -394,13 +394,13 @@ idx_create() = idx_create(0,0)
 function getFile(tu::CXTranslationUnit, file::String)
     ccall( (:clang_getFile, libclang),
             CXFile,
-            (Ptr{Nothing}, Ptr{UInt8}),
+            (Ptr{Cvoid}, Ptr{UInt8}),
                 tu,
                 file)
 end
 
 function __init__()
-    global cu_visitor_cb = @cfunction(cu_children_visitor, Cuint, (CXCursor, CXCursor, Ptr{Nothing}))
+    global cu_visitor_cb = @cfunction(cu_children_visitor, Cuint, (CXCursor, CXCursor, Ptr{Cvoid}))
 end
 
 end # module

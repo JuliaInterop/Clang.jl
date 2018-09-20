@@ -222,12 +222,12 @@ export # CursorKind
     LastExtraDecl
 
 # Type definitions for wrapped types
-const CXIndex = Ptr{Nothing}
-const CXUnsavedFile = Ptr{Nothing}
-const CXFile = Ptr{Nothing}
+const CXIndex = Ptr{Cvoid}
+const CXUnsavedFile = Ptr{Cvoid}
+const CXFile = Ptr{Cvoid}
 const CXTypeKind = Int32
 const CXCursorKind = Int32
-const CXTranslationUnit = Ptr{Nothing}
+const CXTranslationUnit = Ptr{Cvoid}
 
 ###############################################################################
 # Container types
@@ -297,7 +297,7 @@ end
 
 function Base.convert(::Type{String}, x::CXString)
     ret = unsafe_string(x.data)
-    ccall( (:clang_disposeString, libclang), Nothing, (CXString,), x)
+    ccall( (:clang_disposeString, libclang), Cvoid, (CXString,), x)
     return ret
 end
 

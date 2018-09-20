@@ -44,5 +44,5 @@ function method_mangled_name(cursor::cindex.CXCursor)
     bufr = zeros(UInt8, 1024)
     ccall(("wci_getCXXMethodMangledName", :libwrapclang), Int32,
 		 (Ptr{UInt8},Ptr{UInt8}), cursor.data, bufr)
-    bytestring(convert(Ptr{UInt8},bufr))
+    unsafe_string(convert(Ptr{UInt8},bufr))
 end

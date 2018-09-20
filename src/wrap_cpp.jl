@@ -190,7 +190,7 @@ function wrap(out::IO, method::cindex.CXXMethod, nameid::Int)
     newline(buf)
 
     # print the buffer to the output
-    print(out, takebuf_string(buf))
+    print(out, String(take!(buf)))
     # TODO: return information about the thing we wrapped?
 end
 
@@ -241,7 +241,7 @@ function wrap(out::IO, method::cindex.Constructor, nameid::Int)
     newline(buf)
 
     # print the buffer to the output
-    print(out, takebuf_string(buf))
+    print(out, String(take!(buf)))
 end
 
 function wrap(out::IO, top::cindex.ClassDecl)
@@ -390,7 +390,7 @@ function wrapjl(out::IO, libname::String, method::cindex.CXXMethod, id::Int)
     end
     print(buf, string("(", join(defs, ", "), "$s )"))
     newline(buf)
-    print(out, takebuf_string(buf))
+    print(out, String(take!(buf)))
 end
 
 # function return_type(method::cindex.Constructor)
@@ -427,7 +427,7 @@ function wrapjl(out::IO, libname::String, method::cindex.Constructor, id::Int)
     end
     print(buf, string("(", join(defs, ", "), "$s )"))
     newline(buf)
-    print(out, takebuf_string(buf))
+    print(out, String(take!(buf)))
 end
 
 function wrapjl(out::IO, libname::String, class::cindex.ClassDecl)

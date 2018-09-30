@@ -16,7 +16,7 @@ export WrapContext
 reserved_words = ["begin", "while", "if", "for", "try", "return", "break", "continue",
                   "function", "macro", "quote", "let", "local", "global", "const", "do",
                   "struct", "module", "baremodule", "using", "import", "export", "end",
-                  "else", "catch", "finally", "true", "false"]
+                  "else", "elseif", "catch", "finally", "true", "false"]
 
 # These argument types are unsupported
 reserved_argtypes = ["va_list"]

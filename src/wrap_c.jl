@@ -390,7 +390,7 @@ function wrap(context::WrapContext, expr_buf::OrderedDict, sd::StructDecl; usena
     !context.options.wrap_structs && return nothing
 
     if usename == "" && (usename = name(sd)) == ""
-        print("Skipping unnamed StructDecl")
+        println("Skipping unnamed StructDecl")
         return nothing
     end
     usesym = Symbol(usename)

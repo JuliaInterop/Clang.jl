@@ -5,7 +5,6 @@ export parse_header, cu_type, ty_kind, name, spelling,
        tokenize, pointee_type, typedef_type
 export CLType, CLCursor, CXString, CXTypeKind, CursorList, TokenList
 
-import Base.search
 export search
 
 export function_return_modifiers, function_arg_modifiers, cu_visitor_cb
@@ -13,6 +12,8 @@ export function_return_modifiers, function_arg_modifiers, cu_visitor_cb
 import ..libclang
 
 ###############################################################################
+# include("cindex/cindex_common.jl")
+# include("cindex/cindex_api.jl")
 
 include("cindex/defs.jl")
 include("cindex/types.jl")
@@ -177,7 +178,7 @@ end
 function children(cu::CLCursor)
     # TODO: possible to use sizehint! here?
     list = CLCursor[]
-    ccall( (:clang_visitChildren, libclang), Nothing,
+    ccall( (:clang_visitChildren, libclang), Cvoid,
            (CXCursor, Ptr{Cvoid}, Ptr{Cvoid}),
            cu, cu_visitor_cb, pointer_from_objref(list))
     list
@@ -193,7 +194,7 @@ function cu_file(cu::CLCursor)
     cxfile = Ref{CXFile}()
     line = Ref{Cuint}(); col = Ref{Cuint}(); offset = Ref{Cuint}()
 
-    ccall( (:clang_getExpansionLocation, libclang), (Nothing),
+    ccall( (:clang_getExpansionLocation, libclang), (Cvoid),
             (CXSourceLocation, Ref{CXFile}, Ref{Cuint}, Ref{Cuint}, Ref{Cuint}),
             loc,               cxfile,       line,       col,        offset)
 
@@ -349,7 +350,7 @@ end
 
 
 function tu_dispose(tu::CXTranslationUnit)
-    ccall( (:clang_disposeTranslationUnit, libclang), Nothing, (Ptr{Cvoid},), tu)
+    ccall( (:clang_disposeTranslationUnit, libclang), Cvoid, (Ptr{Cvoid},), tu)
 end
 
 function tu_cursor(tu::CXTranslationUnit)

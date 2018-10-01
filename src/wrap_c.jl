@@ -681,7 +681,23 @@ function wrap_header(wc::WrapContext, topcu::CLCursor, top_hdr, obuf::Array)
             if (isa(cursor, FunctionDecl))
                 wrap(wc, obuf, cursor, wc.header_library(cu_file(cursor)))
             elseif !isa(cursor, TypeRef)
-                wrap(wc, wc.common_buf, cursor)
+                combine = isa(cursor, Union{EnumDecl, StructDecl})
+                if combine && i != length(topcl) && isa(topcl[i+1], TypedefDecl)
+                    # combine EnumDecl or StructDecl followed by TypedefDecl
+                    # without this, this enum from C:
+                    # typedef enum {
+                    #     GA_ReadOnly = 0,
+                    #     GA_Update = 1
+                    # } GDALAccess;
+                    # would be converted into Julia:
+                    # @enum ANONYMOUS_* GA_ReadOnly = 0, GA_Update = 1
+                    # const GDALAccess = Void
+                    # instead of just
+                    # @enum GDALAccess GA_ReadOnly = 0, GA_Update = 1
+                    wrap(wc, wc.common_buf, cursor; usename=name(topcl[i+1]))
+                else
+                    wrap(wc, wc.common_buf, cursor)
+                end
             else
                 continue
             end

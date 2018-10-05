@@ -361,29 +361,33 @@ end
 # Handle all other declarations
 ################################################################################
 
-function wrap(context::WrapContext, expr_buf::OrderedDict, cursor::EnumDecl; usename="")
-    if (usename == "" && (usename = name(cursor)) == "")
+function wrap(context::WrapContext, expr_buf::OrderedDict, cursor::CXCursor, kind::Val{CXCursor_EnumDecl}; usename="")
+    if usename == "" && (usename = name(cursor)) == ""
         usename = name_anon()
     end
-    enumname = usename
-
-    buf = Any[]
-    enum_exprs = ExprUnit(buf)
-    expr_buf[symbol_safe(enumname)] = enum_exprs
-
-    push!(buf, "# begin enum $enumname")
-    enumtype = repr_jl(cindex.getEnumDeclIntegerType(cursor))
-    _int = int_conversion[enumtype]
-    push!(buf, :(const $(Symbol(enumname)) = $enumtype))
+    enumname = symbol_safe(usename)
+    enumtype = repr_jl(clang_getEnumDeclIntegerType(cursor))
+    _int = INT_CONVERSION[enumtype]
+    name_values = Tuple{Symbol,Int}[]
+    # exctract values and names
     for enumitem in children(cursor)
         cur_name = cindex.spelling(enumitem)
-        length(cur_name) < 1 && continue
+        isempty(cur_name) && continue
         cur_sym = symbol_safe(cur_name)
-        push!(buf, :(const $cur_sym = $(value(enumitem)) |> $_int))
-        expr_buf[cur_sym] = enum_exprs
+        push!(name_values, (cur_sym, Int(value(enumitem))))
     end
-    push!(buf, "# end enum $enumname")
-
+    int_size = sizeof(_int)*8
+    if int_size == 32 # only add size if != 32
+        enum_expr = :(@cenum($enumname))
+    else
+        enum_expr = :(@cenum($enumname{$int_size}))
+    end
+    expr_buf[enumname] = ExprUnit(enum_expr)
+    for (name, value) in name_values
+        expr_buf[name] = expr_buf[enumname]
+        push!(enum_expr.args, :($name = $value))
+    end
+    return nothing
 end
 
 function wrap(context::WrapContext, expr_buf::OrderedDict, sd::StructDecl; usename = "")
@@ -738,40 +742,35 @@ end
 # Pretty-print a buffer of expressions (and comments) to an output stream
 # Adds blank lines at appropriate places for readability
 function print_buffer(ostrm, obuf)
-
     state = :comment
     in_enum = false
-
     for e in obuf
         isa(e, Poisoned) && continue
         prev_state = state
-        if state != :enum
-            state = isa(e, AbstractString) ? :string :
-                    isa(e, Expr) ? e.head : error("output: can't handle type $(typeof(e))")
-        end
+        state = (isa(e, AbstractString) ? :string :
+                 isa(e, Expr) ? e.head :
+                 error("output: can't handle type $(typeof(e))"))
 
         if state == :string
-            if startswith(e, "# begin enum")
-                state = :enum
-                println(ostrm)
-            elseif startswith(e, "# Skipping")
+            if startswith(e, "# Skipping")
                 state = :skipping
             end
         end
 
-        if state != :enum
-            if ((state != prev_state && prev_state != :string) ||
-                (state == prev_state && (state == :function ||
-                                         state == :struct)))
-                println(ostrm)
+        if ((state != prev_state && prev_state != :string) ||
+            (state == prev_state && (state == :function || state == :type)))
+            println(ostrm)
+        end
+
+        if isa(e, Expr) && e.head == :macrocall && first(e.args) == symbol("@cenum")
+            println(ostrm, "@cenum($(e.args[2]),")
+            for elem in e.args[3:end]
+                println(ostrm, "    $elem,")
             end
+            println(ostrm, ")")
+            continue
         end
-
         println(ostrm, e)
-
-        if state == :enum && isa(e, AbstractString) && startswith(e, "# end enum")
-            state = :end_enum
-        end
     end
 end
 

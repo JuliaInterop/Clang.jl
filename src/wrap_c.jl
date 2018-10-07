@@ -1,30 +1,4 @@
-################################################################################
-# Julia C wrapper generator using libclang from the LLVM project               #
-################################################################################
-
-module wrap_c
-
-version = v"0.0.0"
-
-using Clang.cindex
-using DataStructures
-
-export wrap_c_headers
-export WrapContext
-
-# Reserved Julia identifiers will be prepended with "_"
-reserved_words = ["begin", "while", "if", "for", "try", "return", "break", "continue",
-                  "function", "macro", "quote", "let", "local", "global", "const", "do",
-                  "struct", "module", "baremodule", "using", "import", "export", "end",
-                  "else", "elseif", "catch", "finally", "true", "false"]
-
-# These argument types are unsupported
-reserved_argtypes = ["va_list"]
-
-# These argument types will be untyped in the Julia signature
-untyped_argtypes = [IncompleteArray]
-
-### InternalOptions
+# InternalOptions
 mutable struct InternalOptions
     wrap_structs::Bool
     ismutable::Bool
@@ -34,23 +8,23 @@ InternalOptions() = InternalOptions(true, false)
 struct Poisoned end
 
 mutable struct ExprUnit
-    items::Array{Any}
+    items::Vector
     deps::OrderedSet{Symbol}
     state::Symbol
 end
 
-function ExprUnit(a::Array, deps=Any[]; state::Symbol=:new)
+function ExprUnit(a::Array, deps=[]; state::Symbol=:new)
     ExprUnit(a, OrderedSet{Symbol}([target_type(dep) for dep in deps]), state)
 end
-function ExprUnit(e::Union{Expr,Symbol,String,Poisoned}, deps=Any[]; state::Symbol=:new)
-    ExprUnit(Any[e], OrderedSet{Symbol}([target_type(dep) for dep in deps]), state)
+function ExprUnit(e::Union{Expr,Symbol,String,Poisoned}, deps=[]; state::Symbol=:new)
+    ExprUnit([e], OrderedSet{Symbol}([target_type(dep) for dep in deps]), state)
 end
-ExprUnit() = ExprUnit(Any[], OrderedSet{Symbol}(), :new)
+ExprUnit() = ExprUnit([], OrderedSet{Symbol}(), :new)
 
 ### WrapContext
 # stores shared information about the wrapping session
 mutable struct WrapContext
-    index::cindex.CXIndex
+    index::Index
     headers::Array{String,1}
     output_file::String
     common_file::String
@@ -93,7 +67,7 @@ function init(;
 
     # Set up some optional args if they are not explicitly passed.
 
-    (index == Union{}) && ( index = cindex.idx_create(0, (clang_diagnostics ? 1 : 0)) )
+    (index == Union{}) && ( index = Index(0, clang_diagnostics) )
 
     if (output_file == "" && header_outputfile == Union{})
         header_outputfile = x->joinpath(output_dir, strip(splitext(basename(x))[1]) * ".jl")
@@ -132,145 +106,60 @@ function init(;
     return context
 end
 
-###############################################################################
-#
-# Mapping from libclang types to Julia types
-#
-#   This is primarily used with CXTypeKind enums (aka: cindex.TypeKind)
-#   but can also be used to map arbitrary type names to corresponding
-#   Julia entities, for example "size_t" -> :Csize_t
-#
-##############################################################################
-cl_to_jl = Dict{Any,Any}(
-    cindex.VoidType         => :Cvoid,
-    cindex.BoolType         => :Bool,
-    cindex.Char_U           => :UInt8,
-    cindex.UChar            => :Cuchar,
-    cindex.Char16           => :UInt16,
-    cindex.Char32           => :UInt32,
-    cindex.UShort           => :UInt16,
-    cindex.UInt             => :UInt32,
-    cindex.ULong            => :Culong,
-    cindex.ULongLong        => :Culonglong,
-    cindex.Char_S           => :UInt8,
-    cindex.SChar            => :UInt8,
-    cindex.WChar            => :Char,
-    cindex.Short            => :Int16,
-    cindex.IntType          => :Cint,
-    cindex.Long             => :Clong,
-    cindex.LongLong         => :Clonglong,
-    cindex.Float            => :Cfloat,
-    cindex.Double           => :Cdouble,
-    cindex.LongDouble       => :Float64,
-    cindex.Enum             => :Cint,
-    cindex.NullPtr          => :C_NULL,
-    cindex.UInt128          => :UInt128,
-    cindex.Int128           => :UInt128,
-
-    cindex.FirstBuiltin     => :Cvoid,
-    cindex.CXType_Elaborated => :Cvoid,
-    cindex.Complex          => :Complex,
-    cindex.BlockPointer     => :Cvoid,
-    cindex.Pointer          => :Cvoid,
-    cindex.Invalid          => :Cvoid,
-    :size_t                 => :Csize_t,
-    :ptrdiff_t              => :Cptrdiff_t,
-    :uint64_t               => :UInt64,
-    :uint32_t               => :UInt32,
-    :uint16_t               => :UInt16,
-    :uint8_t                => :UInt8,
-    :int64_t                => :Int64,
-    :int32_t                => :Int32,
-    :int16_t                => :Int16,
-    :int8_t                 => :Int8,
-    :uintptr_t              => :Csize_t
-    )
-
-int_conversion = Dict{Any,Any}(
-    :Cint   => Int32,
-    :Cuint  => UInt32,
-    :Uint64 => UInt64,
-    :Uint32 => UInt32,
-    :Uint16 => UInt16,
-    :Uint8  => UInt8,
-    :UInt64 => UInt64,
-    :UInt32 => UInt32,
-    :UInt16 => UInt16,
-    :UInt8  => UInt8,
-    :Int64  => Int64,
-    :Int32  => Int32,
-    :Int16  => Int16,
-    :Int8   => Int8
-    )
 
 
-################################################################################
-#
-# libclang objects to Julia representation
-#
-# each repr_jl function takes one or more CLCursor or CLType objects,
-# and returns the appropriate representation.
-#
-################################################################################
-
-function repr_jl(t::Union{cindex.Record, cindex.Typedef})
-    tname = Symbol(spelling(cindex.getTypeDeclaration(t)))
-    return get(cl_to_jl, tname, tname)
+"""
+    represent2jl(t::CXType)
+    represent2jl(c::Cursor)
+libclang objects to Julia representation.
+"""
+represent2jl(t::CXType) = _represent2jl(Val(kind(t)), t)
+function _represent2jl(::Val, t::CXType)
+    typeKind = kind(t)
+    !haskey(CLANG_JULIA_TYPEMAP, typeKind) && error("No CXType translation available for: $typeKind")
+    return CLANG_JULIA_TYPEMAP[typeKind]
+end
+function _represent2jl(::Union{Val{CXType_Record},Val{CXType_Typedef}}, t::CXType)
+    tname = Symbol(spelling(typedecl(t)))
+    return get(CLANG_JULIA_TYPEMAP, tname, tname)
+end
+function _represent2jl(::Val{CXType_Pointer}, t::CXType)
+    ptee = pointee_type(t)
+    pteeKind = kind(pteeKind)
+    (pteeKind == CXType_Char_U || pteeKind == CXType_Char_S) && return :Cstring
+    pteeKind == CXType_WChar && return :Cwstring
+    Expr(:curly, :Ptr, represent2jl(ptee))
+end
+function _represent2jl(::Val{CXType_Unexposed}, t::CXType)
+    r = spelling(typedecl(t))
+    r == "" ? :Cvoid : Symbol(r)
+end
+function _represent2jl(::Val{CXType_ConstantArray}, t::CXType)
+    # For ConstantArray declarations, we use NTuples
+    arrsize = clang_getArraySize(t)
+    eltype = represent2jl(clang_getArrayElementType(t))
+    return :(NTuple{$arrsize, $eltype})
+end
+function _represent2jl(::Val{CXType_IncompleteArray}, t::CXType)
+    eltype = clang_getArrayElementType(t)
+    Expr(:curly, :Ptr, represent2jl(eltype))
 end
 
-function repr_jl(t::TypeRef)
-    reftype = cindex.getCursorReferenced(t)
-    refdef = cindex.getCursorDefinition(reftype)
-    if isa(refdef, cindex.InvalidFile) ||
-       isa(refdef, cindex.FirstInvalid) ||
-       isa(refdef, cindex.Invalid)
+represent2jl(c::CXCursor) = _represent2jl(Val(kind(c)), c)
+_represent2jl(::Val, c::CXCursor) = represent2jl(type(c))
+_represent2jl(::Val{CXCursor_UnionDecl}, c::CXCursor) = typedecl(c) |> largestfield |> represent2jl
+_represent2jl(::Val{CXCursor_EnumDecl}, c::CXCursor) = clang_getEnumDeclIntegerType(c) |> represent2jl
+function _represent2jl(::Val{CXCursor_TypeRef}, c::CXCursor)
+    reftype = clang_getCursorReferenced(c)
+    refdef = clang_getCursorDefinition(reftype)
+    cursorKind = kind(refdef)
+    if isnull(refdef) || cursorKind == CXCursor_InvalidFile || cursorKind == CXCursor_FirstInvalid
         return :Cvoid
     else
         return Symbol(spelling(reftype))
     end
 end
 
-function repr_jl(ptr::cindex.Pointer)
-    ptee = pointee_type(ptr)
-    (isa(ptee, cindex.Char_U) || isa(ptee, cindex.Char_S)) && return :Cstring
-    isa(ptee, cindex.WChar) && return :Cwstring
-    Expr(:curly, :Ptr, repr_jl(ptee))
-end
-
-function repr_jl(parm::cindex.ParmDecl)
-    return repr_jl(cu_type(parm))
-end
-
-function repr_jl(unxp::Unexposed)
-    r = spelling(cindex.getTypeDeclaration(unxp))
-    r == "" ? :Cvoid : Symbol(r)
-end
-
-function repr_jl(t::ConstantArray)
-    # For ConstantArray declarations,
-    # we use NTuples
-    arrsize = cindex.getArraySize(t)
-    eltype = repr_jl(cindex.getArrayElementType(t))
-
-    return :(NTuple{$arrsize, $eltype})
-end
-
-function repr_jl(t::IncompleteArray)
-    eltype = cindex.getArrayElementType(t)
-    Expr(:curly, :Ptr, repr_jl(eltype))
-end
-
-function repr_jl(t::Union)
-    tdecl = cindex.getTypeDeclaration(t)
-    maxelem = largestfield(tdecl)
-    return repr_jl(maxelem)
-end
-
-function repr_jl(arg::cindex.CLType)
-    rep = get(cl_to_jl, typeof(arg), nothing)
-    rep == nothing && error("No CLType translation available for: ", arg)
-    return rep
-end
 
 target_type(s::Symbol) = s
 function target_type(e::Expr)
@@ -284,25 +173,31 @@ function target_type(e::Expr)
 end
 target_type(q) = error("target_type: don't know how to handle $q")
 
-###############################################################################
-# Get field decl sizes
-#   - used for hacky union inclusion: we find the largest union field and
-#     declare a block of bytes to match.
-###############################################################################
+"""
+    typesize(t::CXType) -> Int
+    typesize(c::CXCursor) -> Int
+Return field decl sizes.
+"""
+typesize(t::CXType) = _typesize(Val(kind(t)), t)
+_typesize(::Val, t::CXType) = sizeof(getfield(Base, CLANG_JULIA_TYPEMAP[kind(t)]))
+_typesize(::Val{CXType_ConstantArray}, t::CXType) = clang_getArraySize(t)
+_typesize(::Val{CXType_Typedef}, t::CXType) = typesize(typedecl(t))
+_typesize(::Val{CXType_Record}, t::CXType) = (@warn("  incorrect typesize for CXType_Record field"); 0)
+_typesize(::Val{CXType_Unexposed}, t::CXType) = (@warn("  incorrect typesize for CXType_Unexposed field"); 0)
+_typesize(::Val{CXType_Invalid}, t::CXType) = (@warn("  incorrect typesize for CXType_Invalid field"); 0)
 
-typesize(t::CLType) = sizeof(getfield(Base, cl_to_jl[typeof(t)])::DataType)
-typesize(t::Record) = begin @warn("  incorrect typesize for Record field"); 0 end
-typesize(t::Unexposed) = begin @warn("  incorrect typesize for Unexposed field"); 0 end
-typesize(t::ConstantArray) = cindex.getArraySize(t)
-typesize(t::TypedefDecl) = typesize(cindex.getTypedefDeclUnderlyingType(t))
-typesize(t::Typedef) = typesize(cindex.getTypeDeclaration(t))
-typesize(t::Invalid) = begin @warn("  incorrect typesize for Invalid field"); 0 end
+typesize(c::CXCursor) = _typesize(Val(kind(c)), c)
+_typesize(::Val{CXCursor_TypedefDecl}, c::CXCursor) = typesize(clang_getTypedefDeclUnderlyingType(c))
 
-function largestfield(cu::UnionDecl)
-    maxsize,maxelem = 0,0
-    fields = children(cu)
+"""
+Used for hacky union inclusion: we find the largest union field and declare a block of
+bytes to match.
+"""
+function largestfield(c::CXCursor)
+    maxsize, maxelem = 0, 0
+    fields = children(c)
     for i in 1:length(fields)
-        field_size = typesize(cu_type(fields[i]))
+        field_size = typesize(type(fields[i]))
         if field_size > maxsize
             maxsize = field_size
             maxelem = i
@@ -311,34 +206,33 @@ function largestfield(cu::UnionDecl)
     fields[maxelem]
 end
 
-fieldsize(cu::FieldDecl) = fieldsize(children(cu)[1])
-
-################################################################################
-# Handle function declarations
-################################################################################
-
-function wrap(context::WrapContext, buf::Array, func_decl::FunctionDecl, libname)
-    func_type = cindex.cu_type(func_decl)
-    if isa(func_type, FunctionNoProto)
-        @warn "No Prototype for $(func_decl) - assuming no arguments"
-    elseif cindex.isFunctionTypeVariadic(func_type) == 1
-        @warn "Skipping VarArg Function $(func_decl)"
-        return nothing
+"""
+    _wrap!(::Val{CXCursor_FunctionDecl}, cursor::CXCursor, buffer::Vector; libname="libxxx")
+Subroutine for handling function declarations.
+"""
+function _wrap!(::Val{CXCursor_FunctionDecl}, cursor::CXCursor, buffer::Vector; libname="libxxx")
+    func_type = type(cursor)
+    if kind(func_type) == CXType_FunctionNoProto
+        @warn "No Prototype for $(cursor) - assuming no arguments"
+    elseif clang_isFunctionTypeVariadic(func_type) == 1
+        @warn "Skipping VarArg Function $(cursor)"
+        return buffer
     end
+    libname == "libxxx" && @warn "default libname: \"libxxx\" are being used, did you forget to specify the libname?"
 
-    funcname = Symbol(spelling(func_decl))
-    ret_type = repr_jl(return_type(func_decl))
+    func_name = Symbol(spelling(cursor))
+    ret_type = represent2jl(return_type(cursor))
 
-    args = cindex.function_args(func_decl)
+    args = function_args(cursor)
 
-    arg_types = [cindex.getArgType(func_type.typ, UInt32(i)) for i in 0:length(args)-1]
-    arg_reps = [repr_jl(x) for x in arg_types]
+    arg_types = [clang_getArgType(func_type, i) for i in 0:length(args)-1]
+    arg_reps = [represent2jl(x) for x in arg_types]
 
     # check whether any argument types are blocked
-    for arg_t in arg_types
-        if spelling(arg_t) in reserved_argtypes
-            warning("Skipping $(name(func_decl)) due to unsupported argument: $(name(arg_t))")
-            return nothing
+    for t in arg_types
+        if spelling(t) in RESERVED_ARG_TYPES
+            @warn "Skipping $(name(cursor)) due to unsupported argument: $(name(t))"
+            return buffer
         end
     end
 
@@ -346,118 +240,15 @@ function wrap(context::WrapContext, buf::Array, func_decl::FunctionDecl, libname
     arg_count = 0
     arg_names = convert(Vector{Symbol},
                         map(x-> Symbol(begin
-                                         nm = name_safe(cindex.name(x))
+                                         nm = name_safe(name(x))
                                          nm != "" ? nm : "arg"*string(arg_count+=1)
                                        end),
                                 args))
 
-    sig = efunsig(funcname, arg_names, arg_reps)
-    body = eccall(funcname, Symbol(libname), ret_type, arg_names, arg_reps)
+    sig = efunsig(func_name, arg_names, arg_reps)
+    body = eccall(func_name, Symbol(libname), ret_type, arg_names, arg_reps)
     e = Expr(:function, sig, Expr(:block, body))
-    push!(buf, e)
-end
-
-################################################################################
-# Handle all other declarations
-################################################################################
-
-function wrap(context::WrapContext, expr_buf::OrderedDict, cursor::CXCursor, kind::Val{CXCursor_EnumDecl}; usename="")
-    if usename == "" && (usename = name(cursor)) == ""
-        usename = name_anon()
-    end
-    enumname = symbol_safe(usename)
-    enumtype = repr_jl(clang_getEnumDeclIntegerType(cursor))
-    _int = INT_CONVERSION[enumtype]
-    name_values = Tuple{Symbol,Int}[]
-    # exctract values and names
-    for enumitem in children(cursor)
-        cur_name = cindex.spelling(enumitem)
-        isempty(cur_name) && continue
-        cur_sym = symbol_safe(cur_name)
-        push!(name_values, (cur_sym, Int(value(enumitem))))
-    end
-    int_size = sizeof(_int)*8
-    if int_size == 32 # only add size if != 32
-        enum_expr = :(@cenum($enumname))
-    else
-        enum_expr = :(@cenum($enumname{$int_size}))
-    end
-    expr_buf[enumname] = ExprUnit(enum_expr)
-    for (name, value) in name_values
-        expr_buf[name] = expr_buf[enumname]
-        push!(enum_expr.args, :($name = $value))
-    end
-    return nothing
-end
-
-function wrap(context::WrapContext, expr_buf::OrderedDict, sd::StructDecl; usename = "")
-    !context.options.wrap_structs && return nothing
-
-    if usename == "" && (usename = name(sd)) == ""
-        println("Skipping unnamed StructDecl")
-        return nothing
-    end
-    usesym = Symbol(usename)
-
-    struct_fields = children(sd)
-
-    # Generate type declaration
-    b = Expr(:block)
-    e = Expr(:struct, context.options.ismutable, usesym, b)
-    deps = OrderedSet{Symbol}()
-    for cu in struct_fields
-        cur_name = spelling(cu)
-        if isa(cu, StructDecl) || isa(cu, UnionDecl)
-            continue
-        elseif !(isa(cu, FieldDecl) || isa(cu, TypeRef))
-            expr_buf[usesym] = ExprUnit(Poisoned())
-            print("Skipping struct: \"$usename\" due to unsupported field: $cur_name")
-            return nothing
-        elseif length(cur_name) < 1
-            error("Unnamed struct member in: $usename ... cursor: ", string(cu))
-        end
-
-        repr = repr_jl(cu_type(cu))
-        push!(b.args, Expr(:(::), symbol_safe(cur_name), repr))
-        push!(deps, target_type(repr))
-    end
-    println()
-
-    # Check for a previous forward ordering
-    if !(usesym in keys(expr_buf)) || (expr_buf[usesym].state == :empty)
-        if length(struct_fields) > 0
-            expr_buf[usesym] = ExprUnit(e, deps)
-        else
-            # Possible forward definition
-            expr_buf[usesym] = ExprUnit(e, deps, state=:empty)
-        end
-    end
-    return
-end
-
-function wrap(context::WrapContext, expr_buf::OrderedDict, ud::UnionDecl; usename = "")
-    if usename == "" && (usename = name(ud)) == ""
-        @warn "Skipping unnamed UnionDecl"
-        return nothing
-    end
-
-    b = Expr(:block)
-    e = Expr(:struct, context.options.ismutable, Symbol(usename), b)
-    max_cu = largestfield(ud)
-    cur_sym = Symbol("_", usename)
-    target = repr_jl(cu_type(max_cu))
-
-    if string(target) == ""
-        @warn "Skipping UnionDecl $(usename) because largest field '$(name(max_cu))' could not be typed", string(target)
-        return nothing
-    end
-
-    push!(b.args, Expr(:(::), cur_sym, target))
-
-    # TODO: add other dependencies
-    expr_buf[cur_sym] = ExprUnit(e, Any[target])
-
-    return nothing
+    push!(buffer, e)
 end
 
 function is_ptr_type_expr(@nospecialize t)
@@ -480,39 +271,150 @@ function eccall(funcname::Symbol, libname::Symbol, rtype, args, types)
     )
 end
 
-function wrap(context::WrapContext, expr_buf::OrderedDict, tdecl::TypedefDecl; usename="")
-    cursor_type = cindex.cu_type(tdecl)
-    td_type = cindex.getTypedefDeclUnderlyingType(tdecl)
+"""
+    _wrap!(::Val{CXCursor_EnumDecl}, cursor::CXCursor, buffer::OrderedDict; usename="")
+Subroutine for handling enum declarations.
+"""
+function _wrap!(::Val{CXCursor_EnumDecl}, cursor::CXCursor, buffer::OrderedDict; usename="")
+    if usename == "" && (usename = name(cursor)) == ""
+        usename = name_anon()
+    end
+    enumname = symbol_safe(usename)
+    enumtype = represent2jl(cursor)
+    name_values = Tuple{Symbol,Int}[]
+    # exctract values and names
+    for enumitem in children(cursor)
+        cur_name = spelling(enumitem)
+        isempty(cur_name) && continue
+        cur_sym = symbol_safe(cur_name)
+        push!(name_values, (cur_sym, Int(value(enumitem))))
+    end
+    int_size = 8*sizeof(INT_CONVERSION[enumtype])
+    if int_size == 32 # only add size if != 32
+        enum_expr = :(@cenum($enumname))
+    else
+        enum_expr = :(@cenum($enumname{$int_size}))
+    end
+    buffer[enumname] = ExprUnit(enum_expr)
+    for (name, value) in name_values
+        buffer[name] = buffer[enumname]
+        push!(enum_expr.args, :($name = $value))
+    end
+    return buffer
+end
 
-    if isa(td_type, Unexposed)
-        decl_parts = children(tdecl)
+"""
+    _wrap!(::Val{CXCursor_StructDecl}, cursor::CXCursor, buffer::OrderedDict; usename="", ismutable=false)
+Subroutine for handling struct declarations.
+"""
+function _wrap!(::Val{CXCursor_StructDecl}, cursor::CXCursor, buffer::OrderedDict; usename="", ismutable=false)
+    if usename == "" && name(cursor) == ""
+        @warn "Skipping unnamed StructDecl!"
+        return buffer
+    end
+    usesym = Symbol(name(cursor))
+    structFields = children(cursor)
 
-        local tdunxp
+    # Generate type declaration
+    b = Expr(:block)
+    e = Expr(:struct, ismutable, usesym, b)
+    deps = OrderedSet{Symbol}()
+    for cursor in structFields
+        cursorName = spelling(cursor)
+        cursorKind = kind(cursor)
+        if cursorKind == CXCursor_StructDecl || cursorKind == CXCursor_UnionDecl
+            continue
+        elseif cursorKind != CXCursor_FieldDecl || cursorKind == CXCursor_TypeRef
+            buffer[usesym] = ExprUnit(Poisoned())
+            @warn "Skipping struct: \"$usename\" due to unsupported field: $cursorName"
+            return buffer
+        elseif isempty(cursorName)
+            error("Unnamed struct member in: $usename ... cursor: $cursorName")
+        end
+        repr = represent2jl(cursor)
+        push!(b.args, Expr(:(::), symbol_safe(cursorName), repr))
+        push!(deps, target_type(repr))
+    end
 
-        for part in decl_parts
+    # Check for a previous forward ordering
+    if !(usesym in keys(buffer)) || (buffer[usesym].state == :empty)
+        if !isempty(structFields)
+            buffer[usesym] = ExprUnit(e, deps)
+        else
+            # Possible forward definition
+            buffer[usesym] = ExprUnit(e, deps, state=:empty)
+        end
+    end
+    return buffer
+end
+
+"""
+    _wrap!(::Val{CXCursor_UnionDecl}, cursor::CXCursor, buffer::OrderedDict; usename="", ismutable=false)
+Subroutine for handling union declarations.
+"""
+function _wrap!(::Val{CXCursor_UnionDecl}, cursor::CXCursor, buffer::OrderedDict; usename="", ismutable=false)
+    if usename == "" && name(cursor) == ""
+        @warn "Skipping unnamed StructDecl!"
+        return buffer
+    end
+
+    b = Expr(:block)
+    e = Expr(:struct, ismutable, Symbol(usename), b)
+    cursorSym = Symbol("_", usename)
+    cursorMax = largestfield(cursor)
+    target = represent2jl(cursorMax)
+    push!(b.args, Expr(:(::), cursorSym, target))
+
+    # TODO: add other dependencies
+    buffer[cursorSym] = ExprUnit(e, Any[target])
+
+    return buffer
+end
+
+"""
+    _wrap!(::Val{CXCursor_TypedefDecl}, cursor::CXCursor, buffer::OrderedDict; usename="")
+Subroutine for handling typedef declarations.
+"""
+function _wrap!(::Val{CXCursor_TypedefDecl}, cursor::CXCursor, buffer::OrderedDict; usename="")
+    td_type = clang_getTypedefDeclUnderlyingType(cursor)
+    @assert !isvalid(td_type)
+    td_sym = Symbol(spelling(cursor))
+
+    if kind(td_type) == CXType_Unexposed
+        local tdunxp::CXCursor
+        for c in children(cursor)
             # skip any leading non-type cursors
             # Attributes, ...
-            if !isa(part, FirstAttr)
-                tdunxp = part
+            if kind(c) != CXCursor_FirstAttr
+                tdunxp = c
                 break
             end
         end
 
-        if isa(tdunxp, TypeRef)
-            td_type = tdunxp
+        if kind(tdunxp) == CXCursor_TypeRef
+            unxp_target = represent2jl(tdunxp)
+            if !haskey(buffer, td_sym)
+                buffer[td_sym] = ExprUnit(:(const $td_sym = $unxp_target), Any[unxp_target])
+            end
+            return buffer
         else
-            wrap(context, expr_buf, tdunxp; usename=name(tdecl))
-            return # TODO.. ugly flow
+            _wrap!(Val(kind(tdunxp)), tdunxp, buffer, usename=name(cursor))
+            return buffer
         end
-    elseif isa(td_type, FunctionProto)
-        return string("# Skipping Typedef: FunctionProto ", spelling(tdecl))
     end
 
-    td_sym = Symbol(spelling(tdecl))
-    td_target = repr_jl(td_type)
-    if !haskey(expr_buf, td_sym)
-        expr_buf[td_sym] = ExprUnit(:(const $td_sym = $td_target), Any[td_target])
+    if kind(td_type) == CXType_FunctionProto
+        if !haskey(buffer, td_sym)
+            buffer[td_sym] = ExprUnit(string("# Skipping Typedef: CXType_FunctionProto ", spelling(cursor)))
+        end
+        return buffer
     end
+
+    td_target = represent2jl(td_type)
+    if !haskey(buffer, td_sym)
+        buffer[td_sym] = ExprUnit(:(const $td_sym = $td_target), Any[td_target])
+    end
+    return buffer
 end
 
 ################################################################################
@@ -525,11 +427,11 @@ end
 function handle_macro_exprn(tokens::TokenList, pos::Int)
     function trans(tok)
         ops = ["+" "-" "*" "~" ">>" "<<" "/" "\\" "%" "|" "||" "^" "&" "&&"]
-        if (isa(tok, cindex.Literal) ||
-            (isa(tok,cindex.Identifier))) return 0
-        elseif (isa(tok, cindex.Punctuation) && tok.text in ops) return 1
-        else return -1
-        end
+        tokenKind = kind(tok)
+        txt = spelling(tokens.tu, tok)
+        (tokenKind == CXToken_Literal || tokenKind == CXToken_Identifier) && return 0
+        tokenKind == CXToken_Punctuation && txt ∈ ops && return 1
+        return -1
     end
 
     # normalize literal with a size suffix
@@ -557,16 +459,16 @@ function handle_macro_exprn(tokens::TokenList, pos::Int)
           return "$(unsigned ? "U" : "")Int$nbits"
         end
 
-        txt = tok.text
-        if isa(tok,cindex.Identifier) || isa(tok,cindex.Punctuation)
+        tokenKind = kind(tok)
+        txt = spelling(tokens.tu, tok) |> strip
+        if tokenKind == CXToken_Identifier || tokenKind == CXToken_Punctuation
             # pass
-        elseif isa(tok,cindex.Literal)
-            txt = strip(tok.text)
+        elseif tokenKind == CXToken_Literal
             for sfx in literalsuffixes
                 if endswith(txt, sfx)
-                    _type = literal_totype(sfx, txt)
+                    type = literal_totype(sfx, txt)
                     txt = txt[1:end-length(sfx)]
-                    txt = "$(_type)($txt)"
+                    txt = "$(type)($txt)"
                     break
                 end
             end
@@ -577,7 +479,7 @@ function handle_macro_exprn(tokens::TokenList, pos::Int)
     # check whether identifiers and literals alternate
     # with punctuation
     exprn = ""
-    pos > length(tokens) && return (exprn,pos)
+    pos > length(tokens) && return exprn, pos
 
     prev = 1 >> trans(tokens[pos])
     for lpos = pos:length(tokens)
@@ -591,7 +493,7 @@ function handle_macro_exprn(tokens::TokenList, pos::Int)
         end
         exprn = exprn * literally(tok)
     end
-    return (exprn,pos)
+    return exprn, pos
 end
 
 # TODO: This really returns many more symbols than we want,
@@ -603,77 +505,76 @@ get_symbols(s::Symbol) = Any[s]
 get_symbols(e::Expr) = vcat(get_symbols(e.head), get_symbols(e.args))
 get_symbols(xs::Array) = reduce(vcat, [get_symbols(x) for x in xs])
 
-function wrap(context::WrapContext, expr_buf::OrderedDict, md::cindex.MacroDefinition)
-    tokens = tokenize(md)
+"""
+    _wrap!(::Val{CXCursor_MacroDefinition}, cursor::CXCursor, buffer::OrderedDict)
+Subroutine for handling macro declarations.
+"""
+function _wrap!(::Val{CXCursor_MacroDefinition}, cursor::CXCursor, buffer::OrderedDict)
+    tokens = tokenize(cursor)
     # Skip any empty definitions
-    tokens.size < 2 && return nothing
-    startswith(name(md), "_") && return nothing
+    tokens.size < 2 && return buffer
+    startswith(name(cursor), "_") && return buffer
 
+    text = x->spelling(tokens.tu, x)
     pos = 1; exprn = ""
-    if tokens[2].text == "("
-        exprn,pos = handle_macro_exprn(tokens, 3)
-        if (pos != lastindex(tokens) || tokens[pos].text != ")" || exprn == "")
-            mdef_str = join([c.text for c in tokens], " ")
-            expr_buf[Symbol(mdef_str)] = ExprUnit(string("# Skipping MacroDefinition: ", replace(mdef_str, "\n"=>"\n#")))
-            return nothing
+    if text(tokens[2]) == "("
+        exprn, pos = handle_macro_exprn(tokens, 3)
+        if pos != lastindex(tokens) || text(tokens[pos]) != ")" || exprn == ""
+            mdef_str = join([text(c) for c in tokens], " ")
+            buffer[Symbol(mdef_str)] = ExprUnit(string("# Skipping MacroDefinition: ", replace(mdef_str, "\n"=>"\n#")))
+            return buffer
         end
         exprn = "(" * exprn * ")"
     else
-        (exprn,pos) = handle_macro_exprn(tokens, 2)
+        exprn, pos = handle_macro_exprn(tokens, 2)
         if pos != lastindex(tokens)
-            mdef_str = join([c.text for c in tokens], " ")
-            expr_buf[Symbol(mdef_str)] = ExprUnit(string("# Skipping MacroDefinition: ", replace(mdef_str, "\n"=>"#\n")))
-            return nothing
+            mdef_str = join([text(c) for c in tokens], " ")
+            buffer[Symbol(mdef_str)] = ExprUnit(string("# Skipping MacroDefinition: ", replace(mdef_str, "\n"=>"#\n")))
+            return buffer
         end
     end
 
     # Occasionally, skipped definitions slip through
-    (exprn == "" || exprn == "()") && return nothing
+    (exprn == "" || exprn == "()") && return buffer
 
-    use_sym = symbol_safe(tokens[1].text)
+    use_sym = symbol_safe(text(tokens[1]))
     target = Meta.parse(exprn)
     e = Expr(:const, Expr(:(=), use_sym, target))
 
     deps = get_symbols(target)
-    expr_buf[use_sym] = ExprUnit(e, deps)
+    buffer[use_sym] = ExprUnit(e, deps)
+
+    return buffer
 end
 
 # Does this actually occur in header files???
-function wrap(context::WrapContext, expr_buf::OrderedDict, cursor::TypeRef; usename="")
-    usename == "" && (usename = name(cursor))
-    error("Found typeref: ", cursor)
-    println("Printing typeref: ", cursor)
+function _wrap!(::Val{CXCursor_TypeRef}, cursor::CXCursor, buffer::OrderedDict; usename="")
+    usename == "" && (usename = name(cursor);)
+    @error "Found CXCursor_TypeRef: ", cursor
+    println("Printing CXCursor_TypeRef: ", cursor)
     usesym = Symbol(usename)
-    expr_buf[usesym] = ExprUnit(usesym)
+    buffer[usesym] = ExprUnit(usesym)
 end
 
-wrap(context::WrapContext, buf, cursor; usename="") = @warn "Not wrapping $(typeof(cursor))  $usename $(name(cursor))"
+_wrap!(::Val, cursor::CXCursor, buffer; usename="") = @warn "Not wrapping $(typeof(cursor))  $usename $(name(cursor))"
+wrap!(cursor::CXCursor, buffer; args...) = _wrap!(Val(kind(cursor)), cursor, buffer; args...)
 
 
-################################################################################
-# Wrapping driver
-################################################################################
-
-# Any failed cursor in the loop below is put in this global for debugging
-debug_cursors = []
-
-function wrap_header(wc::WrapContext, topcu::CLCursor, top_hdr, obuf::Array)
-    println("WRAPPING HEADER: $top_hdr")
-
-    topcl = children(topcu)
-    push!(debug_cursors, topcu)
-
+function wrap_header(wc::WrapContext, top_cursor::CXCursor, top_header, out_buffer::Array)
+    @info "wrapping header: $top_header ..."
+    push!(DEBUG_CURSORS, top_cursor)
     # Loop over all of the child cursors and wrap them, if appropriate.
-    for i = 1:length(topcl)
-        cursor = topcl[i]
-        cursor_hdr = cu_file(cursor)
+    child_cursors = children(top_cursor)
+    for (i, cursor) in enumerate(child_cursors)
         cursor_name = name(cursor)
+        cursor_header = filename(cursor)
+        cursor_kind = kind(cursor)
 
         # what should be wrapped:
         #   1. wrap if context.header_wrapped(top_header, cursor_header) == True
         #   2. wrap if context.cursor_wrapped(cursor_name, cursor) == True
         #   3. skip compiler defs and cursors already wrapped
-        if !wc.header_wrapped(top_hdr, cursor_hdr) ||
+        if !wc.header_wrapped(top_header, cursor_header) ||
            !wc.cursor_wrapped(cursor_name, cursor) ||       # client callbacks
            startswith(cursor_name, "__")           ||       # skip compiler definitions
            ((cursor_name in keys(wc.common_buf)) &&         # already wrapped
@@ -682,11 +583,10 @@ function wrap_header(wc::WrapContext, topcu::CLCursor, top_hdr, obuf::Array)
         end
 
         try
-            if (isa(cursor, FunctionDecl))
-                wrap(wc, obuf, cursor, wc.header_library(cu_file(cursor)))
-            elseif !isa(cursor, TypeRef)
-                combine = isa(cursor, Union{EnumDecl, StructDecl})
-                if combine && i != length(topcl) && isa(topcl[i+1], TypedefDecl)
+            if cursor_kind == CXCursor_FunctionDecl
+                wrap(cursor, out_buffer, wc.header_library(filename(cursor)))
+            elseif cursor_kind == CXCursor_EnumDecl || cursor_kind == CXCursor_StructDecl
+                if i != length(cursors) && kind(child_cursors[i+1]) == CXCursor_TypedefDecl
                     # combine EnumDecl or StructDecl followed by TypedefDecl
                     # without this, this enum from C:
                     # typedef enum {
@@ -698,104 +598,99 @@ function wrap_header(wc::WrapContext, topcu::CLCursor, top_hdr, obuf::Array)
                     # const GDALAccess = Void
                     # instead of just
                     # @enum GDALAccess GA_ReadOnly = 0, GA_Update = 1
-                    wrap(wc, wc.common_buf, cursor; usename=name(topcl[i+1]))
+                    wrap!(cursor, wc.common_buf, usename=name(child_cursors[i+1]))
                 else
-                    wrap(wc, wc.common_buf, cursor)
+                    wrap!(cursor, wc.common_buf)
                 end
+            elseif cursor_kind != CXCursor_TypeRef
+                wrap!(cursor, wc.common_buf)
             else
                 continue
             end
         catch err
-            push!(debug_cursors, cursor)
-            @info("Error thrown. Last cursor available in Clang.wrap_c.debug_cursors")
+            push!(DEBUG_CURSORS, cursor)
+            @error "error thrown. Last cursor available in Clang.wrap_c.DEBUG_CURSORS."
             rethrow(err)
         end
     end
 end
 
 function parse_c_headers(wc::WrapContext)
-    parsed = Dict{String, CLCursor}()
+    parsed = Dict{String,TranslationUnit}()
 
     # Parse the headers
     for header in unique(wc.headers)
-        topcu = cindex.parse_header(header;
-                                    index = wc.index,
-                                    args  = wc.clang_args,
-                                    includes = wc.clang_includes,
-                                    flags = TranslationUnit_Flags.DetailedPreprocessingRecord |
-                                    TranslationUnit_Flags.SkipFunctionBodies)
-        parsed[header] = topcu
+        tu = parse_header(header;
+                          index = wc.index,
+                          args = wc.clang_args,
+                          includes = wc.clang_includes,
+                          flags = TranslationUnit_Flags.DetailedPreprocessingRecord |
+                                  TranslationUnit_Flags.SkipFunctionBodies)
+        parsed[header] = tu
     end
     return parsed
 end
 
 function sort_includes(wc::WrapContext, parsed)
-    includes = mapreduce(x->search(parsed[x], InclusionDirective), append!, keys(parsed))
-    header_paths = unique(map(x->cindex.getIncludedFile(x), includes))
+    includes = mapreduce(x->search(parsed[x], CXCursor_InclusionDirective), append!, keys(parsed))
+    header_paths = clang_getIncludedFile.(includes) |> unique
     return unique(vcat(filter(x -> x in header_paths, wc.headers), wc.headers))
 end
 
-################################################################################
-# Wrapping driver
-################################################################################
-
-# Pretty-print a buffer of expressions (and comments) to an output stream
-# Adds blank lines at appropriate places for readability
-function print_buffer(ostrm, obuf)
+"""
+Pretty-print a buffer of expressions (and comments) to an output stream
+Adds blank lines at appropriate places for readability
+"""
+function print_buffer(out_stream, out_buffer)
     state = :comment
     in_enum = false
-    for e in obuf
+    for e in out_buffer
         isa(e, Poisoned) && continue
         prev_state = state
         state = (isa(e, AbstractString) ? :string :
                  isa(e, Expr) ? e.head :
                  error("output: can't handle type $(typeof(e))"))
 
-        if state == :string
-            if startswith(e, "# Skipping")
-                state = :skipping
-            end
+        if state == :string && startswith(e, "# Skipping")
+            state = :skipping
         end
 
         if ((state != prev_state && prev_state != :string) ||
             (state == prev_state && (state == :function || state == :type)))
-            println(ostrm)
+            println(out_stream)
         end
 
         if isa(e, Expr) && e.head == :macrocall && first(e.args) == symbol("@cenum")
-            println(ostrm, "@cenum($(e.args[2]),")
+            println(out_stream, "@cenum($(e.args[2]),")
             for elem in e.args[3:end]
-                println(ostrm, "    $elem,")
+                println(out_stream, "    $elem,")
             end
-            println(ostrm, ")")
+            println(out_stream, ")")
             continue
         end
-        println(ostrm, e)
+        println(out_stream, e)
     end
 end
 
-function dump_to_buf!(buf::Array, expr_buf::OrderedDict{Symbol, ExprUnit}, item::ExprUnit)
-    (item.state == :done || item.state == :processing) && return nothing
+function dump_to_buffer!(buffer::Vector, expr_dict::OrderedDict{Symbol,ExprUnit}, item::ExprUnit)
+    (item.state == :done || item.state == :processing) && return buffer
     item.state = :processing
-
     for dep in item.deps
-        dep_expr = get(expr_buf, dep, nothing)
-        dep_expr == nothing && continue
-        dump_to_buf!(buf, expr_buf, dep_expr)
+        haskey(expr_dict, dep) || continue
+        dump_to_buffer!(buffer, expr_dict, buffer[dep])
     end
-
-    append!(buf, item.items)
+    append!(buffer, item.items)
     item.state = :done
+    return buffer
 end
 
-
-function dump_to_buf(expr_buf::OrderedDict{Symbol, ExprUnit})
-    buf = Any[]
-    for item in values(expr_buf)
+function dump_to_buffer(expr_dict::OrderedDict{Symbol,ExprUnit})
+    buffer = []
+    for item in values(expr_dict)
         item.state == :done && continue
-        dump_to_buf!(buf, expr_buf, item)
+        dump_to_buffer!(buffer, expr_dict, item)
     end
-    buf
+    return buffer
 end
 
 function Base.run(wc::WrapContext)
@@ -809,34 +704,34 @@ function Base.run(wc::WrapContext)
     getfile(f) = (f in keys(filehandles)) ? filehandles[f] : (filehandles[f] = open(f, "w"))
 
     for hfile in wc.headers
-        outfile = wc.header_outputfile(hfile)
-        obuf = wc.output_bufs[hfile]
+        out_file = wc.header_outputfile(hfile)
+        out_buffer = wc.output_bufs[hfile]
 
         # Extract header to Expr[] array
-        wrap_header(wc, parsed[hfile], hfile, obuf)
+        wrap_header(wc, parsed[hfile], hfile, out_buffer)
 
         # Apply user-supplied transformation
-        wc.output_bufs[hfile] = wc.rewriter(obuf)
+        wc.output_bufs[hfile] = wc.rewriter(out_buffer)
 
         # Debug
-        println("writing $(outfile)")
+        @info "writing $(out_file)"
 
         # Write output
-        ostrm = getfile(outfile)
-        println(ostrm, "# Julia wrapper for header: $hfile")
-        println(ostrm, "# Automatically generated using Clang.jl wrap_c, version $version\n")
+        out_stream = getfile(out_file)
+        println(out_stream, "# Julia wrapper for header: $hfile")
+        println(out_stream, "# Automatically generated using Clang.jl wrap_c\n")
 
-        print_buffer(ostrm, wc.output_bufs[hfile])
+        print_buffer(out_stream, wc.output_bufs[hfile])
     end
 
-    common_buf = dump_to_buf(wc.common_buf)
+    common_buf = dump_to_buffer(wc.common_buf)
 
     # Apply user-supplied transformation
     common_buf = wc.rewriter(common_buf)
 
     # Write "common" definitions: types, typealiases, etc.
     open(wc.common_file, "w") do f
-        println(f, "# Automatically generated using Clang.jl wrap_c, version $version\n")
+        println(f, "# Automatically generated using Clang.jl wrap_c\n")
         print_buffer(f, common_buf)
     end
 
@@ -848,9 +743,5 @@ end
 ###############################################################################
 
 name_anon() = "ANONYMOUS_"*string((context::WrapContext).anon_count += 1)
-name_safe(cursor_name::AbstractString) = (cursor_name in reserved_words) ? "_"*cursor_name : cursor_name
+name_safe(cursor_name::AbstractString) = (cursor_name in RESERVED_WORDS) ? "_"*cursor_name : cursor_name
 symbol_safe(cursor_name::AbstractString) = Symbol(name_safe(cursor_name))
-
-###############################################################################
-
-end # module wrap_c

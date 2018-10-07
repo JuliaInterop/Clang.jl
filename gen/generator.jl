@@ -30,8 +30,8 @@ rewriter(arg) = arg
 wrap_header(top_hdr::String, cursor_header::String) = (top_hdr == cursor_header)
 
 wc = wrap_c.init(; headers = CLANG_HEADERS,
-                   output_file = joinpath(@__DIR__, "..", "src", "cindex", "cindex_api.jl"),
-                   common_file = joinpath(@__DIR__, "..", "src", "cindex", "cindex_common.jl"),
+                   output_file = joinpath(@__DIR__, "libclang_api.jl"),
+                   common_file = joinpath(@__DIR__, "libclang_common.jl"),
                    clang_includes = vcat(CLANG_INCLUDE, LLVM_INCLUDE),
                    clang_args = ["-I", joinpath(CLANG_INCLUDE, "..")],
                    header_wrapped = wrap_header,

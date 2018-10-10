@@ -1,6 +1,4 @@
-using Clang.wrap_c
-using Clang.cindex
-import Clang.llvm_config
+import Clang: init, run, llvm_config, DEBUG_CURSORS, kind, spelling, isnull
 
 const LLVM_VERSION = readchomp(`$llvm_config --version`)
 const LLVM_LIBDIR  = readchomp(`$llvm_config --libdir`)
@@ -29,9 +27,9 @@ rewriter(arg) = arg
 
 wrap_header(top_hdr::String, cursor_header::String) = (top_hdr == cursor_header)
 
-wc = wrap_c.init(; headers = CLANG_HEADERS,
-                   output_file = joinpath(@__DIR__, "libclang_api.jl"),
-                   common_file = joinpath(@__DIR__, "libclang_common.jl"),
+wc = init(; headers = CLANG_HEADERS,
+                   output_file = joinpath(@__DIR__, "sample", "libclang_api.jl"),
+                   common_file = joinpath(@__DIR__, "sample", "libclang_common.jl"),
                    clang_includes = vcat(CLANG_INCLUDE, LLVM_INCLUDE),
                    clang_args = ["-I", joinpath(CLANG_INCLUDE, "..")],
                    header_wrapped = wrap_header,
@@ -41,3 +39,12 @@ wc = wrap_c.init(; headers = CLANG_HEADERS,
                    )
 
 run(wc)
+
+
+cs = DEBUG_CURSORS
+
+isnull(cs[1])
+
+cs[1].kind
+
+kind(cs[1])

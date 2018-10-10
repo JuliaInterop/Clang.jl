@@ -582,11 +582,11 @@ function wrap_header(wc::WrapContext, top_cursor::CXCursor, top_header, out_buff
             continue
         end
 
-        try
+        # try
             if cursor_kind == CXCursor_FunctionDecl
-                wrap(cursor, out_buffer, wc.header_library(filename(cursor)))
+                wrap!(cursor, out_buffer, libname=wc.header_library(filename(cursor)))
             elseif cursor_kind == CXCursor_EnumDecl || cursor_kind == CXCursor_StructDecl
-                if i != length(cursors) && kind(child_cursors[i+1]) == CXCursor_TypedefDecl
+                if i != length(child_cursors) && kind(child_cursors[i+1]) == CXCursor_TypedefDecl
                     # combine EnumDecl or StructDecl followed by TypedefDecl
                     # without this, this enum from C:
                     # typedef enum {
@@ -607,11 +607,11 @@ function wrap_header(wc::WrapContext, top_cursor::CXCursor, top_header, out_buff
             else
                 continue
             end
-        catch err
-            push!(DEBUG_CURSORS, cursor)
-            @error "error thrown. Last cursor available in Clang.wrap_c.DEBUG_CURSORS."
-            rethrow(err)
-        end
+        # catch err
+        #     push!(DEBUG_CURSORS, cursor)
+        #     @error "error thrown. Last cursor available in Clang.wrap_c.DEBUG_CURSORS."
+        #     rethrow(err)
+        # end
     end
 end
 
@@ -624,8 +624,8 @@ function parse_c_headers(wc::WrapContext)
                           index = wc.index,
                           args = wc.clang_args,
                           includes = wc.clang_includes,
-                          flags = TranslationUnit_Flags.DetailedPreprocessingRecord |
-                                  TranslationUnit_Flags.SkipFunctionBodies)
+                          flags = CXTranslationUnit_DetailedPreprocessingRecord |
+                                  CXTranslationUnit_SkipFunctionBodies)
         parsed[header] = tu
     end
     return parsed
@@ -708,7 +708,7 @@ function Base.run(wc::WrapContext)
         out_buffer = wc.output_bufs[hfile]
 
         # Extract header to Expr[] array
-        wrap_header(wc, parsed[hfile], hfile, out_buffer)
+        wrap_header(wc, getcursor(parsed[hfile]), hfile, out_buffer)
 
         # Apply user-supplied transformation
         wc.output_bufs[hfile] = wc.rewriter(out_buffer)

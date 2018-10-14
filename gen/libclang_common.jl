@@ -2,9 +2,9 @@
 
 
 const CXVirtualFileOverlayImpl = Ptr{Cvoid}
-const CXVirtualFileOverlay = Ptr{Cvoid}
+const CXVirtualFileOverlay = Ptr{CXVirtualFileOverlayImpl}
 const CXModuleMapDescriptorImpl = Ptr{Cvoid}
-const CXModuleMapDescriptor = Ptr{Cvoid}
+const CXModuleMapDescriptor = Ptr{CXModuleMapDescriptorImpl}
 const CXCompilationDatabase = Ptr{Cvoid}
 const CXCompileCommands = Ptr{Cvoid}
 const CXCompileCommand = Ptr{Cvoid}
@@ -30,7 +30,8 @@ struct CXStringSet
     Count::UInt32
 end
 
-const CXTranslationUnit = Ptr{Cvoid}
+const CXTranslationUnitImpl = Ptr{Cvoid}
+const CXTranslationUnit = Ptr{CXTranslationUnitImpl}
 
 struct CXComment
     ASTNode::Ptr{Cvoid}
@@ -75,8 +76,7 @@ const CINDEX_VERSION_MINOR = 45
 
 const CXIndex = Ptr{Cvoid}
 const CXTargetInfoImpl = Ptr{Cvoid}
-const CXTargetInfo = Ptr{Cvoid}
-const CXTranslationUnitImpl = Ptr{Cvoid}
+const CXTargetInfo = Ptr{CXTargetInfoImpl}
 const CXClientData = Ptr{Cvoid}
 
 struct CXUnsavedFile
@@ -208,7 +208,7 @@ const CXDiagnosticSet = Ptr{Cvoid}
 )
 
 struct CXTUResourceUsageEntry
-    kind::Cvoid
+    kind::CXTUResourceUsageKind
     amount::Culong
 end
 struct CXTUResourceUsage
@@ -452,7 +452,7 @@ end
 )
 
 struct CXCursor
-    kind::Cvoid
+    kind::CXCursorKind
     xdata::Cint
     data::NTuple{3, Ptr{Cvoid}}
 end
@@ -493,7 +493,7 @@ end
 )
 
 const CXCursorSetImpl = Ptr{Cvoid}
-const CXCursorSet = Ptr{Cvoid}
+const CXCursorSet = Ptr{CXCursorSetImpl}
 
 @cenum(CXTypeKind,
     CXType_Invalid = 0,
@@ -718,7 +718,7 @@ end
 const CXCompletionString = Ptr{Cvoid}
 
 struct CXCompletionResult
-    CursorKind::Cvoid
+    CursorKind::CXCursorKind
     CompletionString::CXCompletionString
 end
 

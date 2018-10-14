@@ -1,5 +1,5 @@
 # Julia wrapper for header: /Users/gnimuc/.julia/dev/Clang/deps/usr/clang+llvm-6.0.0-x86_64-apple-darwin/include/clang-c/BuildSystem.h
-# Automatically generated using Clang.jl wrap_c, version 0.0.0
+# Automatically generated using Clang.jl wrap_c
 
 
 function clang_getBuildSessionTimestamp()
@@ -11,15 +11,15 @@ function clang_VirtualFileOverlay_create(options)
 end
 
 function clang_VirtualFileOverlay_addFileMapping(arg1, virtualPath, realPath)
-    ccall((:clang_VirtualFileOverlay_addFileMapping, libclang), Cvoid, (CXVirtualFileOverlay, Cstring, Cstring), arg1, virtualPath, realPath)
+    ccall((:clang_VirtualFileOverlay_addFileMapping, libclang), CXErrorCode, (CXVirtualFileOverlay, Cstring, Cstring), arg1, virtualPath, realPath)
 end
 
 function clang_VirtualFileOverlay_setCaseSensitivity(arg1, caseSensitive)
-    ccall((:clang_VirtualFileOverlay_setCaseSensitivity, libclang), Cvoid, (CXVirtualFileOverlay, Cint), arg1, caseSensitive)
+    ccall((:clang_VirtualFileOverlay_setCaseSensitivity, libclang), CXErrorCode, (CXVirtualFileOverlay, Cint), arg1, caseSensitive)
 end
 
 function clang_VirtualFileOverlay_writeToBuffer(arg1, options, out_buffer_ptr, out_buffer_size)
-    ccall((:clang_VirtualFileOverlay_writeToBuffer, libclang), Cvoid, (CXVirtualFileOverlay, UInt32, Ptr{Cstring}, Ptr{UInt32}), arg1, options, out_buffer_ptr, out_buffer_size)
+    ccall((:clang_VirtualFileOverlay_writeToBuffer, libclang), CXErrorCode, (CXVirtualFileOverlay, UInt32, Ptr{Cstring}, Ptr{UInt32}), arg1, options, out_buffer_ptr, out_buffer_size)
 end
 
 function clang_free(buffer)
@@ -35,22 +35,22 @@ function clang_ModuleMapDescriptor_create(options)
 end
 
 function clang_ModuleMapDescriptor_setFrameworkModuleName(arg1, name)
-    ccall((:clang_ModuleMapDescriptor_setFrameworkModuleName, libclang), Cvoid, (CXModuleMapDescriptor, Cstring), arg1, name)
+    ccall((:clang_ModuleMapDescriptor_setFrameworkModuleName, libclang), CXErrorCode, (CXModuleMapDescriptor, Cstring), arg1, name)
 end
 
 function clang_ModuleMapDescriptor_setUmbrellaHeader(arg1, name)
-    ccall((:clang_ModuleMapDescriptor_setUmbrellaHeader, libclang), Cvoid, (CXModuleMapDescriptor, Cstring), arg1, name)
+    ccall((:clang_ModuleMapDescriptor_setUmbrellaHeader, libclang), CXErrorCode, (CXModuleMapDescriptor, Cstring), arg1, name)
 end
 
 function clang_ModuleMapDescriptor_writeToBuffer(arg1, options, out_buffer_ptr, out_buffer_size)
-    ccall((:clang_ModuleMapDescriptor_writeToBuffer, libclang), Cvoid, (CXModuleMapDescriptor, UInt32, Ptr{Cstring}, Ptr{UInt32}), arg1, options, out_buffer_ptr, out_buffer_size)
+    ccall((:clang_ModuleMapDescriptor_writeToBuffer, libclang), CXErrorCode, (CXModuleMapDescriptor, UInt32, Ptr{Cstring}, Ptr{UInt32}), arg1, options, out_buffer_ptr, out_buffer_size)
 end
 
 function clang_ModuleMapDescriptor_dispose(arg1)
     ccall((:clang_ModuleMapDescriptor_dispose, libclang), Cvoid, (CXModuleMapDescriptor,), arg1)
 end
 # Julia wrapper for header: /Users/gnimuc/.julia/dev/Clang/deps/usr/clang+llvm-6.0.0-x86_64-apple-darwin/include/clang-c/CXCompilationDatabase.h
-# Automatically generated using Clang.jl wrap_c, version 0.0.0
+# Automatically generated using Clang.jl wrap_c
 
 
 function clang_CompilationDatabase_fromDirectory(BuildDir, ErrorCode)
@@ -109,10 +109,10 @@ function clang_CompileCommand_getMappedSourceContent(arg1, I)
     ccall((:clang_CompileCommand_getMappedSourceContent, libclang), CXString, (CXCompileCommand, UInt32), arg1, I)
 end
 # Julia wrapper for header: /Users/gnimuc/.julia/dev/Clang/deps/usr/clang+llvm-6.0.0-x86_64-apple-darwin/include/clang-c/CXErrorCode.h
-# Automatically generated using Clang.jl wrap_c, version 0.0.0
+# Automatically generated using Clang.jl wrap_c
 
 # Julia wrapper for header: /Users/gnimuc/.julia/dev/Clang/deps/usr/clang+llvm-6.0.0-x86_64-apple-darwin/include/clang-c/CXString.h
-# Automatically generated using Clang.jl wrap_c, version 0.0.0
+# Automatically generated using Clang.jl wrap_c
 
 
 function clang_getCString(string)
@@ -127,7 +127,7 @@ function clang_disposeStringSet(set)
     ccall((:clang_disposeStringSet, libclang), Cvoid, (Ptr{CXStringSet},), set)
 end
 # Julia wrapper for header: /Users/gnimuc/.julia/dev/Clang/deps/usr/clang+llvm-6.0.0-x86_64-apple-darwin/include/clang-c/Documentation.h
-# Automatically generated using Clang.jl wrap_c, version 0.0.0
+# Automatically generated using Clang.jl wrap_c
 
 
 function clang_Cursor_getParsedComment(C)
@@ -135,7 +135,7 @@ function clang_Cursor_getParsedComment(C)
 end
 
 function clang_Comment_getKind(Comment)
-    ccall((:clang_Comment_getKind, libclang), Cvoid, (CXComment,), Comment)
+    ccall((:clang_Comment_getKind, libclang), CXCommentKind, (CXComment,), Comment)
 end
 
 function clang_Comment_getNumChildren(Comment)
@@ -163,7 +163,7 @@ function clang_InlineCommandComment_getCommandName(Comment)
 end
 
 function clang_InlineCommandComment_getRenderKind(Comment)
-    ccall((:clang_InlineCommandComment_getRenderKind, libclang), Cvoid, (CXComment,), Comment)
+    ccall((:clang_InlineCommandComment_getRenderKind, libclang), CXCommentInlineCommandRenderKind, (CXComment,), Comment)
 end
 
 function clang_InlineCommandComment_getNumArgs(Comment)
@@ -227,7 +227,7 @@ function clang_ParamCommandComment_isDirectionExplicit(Comment)
 end
 
 function clang_ParamCommandComment_getDirection(Comment)
-    ccall((:clang_ParamCommandComment_getDirection, libclang), Cvoid, (CXComment,), Comment)
+    ccall((:clang_ParamCommandComment_getDirection, libclang), CXCommentParamPassDirection, (CXComment,), Comment)
 end
 
 function clang_TParamCommandComment_getParamName(Comment)
@@ -266,7 +266,7 @@ function clang_FullComment_getAsXML(Comment)
     ccall((:clang_FullComment_getAsXML, libclang), CXString, (CXComment,), Comment)
 end
 # Julia wrapper for header: /Users/gnimuc/.julia/dev/Clang/deps/usr/clang+llvm-6.0.0-x86_64-apple-darwin/include/clang-c/Index.h
-# Automatically generated using Clang.jl wrap_c, version 0.0.0
+# Automatically generated using Clang.jl wrap_c
 
 
 function clang_createIndex(excludeDeclarationsFromPCH, displayDiagnostics)
@@ -293,10 +293,9 @@ function clang_getFileName(SFile)
     ccall((:clang_getFileName, libclang), CXString, (CXFile,), SFile)
 end
 
-# pending https://github.com/JuliaLang/julia/issues/29420
-# function clang_getFileTime(SFile)
-#     ccall((:clang_getFileTime, libclang), time_t, (CXFile,), SFile)
-# end
+function clang_getFileTime()
+    ccall((:clang_getFileTime, libclang), Cint, ())
+end
 
 function clang_getFileUniqueID(file, outID)
     ccall((:clang_getFileUniqueID, libclang), Cint, (CXFile, Ptr{CXFileUniqueID}), file, outID)
@@ -311,7 +310,7 @@ function clang_getFile(tu, file_name)
 end
 
 function clang_getFileContents(tu, file, size)
-    ccall((:clang_getFileContents, libclang), Cstring, (CXTranslationUnit, CXFile, Ptr{Csize_t}), tu, file, size)
+    ccall((:clang_getFileContents, libclang), Cstring, (CXTranslationUnit, CXFile, Ptr{Cint}), tu, file, size)
 end
 
 function clang_File_isEqual(file1, file2)
@@ -407,7 +406,7 @@ function clang_getDiagnosticInSet(Diags, Index)
 end
 
 function clang_loadDiagnostics(file, error, errorString)
-    ccall((:clang_loadDiagnostics, libclang), CXDiagnosticSet, (Cstring, Ptr{Cvoid}, Ptr{CXString}), file, error, errorString)
+    ccall((:clang_loadDiagnostics, libclang), CXDiagnosticSet, (Cstring, Ptr{CXLoadDiag_Error}, Ptr{CXString}), file, error, errorString)
 end
 
 function clang_disposeDiagnosticSet(Diags)
@@ -443,7 +442,7 @@ function clang_defaultDiagnosticDisplayOptions()
 end
 
 function clang_getDiagnosticSeverity(arg1)
-    ccall((:clang_getDiagnosticSeverity, libclang), Cvoid, (CXDiagnostic,), arg1)
+    ccall((:clang_getDiagnosticSeverity, libclang), CXDiagnosticSeverity, (CXDiagnostic,), arg1)
 end
 
 function clang_getDiagnosticLocation(arg1)
@@ -491,7 +490,7 @@ function clang_getTranslationUnitSpelling(CTUnit)
 end
 
 function clang_createTranslationUnitFromSourceFile(CIdx, source_filename, num_clang_command_line_args, clang_command_line_args, num_unsaved_files, unsaved_files)
-    ccall((:clang_createTranslationUnitFromSourceFile, libclang), CXTranslationUnit, (CXIndex, Cstring, Cint, Ptr{Cstring}, UInt32, Ptr{Cvoid}), CIdx, source_filename, num_clang_command_line_args, clang_command_line_args, num_unsaved_files, unsaved_files)
+    ccall((:clang_createTranslationUnitFromSourceFile, libclang), CXTranslationUnit, (CXIndex, Cstring, Cint, Ptr{Cstring}, UInt32, Ptr{CXUnsavedFile}), CIdx, source_filename, num_clang_command_line_args, clang_command_line_args, num_unsaved_files, unsaved_files)
 end
 
 function clang_createTranslationUnit(CIdx, ast_filename)
@@ -499,7 +498,7 @@ function clang_createTranslationUnit(CIdx, ast_filename)
 end
 
 function clang_createTranslationUnit2(CIdx, ast_filename, out_TU)
-    ccall((:clang_createTranslationUnit2, libclang), Cvoid, (CXIndex, Cstring, Ptr{CXTranslationUnit}), CIdx, ast_filename, out_TU)
+    ccall((:clang_createTranslationUnit2, libclang), CXErrorCode, (CXIndex, Cstring, Ptr{CXTranslationUnit}), CIdx, ast_filename, out_TU)
 end
 
 function clang_defaultEditingTranslationUnitOptions()
@@ -507,15 +506,15 @@ function clang_defaultEditingTranslationUnitOptions()
 end
 
 function clang_parseTranslationUnit(CIdx, source_filename, command_line_args, num_command_line_args, unsaved_files, num_unsaved_files, options)
-    ccall((:clang_parseTranslationUnit, libclang), CXTranslationUnit, (CXIndex, Cstring, Ptr{Cstring}, Cint, Ptr{Cvoid}, UInt32, UInt32), CIdx, source_filename, command_line_args, num_command_line_args, unsaved_files, num_unsaved_files, options)
+    ccall((:clang_parseTranslationUnit, libclang), CXTranslationUnit, (CXIndex, Cstring, Ptr{Cstring}, Cint, Ptr{CXUnsavedFile}, UInt32, UInt32), CIdx, source_filename, command_line_args, num_command_line_args, unsaved_files, num_unsaved_files, options)
 end
 
 function clang_parseTranslationUnit2(CIdx, source_filename, command_line_args, num_command_line_args, unsaved_files, num_unsaved_files, options, out_TU)
-    ccall((:clang_parseTranslationUnit2, libclang), Cvoid, (CXIndex, Cstring, Ptr{Cstring}, Cint, Ptr{Cvoid}, UInt32, UInt32, Ptr{CXTranslationUnit}), CIdx, source_filename, command_line_args, num_command_line_args, unsaved_files, num_unsaved_files, options, out_TU)
+    ccall((:clang_parseTranslationUnit2, libclang), CXErrorCode, (CXIndex, Cstring, Ptr{Cstring}, Cint, Ptr{CXUnsavedFile}, UInt32, UInt32, Ptr{CXTranslationUnit}), CIdx, source_filename, command_line_args, num_command_line_args, unsaved_files, num_unsaved_files, options, out_TU)
 end
 
 function clang_parseTranslationUnit2FullArgv(CIdx, source_filename, command_line_args, num_command_line_args, unsaved_files, num_unsaved_files, options, out_TU)
-    ccall((:clang_parseTranslationUnit2FullArgv, libclang), Cvoid, (CXIndex, Cstring, Ptr{Cstring}, Cint, Ptr{Cvoid}, UInt32, UInt32, Ptr{CXTranslationUnit}), CIdx, source_filename, command_line_args, num_command_line_args, unsaved_files, num_unsaved_files, options, out_TU)
+    ccall((:clang_parseTranslationUnit2FullArgv, libclang), CXErrorCode, (CXIndex, Cstring, Ptr{Cstring}, Cint, Ptr{CXUnsavedFile}, UInt32, UInt32, Ptr{CXTranslationUnit}), CIdx, source_filename, command_line_args, num_command_line_args, unsaved_files, num_unsaved_files, options, out_TU)
 end
 
 function clang_defaultSaveOptions(TU)
@@ -539,11 +538,11 @@ function clang_defaultReparseOptions(TU)
 end
 
 function clang_reparseTranslationUnit(TU, num_unsaved_files, unsaved_files, options)
-    ccall((:clang_reparseTranslationUnit, libclang), Cint, (CXTranslationUnit, UInt32, Ptr{Cvoid}, UInt32), TU, num_unsaved_files, unsaved_files, options)
+    ccall((:clang_reparseTranslationUnit, libclang), Cint, (CXTranslationUnit, UInt32, Ptr{CXUnsavedFile}, UInt32), TU, num_unsaved_files, unsaved_files, options)
 end
 
 function clang_getTUResourceUsageName(kind)
-    ccall((:clang_getTUResourceUsageName, libclang), Cstring, (Cvoid,), kind)
+    ccall((:clang_getTUResourceUsageName, libclang), Cstring, (CXTUResourceUsageKind,), kind)
 end
 
 function clang_getCXTUResourceUsage(TU)
@@ -595,23 +594,23 @@ function clang_getCursorKind(arg1)
 end
 
 function clang_isDeclaration(arg1)
-    ccall((:clang_isDeclaration, libclang), UInt32, (Cvoid,), arg1)
+    ccall((:clang_isDeclaration, libclang), UInt32, (CXCursorKind,), arg1)
 end
 
 function clang_isReference(arg1)
-    ccall((:clang_isReference, libclang), UInt32, (Cvoid,), arg1)
+    ccall((:clang_isReference, libclang), UInt32, (CXCursorKind,), arg1)
 end
 
 function clang_isExpression(arg1)
-    ccall((:clang_isExpression, libclang), UInt32, (Cvoid,), arg1)
+    ccall((:clang_isExpression, libclang), UInt32, (CXCursorKind,), arg1)
 end
 
 function clang_isStatement(arg1)
-    ccall((:clang_isStatement, libclang), UInt32, (Cvoid,), arg1)
+    ccall((:clang_isStatement, libclang), UInt32, (CXCursorKind,), arg1)
 end
 
 function clang_isAttribute(arg1)
-    ccall((:clang_isAttribute, libclang), UInt32, (Cvoid,), arg1)
+    ccall((:clang_isAttribute, libclang), UInt32, (CXCursorKind,), arg1)
 end
 
 function clang_Cursor_hasAttrs(C)
@@ -619,31 +618,31 @@ function clang_Cursor_hasAttrs(C)
 end
 
 function clang_isInvalid(arg1)
-    ccall((:clang_isInvalid, libclang), UInt32, (Cvoid,), arg1)
+    ccall((:clang_isInvalid, libclang), UInt32, (CXCursorKind,), arg1)
 end
 
 function clang_isTranslationUnit(arg1)
-    ccall((:clang_isTranslationUnit, libclang), UInt32, (Cvoid,), arg1)
+    ccall((:clang_isTranslationUnit, libclang), UInt32, (CXCursorKind,), arg1)
 end
 
 function clang_isPreprocessing(arg1)
-    ccall((:clang_isPreprocessing, libclang), UInt32, (Cvoid,), arg1)
+    ccall((:clang_isPreprocessing, libclang), UInt32, (CXCursorKind,), arg1)
 end
 
 function clang_isUnexposed(arg1)
-    ccall((:clang_isUnexposed, libclang), UInt32, (Cvoid,), arg1)
+    ccall((:clang_isUnexposed, libclang), UInt32, (CXCursorKind,), arg1)
 end
 
 function clang_getCursorLinkage(cursor)
-    ccall((:clang_getCursorLinkage, libclang), Cvoid, (CXCursor,), cursor)
+    ccall((:clang_getCursorLinkage, libclang), CXLinkageKind, (CXCursor,), cursor)
 end
 
 function clang_getCursorVisibility(cursor)
-    ccall((:clang_getCursorVisibility, libclang), Cvoid, (CXCursor,), cursor)
+    ccall((:clang_getCursorVisibility, libclang), CXVisibilityKind, (CXCursor,), cursor)
 end
 
 function clang_getCursorAvailability(cursor)
-    ccall((:clang_getCursorAvailability, libclang), Cvoid, (CXCursor,), cursor)
+    ccall((:clang_getCursorAvailability, libclang), CXAvailabilityKind, (CXCursor,), cursor)
 end
 
 function clang_getCursorPlatformAvailability(cursor, always_deprecated, deprecated_message, always_unavailable, unavailable_message, availability, availability_size)
@@ -655,11 +654,11 @@ function clang_disposeCXPlatformAvailability(availability)
 end
 
 function clang_getCursorLanguage(cursor)
-    ccall((:clang_getCursorLanguage, libclang), Cvoid, (CXCursor,), cursor)
+    ccall((:clang_getCursorLanguage, libclang), CXLanguageKind, (CXCursor,), cursor)
 end
 
 function clang_getCursorTLSKind(cursor)
-    ccall((:clang_getCursorTLSKind, libclang), Cvoid, (CXCursor,), cursor)
+    ccall((:clang_getCursorTLSKind, libclang), CXTLSKind, (CXCursor,), cursor)
 end
 
 function clang_Cursor_getTranslationUnit(arg1)
@@ -755,7 +754,7 @@ function clang_Cursor_getNumTemplateArguments(C)
 end
 
 function clang_Cursor_getTemplateArgumentKind(C, I)
-    ccall((:clang_Cursor_getTemplateArgumentKind, libclang), Cvoid, (CXCursor, UInt32), C, I)
+    ccall((:clang_Cursor_getTemplateArgumentKind, libclang), CXTemplateArgumentKind, (CXCursor, UInt32), C, I)
 end
 
 function clang_Cursor_getTemplateArgumentType(C, I)
@@ -827,11 +826,11 @@ function clang_Type_getObjCEncoding(type)
 end
 
 function clang_getTypeKindSpelling(K)
-    ccall((:clang_getTypeKindSpelling, libclang), CXString, (Cvoid,), K)
+    ccall((:clang_getTypeKindSpelling, libclang), CXString, (CXTypeKind,), K)
 end
 
 function clang_getFunctionTypeCallingConv(T)
-    ccall((:clang_getFunctionTypeCallingConv, libclang), Cvoid, (CXType,), T)
+    ccall((:clang_getFunctionTypeCallingConv, libclang), CXCallingConv, (CXType,), T)
 end
 
 function clang_getResultType(T)
@@ -923,7 +922,7 @@ function clang_Type_getTemplateArgumentAsType(T, i)
 end
 
 function clang_Type_getCXXRefQualifier(T)
-    ccall((:clang_Type_getCXXRefQualifier, libclang), Cvoid, (CXType,), T)
+    ccall((:clang_Type_getCXXRefQualifier, libclang), CXRefQualifierKind, (CXType,), T)
 end
 
 function clang_Cursor_isBitField(C)
@@ -935,11 +934,11 @@ function clang_isVirtualBase(arg1)
 end
 
 function clang_getCXXAccessSpecifier(arg1)
-    ccall((:clang_getCXXAccessSpecifier, libclang), Cvoid, (CXCursor,), arg1)
+    ccall((:clang_getCXXAccessSpecifier, libclang), CX_CXXAccessSpecifier, (CXCursor,), arg1)
 end
 
 function clang_Cursor_getStorageClass(arg1)
-    ccall((:clang_Cursor_getStorageClass, libclang), Cvoid, (CXCursor,), arg1)
+    ccall((:clang_Cursor_getStorageClass, libclang), CX_StorageClass, (CXCursor,), arg1)
 end
 
 function clang_getNumOverloadedDecls(cursor)
@@ -955,7 +954,7 @@ function clang_getIBOutletCollectionType(arg1)
 end
 
 function clang_visitChildren(parent, visitor, client_data)
-    ccall((:clang_visitChildren, libclang), UInt32, (CXCursor, Ptr{Cvoid}, CXClientData), parent, visitor, client_data)
+    ccall((:clang_visitChildren, libclang), UInt32, (CXCursor, CXCursorVisitor, CXClientData), parent, visitor, client_data)
 end
 
 function clang_visitChildrenWithBlock(parent, block)
@@ -1159,7 +1158,7 @@ function clang_CXXMethod_isConst(C)
 end
 
 function clang_getTemplateCursorKind(C)
-    ccall((:clang_getTemplateCursorKind, libclang), Cvoid, (CXCursor,), C)
+    ccall((:clang_getTemplateCursorKind, libclang), CXCursorKind, (CXCursor,), C)
 end
 
 function clang_getSpecializedCursorTemplate(C)
@@ -1199,7 +1198,7 @@ function clang_disposeTokens(TU, Tokens, NumTokens)
 end
 
 function clang_getCursorKindSpelling(Kind)
-    ccall((:clang_getCursorKindSpelling, libclang), CXString, (Cvoid,), Kind)
+    ccall((:clang_getCursorKindSpelling, libclang), CXString, (CXCursorKind,), Kind)
 end
 
 function clang_getDefinitionSpellingAndExtent(arg1, startBuf, endBuf, startLine, startColumn, endLine, endColumn)
@@ -1215,7 +1214,7 @@ function clang_executeOnThread(fn, user_data, stack_size)
 end
 
 function clang_getCompletionChunkKind(completion_string, chunk_number)
-    ccall((:clang_getCompletionChunkKind, libclang), Cvoid, (CXCompletionString, UInt32), completion_string, chunk_number)
+    ccall((:clang_getCompletionChunkKind, libclang), CXCompletionChunkKind, (CXCompletionString, UInt32), completion_string, chunk_number)
 end
 
 function clang_getCompletionChunkText(completion_string, chunk_number)
@@ -1235,7 +1234,7 @@ function clang_getCompletionPriority(completion_string)
 end
 
 function clang_getCompletionAvailability(completion_string)
-    ccall((:clang_getCompletionAvailability, libclang), Cvoid, (CXCompletionString,), completion_string)
+    ccall((:clang_getCompletionAvailability, libclang), CXAvailabilityKind, (CXCompletionString,), completion_string)
 end
 
 function clang_getCompletionNumAnnotations(completion_string)
@@ -1247,7 +1246,7 @@ function clang_getCompletionAnnotation(completion_string, annotation_number)
 end
 
 function clang_getCompletionParent(completion_string, kind)
-    ccall((:clang_getCompletionParent, libclang), CXString, (CXCompletionString, Ptr{Cvoid}), completion_string, kind)
+    ccall((:clang_getCompletionParent, libclang), CXString, (CXCompletionString, Ptr{CXCursorKind}), completion_string, kind)
 end
 
 function clang_getCompletionBriefComment(completion_string)
@@ -1263,7 +1262,7 @@ function clang_defaultCodeCompleteOptions()
 end
 
 function clang_codeCompleteAt(TU, complete_filename, complete_line, complete_column, unsaved_files, num_unsaved_files, options)
-    ccall((:clang_codeCompleteAt, libclang), Ptr{CXCodeCompleteResults}, (CXTranslationUnit, Cstring, UInt32, UInt32, Ptr{Cvoid}, UInt32, UInt32), TU, complete_filename, complete_line, complete_column, unsaved_files, num_unsaved_files, options)
+    ccall((:clang_codeCompleteAt, libclang), Ptr{CXCodeCompleteResults}, (CXTranslationUnit, Cstring, UInt32, UInt32, Ptr{CXUnsavedFile}, UInt32, UInt32), TU, complete_filename, complete_line, complete_column, unsaved_files, num_unsaved_files, options)
 end
 
 function clang_sortCodeCompletionResults(Results, NumResults)
@@ -1287,7 +1286,7 @@ function clang_codeCompleteGetContexts(Results)
 end
 
 function clang_codeCompleteGetContainerKind(Results, IsIncomplete)
-    ccall((:clang_codeCompleteGetContainerKind, libclang), Cvoid, (Ptr{CXCodeCompleteResults}, Ptr{UInt32}), Results, IsIncomplete)
+    ccall((:clang_codeCompleteGetContainerKind, libclang), CXCursorKind, (Ptr{CXCodeCompleteResults}, Ptr{UInt32}), Results, IsIncomplete)
 end
 
 function clang_codeCompleteGetContainerUSR(Results)
@@ -1439,11 +1438,11 @@ function clang_IndexAction_dispose(arg1)
 end
 
 function clang_indexSourceFile(arg1, client_data, index_callbacks, index_callbacks_size, index_options, source_filename, command_line_args, num_command_line_args, unsaved_files, num_unsaved_files, out_TU, TU_options)
-    ccall((:clang_indexSourceFile, libclang), Cint, (CXIndexAction, CXClientData, Ptr{IndexerCallbacks}, UInt32, UInt32, Cstring, Ptr{Cstring}, Cint, Ptr{Cvoid}, UInt32, Ptr{CXTranslationUnit}, UInt32), arg1, client_data, index_callbacks, index_callbacks_size, index_options, source_filename, command_line_args, num_command_line_args, unsaved_files, num_unsaved_files, out_TU, TU_options)
+    ccall((:clang_indexSourceFile, libclang), Cint, (CXIndexAction, CXClientData, Ptr{IndexerCallbacks}, UInt32, UInt32, Cstring, Ptr{Cstring}, Cint, Ptr{CXUnsavedFile}, UInt32, Ptr{CXTranslationUnit}, UInt32), arg1, client_data, index_callbacks, index_callbacks_size, index_options, source_filename, command_line_args, num_command_line_args, unsaved_files, num_unsaved_files, out_TU, TU_options)
 end
 
 function clang_indexSourceFileFullArgv(arg1, client_data, index_callbacks, index_callbacks_size, index_options, source_filename, command_line_args, num_command_line_args, unsaved_files, num_unsaved_files, out_TU, TU_options)
-    ccall((:clang_indexSourceFileFullArgv, libclang), Cint, (CXIndexAction, CXClientData, Ptr{IndexerCallbacks}, UInt32, UInt32, Cstring, Ptr{Cstring}, Cint, Ptr{Cvoid}, UInt32, Ptr{CXTranslationUnit}, UInt32), arg1, client_data, index_callbacks, index_callbacks_size, index_options, source_filename, command_line_args, num_command_line_args, unsaved_files, num_unsaved_files, out_TU, TU_options)
+    ccall((:clang_indexSourceFileFullArgv, libclang), Cint, (CXIndexAction, CXClientData, Ptr{IndexerCallbacks}, UInt32, UInt32, Cstring, Ptr{Cstring}, Cint, Ptr{CXUnsavedFile}, UInt32, Ptr{CXTranslationUnit}, UInt32), arg1, client_data, index_callbacks, index_callbacks_size, index_options, source_filename, command_line_args, num_command_line_args, unsaved_files, num_unsaved_files, out_TU, TU_options)
 end
 
 function clang_indexTranslationUnit(arg1, client_data, index_callbacks, index_callbacks_size, index_options, arg2)
@@ -1462,4 +1461,5 @@ function clang_Type_visitFields(T, visitor, client_data)
     ccall((:clang_Type_visitFields, libclang), UInt32, (CXType, CXFieldVisitor, CXClientData), T, visitor, client_data)
 end
 # Julia wrapper for header: /Users/gnimuc/.julia/dev/Clang/deps/usr/clang+llvm-6.0.0-x86_64-apple-darwin/include/clang-c/Platform.h
-# Automatically generated using Clang.jl wrap_c, version 0.0.0
+# Automatically generated using Clang.jl wrap_c
+

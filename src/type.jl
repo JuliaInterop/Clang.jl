@@ -166,8 +166,15 @@ _element_num(::Val{CXType_VariableArray}, t::CXType) = clang_getNumElements(t)
 _element_num(::Val{CXType_DependentSizedArray}, t::CXType) = clang_getNumElements(t)
 # old API: clang_getArraySize
 
+"""
+    get_named_type(t::CXType) -> CXType
+Return the type named by the qualified-id.
+"""
+get_named_type(t::CXType) = _get_named_type(Val(kind(t)), t)
+_get_named_type(::Val{CXType_Elaborated}, t::CXType) = clang_Type_getNamedType(t)
+
+
 ## TODO:
-# clang_Type_getNamedType
 # clang_Type_isTransparentTagTypedef
 # clang_Type_getAlignOf
 # clang_Type_getClassType

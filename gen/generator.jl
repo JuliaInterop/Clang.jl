@@ -26,14 +26,14 @@ end
 rewriter(A::Array) = [rewriter(a) for a in A]
 rewriter(arg) = arg
 
-wrap_header(top_hdr::String, cursor_header::String) = (top_hdr == cursor_header)
+header_filter(top_hdr::String, cursor_header::String) = (top_hdr == cursor_header)
 
 wc = init(; headers = CLANG_HEADERS,
-                   output_file = joinpath(@__DIR__, "sample", "libclang_api.jl"),
-                   common_file = joinpath(@__DIR__, "sample", "libclang_common.jl"),
+                   output_file = joinpath(@__DIR__, "libclang_api.jl"),
+                   common_file = joinpath(@__DIR__, "libclang_common.jl"),
                    clang_includes = vcat(CLANG_INCLUDE, LLVM_INCLUDE),
                    clang_args = ["-I", joinpath(CLANG_INCLUDE, "..")],
-                   header_wrapped = wrap_header,
+                   header_wrapped = header_filter,
                    header_library = x->"libclang",
                    clang_diagnostics = true,
                    rewriter = rewriter

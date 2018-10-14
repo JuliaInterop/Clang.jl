@@ -438,3 +438,17 @@ end
 Return function arguments for a given cursor.
 """
 function_args(cursor::CXCursor) = search(cursor, CXCursor_ParmDecl)
+
+"""
+    is_typedef_anon(current::CXCursor, next::CXCursor) -> Bool
+Return true if the current cursor is an typedef anonymous struct/enum.
+"""
+function is_typedef_anon(current::CXCursor, next::CXCursor)
+    refback = children(next)
+    if kind(next) == CXCursor_TypedefDecl &&
+       !isempty(refback) && name(refback[1]) == ""
+        return true
+    else
+        return false
+    end
+end

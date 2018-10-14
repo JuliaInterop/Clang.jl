@@ -209,14 +209,14 @@ Subroutine for handling function declarations.
 function _wrap!(::Val{CXCursor_FunctionDecl}, cursor::CXCursor, buffer::Vector; libname="libxxx")
     func_type = type(cursor)
     if kind(func_type) == CXType_FunctionNoProto
-        @warn "No Prototype for $(cursor) - assuming no arguments"
+        @warn "No Prototype for $cursor - assuming no arguments"
     elseif isvariadic(func_type) == 1
-        @warn "Skipping VarArg Function $(cursor)"
+        @warn "Skipping VarArg Function $cursor"
         return buffer
     end
     libname == "libxxx" && @warn "default libname: \"libxxx\" are being used, did you forget to specify the libname?"
 
-    func_name = Symbol(spelling(cursor))
+    funcName = Symbol(spelling(cursor))
     ret_type = clang2julia(return_type(cursor))
 
     args = function_args(cursor)
@@ -241,8 +241,8 @@ function _wrap!(::Val{CXCursor_FunctionDecl}, cursor::CXCursor, buffer::Vector; 
                                        end),
                                 args))
 
-    sig = efunsig(func_name, arg_names, arg_reps)
-    body = eccall(func_name, Symbol(libname), ret_type, arg_names, arg_reps)
+    sig = efunsig(funcName, arg_names, arg_reps)
+    body = eccall(funcName, Symbol(libname), ret_type, arg_names, arg_reps)
     e = Expr(:function, sig, Expr(:block, body))
     push!(buffer, e)
 end
@@ -589,8 +589,7 @@ function wrap_header(wc::WrapContext, transUnit::TranslationUnit, topHeader, out
                 elseif (childKind == CXCursor_EnumDecl || childKind == CXCursor_StructDecl) &&
                        (i != length(childCursors))
                     nextCursor = childCursors[i+1]
-                    refback = children(nextCursor)
-                    if kind(nextCursor) == CXCursor_TypedefDecl && !isempty(refback) && name(refback[1]) == ""
+                    if is_typedef_anon(child, nextCursor)
                         wrap!(child, wc.common_buf, customName=name(nextCursor))
                     else
                         wrap!(child, wc.common_buf)

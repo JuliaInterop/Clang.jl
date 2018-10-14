@@ -1,4 +1,5 @@
-import Clang: init, run, llvm_config, DEBUG_CURSORS, kind, spelling, isnull
+import Clang.LibClang: llvm_config
+using Clang: init
 
 const LLVM_VERSION = readchomp(`$llvm_config --version`)
 const LLVM_LIBDIR  = readchomp(`$llvm_config --libdir`)
@@ -39,12 +40,3 @@ wc = init(; headers = CLANG_HEADERS,
                    )
 
 run(wc)
-
-
-cs = DEBUG_CURSORS
-
-isnull(cs[1])
-
-cs[1].kind
-
-kind(cs[1])

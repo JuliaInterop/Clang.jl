@@ -22,6 +22,7 @@ mutable struct TranslationUnit
     end
 end
 TranslationUnit(idx, source, args, unsavedFiles, options) = TranslationUnit(idx, source, args, length(args), unsavedFiles, length(unsavedFiles), options)
+TranslationUnit(idx, source, args, options) = TranslationUnit(idx, source, args, length(args), C_NULL, 0, options)
 TranslationUnit(idx, source, args) = TranslationUnit(idx, source, args, length(args), C_NULL, 0, CXTranslationUnit_None)
 
 """
@@ -38,6 +39,13 @@ function spelling(tu::TranslationUnit)
     return s
 end
 
+"""
+    getcursor(tu::TranslationUnit) -> CXCursor
+    getcursor(tu::CXTranslationUnit) -> CXCursor
+Return the cursor that represents the given translation unit.
+"""
+getcursor(tu::CXTranslationUnit) = clang_getTranslationUnitCursor(tu)
+getcursor(tu::TranslationUnit) = getcursor(tu.ptr)
 
 ## TODO:
 # clang_parseTranslationUnit2
@@ -63,16 +71,16 @@ Return the TranslationUnit for a given header. This is the main entry point for 
 - `cplusplus::Bool`: parse as C++.
 - `args::Vector{String}`: compiler switches as string array, eg: ["-x", "c++", "-fno-elide-type"].
 - `includes::Vector{String}`: vector of extra include directories to search.
-- `flags::UInt32`: bitwise OR of CXTranslationUnit_Flags.
+- `flags`: bitwise OR of CXTranslationUnit_Flags.
 """
 function parse_header(header::AbstractString; index::Union{Index,Nothing}=nothing, diagnostics::Bool=true,
-    cplusplus::Bool=false, args::Vector{String}=String[], includes::Vector{String}=String[], flags::UInt32=CXTranslationUnit_None)
+    cplusplus::Bool=false, args::Vector{String}=String[], includes::Vector{String}=String[], flags=CXTranslationUnit_None)
     # TODO: support parsing in-memory with CXUnsavedFile arg
     #       to _parseTranslationUnit.jj
     #unsaved_file = CXUnsavedFile()
     !isfile(header) && throw(ArgumentError(header, " not found"))
 
-    index == nothing && (index = CIndex(false, diagnostics);)
+    index == nothing && (index = Index(false, diagnostics);)
 
     cplusplus && append!(args, ["-x", "c++"])
 
@@ -80,5 +88,5 @@ function parse_header(header::AbstractString; index::Union{Index,Nothing}=nothin
         push!(args, "-I", x)
     end
 
-    return TranslationUnit(index, header, args)
+    return TranslationUnit(index, header, args, flags)
 end

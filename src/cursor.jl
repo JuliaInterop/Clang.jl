@@ -19,7 +19,7 @@ Base.hash(c::CXCursor) = clang_hashCursor(c)
     kind(c::CXCursor) -> CXCursorKind
 Return the kind of the given cursor.
 """
-kind(c::CXCursor)::CXCursorKind = clang_getCursorKind(c)
+kind(c::CXCursor) = clang_getCursorKind(c)
 
 """
     isdecl(k::CXcursorKind) -> Bool
@@ -63,7 +63,7 @@ hasattr(c::CXCursor)::Bool = clang_Cursor_hasAttrs(c)
     isvalid(k::CXcursorKind) -> Bool
 Return true if the given cursor kind represents an valid cursor.
 """
-isvalid(k::CXCursorKind) = !(Bool(clang_isInvalid(k)))
+Base.isvalid(k::CXCursorKind) = !(Bool(clang_isInvalid(k)))
 
 """
     is_translation_unit(k::CXcursorKind) -> Bool
@@ -132,14 +132,6 @@ get_lexical_parent(c::CXCursor) = clang_getCursorLexicalParent(c)
 Return the file that is included by the given inclusion directive cursor.
 """
 get_included_file(c::CXCursor) = clang_getIncludedFile(c)
-
-"""
-    getcursor(tu) -> CXCursor
-    getcursor(tu::TranslationUnit) -> CXCursor
-Return the cursor that represents the given translation unit.
-"""
-getcursor(tu) = clang_getTranslationUnitCursor(tu)
-getcursor(tu::TranslationUnit) = getcursor(tu.ptr)
 
 """
     location(c::CXCursor) -> CXSourceLocation
@@ -213,7 +205,7 @@ _argnum(::Val{CXCursor_CXXMethod}, c::CXCursor) = clang_Cursor_getNumArguments(c
     argument(c::CXCursor, i::Integer) -> CXCursor
 Return the argument cursor of a function or method.
 """
-argument(c::CXCursor, i::Integer) = _argument(Val(kind(c)), c, i)
+argument(c::CXCursor, i::Integer) = _argument(Val(kind(c)), c, Unsigned(i))
 _argument(::Val{CXCursor_FunctionDecl}, c::CXCursor, i::Unsigned) = clang_Cursor_getArgument(c, i)
 _argument(::Val{CXCursor_CXXMethod}, c::CXCursor, i::Unsigned) = clang_Cursor_getArgument(c, i)
 
@@ -258,7 +250,7 @@ _result_type(::Val{CXCursor_CXXMethod}, c::CXCursor) = clang_getCursorResultType
 
 """
     isanonymous(c::CXCursor) -> Bool
-Return true if the given cursor represents an anonymous record declaration.
+Return true if the given cursor represents an anonymous record declaration(C++).
 """
 isanonymous(c::CXCursor)::Bool = clang_Cursor_isAnonymous(c)
 
@@ -366,7 +358,7 @@ end
 # helper
 """
     filename(c::CXCursor) -> String
-Return the complete file and path name of the given file.
+Return the complete file and path name of the given file referenced by the input cursor.
 """
 function filename(c::CXCursor)
     file = Ref{CXFile}(C_NULL)
@@ -376,10 +368,14 @@ function filename(c::CXCursor)
     GC.@preserve c begin
         location = clang_getCursorLocation(c)
         clang_getExpansionLocation(location, file, line, column, offset)
-        cxstr = clang_getFileName(file[])
-        ptr = clang_getCString(cxstr)
-        s = unsafe_string(ptr)
-        clang_disposeString(cxstr)
+        if file[] != C_NULL
+            cxstr = clang_getFileName(file[])
+            ptr = clang_getCString(cxstr)
+            s = unsafe_string(ptr)
+            clang_disposeString(cxstr)
+        else
+            s = ""
+        end
     end
     return s
 end
@@ -405,7 +401,7 @@ function typedef_type(c::CXCursor)
 end
 
 """
-    search(cursors::Vector{CXCursor}, ismatch::Function)
+    search(cursors::Vector{CXCursor}, ismatch::Function) -> Vector{CXCursor}
 Return vector of CXCursors that match predicate. `ismatch` is a function that accepts a CXCursor argument.
 """
 function search(cursors::Vector{CXCursor}, ismatch::Function)
@@ -415,16 +411,25 @@ function search(cursors::Vector{CXCursor}, ismatch::Function)
     end
     return matched
 end
-search(c::CXCursor, s::String) = search(c, x->spelling(x)==s)
 search(c::CXCursor, ismatch::Function) = search(children(c), ismatch)
+search(c::CXCursor, s::String) = search(c, x->spelling(x)==s)
 search(c::CXCursor, k::CXCursorKind) = search(c, x->kind(x)==k)
 search(tu::TranslationUnit, k::CXCursorKind) = search(getcursor(tu), k)
+
+# visitor
+function cu_children_visitor(cursor::CXCursor, parent::CXCursor, client_data::Ptr{Cvoid})::Cuint
+    list = unsafe_pointer_to_objref(client_data)
+    push!(list, cursor)
+    return CXChildVisit_Continue
+end
 
 function children(cursor::CXCursor)
     # TODO: possible to use sizehint! here?
     list = CXCursor[]
-    cu_visitor_cb = @cfunction(cu_children_visitor, Cuint, (CXCursor, CXCursor, Ptr{Cvoid}))
-    clang_visitChildren(cursor, cu_visitor_cb, pointer_from_objref(list))
+    GC.@preserve cursor begin
+        cu_visitor_cb = @cfunction(cu_children_visitor, Cuint, (CXCursor, CXCursor, Ptr{Cvoid}))
+        clang_visitChildren(cursor, cu_visitor_cb, pointer_from_objref(list))
+    end
     list
 end
 
@@ -433,3 +438,17 @@ end
 Return function arguments for a given cursor.
 """
 function_args(cursor::CXCursor) = search(cursor, CXCursor_ParmDecl)
+
+"""
+    is_typedef_anon(current::CXCursor, next::CXCursor) -> Bool
+Return true if the current cursor is an typedef anonymous struct/enum.
+"""
+function is_typedef_anon(current::CXCursor, next::CXCursor)
+    refback = children(next)
+    if kind(next) == CXCursor_TypedefDecl &&
+       !isempty(refback) && name(refback[1]) == ""
+        return true
+    else
+        return false
+    end
+end

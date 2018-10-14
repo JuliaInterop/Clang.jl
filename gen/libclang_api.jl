@@ -591,7 +591,7 @@ function clang_hashCursor(arg1)
 end
 
 function clang_getCursorKind(arg1)
-    ccall((:clang_getCursorKind, libclang), Cvoid, (CXCursor,), arg1)
+    ccall((:clang_getCursorKind, libclang), CXCursorKind, (CXCursor,), arg1)
 end
 
 function clang_isDeclaration(arg1)
@@ -955,7 +955,7 @@ function clang_getIBOutletCollectionType(arg1)
 end
 
 function clang_visitChildren(parent, visitor, client_data)
-    ccall((:clang_visitChildren, libclang), UInt32, (CXCursor, CXCursorVisitor, CXClientData), parent, visitor, client_data)
+    ccall((:clang_visitChildren, libclang), UInt32, (CXCursor, Ptr{Cvoid}, CXClientData), parent, visitor, client_data)
 end
 
 function clang_visitChildrenWithBlock(parent, block)

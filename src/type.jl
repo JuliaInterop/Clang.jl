@@ -122,10 +122,10 @@ _argnum(::Val{CXType_FunctionNoProto}, t::CXType) = clang_getNumArgTypes(t)
 _argnum(::Val{CXType_FunctionProto}, t::CXType) = clang_getNumArgTypes(t)
 
 """
-    argtype(t::CXType) -> CXType
+    argtype(t::CXType, i::Integer) -> CXType
 Return the type of a parameter of a function type.
 """
-argtype(t::CXType) = _argtype(Val(kind(t)), t)
+argtype(t::CXType, i::Integer) = _argtype(Val(kind(t)), t, Unsigned(i))
 _argtype(::Val{CXType_FunctionNoProto}, t::CXType, i::Unsigned) = clang_getArgType(t, i)
 _argtype(::Val{CXType_FunctionProto}, t::CXType, i::Unsigned) = clang_getArgType(t, i)
 

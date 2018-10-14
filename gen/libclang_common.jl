@@ -1,32 +1,30 @@
-# Automatically generated using Clang.jl wrap_c, version 0.0.0
+# Automatically generated using Clang.jl wrap_c
 
 
-const CXVirtualFileOverlay = Cvoid
-const CXModuleMapDescriptor = Cvoid
+const CXVirtualFileOverlayImpl = Ptr{Cvoid}
+const CXVirtualFileOverlay = Ptr{Cvoid}
+const CXModuleMapDescriptorImpl = Ptr{Cvoid}
+const CXModuleMapDescriptor = Ptr{Cvoid}
 const CXCompilationDatabase = Ptr{Cvoid}
 const CXCompileCommands = Ptr{Cvoid}
 const CXCompileCommand = Ptr{Cvoid}
 
-# begin enum CXCompilationDatabase_Error
-const CXCompilationDatabase_Error = UInt32
-const CXCompilationDatabase_NoError = 0 |> UInt32
-const CXCompilationDatabase_CanNotLoadDatabase = 1 |> UInt32
-# end enum CXCompilationDatabase_Error
-
-# begin enum CXErrorCode
-const CXErrorCode = UInt32
-const CXError_Success = 0 |> UInt32
-const CXError_Failure = 1 |> UInt32
-const CXError_Crashed = 2 |> UInt32
-const CXError_InvalidArguments = 3 |> UInt32
-const CXError_ASTReadError = 4 |> UInt32
-# end enum CXErrorCode
+@cenum(CXCompilationDatabase_Error,
+    CXCompilationDatabase_NoError = 0,
+    CXCompilationDatabase_CanNotLoadDatabase = 1,
+)
+@cenum(CXErrorCode,
+    CXError_Success = 0,
+    CXError_Failure = 1,
+    CXError_Crashed = 2,
+    CXError_InvalidArguments = 3,
+    CXError_ASTReadError = 4,
+)
 
 struct CXString
     data::Ptr{Cvoid}
     private_flags::UInt32
 end
-
 struct CXStringSet
     Strings::Ptr{CXString}
     Count::UInt32
@@ -39,37 +37,32 @@ struct CXComment
     TranslationUnit::CXTranslationUnit
 end
 
-# begin enum CXCommentKind
-const CXCommentKind = UInt32
-const CXComment_Null = 0 |> UInt32
-const CXComment_Text = 1 |> UInt32
-const CXComment_InlineCommand = 2 |> UInt32
-const CXComment_HTMLStartTag = 3 |> UInt32
-const CXComment_HTMLEndTag = 4 |> UInt32
-const CXComment_Paragraph = 5 |> UInt32
-const CXComment_BlockCommand = 6 |> UInt32
-const CXComment_ParamCommand = 7 |> UInt32
-const CXComment_TParamCommand = 8 |> UInt32
-const CXComment_VerbatimBlockCommand = 9 |> UInt32
-const CXComment_VerbatimBlockLine = 10 |> UInt32
-const CXComment_VerbatimLine = 11 |> UInt32
-const CXComment_FullComment = 12 |> UInt32
-# end enum CXCommentKind
-
-# begin enum CXCommentInlineCommandRenderKind
-const CXCommentInlineCommandRenderKind = UInt32
-const CXCommentInlineCommandRenderKind_Normal = 0 |> UInt32
-const CXCommentInlineCommandRenderKind_Bold = 1 |> UInt32
-const CXCommentInlineCommandRenderKind_Monospaced = 2 |> UInt32
-const CXCommentInlineCommandRenderKind_Emphasized = 3 |> UInt32
-# end enum CXCommentInlineCommandRenderKind
-
-# begin enum CXCommentParamPassDirection
-const CXCommentParamPassDirection = UInt32
-const CXCommentParamPassDirection_In = 0 |> UInt32
-const CXCommentParamPassDirection_Out = 1 |> UInt32
-const CXCommentParamPassDirection_InOut = 2 |> UInt32
-# end enum CXCommentParamPassDirection
+@cenum(CXCommentKind,
+    CXComment_Null = 0,
+    CXComment_Text = 1,
+    CXComment_InlineCommand = 2,
+    CXComment_HTMLStartTag = 3,
+    CXComment_HTMLEndTag = 4,
+    CXComment_Paragraph = 5,
+    CXComment_BlockCommand = 6,
+    CXComment_ParamCommand = 7,
+    CXComment_TParamCommand = 8,
+    CXComment_VerbatimBlockCommand = 9,
+    CXComment_VerbatimBlockLine = 10,
+    CXComment_VerbatimLine = 11,
+    CXComment_FullComment = 12,
+)
+@cenum(CXCommentInlineCommandRenderKind,
+    CXCommentInlineCommandRenderKind_Normal = 0,
+    CXCommentInlineCommandRenderKind_Bold = 1,
+    CXCommentInlineCommandRenderKind_Monospaced = 2,
+    CXCommentInlineCommandRenderKind_Emphasized = 3,
+)
+@cenum(CXCommentParamPassDirection,
+    CXCommentParamPassDirection_In = 0,
+    CXCommentParamPassDirection_Out = 1,
+    CXCommentParamPassDirection_InOut = 2,
+)
 
 const CINDEX_VERSION_MAJOR = 0
 const CINDEX_VERSION_MINOR = 45
@@ -81,9 +74,10 @@ const CINDEX_VERSION_MINOR = 45
 # Skipping MacroDefinition: CINDEX_VERSION_STRING CINDEX_VERSION_STRINGIZE ( CINDEX_VERSION_MAJOR , CINDEX_VERSION_MINOR )
 
 const CXIndex = Ptr{Cvoid}
-const CXTargetInfo = Cvoid
+const CXTargetInfoImpl = Ptr{Cvoid}
+const CXTargetInfo = Ptr{Cvoid}
+const CXTranslationUnitImpl = Ptr{Cvoid}
 const CXClientData = Ptr{Cvoid}
-const CXCursorVisitor = Ptr{Cvoid}
 
 struct CXUnsavedFile
     Filename::Cstring
@@ -91,13 +85,12 @@ struct CXUnsavedFile
     Length::Culong
 end
 
-# begin enum CXAvailabilityKind
-const CXAvailabilityKind = UInt32
-const CXAvailability_Available = 0 |> UInt32
-const CXAvailability_Deprecated = 1 |> UInt32
-const CXAvailability_NotAvailable = 2 |> UInt32
-const CXAvailability_NotAccessible = 3 |> UInt32
-# end enum CXAvailabilityKind
+@cenum(CXAvailabilityKind,
+    CXAvailability_Available = 0,
+    CXAvailability_Deprecated = 1,
+    CXAvailability_NotAvailable = 2,
+    CXAvailability_NotAccessible = 3,
+)
 
 struct CXVersion
     Major::Cint
@@ -105,78 +98,68 @@ struct CXVersion
     Subminor::Cint
 end
 
-# begin enum CXCursor_ExceptionSpecificationKind
-const CXCursor_ExceptionSpecificationKind = UInt32
-const CXCursor_ExceptionSpecificationKind_None = 0 |> UInt32
-const CXCursor_ExceptionSpecificationKind_DynamicNone = 1 |> UInt32
-const CXCursor_ExceptionSpecificationKind_Dynamic = 2 |> UInt32
-const CXCursor_ExceptionSpecificationKind_MSAny = 3 |> UInt32
-const CXCursor_ExceptionSpecificationKind_BasicNoexcept = 4 |> UInt32
-const CXCursor_ExceptionSpecificationKind_ComputedNoexcept = 5 |> UInt32
-const CXCursor_ExceptionSpecificationKind_Unevaluated = 6 |> UInt32
-const CXCursor_ExceptionSpecificationKind_Uninstantiated = 7 |> UInt32
-const CXCursor_ExceptionSpecificationKind_Unparsed = 8 |> UInt32
-# end enum CXCursor_ExceptionSpecificationKind
-
-# begin enum CXGlobalOptFlags
-const CXGlobalOptFlags = UInt32
-const CXGlobalOpt_None = 0 |> UInt32
-const CXGlobalOpt_ThreadBackgroundPriorityForIndexing = 1 |> UInt32
-const CXGlobalOpt_ThreadBackgroundPriorityForEditing = 2 |> UInt32
-const CXGlobalOpt_ThreadBackgroundPriorityForAll = 3 |> UInt32
-# end enum CXGlobalOptFlags
+@cenum(CXCursor_ExceptionSpecificationKind,
+    CXCursor_ExceptionSpecificationKind_None = 0,
+    CXCursor_ExceptionSpecificationKind_DynamicNone = 1,
+    CXCursor_ExceptionSpecificationKind_Dynamic = 2,
+    CXCursor_ExceptionSpecificationKind_MSAny = 3,
+    CXCursor_ExceptionSpecificationKind_BasicNoexcept = 4,
+    CXCursor_ExceptionSpecificationKind_ComputedNoexcept = 5,
+    CXCursor_ExceptionSpecificationKind_Unevaluated = 6,
+    CXCursor_ExceptionSpecificationKind_Uninstantiated = 7,
+    CXCursor_ExceptionSpecificationKind_Unparsed = 8,
+)
+@cenum(CXGlobalOptFlags,
+    CXGlobalOpt_None = 0,
+    CXGlobalOpt_ThreadBackgroundPriorityForIndexing = 1,
+    CXGlobalOpt_ThreadBackgroundPriorityForEditing = 2,
+    CXGlobalOpt_ThreadBackgroundPriorityForAll = 3,
+)
 
 const CXFile = Ptr{Cvoid}
 
 struct CXFileUniqueID
     data::NTuple{3, Culonglong}
 end
-
 struct CXSourceLocation
     ptr_data::NTuple{2, Ptr{Cvoid}}
     int_data::UInt32
 end
-
 struct CXSourceRange
     ptr_data::NTuple{2, Ptr{Cvoid}}
     begin_int_data::UInt32
     end_int_data::UInt32
 end
-
 struct CXSourceRangeList
     count::UInt32
     ranges::Ptr{CXSourceRange}
 end
 
-# begin enum CXDiagnostic
-const CXDiagnostic = UInt32
-const CXDiagnostic_Ignored = 0 |> UInt32
-const CXDiagnostic_Note = 1 |> UInt32
-const CXDiagnostic_Warning = 2 |> UInt32
-const CXDiagnostic_Error = 3 |> UInt32
-const CXDiagnostic_Fatal = 4 |> UInt32
-# end enum CXDiagnostic
+@cenum(CXDiagnosticSeverity,
+    CXDiagnostic_Ignored = 0,
+    CXDiagnostic_Note = 1,
+    CXDiagnostic_Warning = 2,
+    CXDiagnostic_Error = 3,
+    CXDiagnostic_Fatal = 4,
+)
 
+const CXDiagnostic = Ptr{Cvoid}
 const CXDiagnosticSet = Ptr{Cvoid}
 
-# begin enum CXLoadDiag_Error
-const CXLoadDiag_Error = UInt32
-const CXLoadDiag_None = 0 |> UInt32
-const CXLoadDiag_Unknown = 1 |> UInt32
-const CXLoadDiag_CannotLoad = 2 |> UInt32
-const CXLoadDiag_InvalidFile = 3 |> UInt32
-# end enum CXLoadDiag_Error
-
-# begin enum CXDiagnosticDisplayOptions
-const CXDiagnosticDisplayOptions = UInt32
-const CXDiagnostic_DisplaySourceLocation = 1 |> UInt32
-const CXDiagnostic_DisplayColumn = 2 |> UInt32
-const CXDiagnostic_DisplaySourceRanges = 4 |> UInt32
-const CXDiagnostic_DisplayOption = 8 |> UInt32
-const CXDiagnostic_DisplayCategoryId = 16 |> UInt32
-const CXDiagnostic_DisplayCategoryName = 32 |> UInt32
-# end enum CXDiagnosticDisplayOptions
-
+@cenum(CXLoadDiag_Error,
+    CXLoadDiag_None = 0,
+    CXLoadDiag_Unknown = 1,
+    CXLoadDiag_CannotLoad = 2,
+    CXLoadDiag_InvalidFile = 3,
+)
+@cenum(CXDiagnosticDisplayOptions,
+    CXDiagnostic_DisplaySourceLocation = 1,
+    CXDiagnostic_DisplayColumn = 2,
+    CXDiagnostic_DisplaySourceRanges = 4,
+    CXDiagnostic_DisplayOption = 8,
+    CXDiagnostic_DisplayCategoryId = 16,
+    CXDiagnostic_DisplayCategoryName = 32,
+)
 @cenum(CXTranslationUnit_Flags,
     CXTranslationUnit_None = 0,
     CXTranslationUnit_DetailedPreprocessingRecord = 1,
@@ -191,58 +174,48 @@ const CXDiagnostic_DisplayCategoryName = 32 |> UInt32
     CXTranslationUnit_KeepGoing = 512,
     CXTranslationUnit_SingleFileParse = 1024,
 )
-
-# begin enum CXSaveTranslationUnit_Flags
-const CXSaveTranslationUnit_Flags = UInt32
-const CXSaveTranslationUnit_None = 0 |> UInt32
-# end enum CXSaveTranslationUnit_Flags
-
-# begin enum CXSaveError
-const CXSaveError = UInt32
-const CXSaveError_None = 0 |> UInt32
-const CXSaveError_Unknown = 1 |> UInt32
-const CXSaveError_TranslationErrors = 2 |> UInt32
-const CXSaveError_InvalidTU = 3 |> UInt32
-# end enum CXSaveError
-
-# begin enum CXReparse_Flags
-const CXReparse_Flags = UInt32
-const CXReparse_None = 0 |> UInt32
-# end enum CXReparse_Flags
-
-# begin enum CXTUResourceUsageKind
-const CXTUResourceUsageKind = UInt32
-const CXTUResourceUsage_AST = 1 |> UInt32
-const CXTUResourceUsage_Identifiers = 2 |> UInt32
-const CXTUResourceUsage_Selectors = 3 |> UInt32
-const CXTUResourceUsage_GlobalCompletionResults = 4 |> UInt32
-const CXTUResourceUsage_SourceManagerContentCache = 5 |> UInt32
-const CXTUResourceUsage_AST_SideTables = 6 |> UInt32
-const CXTUResourceUsage_SourceManager_Membuffer_Malloc = 7 |> UInt32
-const CXTUResourceUsage_SourceManager_Membuffer_MMap = 8 |> UInt32
-const CXTUResourceUsage_ExternalASTSource_Membuffer_Malloc = 9 |> UInt32
-const CXTUResourceUsage_ExternalASTSource_Membuffer_MMap = 10 |> UInt32
-const CXTUResourceUsage_Preprocessor = 11 |> UInt32
-const CXTUResourceUsage_PreprocessingRecord = 12 |> UInt32
-const CXTUResourceUsage_SourceManager_DataStructures = 13 |> UInt32
-const CXTUResourceUsage_Preprocessor_HeaderSearch = 14 |> UInt32
-const CXTUResourceUsage_MEMORY_IN_BYTES_BEGIN = 1 |> UInt32
-const CXTUResourceUsage_MEMORY_IN_BYTES_END = 14 |> UInt32
-const CXTUResourceUsage_First = 1 |> UInt32
-const CXTUResourceUsage_Last = 14 |> UInt32
-# end enum CXTUResourceUsageKind
+@cenum(CXSaveTranslationUnit_Flags,
+    CXSaveTranslationUnit_None = 0,
+)
+@cenum(CXSaveError,
+    CXSaveError_None = 0,
+    CXSaveError_Unknown = 1,
+    CXSaveError_TranslationErrors = 2,
+    CXSaveError_InvalidTU = 3,
+)
+@cenum(CXReparse_Flags,
+    CXReparse_None = 0,
+)
+@cenum(CXTUResourceUsageKind,
+    CXTUResourceUsage_AST = 1,
+    CXTUResourceUsage_Identifiers = 2,
+    CXTUResourceUsage_Selectors = 3,
+    CXTUResourceUsage_GlobalCompletionResults = 4,
+    CXTUResourceUsage_SourceManagerContentCache = 5,
+    CXTUResourceUsage_AST_SideTables = 6,
+    CXTUResourceUsage_SourceManager_Membuffer_Malloc = 7,
+    CXTUResourceUsage_SourceManager_Membuffer_MMap = 8,
+    CXTUResourceUsage_ExternalASTSource_Membuffer_Malloc = 9,
+    CXTUResourceUsage_ExternalASTSource_Membuffer_MMap = 10,
+    CXTUResourceUsage_Preprocessor = 11,
+    CXTUResourceUsage_PreprocessingRecord = 12,
+    CXTUResourceUsage_SourceManager_DataStructures = 13,
+    CXTUResourceUsage_Preprocessor_HeaderSearch = 14,
+    CXTUResourceUsage_MEMORY_IN_BYTES_BEGIN = 1,
+    CXTUResourceUsage_MEMORY_IN_BYTES_END = 14,
+    CXTUResourceUsage_First = 1,
+    CXTUResourceUsage_Last = 14,
+)
 
 struct CXTUResourceUsageEntry
     kind::Cvoid
     amount::Culong
 end
-
 struct CXTUResourceUsage
     data::Ptr{Cvoid}
     numEntries::UInt32
     entries::Ptr{CXTUResourceUsageEntry}
 end
-
 
 @cenum(CXCursorKind,
     CXCursor_UnexposedDecl = 1,
@@ -479,27 +452,24 @@ end
 )
 
 struct CXCursor
-    kind::Cuint
+    kind::Cvoid
     xdata::Cint
     data::NTuple{3, Ptr{Cvoid}}
 end
 
-# begin enum CXLinkageKind
-const CXLinkageKind = UInt32
-const CXLinkage_Invalid = 0 |> UInt32
-const CXLinkage_NoLinkage = 1 |> UInt32
-const CXLinkage_Internal = 2 |> UInt32
-const CXLinkage_UniqueExternal = 3 |> UInt32
-const CXLinkage_External = 4 |> UInt32
-# end enum CXLinkageKind
-
-# begin enum CXVisibilityKind
-const CXVisibilityKind = UInt32
-const CXVisibility_Invalid = 0 |> UInt32
-const CXVisibility_Hidden = 1 |> UInt32
-const CXVisibility_Protected = 2 |> UInt32
-const CXVisibility_Default = 3 |> UInt32
-# end enum CXVisibilityKind
+@cenum(CXLinkageKind,
+    CXLinkage_Invalid = 0,
+    CXLinkage_NoLinkage = 1,
+    CXLinkage_Internal = 2,
+    CXLinkage_UniqueExternal = 3,
+    CXLinkage_External = 4,
+)
+@cenum(CXVisibilityKind,
+    CXVisibility_Invalid = 0,
+    CXVisibility_Hidden = 1,
+    CXVisibility_Protected = 2,
+    CXVisibility_Default = 3,
+)
 
 struct CXPlatformAvailability
     Platform::CXString
@@ -510,22 +480,20 @@ struct CXPlatformAvailability
     Message::CXString
 end
 
-# begin enum CXLanguageKind
-const CXLanguageKind = UInt32
-const CXLanguage_Invalid = 0 |> UInt32
-const CXLanguage_C = 1 |> UInt32
-const CXLanguage_ObjC = 2 |> UInt32
-const CXLanguage_CPlusPlus = 3 |> UInt32
-# end enum CXLanguageKind
+@cenum(CXLanguageKind,
+    CXLanguage_Invalid = 0,
+    CXLanguage_C = 1,
+    CXLanguage_ObjC = 2,
+    CXLanguage_CPlusPlus = 3,
+)
+@cenum(CXTLSKind,
+    CXTLS_None = 0,
+    CXTLS_Dynamic = 1,
+    CXTLS_Static = 2,
+)
 
-# begin enum CXTLSKind
-const CXTLSKind = UInt32
-const CXTLS_None = 0 |> UInt32
-const CXTLS_Dynamic = 1 |> UInt32
-const CXTLS_Static = 2 |> UInt32
-# end enum CXTLSKind
-
-const CXCursorSet = Cvoid
+const CXCursorSetImpl = Ptr{Cvoid}
+const CXCursorSet = Ptr{Cvoid}
 
 @cenum(CXTypeKind,
     CXType_Invalid = 0,
@@ -625,132 +593,115 @@ const CXCursorSet = Cvoid
     CXType_OCLQueue = 159,
     CXType_OCLReserveID = 160,
 )
-
-# begin enum CXCallingConv
-const CXCallingConv = UInt32
-const CXCallingConv_Default = 0 |> UInt32
-const CXCallingConv_C = 1 |> UInt32
-const CXCallingConv_X86StdCall = 2 |> UInt32
-const CXCallingConv_X86FastCall = 3 |> UInt32
-const CXCallingConv_X86ThisCall = 4 |> UInt32
-const CXCallingConv_X86Pascal = 5 |> UInt32
-const CXCallingConv_AAPCS = 6 |> UInt32
-const CXCallingConv_AAPCS_VFP = 7 |> UInt32
-const CXCallingConv_X86RegCall = 8 |> UInt32
-const CXCallingConv_IntelOclBicc = 9 |> UInt32
-const CXCallingConv_Win64 = 10 |> UInt32
-const CXCallingConv_X86_64Win64 = 10 |> UInt32
-const CXCallingConv_X86_64SysV = 11 |> UInt32
-const CXCallingConv_X86VectorCall = 12 |> UInt32
-const CXCallingConv_Swift = 13 |> UInt32
-const CXCallingConv_PreserveMost = 14 |> UInt32
-const CXCallingConv_PreserveAll = 15 |> UInt32
-const CXCallingConv_Invalid = 100 |> UInt32
-const CXCallingConv_Unexposed = 200 |> UInt32
-# end enum CXCallingConv
+@cenum(CXCallingConv,
+    CXCallingConv_Default = 0,
+    CXCallingConv_C = 1,
+    CXCallingConv_X86StdCall = 2,
+    CXCallingConv_X86FastCall = 3,
+    CXCallingConv_X86ThisCall = 4,
+    CXCallingConv_X86Pascal = 5,
+    CXCallingConv_AAPCS = 6,
+    CXCallingConv_AAPCS_VFP = 7,
+    CXCallingConv_X86RegCall = 8,
+    CXCallingConv_IntelOclBicc = 9,
+    CXCallingConv_Win64 = 10,
+    CXCallingConv_X86_64Win64 = 10,
+    CXCallingConv_X86_64SysV = 11,
+    CXCallingConv_X86VectorCall = 12,
+    CXCallingConv_Swift = 13,
+    CXCallingConv_PreserveMost = 14,
+    CXCallingConv_PreserveAll = 15,
+    CXCallingConv_Invalid = 100,
+    CXCallingConv_Unexposed = 200,
+)
 
 struct CXType
-    kind::UInt32
+    kind::CXTypeKind
     data::NTuple{2, Ptr{Cvoid}}
 end
 
-# begin enum CXTemplateArgumentKind
-const CXTemplateArgumentKind = UInt32
-const CXTemplateArgumentKind_Null = 0 |> UInt32
-const CXTemplateArgumentKind_Type = 1 |> UInt32
-const CXTemplateArgumentKind_Declaration = 2 |> UInt32
-const CXTemplateArgumentKind_NullPtr = 3 |> UInt32
-const CXTemplateArgumentKind_Integral = 4 |> UInt32
-const CXTemplateArgumentKind_Template = 5 |> UInt32
-const CXTemplateArgumentKind_TemplateExpansion = 6 |> UInt32
-const CXTemplateArgumentKind_Expression = 7 |> UInt32
-const CXTemplateArgumentKind_Pack = 8 |> UInt32
-const CXTemplateArgumentKind_Invalid = 9 |> UInt32
-# end enum CXTemplateArgumentKind
+@cenum(CXTemplateArgumentKind,
+    CXTemplateArgumentKind_Null = 0,
+    CXTemplateArgumentKind_Type = 1,
+    CXTemplateArgumentKind_Declaration = 2,
+    CXTemplateArgumentKind_NullPtr = 3,
+    CXTemplateArgumentKind_Integral = 4,
+    CXTemplateArgumentKind_Template = 5,
+    CXTemplateArgumentKind_TemplateExpansion = 6,
+    CXTemplateArgumentKind_Expression = 7,
+    CXTemplateArgumentKind_Pack = 8,
+    CXTemplateArgumentKind_Invalid = 9,
+)
+@cenum(CXTypeLayoutError,
+    CXTypeLayoutError_Invalid = -1,
+    CXTypeLayoutError_Incomplete = -2,
+    CXTypeLayoutError_Dependent = -3,
+    CXTypeLayoutError_NotConstantSize = -4,
+    CXTypeLayoutError_InvalidFieldName = -5,
+)
+@cenum(CXRefQualifierKind,
+    CXRefQualifier_None = 0,
+    CXRefQualifier_LValue = 1,
+    CXRefQualifier_RValue = 2,
+)
+@cenum(CX_CXXAccessSpecifier,
+    CX_CXXInvalidAccessSpecifier = 0,
+    CX_CXXPublic = 1,
+    CX_CXXProtected = 2,
+    CX_CXXPrivate = 3,
+)
+@cenum(CX_StorageClass,
+    CX_SC_Invalid = 0,
+    CX_SC_None = 1,
+    CX_SC_Extern = 2,
+    CX_SC_Static = 3,
+    CX_SC_PrivateExtern = 4,
+    CX_SC_OpenCLWorkGroupLocal = 5,
+    CX_SC_Auto = 6,
+    CX_SC_Register = 7,
+)
+@cenum(CXChildVisitResult,
+    CXChildVisit_Break = 0,
+    CXChildVisit_Continue = 1,
+    CXChildVisit_Recurse = 2,
+)
 
-# begin enum CXTypeLayoutError
-const CXTypeLayoutError = Cint
-const CXTypeLayoutError_Invalid = -1 |> Int32
-const CXTypeLayoutError_Incomplete = -2 |> Int32
-const CXTypeLayoutError_Dependent = -3 |> Int32
-const CXTypeLayoutError_NotConstantSize = -4 |> Int32
-const CXTypeLayoutError_InvalidFieldName = -5 |> Int32
-# end enum CXTypeLayoutError
-
-# begin enum CXRefQualifierKind
-const CXRefQualifierKind = UInt32
-const CXRefQualifier_None = 0 |> UInt32
-const CXRefQualifier_LValue = 1 |> UInt32
-const CXRefQualifier_RValue = 2 |> UInt32
-# end enum CXRefQualifierKind
-
-# begin enum CX_CXXAccessSpecifier
-const CX_CXXAccessSpecifier = UInt32
-const CX_CXXInvalidAccessSpecifier = 0 |> UInt32
-const CX_CXXPublic = 1 |> UInt32
-const CX_CXXProtected = 2 |> UInt32
-const CX_CXXPrivate = 3 |> UInt32
-# end enum CX_CXXAccessSpecifier
-
-# begin enum CX_StorageClass
-const CX_StorageClass = UInt32
-const CX_SC_Invalid = 0 |> UInt32
-const CX_SC_None = 1 |> UInt32
-const CX_SC_Extern = 2 |> UInt32
-const CX_SC_Static = 3 |> UInt32
-const CX_SC_PrivateExtern = 4 |> UInt32
-const CX_SC_OpenCLWorkGroupLocal = 5 |> UInt32
-const CX_SC_Auto = 6 |> UInt32
-const CX_SC_Register = 7 |> UInt32
-# end enum CX_StorageClass
-
-# begin enum CXChildVisitResult
-const CXChildVisitResult = UInt32
-const CXChildVisit_Break = 0 |> UInt32
-const CXChildVisit_Continue = 1 |> UInt32
-const CXChildVisit_Recurse = 2 |> UInt32
-# end enum CXChildVisitResult
-
+const CXCursorVisitor = Ptr{Cvoid}
 const CXCursorVisitorBlock = Cvoid
 
-# begin enum CXObjCPropertyAttrKind
-const CXObjCPropertyAttrKind = UInt32
-const CXObjCPropertyAttr_noattr = 0 |> UInt32
-const CXObjCPropertyAttr_readonly = 1 |> UInt32
-const CXObjCPropertyAttr_getter = 2 |> UInt32
-const CXObjCPropertyAttr_assign = 4 |> UInt32
-const CXObjCPropertyAttr_readwrite = 8 |> UInt32
-const CXObjCPropertyAttr_retain = 16 |> UInt32
-const CXObjCPropertyAttr_copy = 32 |> UInt32
-const CXObjCPropertyAttr_nonatomic = 64 |> UInt32
-const CXObjCPropertyAttr_setter = 128 |> UInt32
-const CXObjCPropertyAttr_atomic = 256 |> UInt32
-const CXObjCPropertyAttr_weak = 512 |> UInt32
-const CXObjCPropertyAttr_strong = 1024 |> UInt32
-const CXObjCPropertyAttr_unsafe_unretained = 2048 |> UInt32
-const CXObjCPropertyAttr_class = 4096 |> UInt32
-# end enum CXObjCPropertyAttrKind
-
-# begin enum CXObjCDeclQualifierKind
-const CXObjCDeclQualifierKind = UInt32
-const CXObjCDeclQualifier_None = 0 |> UInt32
-const CXObjCDeclQualifier_In = 1 |> UInt32
-const CXObjCDeclQualifier_Inout = 2 |> UInt32
-const CXObjCDeclQualifier_Out = 4 |> UInt32
-const CXObjCDeclQualifier_Bycopy = 8 |> UInt32
-const CXObjCDeclQualifier_Byref = 16 |> UInt32
-const CXObjCDeclQualifier_Oneway = 32 |> UInt32
-# end enum CXObjCDeclQualifierKind
+@cenum(CXObjCPropertyAttrKind,
+    CXObjCPropertyAttr_noattr = 0,
+    CXObjCPropertyAttr_readonly = 1,
+    CXObjCPropertyAttr_getter = 2,
+    CXObjCPropertyAttr_assign = 4,
+    CXObjCPropertyAttr_readwrite = 8,
+    CXObjCPropertyAttr_retain = 16,
+    CXObjCPropertyAttr_copy = 32,
+    CXObjCPropertyAttr_nonatomic = 64,
+    CXObjCPropertyAttr_setter = 128,
+    CXObjCPropertyAttr_atomic = 256,
+    CXObjCPropertyAttr_weak = 512,
+    CXObjCPropertyAttr_strong = 1024,
+    CXObjCPropertyAttr_unsafe_unretained = 2048,
+    CXObjCPropertyAttr_class = 4096,
+)
+@cenum(CXObjCDeclQualifierKind,
+    CXObjCDeclQualifier_None = 0,
+    CXObjCDeclQualifier_In = 1,
+    CXObjCDeclQualifier_Inout = 2,
+    CXObjCDeclQualifier_Out = 4,
+    CXObjCDeclQualifier_Bycopy = 8,
+    CXObjCDeclQualifier_Byref = 16,
+    CXObjCDeclQualifier_Oneway = 32,
+)
 
 const CXModule = Ptr{Cvoid}
 
-# begin enum CXNameRefFlags
-const CXNameRefFlags = UInt32
-const CXNameRange_WantQualifier = 1 |> UInt32
-const CXNameRange_WantTemplateArgs = 2 |> UInt32
-const CXNameRange_WantSinglePiece = 4 |> UInt32
-# end enum CXNameRefFlags
-
+@cenum(CXNameRefFlags,
+    CXNameRange_WantQualifier = 1,
+    CXNameRange_WantTemplateArgs = 2,
+    CXNameRange_WantSinglePiece = 4,
+)
 @cenum(CXTokenKind,
     CXToken_Punctuation = 0,
     CXToken_Keyword = 1,
@@ -771,104 +722,97 @@ struct CXCompletionResult
     CompletionString::CXCompletionString
 end
 
-# begin enum CXCompletionChunkKind
-const CXCompletionChunkKind = UInt32
-const CXCompletionChunk_Optional = 0 |> UInt32
-const CXCompletionChunk_TypedText = 1 |> UInt32
-const CXCompletionChunk_Text = 2 |> UInt32
-const CXCompletionChunk_Placeholder = 3 |> UInt32
-const CXCompletionChunk_Informative = 4 |> UInt32
-const CXCompletionChunk_CurrentParameter = 5 |> UInt32
-const CXCompletionChunk_LeftParen = 6 |> UInt32
-const CXCompletionChunk_RightParen = 7 |> UInt32
-const CXCompletionChunk_LeftBracket = 8 |> UInt32
-const CXCompletionChunk_RightBracket = 9 |> UInt32
-const CXCompletionChunk_LeftBrace = 10 |> UInt32
-const CXCompletionChunk_RightBrace = 11 |> UInt32
-const CXCompletionChunk_LeftAngle = 12 |> UInt32
-const CXCompletionChunk_RightAngle = 13 |> UInt32
-const CXCompletionChunk_Comma = 14 |> UInt32
-const CXCompletionChunk_ResultType = 15 |> UInt32
-const CXCompletionChunk_Colon = 16 |> UInt32
-const CXCompletionChunk_SemiColon = 17 |> UInt32
-const CXCompletionChunk_Equal = 18 |> UInt32
-const CXCompletionChunk_HorizontalSpace = 19 |> UInt32
-const CXCompletionChunk_VerticalSpace = 20 |> UInt32
-# end enum CXCompletionChunkKind
+@cenum(CXCompletionChunkKind,
+    CXCompletionChunk_Optional = 0,
+    CXCompletionChunk_TypedText = 1,
+    CXCompletionChunk_Text = 2,
+    CXCompletionChunk_Placeholder = 3,
+    CXCompletionChunk_Informative = 4,
+    CXCompletionChunk_CurrentParameter = 5,
+    CXCompletionChunk_LeftParen = 6,
+    CXCompletionChunk_RightParen = 7,
+    CXCompletionChunk_LeftBracket = 8,
+    CXCompletionChunk_RightBracket = 9,
+    CXCompletionChunk_LeftBrace = 10,
+    CXCompletionChunk_RightBrace = 11,
+    CXCompletionChunk_LeftAngle = 12,
+    CXCompletionChunk_RightAngle = 13,
+    CXCompletionChunk_Comma = 14,
+    CXCompletionChunk_ResultType = 15,
+    CXCompletionChunk_Colon = 16,
+    CXCompletionChunk_SemiColon = 17,
+    CXCompletionChunk_Equal = 18,
+    CXCompletionChunk_HorizontalSpace = 19,
+    CXCompletionChunk_VerticalSpace = 20,
+)
 
 struct CXCodeCompleteResults
     Results::Ptr{CXCompletionResult}
     NumResults::UInt32
 end
 
-# begin enum CXCodeComplete_Flags
-const CXCodeComplete_Flags = UInt32
-const CXCodeComplete_IncludeMacros = 1 |> UInt32
-const CXCodeComplete_IncludeCodePatterns = 2 |> UInt32
-const CXCodeComplete_IncludeBriefComments = 4 |> UInt32
-# end enum CXCodeComplete_Flags
-
-# begin enum CXCompletionContext
-const CXCompletionContext = UInt32
-const CXCompletionContext_Unexposed = 0 |> UInt32
-const CXCompletionContext_AnyType = 1 |> UInt32
-const CXCompletionContext_AnyValue = 2 |> UInt32
-const CXCompletionContext_ObjCObjectValue = 4 |> UInt32
-const CXCompletionContext_ObjCSelectorValue = 8 |> UInt32
-const CXCompletionContext_CXXClassTypeValue = 16 |> UInt32
-const CXCompletionContext_DotMemberAccess = 32 |> UInt32
-const CXCompletionContext_ArrowMemberAccess = 64 |> UInt32
-const CXCompletionContext_ObjCPropertyAccess = 128 |> UInt32
-const CXCompletionContext_EnumTag = 256 |> UInt32
-const CXCompletionContext_UnionTag = 512 |> UInt32
-const CXCompletionContext_StructTag = 1024 |> UInt32
-const CXCompletionContext_ClassTag = 2048 |> UInt32
-const CXCompletionContext_Namespace = 4096 |> UInt32
-const CXCompletionContext_NestedNameSpecifier = 8192 |> UInt32
-const CXCompletionContext_ObjCInterface = 16384 |> UInt32
-const CXCompletionContext_ObjCProtocol = 32768 |> UInt32
-const CXCompletionContext_ObjCCategory = 65536 |> UInt32
-const CXCompletionContext_ObjCInstanceMessage = 131072 |> UInt32
-const CXCompletionContext_ObjCClassMessage = 262144 |> UInt32
-const CXCompletionContext_ObjCSelectorName = 524288 |> UInt32
-const CXCompletionContext_MacroName = 1048576 |> UInt32
-const CXCompletionContext_NaturalLanguage = 2097152 |> UInt32
-const CXCompletionContext_Unknown = 4194303 |> UInt32
-# end enum CXCompletionContext
+@cenum(CXCodeComplete_Flags,
+    CXCodeComplete_IncludeMacros = 1,
+    CXCodeComplete_IncludeCodePatterns = 2,
+    CXCodeComplete_IncludeBriefComments = 4,
+)
+@cenum(CXCompletionContext,
+    CXCompletionContext_Unexposed = 0,
+    CXCompletionContext_AnyType = 1,
+    CXCompletionContext_AnyValue = 2,
+    CXCompletionContext_ObjCObjectValue = 4,
+    CXCompletionContext_ObjCSelectorValue = 8,
+    CXCompletionContext_CXXClassTypeValue = 16,
+    CXCompletionContext_DotMemberAccess = 32,
+    CXCompletionContext_ArrowMemberAccess = 64,
+    CXCompletionContext_ObjCPropertyAccess = 128,
+    CXCompletionContext_EnumTag = 256,
+    CXCompletionContext_UnionTag = 512,
+    CXCompletionContext_StructTag = 1024,
+    CXCompletionContext_ClassTag = 2048,
+    CXCompletionContext_Namespace = 4096,
+    CXCompletionContext_NestedNameSpecifier = 8192,
+    CXCompletionContext_ObjCInterface = 16384,
+    CXCompletionContext_ObjCProtocol = 32768,
+    CXCompletionContext_ObjCCategory = 65536,
+    CXCompletionContext_ObjCInstanceMessage = 131072,
+    CXCompletionContext_ObjCClassMessage = 262144,
+    CXCompletionContext_ObjCSelectorName = 524288,
+    CXCompletionContext_MacroName = 1048576,
+    CXCompletionContext_NaturalLanguage = 2097152,
+    CXCompletionContext_Unknown = 4194303,
+)
 
 const CXInclusionVisitor = Ptr{Cvoid}
 
-# begin enum CXEvalResultKind
-const CXEvalResultKind = UInt32
-const CXEval_Int = 1 |> UInt32
-const CXEval_Float = 2 |> UInt32
-const CXEval_ObjCStrLiteral = 3 |> UInt32
-const CXEval_StrLiteral = 4 |> UInt32
-const CXEval_CFStr = 5 |> UInt32
-const CXEval_Other = 6 |> UInt32
-const CXEval_UnExposed = 0 |> UInt32
-# end enum CXEvalResultKind
+@cenum(CXEvalResultKind,
+    CXEval_Int = 1,
+    CXEval_Float = 2,
+    CXEval_ObjCStrLiteral = 3,
+    CXEval_StrLiteral = 4,
+    CXEval_CFStr = 5,
+    CXEval_Other = 6,
+    CXEval_UnExposed = 0,
+)
 
 const CXEvalResult = Ptr{Cvoid}
 const CXRemapping = Ptr{Cvoid}
 
-# begin enum CXVisitorResult
-const CXVisitorResult = UInt32
-const CXVisit_Break = 0 |> UInt32
-const CXVisit_Continue = 1 |> UInt32
-# end enum CXVisitorResult
+@cenum(CXVisitorResult,
+    CXVisit_Break = 0,
+    CXVisit_Continue = 1,
+)
 
 struct CXCursorAndRangeVisitor
     context::Ptr{Cvoid}
     visit::Ptr{Cvoid}
 end
 
-# begin enum CXResult
-const CXResult = UInt32
-const CXResult_Success = 0 |> UInt32
-const CXResult_Invalid = 1 |> UInt32
-const CXResult_VisitBreak = 2 |> UInt32
-# end enum CXResult
+@cenum(CXResult,
+    CXResult_Success = 0,
+    CXResult_Invalid = 1,
+    CXResult_VisitBreak = 2,
+)
 
 const CXCursorAndRangeVisitorBlock = Cvoid
 const CXIdxClientFile = Ptr{Cvoid}
@@ -880,7 +824,6 @@ struct CXIdxLoc
     ptr_data::NTuple{2, Ptr{Cvoid}}
     int_data::UInt32
 end
-
 struct CXIdxIncludedFileInfo
     hashLoc::CXIdxLoc
     filename::Cstring
@@ -889,7 +832,6 @@ struct CXIdxIncludedFileInfo
     isAngled::Cint
     isModuleImport::Cint
 end
-
 struct CXIdxImportedASTFileInfo
     file::CXFile
     _module::CXModule
@@ -897,68 +839,60 @@ struct CXIdxImportedASTFileInfo
     isImplicit::Cint
 end
 
-# begin enum CXIdxEntityKind
-const CXIdxEntityKind = UInt32
-const CXIdxEntity_Unexposed = 0 |> UInt32
-const CXIdxEntity_Typedef = 1 |> UInt32
-const CXIdxEntity_Function = 2 |> UInt32
-const CXIdxEntity_Variable = 3 |> UInt32
-const CXIdxEntity_Field = 4 |> UInt32
-const CXIdxEntity_EnumConstant = 5 |> UInt32
-const CXIdxEntity_ObjCClass = 6 |> UInt32
-const CXIdxEntity_ObjCProtocol = 7 |> UInt32
-const CXIdxEntity_ObjCCategory = 8 |> UInt32
-const CXIdxEntity_ObjCInstanceMethod = 9 |> UInt32
-const CXIdxEntity_ObjCClassMethod = 10 |> UInt32
-const CXIdxEntity_ObjCProperty = 11 |> UInt32
-const CXIdxEntity_ObjCIvar = 12 |> UInt32
-const CXIdxEntity_Enum = 13 |> UInt32
-const CXIdxEntity_Struct = 14 |> UInt32
-const CXIdxEntity_Union = 15 |> UInt32
-const CXIdxEntity_CXXClass = 16 |> UInt32
-const CXIdxEntity_CXXNamespace = 17 |> UInt32
-const CXIdxEntity_CXXNamespaceAlias = 18 |> UInt32
-const CXIdxEntity_CXXStaticVariable = 19 |> UInt32
-const CXIdxEntity_CXXStaticMethod = 20 |> UInt32
-const CXIdxEntity_CXXInstanceMethod = 21 |> UInt32
-const CXIdxEntity_CXXConstructor = 22 |> UInt32
-const CXIdxEntity_CXXDestructor = 23 |> UInt32
-const CXIdxEntity_CXXConversionFunction = 24 |> UInt32
-const CXIdxEntity_CXXTypeAlias = 25 |> UInt32
-const CXIdxEntity_CXXInterface = 26 |> UInt32
-# end enum CXIdxEntityKind
-
-# begin enum CXIdxEntityLanguage
-const CXIdxEntityLanguage = UInt32
-const CXIdxEntityLang_None = 0 |> UInt32
-const CXIdxEntityLang_C = 1 |> UInt32
-const CXIdxEntityLang_ObjC = 2 |> UInt32
-const CXIdxEntityLang_CXX = 3 |> UInt32
-const CXIdxEntityLang_Swift = 4 |> UInt32
-# end enum CXIdxEntityLanguage
-
-# begin enum CXIdxEntityCXXTemplateKind
-const CXIdxEntityCXXTemplateKind = UInt32
-const CXIdxEntity_NonTemplate = 0 |> UInt32
-const CXIdxEntity_Template = 1 |> UInt32
-const CXIdxEntity_TemplatePartialSpecialization = 2 |> UInt32
-const CXIdxEntity_TemplateSpecialization = 3 |> UInt32
-# end enum CXIdxEntityCXXTemplateKind
-
-# begin enum CXIdxAttrKind
-const CXIdxAttrKind = UInt32
-const CXIdxAttr_Unexposed = 0 |> UInt32
-const CXIdxAttr_IBAction = 1 |> UInt32
-const CXIdxAttr_IBOutlet = 2 |> UInt32
-const CXIdxAttr_IBOutletCollection = 3 |> UInt32
-# end enum CXIdxAttrKind
+@cenum(CXIdxEntityKind,
+    CXIdxEntity_Unexposed = 0,
+    CXIdxEntity_Typedef = 1,
+    CXIdxEntity_Function = 2,
+    CXIdxEntity_Variable = 3,
+    CXIdxEntity_Field = 4,
+    CXIdxEntity_EnumConstant = 5,
+    CXIdxEntity_ObjCClass = 6,
+    CXIdxEntity_ObjCProtocol = 7,
+    CXIdxEntity_ObjCCategory = 8,
+    CXIdxEntity_ObjCInstanceMethod = 9,
+    CXIdxEntity_ObjCClassMethod = 10,
+    CXIdxEntity_ObjCProperty = 11,
+    CXIdxEntity_ObjCIvar = 12,
+    CXIdxEntity_Enum = 13,
+    CXIdxEntity_Struct = 14,
+    CXIdxEntity_Union = 15,
+    CXIdxEntity_CXXClass = 16,
+    CXIdxEntity_CXXNamespace = 17,
+    CXIdxEntity_CXXNamespaceAlias = 18,
+    CXIdxEntity_CXXStaticVariable = 19,
+    CXIdxEntity_CXXStaticMethod = 20,
+    CXIdxEntity_CXXInstanceMethod = 21,
+    CXIdxEntity_CXXConstructor = 22,
+    CXIdxEntity_CXXDestructor = 23,
+    CXIdxEntity_CXXConversionFunction = 24,
+    CXIdxEntity_CXXTypeAlias = 25,
+    CXIdxEntity_CXXInterface = 26,
+)
+@cenum(CXIdxEntityLanguage,
+    CXIdxEntityLang_None = 0,
+    CXIdxEntityLang_C = 1,
+    CXIdxEntityLang_ObjC = 2,
+    CXIdxEntityLang_CXX = 3,
+    CXIdxEntityLang_Swift = 4,
+)
+@cenum(CXIdxEntityCXXTemplateKind,
+    CXIdxEntity_NonTemplate = 0,
+    CXIdxEntity_Template = 1,
+    CXIdxEntity_TemplatePartialSpecialization = 2,
+    CXIdxEntity_TemplateSpecialization = 3,
+)
+@cenum(CXIdxAttrKind,
+    CXIdxAttr_Unexposed = 0,
+    CXIdxAttr_IBAction = 1,
+    CXIdxAttr_IBOutlet = 2,
+    CXIdxAttr_IBOutletCollection = 3,
+)
 
 struct CXIdxAttrInfo
     kind::CXIdxAttrKind
     cursor::CXCursor
     loc::CXIdxLoc
 end
-
 struct CXIdxEntityInfo
     kind::CXIdxEntityKind
     templateKind::CXIdxEntityCXXTemplateKind
@@ -969,11 +903,9 @@ struct CXIdxEntityInfo
     attributes::Ptr{Ptr{CXIdxAttrInfo}}
     numAttributes::UInt32
 end
-
 struct CXIdxContainerInfo
     cursor::CXCursor
 end
-
 struct CXIdxIBOutletCollectionAttrInfo
     attrInfo::Ptr{CXIdxAttrInfo}
     objcClass::Ptr{CXIdxEntityInfo}
@@ -981,10 +913,9 @@ struct CXIdxIBOutletCollectionAttrInfo
     classLoc::CXIdxLoc
 end
 
-# begin enum CXIdxDeclInfoFlags
-const CXIdxDeclInfoFlags = UInt32
-const CXIdxDeclFlag_Skipped = 1 |> UInt32
-# end enum CXIdxDeclInfoFlags
+@cenum(CXIdxDeclInfoFlags,
+    CXIdxDeclFlag_Skipped = 1,
+)
 
 struct CXIdxDeclInfo
     entityInfo::Ptr{CXIdxEntityInfo}
@@ -1002,41 +933,35 @@ struct CXIdxDeclInfo
     flags::UInt32
 end
 
-# begin enum CXIdxObjCContainerKind
-const CXIdxObjCContainerKind = UInt32
-const CXIdxObjCContainer_ForwardRef = 0 |> UInt32
-const CXIdxObjCContainer_Interface = 1 |> UInt32
-const CXIdxObjCContainer_Implementation = 2 |> UInt32
-# end enum CXIdxObjCContainerKind
+@cenum(CXIdxObjCContainerKind,
+    CXIdxObjCContainer_ForwardRef = 0,
+    CXIdxObjCContainer_Interface = 1,
+    CXIdxObjCContainer_Implementation = 2,
+)
 
 struct CXIdxObjCContainerDeclInfo
     declInfo::Ptr{CXIdxDeclInfo}
     kind::CXIdxObjCContainerKind
 end
-
 struct CXIdxBaseClassInfo
     base::Ptr{CXIdxEntityInfo}
     cursor::CXCursor
     loc::CXIdxLoc
 end
-
 struct CXIdxObjCProtocolRefInfo
     protocol::Ptr{CXIdxEntityInfo}
     cursor::CXCursor
     loc::CXIdxLoc
 end
-
 struct CXIdxObjCProtocolRefListInfo
     protocols::Ptr{Ptr{CXIdxObjCProtocolRefInfo}}
     numProtocols::UInt32
 end
-
 struct CXIdxObjCInterfaceDeclInfo
     containerInfo::Ptr{CXIdxObjCContainerDeclInfo}
     superInfo::Ptr{CXIdxBaseClassInfo}
     protocols::Ptr{CXIdxObjCProtocolRefListInfo}
 end
-
 struct CXIdxObjCCategoryDeclInfo
     containerInfo::Ptr{CXIdxObjCContainerDeclInfo}
     objcClass::Ptr{CXIdxEntityInfo}
@@ -1044,24 +969,21 @@ struct CXIdxObjCCategoryDeclInfo
     classLoc::CXIdxLoc
     protocols::Ptr{CXIdxObjCProtocolRefListInfo}
 end
-
 struct CXIdxObjCPropertyDeclInfo
     declInfo::Ptr{CXIdxDeclInfo}
     getter::Ptr{CXIdxEntityInfo}
     setter::Ptr{CXIdxEntityInfo}
 end
-
 struct CXIdxCXXClassDeclInfo
     declInfo::Ptr{CXIdxDeclInfo}
     bases::Ptr{Ptr{CXIdxBaseClassInfo}}
     numBases::UInt32
 end
 
-# begin enum CXIdxEntityRefKind
-const CXIdxEntityRefKind = UInt32
-const CXIdxEntityRef_Direct = 1 |> UInt32
-const CXIdxEntityRef_Implicit = 2 |> UInt32
-# end enum CXIdxEntityRefKind
+@cenum(CXIdxEntityRefKind,
+    CXIdxEntityRef_Direct = 1,
+    CXIdxEntityRef_Implicit = 2,
+)
 
 struct CXIdxEntityRefInfo
     kind::CXIdxEntityRefKind
@@ -1071,7 +993,6 @@ struct CXIdxEntityRefInfo
     parentEntity::Ptr{CXIdxEntityInfo}
     container::Ptr{CXIdxContainerInfo}
 end
-
 struct IndexerCallbacks
     abortQuery::Ptr{Cvoid}
     diagnostic::Ptr{Cvoid}
@@ -1085,15 +1006,14 @@ end
 
 const CXIndexAction = Ptr{Cvoid}
 
-# begin enum CXIndexOptFlags
-const CXIndexOptFlags = UInt32
-const CXIndexOpt_None = 0 |> UInt32
-const CXIndexOpt_SuppressRedundantRefs = 1 |> UInt32
-const CXIndexOpt_IndexFunctionLocalSymbols = 2 |> UInt32
-const CXIndexOpt_IndexImplicitTemplateInstantiations = 4 |> UInt32
-const CXIndexOpt_SuppressWarnings = 8 |> UInt32
-const CXIndexOpt_SkipParsedBodiesInSession = 16 |> UInt32
-# end enum CXIndexOptFlags
+@cenum(CXIndexOptFlags,
+    CXIndexOpt_None = 0,
+    CXIndexOpt_SuppressRedundantRefs = 1,
+    CXIndexOpt_IndexFunctionLocalSymbols = 2,
+    CXIndexOpt_IndexImplicitTemplateInstantiations = 4,
+    CXIndexOpt_SuppressWarnings = 8,
+    CXIndexOpt_SkipParsedBodiesInSession = 16,
+)
 
 const CXFieldVisitor = Ptr{Cvoid}
 

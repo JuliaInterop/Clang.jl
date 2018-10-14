@@ -1,35 +1,34 @@
 using Clang
-using Clang.cindex
+using Clang.LibClang
 using Test
 
 @testset "c basic" begin
-    top = cindex.parse_header(joinpath(@__DIR__, "cxx/cbasic.h"),
-                              flags = TranslationUnit_Flags.DetailedPreprocessingRecord |
-                              TranslationUnit_Flags.SkipFunctionBodies)
+    # parse file
+    transUnit = parse_header(joinpath(@__DIR__, "c", "cbasic.h"),
+                             flags = CXTranslationUnit_DetailedPreprocessingRecord |
+                                     CXTranslationUnit_SkipFunctionBodies)
+    GC.@preserve transUnit begin
+        # get root cursor
+        top = getcursor(transUnit)
+        # search the first macro defination "#define CONST 1"
+        cursorCONST = search(top, x->kind(x)==CXCursor_MacroDefinition && name(x) == "CONST")
+        toksCONST = tokenize(cursorCONST[1])
+        @test kind(toksCONST[1]) == CXToken_Identifier
+        @test kind(toksCONST[2]) == CXToken_Literal
+        @test spelling(toksCONST, 2) == "1"
+        # search the second macro defination "#define CONSTADD CONST + 2"
+        cursorCONSTADD = search(top, x->kind(x)==CXCursor_MacroDefinition && name(x) == "CONSTADD")
+        toksCONSTADD = tokenize(cursorCONSTADD[1])
+        @test spelling(toksCONSTADD, 1) == "CONSTADD"
+        @test spelling(toksCONSTADD, 2) == "CONST"
+        @test spelling(toksCONSTADD, 3) == "+"
+        @test spelling(toksCONSTADD, 4) == "2"
 
-    # CursorList visiting
-
-
-    # Tokenizer
-
-    CONST = tokenize(cindex.search(
-                        top,
-                        x-> (isa(x, cindex.MacroDefinition) && name(x) == "CONST") )[1])
-    CONSTADD = tokenize(cindex.search(
-                        top,
-                        x-> (isa(x, cindex.MacroDefinition) && name(x) == "CONSTADD"))[1])
-
-    @test (typeof(CONST[1]) == cindex.Identifier && typeof(CONST[2]) == cindex.Literal)
-    @test (CONSTADD[1].text == "CONSTADD" && CONSTADD[2].text == "CONST" &&
-           CONSTADD[3].text == "+" && CONSTADD[4].text == "2")
-
-    # Function arguments
-
-    func1 = cindex.search(top, "func1")[1]
-    @test cindex.getNumArgTypes(cu_type(func1)) == 4
-    func1_args = cindex.function_args(func1)
-    @test map(spelling, func1_args) == ["a","b","c","d"]
-
-    # TODO should return a structure or namedtuple
-    @test endswith( cu_file(func1), "cxx/cbasic.h")
+        # function arguments
+        func1 = search(top, "func1")[1]
+        @test argnum(func1) == 4
+        func1_args = function_args(func1) # TODO should return a structure or namedtuple
+        @test map(spelling, func1_args) == ["a","b","c","d"]
+        @test endswith(filename(func1), "c/cbasic.h")
+    end
 end

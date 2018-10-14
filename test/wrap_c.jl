@@ -1,24 +1,29 @@
+using Clang
+using Clang: parse_c_headers, wrap!
 using Test
-using Clang.wrap_c
+
 include("strip_line_numbers.jl")
 
 @testset "wrap_c" begin
-    wc = wrap_c.init(;  headers = [joinpath(@__DIR__, "cxx/cbasic.h")])
-    hdr_tunits = wrap_c.parse_c_headers(wc)
+    wc = init(;  headers = [joinpath(@__DIR__, "c", "cbasic.h")])
+    hdr_tunits = parse_c_headers(wc)
 
     # test func1
-    tunit = hdr_tunits[joinpath(@__DIR__, "cxx/cbasic.h")]
-    func1 = search(tunit, "func1")[1]
-    buf = Any[]
+    tunit = hdr_tunits[joinpath(@__DIR__, "c", "cbasic.h")]
+    GC.@preserve tunit begin
+        top = getcursor(tunit)
+        func1 = search(top, "func1")[1]
+        buffer = Any[]
 
-    wrap_c.wrap(wc, buf, func1, "test")
+        wrap!(func1, buffer, libname="test")
 
-    exc = :(
-        function func1(a::Cint,b::Cdouble,c,d)
-            ccall((:func1,test),Cint,(Cint,Cdouble,Ptr{Cdouble},Ptr{Cvoid}),a,b,c,d)
-        end)
+        exc = :(
+            function func1(a::Cint,b::Cdouble,c,d)
+                ccall((:func1,test),Cint,(Cint,Cdouble,Ptr{Cdouble},Ptr{Cvoid}),a,b,c,d)
+            end)
 
-    strip_line_numbers!(exc)
+        strip_line_numbers!(exc)
 
-    @test buf[1] == exc
+        @test buffer[1] == exc
+    end
 end

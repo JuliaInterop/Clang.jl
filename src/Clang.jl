@@ -26,7 +26,7 @@ include("type.jl")
 export isvolatile, isrestrict, isvariadic, is_plain_old_data
 export address_space, typedef_name, typedecl
 export pointee_type, argtype, element_type, element_num
-export resolve_type
+export resolve_type, get_named_type
 
 include("token.jl")
 export tokenize
@@ -34,6 +34,11 @@ export tokenize
 include("show.jl")
 
 include("constants.jl")
+export RESERVED_WORDS, CLANG_JULIA_TYPEMAP, INT_CONVERSION
+
+include("clang2julia.jl")
+export clang2julia, target_type, typesize
+
 include("wrap_c.jl")
 export wrap_header
 export WrapContext, init

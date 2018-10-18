@@ -7,8 +7,8 @@ The Clang.jl wrapper generator is designed to be simple but flexible. The most b
 
     context = wrap_c.init()
     
-    headers = ["all.h", "your.h", "headers.h"]
-    wrap_c.wrap_c_headers(context, headers)
+    context.headers = ["all.h", "your.h", "headers.h"]
+    run(context)
 
 However, it is usually necessary to set compiler arguments or customize output. The ``init`` function provides several arguments to configure the compiler, as well as callback functions used to determine various aspects of the output.
 
@@ -34,11 +34,6 @@ However, it is usually necessary to set compiler arguments or customize output. 
     :type header_outputfile: Function(header::String) -> Bool
     :param rewriter: Function to rewrite generated expressions
     :type rewriter: Function(Expr)
-
-
-.. function:: wrap_c_headers(wc::WrapContext, headers::Vector{String})
-
-    Generate a wrapping using given WrapContext for a list of headers. All parameters are governed by the WrapContext, see ``wrap_c.init`` for full listing of options.
 
 .. type:: WrapContext
     

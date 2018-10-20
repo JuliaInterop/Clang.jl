@@ -51,6 +51,10 @@ function version()
     return s
 end
 
-export version
+const LLVM_VERSION = match(r"[0-9]+.[0-9]+.[0-9]+", version()).match
+const LLVM_LIBDIR = joinpath(@__DIR__, "..", "deps", "usr", "lib") |> normpath
+const LLVM_INCLUDE = joinpath(LLVM_LIBDIR, "clang", LLVM_VERSION, "include")
+
+export version, LLVM_VERSION, LLVM_LIBDIR, LLVM_INCLUDE
 
 end

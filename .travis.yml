@@ -1,36 +1,31 @@
-## Documentation: http://docs.travis-ci.com/user/languages/julia/
+# Documentation: http://docs.travis-ci.com/user/languages/julia/
 language: julia
+
 os:
   - linux
   - osx
+
 julia:
   - 1.0
   - nightly
+
+matrix:
+  allow_failures:
+    - julia: nightly
+
 notifications:
   email: false
-git:
-  depth: 99999999
 
-## uncomment the following lines to allow failures on nightly julia
-## (tests will run but not make your overall status red)
-matrix:
- allow_failures:
- - julia: nightly
+## uncomment and modify the following lines to manually install system packages
+#addons:
+#  apt: # apt-get for linux
+#    packages:
+#    - gfortran
+#before_script: # homebrew for mac
+#  - if [ $TRAVIS_OS_NAME = osx ]; then brew install gcc; fi
 
-addons:
-  apt:
-    sources:
-    - ubuntu-toolchain-r-test
-    - sourceline: 'deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-6.0 main'
-      key_url: 'http://apt.llvm.org/llvm-snapshot.gpg.key'
-    packages:
-      llvm-6.0
-      llvm-6.0-tools
-      libclang-6.0-dev
-
-## uncomment the following lines to override the default test script
-#script:
-#  - julia -e 'Pkg.build(); Pkg.test(; coverage=true)'
 after_success:
   # push coverage results to Coveralls
-  - julia -e 'using Pkg; Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())'
+  - julia -e 'using Pkg; cd(Pkg.dir("Clang")); Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())'
+  # push coverage results to Codecov
+  - julia -e 'using Pkg; cd(Pkg.dir("Clang")); Pkg.add("Coverage"); using Coverage; Codecov.submit(Codecov.process_folder())'

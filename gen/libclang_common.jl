@@ -1,9 +1,9 @@
 # Automatically generated using Clang.jl wrap_c
 
 
-const CXVirtualFileOverlayImpl = Ptr{Cvoid}
+const CXVirtualFileOverlayImpl = Cvoid
 const CXVirtualFileOverlay = Ptr{CXVirtualFileOverlayImpl}
-const CXModuleMapDescriptorImpl = Ptr{Cvoid}
+const CXModuleMapDescriptorImpl = Cvoid
 const CXModuleMapDescriptor = Ptr{CXModuleMapDescriptorImpl}
 const CXCompilationDatabase = Ptr{Cvoid}
 const CXCompileCommands = Ptr{Cvoid}
@@ -30,7 +30,7 @@ struct CXStringSet
     Count::UInt32
 end
 
-const CXTranslationUnitImpl = Ptr{Cvoid}
+const CXTranslationUnitImpl = Cvoid
 const CXTranslationUnit = Ptr{CXTranslationUnitImpl}
 
 struct CXComment
@@ -75,7 +75,7 @@ const CINDEX_VERSION_MINOR = 45
 # Skipping MacroDefinition: CINDEX_VERSION_STRING CINDEX_VERSION_STRINGIZE ( CINDEX_VERSION_MAJOR , CINDEX_VERSION_MINOR )
 
 const CXIndex = Ptr{Cvoid}
-const CXTargetInfoImpl = Ptr{Cvoid}
+const CXTargetInfoImpl = Cvoid
 const CXTargetInfo = Ptr{CXTargetInfoImpl}
 const CXClientData = Ptr{Cvoid}
 
@@ -492,7 +492,7 @@ end
     CXTLS_Static = 2,
 )
 
-const CXCursorSetImpl = Ptr{Cvoid}
+const CXCursorSetImpl = Cvoid
 const CXCursorSet = Ptr{CXCursorSetImpl}
 
 @cenum(CXTypeKind,

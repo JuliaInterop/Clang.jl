@@ -1,4 +1,4 @@
-# Julia wrapper for header: /Users/gnimuc/.julia/dev/Clang/deps/usr/clang+llvm-6.0.0-x86_64-apple-darwin/include/clang-c/BuildSystem.h
+# Julia wrapper for header: /Users/gnimuc/.julia/dev/Clang/deps/usr/include/clang-c/BuildSystem.h
 # Automatically generated using Clang.jl wrap_c
 
 
@@ -49,7 +49,7 @@ end
 function clang_ModuleMapDescriptor_dispose(arg1)
     ccall((:clang_ModuleMapDescriptor_dispose, libclang), Cvoid, (CXModuleMapDescriptor,), arg1)
 end
-# Julia wrapper for header: /Users/gnimuc/.julia/dev/Clang/deps/usr/clang+llvm-6.0.0-x86_64-apple-darwin/include/clang-c/CXCompilationDatabase.h
+# Julia wrapper for header: /Users/gnimuc/.julia/dev/Clang/deps/usr/include/clang-c/CXCompilationDatabase.h
 # Automatically generated using Clang.jl wrap_c
 
 
@@ -108,10 +108,10 @@ end
 function clang_CompileCommand_getMappedSourceContent(arg1, I)
     ccall((:clang_CompileCommand_getMappedSourceContent, libclang), CXString, (CXCompileCommand, UInt32), arg1, I)
 end
-# Julia wrapper for header: /Users/gnimuc/.julia/dev/Clang/deps/usr/clang+llvm-6.0.0-x86_64-apple-darwin/include/clang-c/CXErrorCode.h
+# Julia wrapper for header: /Users/gnimuc/.julia/dev/Clang/deps/usr/include/clang-c/CXErrorCode.h
 # Automatically generated using Clang.jl wrap_c
 
-# Julia wrapper for header: /Users/gnimuc/.julia/dev/Clang/deps/usr/clang+llvm-6.0.0-x86_64-apple-darwin/include/clang-c/CXString.h
+# Julia wrapper for header: /Users/gnimuc/.julia/dev/Clang/deps/usr/include/clang-c/CXString.h
 # Automatically generated using Clang.jl wrap_c
 
 
@@ -126,7 +126,7 @@ end
 function clang_disposeStringSet(set)
     ccall((:clang_disposeStringSet, libclang), Cvoid, (Ptr{CXStringSet},), set)
 end
-# Julia wrapper for header: /Users/gnimuc/.julia/dev/Clang/deps/usr/clang+llvm-6.0.0-x86_64-apple-darwin/include/clang-c/Documentation.h
+# Julia wrapper for header: /Users/gnimuc/.julia/dev/Clang/deps/usr/include/clang-c/Documentation.h
 # Automatically generated using Clang.jl wrap_c
 
 
@@ -265,7 +265,7 @@ end
 function clang_FullComment_getAsXML(Comment)
     ccall((:clang_FullComment_getAsXML, libclang), CXString, (CXComment,), Comment)
 end
-# Julia wrapper for header: /Users/gnimuc/.julia/dev/Clang/deps/usr/clang+llvm-6.0.0-x86_64-apple-darwin/include/clang-c/Index.h
+# Julia wrapper for header: /Users/gnimuc/.julia/dev/Clang/deps/usr/include/clang-c/Index.h
 # Automatically generated using Clang.jl wrap_c
 
 
@@ -1460,6 +1460,6 @@ end
 function clang_Type_visitFields(T, visitor, client_data)
     ccall((:clang_Type_visitFields, libclang), UInt32, (CXType, CXFieldVisitor, CXClientData), T, visitor, client_data)
 end
-# Julia wrapper for header: /Users/gnimuc/.julia/dev/Clang/deps/usr/clang+llvm-6.0.0-x86_64-apple-darwin/include/clang-c/Platform.h
+# Julia wrapper for header: /Users/gnimuc/.julia/dev/Clang/deps/usr/include/clang-c/Platform.h
 # Automatically generated using Clang.jl wrap_c
 

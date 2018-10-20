@@ -1,17 +1,12 @@
-import Clang.LibClang: llvm_config
-using Clang: init
+using Clang: init, LLVM_INCLUDE
 
-const LLVM_VERSION = readchomp(`$llvm_config --version`)
-const LLVM_LIBDIR  = readchomp(`$llvm_config --libdir`)
-const LLVM_INCLUDE = joinpath(LLVM_LIBDIR, "clang", LLVM_VERSION, "include")
-
-const CLANG_INCLUDE = joinpath(@__DIR__, "..", "deps", "usr", "clang+llvm-6.0.0-x86_64-apple-darwin", "include", "clang-c") |> normpath
+const CLANG_INCLUDE = joinpath(@__DIR__, "..", "deps", "usr", "include", "clang-c") |> normpath
 const CLANG_HEADERS = [joinpath(CLANG_INCLUDE, cHeader) for cHeader in readdir(CLANG_INCLUDE) if endswith(cHeader, ".h")]
 
 function rewriter(ex::Expr)
     if Meta.isexpr(ex, :struct)
         block = ex.args[3]
-        isempty(block.args) && (typename = ex.args[2]; return :(const $typename = Ptr{Cvoid});)
+        isempty(block.args) && (typename = ex.args[2]; return :(const $typename = Cvoid);)
     end
     Meta.isexpr(ex, :function) || return ex
     signature = ex.args[1]

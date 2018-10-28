@@ -449,16 +449,15 @@ function _wrap!(::Val{CXCursor_MacroDefinition}, cursor::CXCursor, buffer::Order
     return buffer
 end
 
-# Does this actually occur in header files???
-function _wrap!(::Val{CXCursor_TypeRef}, cursor::CXCursor, buffer::OrderedDict{Symbol,ExprUnit}; customName="")
-    customName == "" && (customName = name(cursor);)
-    @error "Found CXCursor_TypeRef: ", cursor
-    println("Printing CXCursor_TypeRef: ", cursor)
-    usesym = Symbol(customName)
-    buffer[usesym] = ExprUnit(usesym)
+"""
+    _wrap!(::Val{CXCursor_TypeRef}, cursor::CXCursor, buffer::OrderedDict{Symbol,ExprUnit}; customName="")
+For now, we just skip CXCursor_TypeRef cursors.
+"""
+function _wrap!(::Val{CXCursor_TypeRef}, cursor::CXCursor, buffer::OrderedDict{Symbol,ExprUnit})
+    @warn "Skipping CXCursor_TypeRef cursor: $cursor"
 end
 
-_wrap!(::Val, cursor::CXCursor, buffer; customName="") = @warn "Not wrapping $(cursor), custom name: $customName"
+_wrap!(::Val, cursor::CXCursor, buffer; customName="") = @warn "not wrapping $(cursor), custom name: $customName"
 wrap!(cursor::CXCursor, buffer; args...) = _wrap!(Val(kind(cursor)), cursor, buffer; args...)
 
 
@@ -495,10 +494,8 @@ function wrap_header(wc::WrapContext, transUnit::TranslationUnit, topHeader, out
                     else
                         wrap!(child, wc.common_buf)
                     end
-                elseif childKind != CXCursor_TypeRef
-                    wrap!(child, wc.common_buf)
                 else
-                    continue
+                    wrap!(child, wc.common_buf)
                 end
             # catch err
             #     push!(DEBUG_CURSORS, cursor)

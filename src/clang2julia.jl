@@ -66,8 +66,10 @@ _clang2julia(::Val{CXType_Elaborated}, t::CXType) = clang2julia(get_named_type(t
 _clang2julia(::Val{CXType_Enum}, t::CXType) = spelling(t) |> split |> last |> Symbol
 
 function _clang2julia(::Union{Val{CXType_Record},Val{CXType_Typedef}}, t::CXType)
-    tname = Symbol(spelling(typedecl(t)))
-    return get(CLANG_JULIA_TYPEMAP, tname, tname)
+    cursorName = spelling(typedecl(t))
+    typeName = isempty(cursorName) ? spelling(t) : cursorName  # handle anonymous typedef records
+    typeSym = Symbol(typeName)
+    return get(CLANG_JULIA_TYPEMAP, typeSym, typeSym)
 end
 
 function _clang2julia(::Val{CXType_Pointer}, t::CXType)
@@ -118,3 +120,18 @@ function _clang2julia(::Val{CXCursor_TypeRef}, c::CXCursor)
         return Symbol(spelling(reftype))
     end
 end
+
+# function _clang2julia(::Val{CXCursor_TypedefDecl}, c::CXCursor)
+#     underlying = underlying_type(c) |> canonical
+#     if isempty(spelling(typedecl(underlying)))
+#         # handle anonymous typedef
+#         if kind(underlying) == CXType_Pointer
+#             ptee = pointee_type(t)
+#             pteeKind = kind(ptee)
+#             (pteeKind == CXType_Char_U || pteeKind == CXType_Char_S) && return :Cstring
+#             pteeKind == CXType_WChar && return :Cwstring
+#             Expr(:curly, :Ptr, clang2julia(ptee))
+#     else
+#         return clang2julia(type(c))
+#     end
+# end

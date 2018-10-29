@@ -15,7 +15,7 @@ include("strip_line_numbers.jl")
         func1 = search(top, "func1")[1]
         buffer = Any[]
 
-        wrap!(func1, buffer, libname="test")
+        wrap!(func1, buffer, libname="test", isstrict=true)
 
         exc = :(
             function func1(a::Cint,b::Cdouble,c,d)

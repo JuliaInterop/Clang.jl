@@ -31,7 +31,7 @@ wc = init(; headers = CLANG_HEADERS,
                    header_wrapped = header_filter,
                    header_library = x->"libclang",
                    clang_diagnostics = true,
-                   rewriter = rewriter
+                   # rewriter = rewriter
                    )
 
 run(wc)

@@ -2,8 +2,9 @@
 mutable struct InternalOptions
     wrap_structs::Bool
     ismutable::Bool
+    isstrict::Bool
 end
-InternalOptions() = InternalOptions(true, false)
+InternalOptions() = InternalOptions(true, false, false)
 
 struct Poisoned end
 
@@ -21,15 +22,18 @@ function ExprUnit(e::Union{Expr,Symbol,String,Poisoned}, deps=[]; state::Symbol=
 end
 ExprUnit() = ExprUnit([], OrderedSet{Symbol}(), :new)
 
-### WrapContext
-# stores shared information about the wrapping session
+
+"""
+    WrapContext
+Store shared information about the wrapping session.
+"""
 mutable struct WrapContext
     index::Index
-    headers::Array{String,1}
+    headers::Vector{String}
     output_file::String
     common_file::String
-    clang_includes::Array{String,1}              # clang include paths
-    clang_args::Array{String,1}                  # additional {"-Arg", "value"} pairs for clang
+    clang_includes::Vector{String}               # clang include paths
+    clang_args::Vector{String}                   # additional {"-Arg", "value"} pairs for clang
     header_wrapped::Function                     # called to determine header inclusion status
                                                  #   (top_header, cursor_header) -> Bool
     header_library::Function                     # called to determine shared library for given header
@@ -103,29 +107,28 @@ function init(;
 end
 
 """
-    _wrap!(::Val{CXCursor_FunctionDecl}, cursor::CXCursor, buffer::Vector; libname="libxxx")
-Subroutine for handling function declarations.
+    _wrap!(::Val{CXCursor_FunctionDecl}, cursor::CXCursor, buffer::Vector; libname="libxxx", isstrict=false)
+Subroutine for handling function declarations. `isstrict` can be used to control whether the
+generated function signatures are strictly typed or not.
 """
-function _wrap!(::Val{CXCursor_FunctionDecl}, cursor::CXCursor, buffer::Vector; libname="libxxx")
-    func_type = type(cursor)
-    if kind(func_type) == CXType_FunctionNoProto
+function _wrap!(::Val{CXCursor_FunctionDecl}, cursor::CXCursor, buffer::Vector; libname="libxxx", isstrict=false, options...)
+    funcType = type(cursor)
+    if kind(funcType) == CXType_FunctionNoProto
         @warn "No Prototype for $cursor - assuming no arguments"
-    elseif isvariadic(func_type) == 1
+    elseif isvariadic(funcType) == 1
         @warn "Skipping VarArg Function $cursor"
         return buffer
     end
     libname == "libxxx" && @warn "default libname: \"libxxx\" are being used, did you forget to specify the libname?"
 
     funcName = Symbol(spelling(cursor))
-    ret_type = clang2julia(return_type(cursor))
-
+    returnType = clang2julia(return_type(cursor))
     args = function_args(cursor)
-
-    arg_types = [argtype(func_type, i) for i in 0:length(args)-1]
-    arg_reps = [clang2julia(x) for x in arg_types]
+    argTypes = [argtype(funcType, i) for i in 0:length(args)-1]
+    arg_reps = clang2julia.(argTypes)
 
     # check whether any argument types are blocked
-    for t in arg_types
+    for t in argTypes
         if spelling(t) in RESERVED_ARG_TYPES
             @warn "Skipping $(name(cursor)) due to unsupported argument: $(name(t))"
             return buffer
@@ -133,17 +136,16 @@ function _wrap!(::Val{CXCursor_FunctionDecl}, cursor::CXCursor, buffer::Vector; 
     end
 
     # Handle unnamed args and convert names to symbols
-    arg_count = 0
-    arg_names = convert(Vector{Symbol},
-                        map(x-> Symbol(begin
-                                         nm = name_safe(name(x))
-                                         nm != "" ? nm : "arg"*string(arg_count+=1)
-                                       end),
-                                args))
+    argCount = 0
+    argNames = map(args) do x
+                    nm = name_safe(name(x))
+                    s = !isempty(nm) ? nm : "arg"*string(argCount+=1)
+                    Symbol(s)
+                end
 
-    sig = efunsig(funcName, arg_names, arg_reps)
-    body = eccall(funcName, Symbol(libname), ret_type, arg_names, arg_reps)
-    e = Expr(:function, sig, Expr(:block, body))
+    signature = isstrict ? efunsig(funcName, argNames, arg_reps) : Expr(:call, funcName, argNames...)
+    body = eccall(funcName, Symbol(libname), returnType, argNames, arg_reps)
+    e = Expr(:function, signature, Expr(:block, body))
     push!(buffer, e)
 end
 
@@ -171,7 +173,7 @@ end
     _wrap!(::Val{CXCursor_EnumDecl}, cursor::CXCursor, buffer::OrderedDict; customName="")
 Subroutine for handling enum declarations.
 """
-function _wrap!(::Val{CXCursor_EnumDecl}, cursor::CXCursor, buffer::OrderedDict{Symbol,ExprUnit}; customName="")
+function _wrap!(::Val{CXCursor_EnumDecl}, cursor::CXCursor, buffer::OrderedDict{Symbol,ExprUnit}; customName="", options...)
     cursorName = name(cursor)
     if cursorName == "" && customName == ""
         @warn "Skipping unnamed EnumDecl: $cursor"
@@ -206,7 +208,7 @@ end
     _wrap!(::Val{CXCursor_StructDecl}, cursor::CXCursor, buffer::OrderedDict; customName="", ismutable=false)
 Subroutine for handling struct declarations.
 """
-function _wrap!(::Val{CXCursor_StructDecl}, cursor::CXCursor, buffer::OrderedDict{Symbol,ExprUnit}; customName="", ismutable=false)
+function _wrap!(::Val{CXCursor_StructDecl}, cursor::CXCursor, buffer::OrderedDict{Symbol,ExprUnit}; customName="", ismutable=false, options...)
     cursorName = name(cursor)
     if cursorName == "" && customName == ""
         @warn "Skipping unnamed StructDecl: $cursor"
@@ -253,7 +255,7 @@ end
     _wrap!(::Val{CXCursor_UnionDecl}, cursor::CXCursor, buffer::OrderedDict; customName="", ismutable=false)
 Subroutine for handling union declarations.
 """
-function _wrap!(::Val{CXCursor_UnionDecl}, cursor::CXCursor, buffer::OrderedDict{Symbol,ExprUnit}; customName="", ismutable=false)
+function _wrap!(::Val{CXCursor_UnionDecl}, cursor::CXCursor, buffer::OrderedDict{Symbol,ExprUnit}; customName="", ismutable=false, options...)
     cursorName = name(cursor)
     if cursorName == "" && customName == ""
         @warn "Skipping unnamed UnionDecl: $cursor"
@@ -319,13 +321,11 @@ function _wrap!(::Val{CXCursor_TypedefDecl}, cursor::CXCursor, buffer::OrderedDi
     return buffer
 end
 
-################################################################################
-# Handler for macro definitions
-################################################################################
-#
-# For handling of #define'd constants, allows basic expressions
-# but bails out quickly.
 
+"""
+    handle_macro_exprn(tokens::TokenList, pos::Int)
+For handling of #define'd constants, allows basic expressions but bails out quickly.
+"""
 function handle_macro_exprn(tokens::TokenList, pos::Int)
     function trans(tok)
         ops = ["+" "-" "*" "~" ">>" "<<" "/" "\\" "%" "|" "||" "^" "&" "&&"]
@@ -458,7 +458,7 @@ function _wrap!(::Val{CXCursor_TypeRef}, cursor::CXCursor, buffer::OrderedDict{S
 end
 
 _wrap!(::Val, cursor::CXCursor, buffer; customName="") = @warn "not wrapping $(cursor), custom name: $customName"
-wrap!(cursor::CXCursor, buffer; args...) = _wrap!(Val(kind(cursor)), cursor, buffer; args...)
+wrap!(cursor::CXCursor, buffer; options...) = _wrap!(Val(kind(cursor)), cursor, buffer; options...)
 
 
 function wrap_header(wc::WrapContext, transUnit::TranslationUnit, topHeader, out_buffer::Array)
@@ -485,14 +485,14 @@ function wrap_header(wc::WrapContext, transUnit::TranslationUnit, topHeader, out
 
             # try
                 if childKind == CXCursor_FunctionDecl
-                    wrap!(child, out_buffer, libname=wc.header_library(filename(child)))
+                    wrap!(child, out_buffer, libname=wc.header_library(filename(child)), isstrict=wc.options.isstrict)
                 elseif (childKind == CXCursor_EnumDecl || childKind == CXCursor_StructDecl) &&
                        (i != length(childCursors))
                     nextCursor = childCursors[i+1]
                     if is_typedef_anon(child, nextCursor)
-                        wrap!(child, wc.common_buf, customName=name(nextCursor))
+                        wrap!(child, wc.common_buf, customName=name(nextCursor), ismutable=wc.options.ismutable)
                     else
-                        wrap!(child, wc.common_buf)
+                        wrap!(child, wc.common_buf, ismutable=wc.options.ismutable)
                     end
                 else
                     wrap!(child, wc.common_buf)
@@ -508,7 +508,6 @@ end
 
 function parse_c_headers(wc::WrapContext)
     parsed = Dict{String,TranslationUnit}()
-
     # Parse the headers
     for header in unique(wc.headers)
         tu = parse_header(header;
@@ -534,7 +533,6 @@ Adds blank lines at appropriate places for readability
 """
 function print_buffer(out_stream, out_buffer)
     state = :comment
-    in_enum = false
     for e in out_buffer
         isa(e, Poisoned) && continue
         prev_state = state
@@ -547,7 +545,7 @@ function print_buffer(out_stream, out_buffer)
         end
 
         if ((state != prev_state && prev_state != :string) ||
-            (state == prev_state && (state == :function || state == :type)))
+            (state == prev_state && (state == :function || state == :struct)))
             println(out_stream)
         end
 

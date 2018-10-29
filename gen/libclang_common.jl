@@ -1,9 +1,14 @@
 # Automatically generated using Clang.jl wrap_c
 
 
-const CXVirtualFileOverlayImpl = Cvoid
+struct CXVirtualFileOverlayImpl
+end
+
 const CXVirtualFileOverlay = Ptr{CXVirtualFileOverlayImpl}
-const CXModuleMapDescriptorImpl = Cvoid
+
+struct CXModuleMapDescriptorImpl
+end
+
 const CXModuleMapDescriptor = Ptr{CXModuleMapDescriptorImpl}
 const CXCompilationDatabase = Ptr{Cvoid}
 const CXCompileCommands = Ptr{Cvoid}
@@ -25,12 +30,15 @@ struct CXString
     data::Ptr{Cvoid}
     private_flags::UInt32
 end
+
 struct CXStringSet
     Strings::Ptr{CXString}
     Count::UInt32
 end
 
-const CXTranslationUnitImpl = Cvoid
+struct CXTranslationUnitImpl
+end
+
 const CXTranslationUnit = Ptr{CXTranslationUnitImpl}
 
 struct CXComment
@@ -75,7 +83,10 @@ const CINDEX_VERSION_MINOR = 45
 # Skipping MacroDefinition: CINDEX_VERSION_STRING CINDEX_VERSION_STRINGIZE ( CINDEX_VERSION_MAJOR , CINDEX_VERSION_MINOR )
 
 const CXIndex = Ptr{Cvoid}
-const CXTargetInfoImpl = Cvoid
+
+struct CXTargetInfoImpl
+end
+
 const CXTargetInfo = Ptr{CXTargetInfoImpl}
 const CXClientData = Ptr{Cvoid}
 
@@ -121,15 +132,18 @@ const CXFile = Ptr{Cvoid}
 struct CXFileUniqueID
     data::NTuple{3, Culonglong}
 end
+
 struct CXSourceLocation
     ptr_data::NTuple{2, Ptr{Cvoid}}
     int_data::UInt32
 end
+
 struct CXSourceRange
     ptr_data::NTuple{2, Ptr{Cvoid}}
     begin_int_data::UInt32
     end_int_data::UInt32
 end
+
 struct CXSourceRangeList
     count::UInt32
     ranges::Ptr{CXSourceRange}
@@ -211,6 +225,7 @@ struct CXTUResourceUsageEntry
     kind::CXTUResourceUsageKind
     amount::Culong
 end
+
 struct CXTUResourceUsage
     data::Ptr{Cvoid}
     numEntries::UInt32
@@ -492,7 +507,9 @@ end
     CXTLS_Static = 2,
 )
 
-const CXCursorSetImpl = Cvoid
+struct CXCursorSetImpl
+end
+
 const CXCursorSet = Ptr{CXCursorSetImpl}
 
 @cenum(CXTypeKind,
@@ -824,6 +841,7 @@ struct CXIdxLoc
     ptr_data::NTuple{2, Ptr{Cvoid}}
     int_data::UInt32
 end
+
 struct CXIdxIncludedFileInfo
     hashLoc::CXIdxLoc
     filename::Cstring
@@ -832,6 +850,7 @@ struct CXIdxIncludedFileInfo
     isAngled::Cint
     isModuleImport::Cint
 end
+
 struct CXIdxImportedASTFileInfo
     file::CXFile
     _module::CXModule
@@ -893,6 +912,7 @@ struct CXIdxAttrInfo
     cursor::CXCursor
     loc::CXIdxLoc
 end
+
 struct CXIdxEntityInfo
     kind::CXIdxEntityKind
     templateKind::CXIdxEntityCXXTemplateKind
@@ -903,9 +923,11 @@ struct CXIdxEntityInfo
     attributes::Ptr{Ptr{CXIdxAttrInfo}}
     numAttributes::UInt32
 end
+
 struct CXIdxContainerInfo
     cursor::CXCursor
 end
+
 struct CXIdxIBOutletCollectionAttrInfo
     attrInfo::Ptr{CXIdxAttrInfo}
     objcClass::Ptr{CXIdxEntityInfo}
@@ -943,25 +965,30 @@ struct CXIdxObjCContainerDeclInfo
     declInfo::Ptr{CXIdxDeclInfo}
     kind::CXIdxObjCContainerKind
 end
+
 struct CXIdxBaseClassInfo
     base::Ptr{CXIdxEntityInfo}
     cursor::CXCursor
     loc::CXIdxLoc
 end
+
 struct CXIdxObjCProtocolRefInfo
     protocol::Ptr{CXIdxEntityInfo}
     cursor::CXCursor
     loc::CXIdxLoc
 end
+
 struct CXIdxObjCProtocolRefListInfo
     protocols::Ptr{Ptr{CXIdxObjCProtocolRefInfo}}
     numProtocols::UInt32
 end
+
 struct CXIdxObjCInterfaceDeclInfo
     containerInfo::Ptr{CXIdxObjCContainerDeclInfo}
     superInfo::Ptr{CXIdxBaseClassInfo}
     protocols::Ptr{CXIdxObjCProtocolRefListInfo}
 end
+
 struct CXIdxObjCCategoryDeclInfo
     containerInfo::Ptr{CXIdxObjCContainerDeclInfo}
     objcClass::Ptr{CXIdxEntityInfo}
@@ -969,11 +996,13 @@ struct CXIdxObjCCategoryDeclInfo
     classLoc::CXIdxLoc
     protocols::Ptr{CXIdxObjCProtocolRefListInfo}
 end
+
 struct CXIdxObjCPropertyDeclInfo
     declInfo::Ptr{CXIdxDeclInfo}
     getter::Ptr{CXIdxEntityInfo}
     setter::Ptr{CXIdxEntityInfo}
 end
+
 struct CXIdxCXXClassDeclInfo
     declInfo::Ptr{CXIdxDeclInfo}
     bases::Ptr{Ptr{CXIdxBaseClassInfo}}
@@ -993,6 +1022,7 @@ struct CXIdxEntityRefInfo
     parentEntity::Ptr{CXIdxEntityInfo}
     container::Ptr{CXIdxContainerInfo}
 end
+
 struct IndexerCallbacks
     abortQuery::Ptr{Cvoid}
     diagnostic::Ptr{Cvoid}

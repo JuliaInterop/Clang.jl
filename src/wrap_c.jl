@@ -209,6 +209,7 @@ end
 Subroutine for handling struct declarations.
 """
 function _wrap!(::Val{CXCursor_StructDecl}, cursor::CXCursor, buffer::OrderedDict{Symbol,ExprUnit}; customName="", ismutable=false, options...)
+    cursor = canonical(cursor)  # make sure a empty struct is indeed an opaque struct typedef/typealias
     cursorName = name(cursor)
     if cursorName == "" && customName == ""
         @warn "Skipping unnamed StructDecl: $cursor"
@@ -217,7 +218,7 @@ function _wrap!(::Val{CXCursor_StructDecl}, cursor::CXCursor, buffer::OrderedDic
     structName = customName == "" ? cursorName : customName
     structSym = symbol_safe(structName)
 
-    # Generate type declaration
+    # Generate struct declaration
     block = Expr(:block)
     expr = Expr(:struct, ismutable, structSym, block)
     deps = OrderedSet{Symbol}()
@@ -244,8 +245,8 @@ function _wrap!(::Val{CXCursor_StructDecl}, cursor::CXCursor, buffer::OrderedDic
         if !isempty(structFields)
             buffer[structSym] = ExprUnit(expr, deps)
         else
-            # Possible forward definition
-            buffer[structSym] = ExprUnit(expr, deps, state=:empty)
+            # opaque struct typedef/typealias
+            buffer[structSym] = ExprUnit(:(const $structSym = Cvoid), deps, state=:empty)
         end
     end
     return buffer

@@ -130,7 +130,7 @@ function _wrap!(::Val{CXCursor_FunctionDecl}, cursor::CXCursor, buffer::Vector; 
     # check whether any argument types are blocked
     for t in argTypes
         if spelling(t) in RESERVED_ARG_TYPES
-            @warn "Skipping $(name(cursor)) due to unsupported argument: $(name(t))"
+            @warn "Skipping $(name(cursor)) due to unsupported argument: $(spelling(t))"
             return buffer
         end
     end

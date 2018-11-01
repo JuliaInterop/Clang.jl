@@ -120,18 +120,3 @@ function _clang2julia(::Val{CXCursor_TypeRef}, c::CXCursor)
         return Symbol(spelling(reftype))
     end
 end
-
-# function _clang2julia(::Val{CXCursor_TypedefDecl}, c::CXCursor)
-#     underlying = underlying_type(c) |> canonical
-#     if isempty(spelling(typedecl(underlying)))
-#         # handle anonymous typedef
-#         if kind(underlying) == CXType_Pointer
-#             ptee = pointee_type(t)
-#             pteeKind = kind(ptee)
-#             (pteeKind == CXType_Char_U || pteeKind == CXType_Char_S) && return :Cstring
-#             pteeKind == CXType_WChar && return :Cwstring
-#             Expr(:curly, :Ptr, clang2julia(ptee))
-#     else
-#         return clang2julia(type(c))
-#     end
-# end

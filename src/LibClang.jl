@@ -16,6 +16,9 @@ end
 include("CEnum.jl")
 using .CEnum
 
+include("ctypes.jl")
+export Ctime_t
+
 include(joinpath(@__DIR__, "..", "gen", "libclang_common.jl"))
 include(joinpath(@__DIR__, "..", "gen", "libclang_api.jl"))
 

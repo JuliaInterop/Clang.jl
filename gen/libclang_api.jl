@@ -293,8 +293,8 @@ function clang_getFileName(SFile)
     ccall((:clang_getFileName, libclang), CXString, (CXFile,), SFile)
 end
 
-function clang_getFileTime()
-    ccall((:clang_getFileTime, libclang), Cint, ())
+function clang_getFileTime(SFile)
+    ccall((:clang_getFileTime, libclang), Ctime_t, (CXFile,), SFile)
 end
 
 function clang_getFileUniqueID(file, outID)
@@ -310,7 +310,7 @@ function clang_getFile(tu, file_name)
 end
 
 function clang_getFileContents(tu, file, size)
-    ccall((:clang_getFileContents, libclang), Cstring, (CXTranslationUnit, CXFile, Ptr{Cint}), tu, file, size)
+    ccall((:clang_getFileContents, libclang), Cstring, (CXTranslationUnit, CXFile, Ptr{Csize_t}), tu, file, size)
 end
 
 function clang_File_isEqual(file1, file2)

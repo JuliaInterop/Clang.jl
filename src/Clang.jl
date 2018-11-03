@@ -37,6 +37,7 @@ include("constants.jl")
 export RESERVED_WORDS, CLANG_JULIA_TYPEMAP, INT_CONVERSION
 
 include("clang2julia.jl")
+export CLANG_JULIA_TYPEMAP, INT_CONVERSION
 export clang2julia, target_type, typesize
 
 include("wrap_c.jl")
@@ -44,10 +45,12 @@ export wrap_header
 export WrapContext, init
 
 function version()
-    cxstr = clang_getClangVersion()
-    ptr = clang_getCString(cxstr)
-    s = unsafe_string(ptr)
-    clang_disposeString(cxstr)
+    GC.@preserve begin
+        cxstr = clang_getClangVersion()
+        ptr = clang_getCString(cxstr)
+        s = unsafe_string(ptr)
+        clang_disposeString(cxstr)
+    end
     return s
 end
 
@@ -55,6 +58,6 @@ const LLVM_VERSION = match(r"[0-9]+.[0-9]+.[0-9]+", version()).match
 const LLVM_LIBDIR = joinpath(@__DIR__, "..", "deps", "usr", "lib") |> normpath
 const LLVM_INCLUDE = joinpath(LLVM_LIBDIR, "clang", LLVM_VERSION, "include")
 
-export version, LLVM_VERSION, LLVM_LIBDIR, LLVM_INCLUDE
+export LLVM_VERSION, LLVM_LIBDIR, LLVM_INCLUDE
 
 end

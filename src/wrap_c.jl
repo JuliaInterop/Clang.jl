@@ -523,8 +523,8 @@ function parse_c_headers(wc::WrapContext)
 end
 
 function sort_includes(wc::WrapContext, parsed)
-    includes = mapreduce(x->search(parsed[x], CXCursor_InclusionDirective), append!, keys(parsed))
-    header_paths = unique(get_included_file.(includes))
+    includes = mapreduce(x->search(getcursor(parsed[x]), CXCursor_InclusionDirective), append!, keys(parsed))
+    header_paths = unique(map(x->get_included_file(x), includes))
     return unique(vcat(filter(x -> x in header_paths, wc.headers), wc.headers))
 end
 

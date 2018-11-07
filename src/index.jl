@@ -23,7 +23,8 @@ mutable struct Index
         return obj
     end
 end
-Index() = Index(false, true)
+Index(diagnostic::Bool) = Index(false, diagnostic)
+Index() = Index(true)
 
 
 ## TODO:

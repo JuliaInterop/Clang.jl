@@ -1,4 +1,5 @@
-# basic
+# for manipulating CXTypes
+
 Base.:(==)(t1::CXType, t2::CXType) = clang_equalTypes(t1, t2) != 0
 
 """
@@ -139,7 +140,7 @@ isvariadic(t::CXType)::Bool = clang_isFunctionTypeVariadic(t)
     is_plain_old_data(t::CXType) -> Bool
 Return true if the CXType is a plain old data type.
 """
-is_plain_old_data(t::CXType)::Bool  = clang_isPODType(t)
+is_plain_old_data(t::CXType)::Bool = clang_isPODType(t)
 
 """
     element_type(t::CXType) -> CXType

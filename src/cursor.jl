@@ -1,4 +1,4 @@
-# basics
+# for manipulating CXCursors
 """
     isnull(c::CXCursor) -> Bool
 Return true if cursor is null.
@@ -355,6 +355,7 @@ function spelling(k::CXCursorKind)
     return s
 end
 
+
 # helper
 """
     filename(c::CXCursor) -> String
@@ -414,7 +415,6 @@ end
 search(c::CXCursor, ismatch::Function) = search(children(c), ismatch)
 search(c::CXCursor, s::String) = search(c, x->spelling(x)==s)
 search(c::CXCursor, k::CXCursorKind) = search(c, x->kind(x)==k)
-search(tu::TranslationUnit, k::CXCursorKind) = search(getcursor(tu), k)
 
 # visitor
 function cu_children_visitor(cursor::CXCursor, parent::CXCursor, client_data::Ptr{Cvoid})::Cuint

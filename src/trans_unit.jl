@@ -58,35 +58,51 @@ getcursor(tu::TranslationUnit) = getcursor(tu.ptr)
 # clang_defaultReparseOptions
 # clang_reparseTranslationUnit
 
+
 # helper
 """
-    parse_header(header::AbstractString; index=nothing, diagnostics=true, cplusplus=false,
-                 args=String[], includes=String[], flags=CXTranslationUnit_None) -> TranslationUnit
+    parse_header(header::AbstractString; index::Index=Index(), args::Vector{String}=String[],
+                 includes::Vector{String}=String[], flags=CXTranslationUnit_None) -> TranslationUnit
 Return the TranslationUnit for a given header. This is the main entry point for parsing.
+See also [`parse_headers`](@ref).
 
 # Arguments
 - `header::AbstractString`: the header file to parse.
-- `index::Union{Index,Nothing}`: CXIndex pointer (pass to avoid re-allocation).
-- `diagnostics::Bool`: display Clang diagnostics.
-- `cplusplus::Bool`: parse as C++.
+- `index::Index`: CXIndex pointer (pass to avoid re-allocation).
 - `args::Vector{String}`: compiler switches as string array, eg: ["-x", "c++", "-fno-elide-type"].
 - `includes::Vector{String}`: vector of extra include directories to search.
 - `flags`: bitwise OR of CXTranslationUnit_Flags.
 """
-function parse_header(header::AbstractString; index::Union{Index,Nothing}=nothing, diagnostics::Bool=true,
-    cplusplus::Bool=false, args::Vector{String}=String[], includes::Vector{String}=String[], flags=CXTranslationUnit_None)
+function parse_header(header::AbstractString; index::Index=Index(), args::Vector{String}=String[],
+                      includes::Vector{String}=String[], flags=CXTranslationUnit_None)
     # TODO: support parsing in-memory with CXUnsavedFile arg
     #       to _parseTranslationUnit.jj
     #unsaved_file = CXUnsavedFile()
     !isfile(header) && throw(ArgumentError(header, " not found"))
-
-    index == nothing && (index = Index(false, diagnostics);)
-
-    cplusplus && append!(args, ["-x", "c++"])
 
     !isempty(includes) && foreach(includes) do x
         push!(args, "-I", x)
     end
 
     return TranslationUnit(index, header, args, flags)
+end
+
+"""
+    parse_headers(headers::Vector{String}; index::Index=Index(), args::Vector{String}=String[], includes::Vector{String}=String[],
+        flags = CXTranslationUnit_DetailedPreprocessingRecord | CXTranslationUnit_SkipFunctionBodies) -> Dict
+Return a TranslationUnit Dict for the given headers. See also [`parse_header`](@ref).
+"""
+function parse_headers(headers::Vector{String};
+                       index::Index = Index(),
+                       args::Vector{String} = String[],
+                       includes::Vector{String} = String[],
+                       flags = CXTranslationUnit_DetailedPreprocessingRecord |
+                               CXTranslationUnit_SkipFunctionBodies)
+    trans_units = Dict{String,TranslationUnit}()
+    # Parse the headers
+    for header in unique(headers)
+        tu = parse_header(header; index=index, args=args, includes=includes, flags=flags)
+        trans_units[header] = tu
+    end
+    return trans_units
 end

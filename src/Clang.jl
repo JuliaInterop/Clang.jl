@@ -8,8 +8,8 @@ using DataStructures
 include("index.jl")
 export Index
 
-include("translation_unit.jl")
-export TranslationUnit, spelling, getcursor, parse_header
+include("trans_unit.jl")
+export TranslationUnit, spelling, getcursor, parse_header, parse_headers
 
 include("cursor.jl")
 export isnull, isdecl, isref, isexpr, isstat, isattr, hasattr, isdef
@@ -33,12 +33,18 @@ export tokenize
 
 include("show.jl")
 
-include("constants.jl")
-export RESERVED_WORDS, CLANG_JULIA_TYPEMAP, INT_CONVERSION
+include("utils.jl")
+export name_safe, symbol_safe
 
 include("clang2julia.jl")
 export CLANG_JULIA_TYPEMAP, INT_CONVERSION
 export clang2julia, target_type, typesize
+
+include("expr_unit.jl")
+export ExprUnit
+
+include("context.jl")
+export AbstractContext, DefaultContext
 
 include("wrap_c.jl")
 export wrap_header

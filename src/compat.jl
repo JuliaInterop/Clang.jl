@@ -40,7 +40,7 @@ function init(; headers::Vector{String}                    = String[],
                 clang_includes::Vector{String}             = String[],
                 clang_diagnostics::Bool                    = true,
                 header_wrapped                             = (header, cursorname) -> true,
-                header_library                             = Union{},
+                header_library                             = nothing,
                 header_outputfile::Union{Function,Nothing} = nothing,
                 cursor_wrapped                             = (cursorname, cursor) -> true,
                 options                                    = InternalOptions(),
@@ -119,13 +119,13 @@ function Base.run(wc::WrapContext)
             end
             ctx.libname = wc.header_library(child_header)
 
-            # try
+            try
                 wrap!(ctx, child)
-            # catch err
-            #     push!(ctx.cursor_stack, cursor)
-            #     @error "error thrown. Last cursor available in context.cursor_stack."
-            #     rethrow(err)
-            # end
+            catch err
+                push!(ctx.cursor_stack, cursor)
+                @error "error thrown. Last cursor available in context.cursor_stack."
+                rethrow(err)
+            end
         end
 
         # apply user-supplied transformation
@@ -154,4 +154,7 @@ function Base.run(wc::WrapContext)
     end
 
     map(close, values(filehandles))
+
+    copydeps(dirname(wc.common_file))
+    print_template(joinpath(dirname(wc.common_file), "LibTemplate.jl"))
 end

@@ -6,7 +6,7 @@ module wrap_c
 
 version = v"0.0.0"
 
-using Clang.cindex
+using ..Deprecated.cindex
 using DataStructures
 
 export wrap_c_headers

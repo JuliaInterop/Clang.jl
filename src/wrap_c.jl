@@ -235,10 +235,10 @@ For handling of #define'd constants, allows basic expressions but bails out quic
 function handle_macro_exprn(tokens::TokenList, pos::Int)
     function trans(tok)
         ops = ["+" "-" "*" "~" ">>" "<<" "/" "\\" "%" "|" "||" "^" "&" "&&"]
-        tokenKind = kind(tok)
+        token_kind = kind(tok)
         txt = spelling(tokens.tu, tok)
-        (tokenKind == CXToken_Literal || tokenKind == CXToken_Identifier) && return 0
-        tokenKind == CXToken_Punctuation && txt ∈ ops && return 1
+        (token_kind == CXToken_Literal || token_kind == CXToken_Identifier) && return 0
+        token_kind == CXToken_Punctuation && txt ∈ ops && return 1
         return -1
     end
 
@@ -267,11 +267,11 @@ function handle_macro_exprn(tokens::TokenList, pos::Int)
           return "$(unsigned ? "U" : "")Int$nbits"
         end
 
-        tokenKind = kind(tok)
+        token_kind = kind(tok)
         txt = spelling(tokens.tu, tok) |> strip
-        if tokenKind == CXToken_Identifier || tokenKind == CXToken_Punctuation
+        if token_kind == CXToken_Identifier || token_kind == CXToken_Punctuation
             # pass
-        elseif tokenKind == CXToken_Literal
+        elseif token_kind == CXToken_Literal
             for sfx in literalsuffixes
                 if endswith(txt, sfx)
                     type = literal_totype(sfx, txt)

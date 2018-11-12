@@ -208,30 +208,12 @@ function wrap!(::Val{CXCursor_TypedefDecl}, cursor::CXCursor, ctx::AbstractConte
     td_sym = Symbol(spelling(cursor))
     buffer = ctx.common_buffer
     if kind(td_type) == CXType_Unexposed
-        local tdunxp::CXCursor
-        for c in children(cursor)
-            # skip any leading non-type cursors
-            # Attributes, ...
-            if kind(c) != CXCursor_FirstAttr
-                tdunxp = c
-                break
-            end
-        end
-
-        if kind(tdunxp) == CXCursor_TypeRef
-            unxp_target = clang2julia(tdunxp)
-            if !haskey(buffer, td_sym)
-                buffer[td_sym] = ExprUnit(:(const $td_sym = $unxp_target), Any[unxp_target])
-            end
-            return ctx
-        else
-            # _wrap!(Val(kind(tdunxp)), tdunxp, buffer, customName=name(cursor))
-            @warn "TODO: fix this?!"
-            return ctx
-        end
+        # TODO: which corner case will trigger this pass?
+        @error "Skipping Typedef: CXType_Unexposed, $cursor, please report this on Github."
     end
 
     if kind(td_type) == CXType_FunctionProto
+        # TODO: need to find a test case too
         if !haskey(buffer, td_sym)
             buffer[td_sym] = ExprUnit(string("# Skipping Typedef: CXType_FunctionProto ", spelling(cursor)))
         end

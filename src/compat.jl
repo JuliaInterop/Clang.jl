@@ -89,7 +89,7 @@ function Base.run(wc::WrapContext)
     ctx = DefaultContext(wc.index)
     parse_headers!(ctx, wc.headers, args=wc.clang_args, includes=wc.clang_includes)
     ctx.options["is_function_strictly_typed"] = false
-    ctx.options["is_struct_mutable"] = wc.InternalOptions.ismutable
+    ctx.options["is_struct_mutable"] = wc.options.ismutable
     # Helper to store file handles
     filehandles = Dict{String,IOStream}()
     getfile(f) = (f in keys(filehandles)) ? filehandles[f] : (filehandles[f] = open(f, "w"))

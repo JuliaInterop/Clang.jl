@@ -1,112 +1,13 @@
 """
-Reserved Julia identifiers will be prepended with "_"
-"""
-const RESERVED_WORDS = ["begin", "while", "if", "for", "try", "return", "break", "continue",
-                        "function", "macro", "quote", "let", "local", "global", "const", "do",
-                        "struct", "module", "baremodule", "using", "import", "export", "end",
-                        "else", "elseif", "catch", "finally", "true", "false"]
-
-"""
 Unsupported argument types
 """
 const RESERVED_ARG_TYPES = ["va_list"]
 
 """
-These argument types will be untyped in the Julia signature
-"""
-const UNTYPED_ARG_TYPES = [CXType_IncompleteArray]
-
-# InternalOptions
-mutable struct InternalOptions
-    wrap_structs::Bool
-    ismutable::Bool
-end
-InternalOptions() = InternalOptions(true, false)
-
-"""
-    WrapContext
-Store shared information about the wrapping session.
-"""
-mutable struct WrapContext
-    index::Index
-    headers::Vector{String}
-    output_file::String
-    common_file::String
-    clang_includes::Vector{String}               # clang include paths
-    clang_args::Vector{String}                   # additional {"-Arg", "value"} pairs for clang
-    header_wrapped::Function                     # called to determine header inclusion status
-                                                 #   (top_header, cursor_header) -> Bool
-    header_library::Function                     # called to determine shared library for given header
-                                                 #   (header_name) -> library_name::AbstractString
-    header_outputfile::Function                  # called to determine output file group for given header
-                                                 #   (header_name) -> output_file::AbstractString
-    cursor_wrapped::Function                     # called to determine cursor inclusion status
-                                                 #   (cursor_name, cursor) -> Bool
-    common_buf::OrderedDict{Symbol, ExprUnit}    # output buffer for common items: typedefs, enums, etc.
-    output_bufs::DefaultOrderedDict{String, Array{Any}}
-    options::InternalOptions
-    rewriter::Function
-end
-
-### Convenience function to initialize wrapping context with defaults
-function init(; headers::Vector{String}                    = String[],
-                index::Union{Index,Nothing}                = nothing,
-                output_dir::String                         = "",
-                output_file::String                        = "",
-                common_file::String                        = "",
-                clang_args::Vector{String}                 = String[],
-                clang_includes::Vector{String}             = String[],
-                clang_diagnostics::Bool                    = true,
-                header_wrapped                             = (header, cursorname) -> true,
-                header_library                             = Union{},
-                header_outputfile::Union{Function,Nothing} = nothing,
-                cursor_wrapped                             = (cursorname, cursor) -> true,
-                options                                    = InternalOptions(),
-                rewriter                                   = x -> x)
-
-    # Set up some optional args if they are not explicitly passed.
-    index == nothing && (index = Index(clang_diagnostics);)
-
-    if output_file == "" && header_outputfile == nothing
-        header_outputfile = x->joinpath(output_dir, strip(splitext(basename(x))[1]) * ".jl")
-    end
-
-    common_file == "" && (common_file = output_file;)
-    common_file = joinpath(output_dir, common_file)
-
-    if header_library == nothing
-        header_library = x->strip(splitext(basename(x))[1])
-    elseif isa(header_library, String)
-        libname = copy(header_library)
-        header_library = x->libname
-    end
-    if header_outputfile == nothing
-        header_outputfile = x->joinpath(output_dir, output_file)
-    end
-
-    # Instantiate and return the WrapContext
-    global context = WrapContext(index,
-                                 headers,
-                                 output_file,
-                                 common_file,
-                                 clang_includes,
-                                 clang_args,
-                                 header_wrapped,
-                                 header_library,
-                                 header_outputfile,
-                                 cursor_wrapped,
-                                 OrderedDict{Symbol,ExprUnit}(),
-                                 DefaultOrderedDict{String, Array{Any}}(()->Any[]),
-                                 options,
-                                 rewriter)
-    return context
-end
-
-"""
-    _wrap!(::Val{CXCursor_FunctionDecl}, cursor::CXCursor, ctx::AbstractContext)
+    wrap!(::Val{CXCursor_FunctionDecl}, cursor::CXCursor, ctx::AbstractContext)
 Subroutine for handling function declarations. Note that VarArg functions are not supported.
 """
-function _wrap!(::Val{CXCursor_FunctionDecl}, cursor::CXCursor, ctx::AbstractContext)
+function wrap!(::Val{CXCursor_FunctionDecl}, cursor::CXCursor, ctx::AbstractContext)
     func_type = type(cursor)
     if kind(func_type) == CXType_FunctionNoProto
         @warn "No Prototype for $cursor - assuming no arguments"
@@ -140,7 +41,7 @@ function _wrap!(::Val{CXCursor_FunctionDecl}, cursor::CXCursor, ctx::AbstractCon
     isstrict = get(ctx.options, "is_function_strictly_typed", true)
     signature = isstrict ? efunsig(func_name, arg_names, arg_reps) : Expr(:call, func_name, arg_names...)
 
-    ctx.libname == "libxxx" && @warn "default libname: \":libxxx\" are being used, did you forget to specify the Context.libname?"
+    ctx.libname == "libxxx" && @warn "default libname: \":libxxx\" are being used, did you forget to specify `context.libname`?"
     body = eccall(func_name, Symbol(ctx.libname), ret_type, arg_names, arg_reps)
 
     push!(ctx.api_buffer, Expr(:function, signature, Expr(:block, body)))
@@ -169,14 +70,14 @@ function eccall(func_name::Symbol, libname::Symbol, rtype, args, types)
 end
 
 """
-    _wrap!(::Val{CXCursor_EnumDecl}, cursor::CXCursor, ctx::AbstractContext)
+    wrap!(::Val{CXCursor_EnumDecl}, cursor::CXCursor, ctx::AbstractContext)
 Subroutine for handling enum declarations.
 """
-function _wrap!(::Val{CXCursor_EnumDecl}, cursor::CXCursor, ctx::AbstractContext)
+function wrap!(::Val{CXCursor_EnumDecl}, cursor::CXCursor, ctx::AbstractContext)
     cursor_name = name(cursor)
     # handle typedef anonymous enum
     idx = ctx.children_index
-    if idx < length(ctx.children)
+    if 0 < idx < length(ctx.children)
         next_cursor = ctx.children[idx+1]
         if is_typedef_anon(cursor, next_cursor)
             cursor_name = name(next_cursor)
@@ -211,15 +112,17 @@ function _wrap!(::Val{CXCursor_EnumDecl}, cursor::CXCursor, ctx::AbstractContext
 end
 
 """
-    _wrap!(::Val{CXCursor_StructDecl}, cursor::CXCursor, ctx::AbstractContext)
+    wrap!(::Val{CXCursor_StructDecl}, cursor::CXCursor, ctx::AbstractContext)
 Subroutine for handling struct declarations.
 """
-function _wrap!(::Val{CXCursor_StructDecl}, cursor::CXCursor, ctx::AbstractContext)
-    cursor = canonical(cursor)  # make sure a empty struct is indeed an opaque struct typedef/typealias
+function wrap!(::Val{CXCursor_StructDecl}, cursor::CXCursor, ctx::AbstractContext)
+    # make sure a empty struct is indeed an opaque struct typedef/typealias
+    # cursor = canonical(cursor)  # this won't work
+    cursor = type(cursor) |> canonical |> typedecl
     cursor_name = name(cursor)
     # handle typedef anonymous struct
     idx = ctx.children_index
-    if idx < length(ctx.children)
+    if 0 < idx < length(ctx.children)
         next_cursor = ctx.children[idx+1]
         if is_typedef_anon(cursor, next_cursor)
             cursor_name = name(next_cursor)
@@ -267,14 +170,14 @@ function _wrap!(::Val{CXCursor_StructDecl}, cursor::CXCursor, ctx::AbstractConte
 end
 
 """
-    _wrap!(::Val{CXCursor_UnionDecl}, cursor::CXCursor, ctx::AbstractContext)
+    wrap!(::Val{CXCursor_UnionDecl}, cursor::CXCursor, ctx::AbstractContext)
 Subroutine for handling union declarations.
 """
-function _wrap!(::Val{CXCursor_UnionDecl}, cursor::CXCursor, ctx::AbstractContext)
+function wrap!(::Val{CXCursor_UnionDecl}, cursor::CXCursor, ctx::AbstractContext)
     cursor_name = name(cursor)
     # handle typedef anonymous union
     idx = ctx.children_index
-    if idx < length(ctx.children)
+    if 0 < idx < length(ctx.children)
         next_cursor = ctx.children[idx+1]
         if is_typedef_anon(cursor, next_cursor)
             cursor_name = name(next_cursor)
@@ -297,10 +200,10 @@ function _wrap!(::Val{CXCursor_UnionDecl}, cursor::CXCursor, ctx::AbstractContex
 end
 
 """
-    _wrap!(::Val{CXCursor_TypedefDecl}, cursor::CXCursor, ctx::AbstractContext)
+    wrap!(::Val{CXCursor_TypedefDecl}, cursor::CXCursor, ctx::AbstractContext)
 Subroutine for handling typedef declarations.
 """
-function _wrap!(::Val{CXCursor_TypedefDecl}, cursor::CXCursor, ctx::AbstractContext)
+function wrap!(::Val{CXCursor_TypedefDecl}, cursor::CXCursor, ctx::AbstractContext)
     td_type = underlying_type(cursor)
     td_sym = Symbol(spelling(cursor))
     buffer = ctx.common_buffer
@@ -337,7 +240,7 @@ function _wrap!(::Val{CXCursor_TypedefDecl}, cursor::CXCursor, ctx::AbstractCont
 
     td_target = clang2julia(td_type)
     if !haskey(buffer, td_sym)
-        buffer[td_sym] = ExprUnit(:(const $td_sym = $td_target), Any[td_target])
+        buffer[td_sym] = ExprUnit(:(const $td_sym = $td_target), [td_target])
     end
     return ctx
 end
@@ -429,10 +332,10 @@ get_symbols(e::Expr) = vcat(get_symbols(e.head), get_symbols(e.args))
 get_symbols(xs::Array) = reduce(vcat, [get_symbols(x) for x in xs])
 
 """
-    _wrap!(::Val{CXCursor_MacroDefinition}, cursor::CXCursor, ctx::AbstractContext)
+    wrap!(::Val{CXCursor_MacroDefinition}, cursor::CXCursor, ctx::AbstractContext)
 Subroutine for handling macro declarations.
 """
-function _wrap!(::Val{CXCursor_MacroDefinition}, cursor::CXCursor, ctx::AbstractContext)
+function wrap!(::Val{CXCursor_MacroDefinition}, cursor::CXCursor, ctx::AbstractContext)
     tokens = tokenize(cursor)
     # Skip any empty definitions
     tokens.size < 2 && return ctx
@@ -472,15 +375,15 @@ function _wrap!(::Val{CXCursor_MacroDefinition}, cursor::CXCursor, ctx::Abstract
 end
 
 """
-    _wrap!(::Val{CXCursor_TypeRef}, cursor::CXCursor, ctx::AbstractContext)
+    wrap!(::Val{CXCursor_TypeRef}, cursor::CXCursor, ctx::AbstractContext)
 For now, we just skip CXCursor_TypeRef cursors.
 """
-function _wrap!(::Val{CXCursor_TypeRef}, cursor::CXCursor, ctx::AbstractContext)
+function wrap!(::Val{CXCursor_TypeRef}, cursor::CXCursor, ctx::AbstractContext)
     @warn "Skipping CXCursor_TypeRef cursor: $cursor"
     return ctx
 end
 
-function _wrap!(::Val, cursor::CXCursor, ctx::AbstractContext)
+function wrap!(::Val, cursor::CXCursor, ctx::AbstractContext)
     @warn "not wrapping $(cursor)"
     return ctx
 end
@@ -489,77 +392,4 @@ end
     wrap!(ctx::AbstractContext, cursor::CXCursor)
 Wrap current cursor.
 """
-wrap!(ctx::AbstractContext, cursor::CXCursor) = _wrap!(Val(kind(cursor)), cursor, ctx)
-
-
-function Base.run(wc::WrapContext)
-    # parse headers
-    ctx = DefaultContext(wc.index)
-    parse_headers!(ctx, wc.headers, args=wc.clang_args, includes=wc.clang_includes)
-    ctx.options["is_function_strictly_typed"] = false
-
-    # Helper to store file handles
-    filehandles = Dict{String,IOStream}()
-    getfile(f) = (f in keys(filehandles)) ? filehandles[f] : (filehandles[f] = open(f, "w"))
-
-    for header in wc.headers
-        # extract header to Expr[] array
-        @info "wrapping header: $header ..."
-        trans_unit = ctx.trans_units[header]
-        root_cursor = getcursor(trans_unit)
-        push!(ctx.cursor_stack, root_cursor)
-
-        # loop over all of the child cursors and wrap them, if appropriate.
-        ctx.children = children(root_cursor)
-        for (i, child) in enumerate(ctx.children)
-            child_name = name(child)
-            child_header = filename(child)
-            ctx.children_index = i
-            # what should be wrapped:
-            #   1. wrap if context.header_wrapped(header, child_header) == True
-            #   2. wrap if context.cursor_wrapped(cursor_name, cursor) == True
-            #   3. skip compiler defs and cursors already wrapped
-            if !wc.header_wrapped(header, child_header) ||
-               !wc.cursor_wrapped(child_name, child) ||       # client callbacks
-               startswith(child_name, "__")          ||       # skip compiler definitions
-               child_name in keys(ctx.common_buffer)          # already wrapped
-                continue
-            end
-            ctx.libname = wc.header_library(child_header)
-
-            # try
-                wrap!(ctx, child)
-            # catch err
-            #     push!(ctx.cursor_stack, cursor)
-            #     @error "error thrown. Last cursor available in context.cursor_stack."
-            #     rethrow(err)
-            # end
-        end
-
-        # apply user-supplied transformation
-        wc.rewriter(ctx.api_buffer)
-
-        # write output
-        out_file = wc.header_outputfile(header)
-        @info "writing $(out_file)"
-
-        out_stream = getfile(out_file)
-        println(out_stream, "# Julia wrapper for header: $header")
-        println(out_stream, "# Automatically generated using Clang.jl wrap_c\n")
-        print_buffer(out_stream, ctx.api_buffer)
-        ctx.api_buffer = Expr[]  # clean api_buffer for the next header
-    end
-
-    common_buf = dump_to_buffer(ctx.common_buffer)
-
-    # apply user-supplied transformation
-    common_buf = wc.rewriter(common_buf)
-
-    # write "common" definitions: types, typealiases, etc.
-    open(wc.common_file, "w") do f
-        println(f, "# Automatically generated using Clang.jl wrap_c\n")
-        print_buffer(f, common_buf)
-    end
-
-    map(close, values(filehandles))
-end
+wrap!(ctx::AbstractContext, cursor::CXCursor) = wrap!(Val(kind(cursor)), cursor, ctx)

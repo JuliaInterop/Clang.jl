@@ -14,7 +14,7 @@ end
 DefaultContext(index::Index) = DefaultContext(index, Dict{String,TranslationUnit}(), Dict{String,Bool}(),
                                               "libxxx", OrderedDict{Symbol,ExprUnit}(), Expr[],
                                               CXCursor[], CXCursor[], -1)
-DefaultContext(diagnostic::Bool) = DefaultContext(Index(diagnostic))
+DefaultContext(diagnostic::Bool=true) = DefaultContext(Index(diagnostic))
 
-parse_header!(ctx::AbstractContext, header::AbstractString; args...) = (ctx.trans_units[header]=parse_header(headers; args...);)
+parse_header!(ctx::AbstractContext, header::AbstractString; args...) = (ctx.trans_units[header]=parse_header(header; args...);)
 parse_headers!(ctx::AbstractContext, headers::Vector{String}; args...) = merge!(ctx.trans_units, parse_headers(headers; args...))

@@ -8,11 +8,11 @@ mutable struct TokenList
     tu::CXTranslationUnit
     function TokenList(tu::CXTranslationUnit, sr::CXSourceRange)
         GC.@preserve tu sr begin
-            ptrRef = Ref{Ptr{CXToken}}(C_NULL)
-            numRef = Ref{Cuint}(0)
-            clang_tokenize(tu, sr, ptrRef, numRef)
-            @assert ptrRef[] != C_NULL
-            obj = new(ptrRef[], numRef[], tu)
+            ptr_ref = Ref{Ptr{CXToken}}(C_NULL)
+            num_ref = Ref{Cuint}(0)
+            clang_tokenize(tu, sr, ptr_ref, num_ref)
+            @assert ptr_ref[] != C_NULL
+            obj = new(ptr_ref[], num_ref[], tu)
         end
         finalizer(obj) do x
             if x.ptr != C_NULL

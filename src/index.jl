@@ -1,19 +1,19 @@
 """
-    Index(excludeDeclsFromPCH, displayDiagnostics)
+    Index(exclude_decls_from_PCH, display_diagnostics)
 Provide a shared context for creating translation units.
 
 # Arguments
-- `excludeDeclsFromPCH`: whether to allow enumeration of "local" declarations.
-- `displayDiagnostics`: whether to display diagnostics.
+- `exclude_decls_from_PCH`: whether to allow enumeration of "local" declarations.
+- `display_diagnostics`: whether to display diagnostics.
 """
 mutable struct Index
     ptr::CXIndex
-    excludeDeclsFromPCH::Cint
-    displayDiagnostics::Cint
-    function Index(excludeDeclsFromPCH, displayDiagnostics)
-        ptr = clang_createIndex(excludeDeclsFromPCH, displayDiagnostics)
+    exclude_decls_from_PCH::Cint
+    display_diagnostics::Cint
+    function Index(exclude_decls_from_PCH, display_diagnostics)
+        ptr = clang_createIndex(exclude_decls_from_PCH, display_diagnostics)
         @assert ptr != C_NULL
-        obj = new(ptr, excludeDeclsFromPCH, displayDiagnostics)
+        obj = new(ptr, exclude_decls_from_PCH, display_diagnostics)
         finalizer(obj) do x
             if x.ptr != C_NULL
                 clang_disposeIndex(x.ptr)

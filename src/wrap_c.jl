@@ -347,11 +347,18 @@ function wrap!(::Val{CXCursor_MacroDefinition}, cursor::CXCursor, ctx::AbstractC
     (exprn == "" || exprn == "()") && return buffer
 
     use_sym = symbol_safe(text(tokens[1]))
-    target = Meta.parse(exprn)
-    e = Expr(:const, Expr(:(=), use_sym, target))
 
-    deps = get_symbols(target)
-    buffer[use_sym] = ExprUnit(e, deps)
+    try
+        target = Meta.parse(exprn)
+        e = Expr(:const, Expr(:(=), use_sym, target))
+        deps = get_symbols(target)
+        buffer[use_sym] = ExprUnit(e, deps)
+    catch err
+        # this assumes all parsing failure is due to string-parsing
+        ## TODO: find a elegant way to solve this
+        e = :(const $use_sym = $(exprn[2:end-1]))
+        buffer[use_sym] = ExprUnit(e,[])
+    end
 
     return ctx
 end

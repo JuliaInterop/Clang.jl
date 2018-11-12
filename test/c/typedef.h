@@ -14,3 +14,9 @@ struct Node {
     int data;
     Node *nextptr;
 };
+
+// issue #213
+typedef enum _bar {
+  BAR,
+  BAZ
+} bar;

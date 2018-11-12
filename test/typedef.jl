@@ -43,6 +43,11 @@ using Test
         node_typedef_type = underlying_type(node_typedef)
         @test kind(node_typedef_type) != CXType_Unexposed
         @test spelling(node_typedef) == "Node"
+
+        wrap!(ctx, cursors[9])
+        expr = :(const bar = _bar)
+        strip_line_numbers!(expr)
+        @test ctx.common_buffer[:bar].items[1] == expr
     end
 end
 

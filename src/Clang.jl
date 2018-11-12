@@ -37,17 +37,19 @@ include("utils.jl")
 export name_safe, symbol_safe
 
 include("clang2julia.jl")
-export CLANG_JULIA_TYPEMAP, INT_CONVERSION
 export clang2julia, target_type, typesize
 
 include("expr_unit.jl")
-export ExprUnit
+export ExprUnit, dump_to_buffer, print_buffer
 
 include("context.jl")
 export AbstractContext, DefaultContext
+export parse_header!, parse_headers!
 
 include("wrap_c.jl")
-export wrap_header
+export wrap!
+
+include("compat.jl")
 export WrapContext, init
 
 function version()

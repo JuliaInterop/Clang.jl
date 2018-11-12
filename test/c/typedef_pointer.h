@@ -1,3 +1,7 @@
+typedef int *intptr;
+
+typedef int (*funcptr)(float, int);
+
 // issue #190
 typedef struct {
     double x;

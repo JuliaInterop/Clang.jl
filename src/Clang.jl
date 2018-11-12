@@ -35,6 +35,7 @@ include("show.jl")
 
 include("utils.jl")
 export name_safe, symbol_safe
+export copydeps, print_template
 
 include("clang2julia.jl")
 export clang2julia, target_type, typesize
@@ -67,5 +68,7 @@ const LLVM_LIBDIR = joinpath(@__DIR__, "..", "deps", "usr", "lib") |> normpath
 const LLVM_INCLUDE = joinpath(LLVM_LIBDIR, "clang", LLVM_VERSION, "include")
 
 export LLVM_VERSION, LLVM_LIBDIR, LLVM_INCLUDE
+
+include("deprecated/Deprecated.jl")
 
 end

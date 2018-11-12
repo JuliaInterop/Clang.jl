@@ -1,7 +1,7 @@
 module wrap_cpp
 # module wt
 
-using Clang.cindex
+using ..Deprecated.cindex
 
 export
     CustomArg,

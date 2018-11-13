@@ -8,3 +8,6 @@
 deps/usr
 deps/deps.jl
 deps/build.log
+gen/LibTemplate.jl
+gen/CEnum.jl
+gen/ctypes.jl

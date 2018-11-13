@@ -2,9 +2,9 @@ module CEnum
 
 abstract type Cenum{T} end
 
-Base.:|(a::T, b::T) where {T<:Cenum} = UInt32(a) | UInt32(b)
-Base.:&(a::T, b::T) where {T<:Cenum} = UInt32(a) & UInt32(b)
-Base.:(==)(a::Integer, b::Cenum) = a == UInt32(b)
+Base.:|(a::T, b::T) where {T<:Cenum{UInt32}} = UInt32(a) | UInt32(b)
+Base.:&(a::T, b::T) where {T<:Cenum{UInt32}} = UInt32(a) & UInt32(b)
+Base.:(==)(a::Integer, b::Cenum{T}) where {T<:Integer} = a == T(b)
 Base.:(==)(a::Cenum, b::Integer) = b == a
 
 # typemin and typemax won't change for an enum, so we might as well inline them per type
@@ -57,7 +57,17 @@ end
 
 
 macro cenum(name, args...)
-    if !isa(name, Symbol)
+    if Meta.isexpr(name, :curly)
+        typename, type = name.args
+        typename = esc(typename)
+        typesize = 8*sizeof(getfield(Base, type))
+        typedef_expr = :(primitive type $typename <: CEnum.Cenum{$type} $typesize end)
+    elseif isa(name, Symbol)
+        # default to UInt32
+        typename = esc(name)
+        type = UInt32
+        typedef_expr = :(primitive type $typename <: CEnum.Cenum{UInt32} 32 end)
+    else
         error("Name must be symbol or Name{Type}. Found: $name")
     end
     lastval = -1
@@ -82,16 +92,16 @@ macro cenum(name, args...)
         values = :(tuple($(values...)))
     end
     value_block = Expr(:block)
-    typename = esc(name)
+
     for (ename, value) in name_values
         push!(value_block.args, :(const $(esc(ename)) = $typename($value)))
     end
 
     expr = quote
-        primitive type $typename <: CEnum.Cenum{UInt32} 32 end
+        $typedef_expr
         function Base.convert(::Type{$typename}, x::Integer)
             is_member($typename, x) || Base.Enums.enum_argument_error($(Expr(:quote, name)), x)
-            Base.bitcast($typename, convert(Int32, x))
+            Base.bitcast($typename, convert($type, x))
         end
         CEnum.enum_names(::Type{$typename}) = tuple($(map(x-> Expr(:quote, first(x)), name_values)...))
         CEnum.enum_values(::Type{$typename}) = $values

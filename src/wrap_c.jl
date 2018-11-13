@@ -86,7 +86,7 @@ function wrap!(::Val{CXCursor_EnumDecl}, cursor::CXCursor, ctx::AbstractContext)
     cursor_name == "" && (@warn("Skipping unnamed EnumDecl: $cursor"); return ctx)
 
     enum_sym = symbol_safe(cursor_name)
-    enum_type = clang2julia(cursor)
+    enum_type = INT_CONVERSION[clang2julia(cursor)]
     name2value = Tuple{Symbol,Int}[]
     # extract values and names
     for item_cursor in children(cursor)
@@ -95,11 +95,11 @@ function wrap!(::Val{CXCursor_EnumDecl}, cursor::CXCursor, ctx::AbstractContext)
         item_sym = symbol_safe(item_name)
         push!(name2value, (item_sym, value(item_cursor)))
     end
-    int_size = 8*sizeof(INT_CONVERSION[enum_type])
-    if int_size == 32 # only add size if != 32
-        expr = :(@cenum($enum_sym))
+
+    if enum_type == UInt32
+        expr = Expr(:macrocall, Symbol("@cenum"), nothing, enum_sym)
     else
-        expr = :(@cenum($enum_sym{$int_size}))
+        expr = Expr(:macrocall, Symbol("@cenum"), nothing, Expr(:curly, enum_sym, enum_type))
     end
 
     ctx.common_buffer[enum_sym] = ExprUnit(expr)
@@ -354,7 +354,7 @@ function wrap!(::Val{CXCursor_MacroDefinition}, cursor::CXCursor, ctx::AbstractC
         deps = get_symbols(target)
         buffer[use_sym] = ExprUnit(e, deps)
     catch err
-        # this assumes all parsing failure is due to string-parsing
+        # this assumes all parsing failures are due to string-parsing
         ## TODO: find a elegant way to solve this
         e = :(const $use_sym = $(exprn[2:end-1]))
         buffer[use_sym] = ExprUnit(e,[])

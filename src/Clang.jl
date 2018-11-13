@@ -36,6 +36,7 @@ include("show.jl")
 include("utils.jl")
 export name_safe, symbol_safe
 export copydeps, print_template
+export strip_line_numbers!
 
 include("clang2julia.jl")
 export clang2julia, target_type, typesize

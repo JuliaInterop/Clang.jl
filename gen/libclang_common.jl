@@ -637,7 +637,7 @@ end
     CXTemplateArgumentKind_Pack = 8,
     CXTemplateArgumentKind_Invalid = 9,
 )
-@cenum(CXTypeLayoutError,
+@cenum(CXTypeLayoutError{Int32},
     CXTypeLayoutError_Invalid = -1,
     CXTypeLayoutError_Incomplete = -2,
     CXTypeLayoutError_Dependent = -3,

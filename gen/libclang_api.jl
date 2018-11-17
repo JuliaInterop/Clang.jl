@@ -1,5 +1,5 @@
 # Julia wrapper for header: /Users/gnimuc/.julia/dev/Clang/deps/usr/include/clang-c/BuildSystem.h
-# Automatically generated using Clang.jl wrap_c
+# Automatically generated using Clang.jl
 
 
 function clang_getBuildSessionTimestamp()
@@ -50,7 +50,7 @@ function clang_ModuleMapDescriptor_dispose(arg1)
     ccall((:clang_ModuleMapDescriptor_dispose, libclang), Cvoid, (CXModuleMapDescriptor,), arg1)
 end
 # Julia wrapper for header: /Users/gnimuc/.julia/dev/Clang/deps/usr/include/clang-c/CXCompilationDatabase.h
-# Automatically generated using Clang.jl wrap_c
+# Automatically generated using Clang.jl
 
 
 function clang_CompilationDatabase_fromDirectory(BuildDir, ErrorCode)
@@ -109,10 +109,10 @@ function clang_CompileCommand_getMappedSourceContent(arg1, I)
     ccall((:clang_CompileCommand_getMappedSourceContent, libclang), CXString, (CXCompileCommand, UInt32), arg1, I)
 end
 # Julia wrapper for header: /Users/gnimuc/.julia/dev/Clang/deps/usr/include/clang-c/CXErrorCode.h
-# Automatically generated using Clang.jl wrap_c
+# Automatically generated using Clang.jl
 
 # Julia wrapper for header: /Users/gnimuc/.julia/dev/Clang/deps/usr/include/clang-c/CXString.h
-# Automatically generated using Clang.jl wrap_c
+# Automatically generated using Clang.jl
 
 
 function clang_getCString(string)
@@ -127,7 +127,7 @@ function clang_disposeStringSet(set)
     ccall((:clang_disposeStringSet, libclang), Cvoid, (Ptr{CXStringSet},), set)
 end
 # Julia wrapper for header: /Users/gnimuc/.julia/dev/Clang/deps/usr/include/clang-c/Documentation.h
-# Automatically generated using Clang.jl wrap_c
+# Automatically generated using Clang.jl
 
 
 function clang_Cursor_getParsedComment(C)
@@ -266,7 +266,7 @@ function clang_FullComment_getAsXML(Comment)
     ccall((:clang_FullComment_getAsXML, libclang), CXString, (CXComment,), Comment)
 end
 # Julia wrapper for header: /Users/gnimuc/.julia/dev/Clang/deps/usr/include/clang-c/Index.h
-# Automatically generated using Clang.jl wrap_c
+# Automatically generated using Clang.jl
 
 
 function clang_createIndex(excludeDeclarationsFromPCH, displayDiagnostics)
@@ -1461,5 +1461,5 @@ function clang_Type_visitFields(T, visitor, client_data)
     ccall((:clang_Type_visitFields, libclang), UInt32, (CXType, CXFieldVisitor, CXClientData), T, visitor, client_data)
 end
 # Julia wrapper for header: /Users/gnimuc/.julia/dev/Clang/deps/usr/include/clang-c/Platform.h
-# Automatically generated using Clang.jl wrap_c
+# Automatically generated using Clang.jl
 

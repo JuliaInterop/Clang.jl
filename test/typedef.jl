@@ -30,7 +30,7 @@ using Test
         @test canonical(node_type) |> typedecl == cursors[7]
 
         ctx = DefaultContext()
-        ctx.trans_units["typedef.h"] = trans_unit
+        push!(ctx.trans_units, trans_unit)
         wrap!(ctx, cursors[5])
         expr = :(struct Node
                     data::Cint
@@ -116,7 +116,7 @@ end
         @test clang2julia(underlying_type(FOOP)) == :(Ptr{FOO})
 
         ctx = DefaultContext()
-        ctx.trans_units["typedef_pointer.h"] = trans_unit
+        push!(ctx.trans_units, trans_unit)
         wrap!(ctx, cursors[6])
         expr = :(
             function test1(a::Cdouble,b::Cdouble,c::FOOP)

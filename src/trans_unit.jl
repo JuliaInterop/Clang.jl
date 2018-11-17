@@ -98,11 +98,11 @@ function parse_headers(headers::Vector{String};
                        includes::Vector{String} = String[],
                        flags = CXTranslationUnit_DetailedPreprocessingRecord |
                                CXTranslationUnit_SkipFunctionBodies)
-    trans_units = Dict{String,TranslationUnit}()
+    trans_units = TranslationUnit[]
     # Parse the headers
     for header in unique(headers)
         tu = parse_header(header; index=index, args=args, includes=includes, flags=flags)
-        trans_units[header] = tu
+        push!(trans_units, tu)
     end
     return trans_units
 end

@@ -4,8 +4,7 @@ using Test
 @testset "wrap_c" begin
     ctx = DefaultContext()
     parse_header!(ctx, joinpath(@__DIR__, "c", "cbasic.h"))
-    headers = keys(ctx.trans_units) |> collect
-    root_cursor = getcursor(ctx.trans_units[headers[1]])
+    root_cursor = getcursor(ctx.trans_units[1])
     func1 = search(root_cursor, "func1")[1]
     ctx.libname = "test"
 

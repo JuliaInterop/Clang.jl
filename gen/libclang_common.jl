@@ -1,4 +1,4 @@
-# Automatically generated using Clang.jl wrap_c
+# Automatically generated using Clang.jl
 
 
 const CXVirtualFileOverlayImpl = Cvoid

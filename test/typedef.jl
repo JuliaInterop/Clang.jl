@@ -36,7 +36,7 @@ using Test
                     data::Cint
                     nextptr::Ptr{Node}
                 end)
-        strip_line_numbers!(expr)
+        Base.remove_linenums!(expr)
         @test ctx.common_buffer[:Node].items[1] == expr
 
         node_typedef = cursors[6]
@@ -46,7 +46,7 @@ using Test
 
         wrap!(ctx, cursors[9])
         expr = :(const bar = _bar)
-        strip_line_numbers!(expr)
+        Base.remove_linenums!(expr)
         @test ctx.common_buffer[:bar].items[1] == expr
     end
 end
@@ -122,7 +122,7 @@ end
             function test1(a::Cdouble,b::Cdouble,c::FOOP)
                 ccall((:test1,libxxx),FOOP,(Cdouble,Cdouble,FOOP),a,b,c)
             end)
-        strip_line_numbers!(expr)
+        Base.remove_linenums!(expr)
         @test ctx.api_buffer[1] == expr
     end
 end

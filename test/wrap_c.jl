@@ -15,7 +15,7 @@ using Test
             ccall((:func1,test),Cint,(Cint,Cdouble,Ptr{Cdouble},Ptr{Cvoid}),a,b,c,d)
         end)
 
-    strip_line_numbers!(exc)
+    Base.remove_linenums!(exc)
 
     @test ctx.api_buffer[1] == exc
 end

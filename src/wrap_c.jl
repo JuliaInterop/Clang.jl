@@ -16,7 +16,7 @@ function wrap!(::Val{CXCursor_FunctionDecl}, cursor::CXCursor, ctx::AbstractCont
         return ctx
     end
 
-    func_name = Symbol(spelling(cursor))
+    func_name = isempty(ctx.force_name) ? Symbol(spelling(cursor)) : ctx.force_name
     ret_type = clang2julia(return_type(cursor))
     args = function_args(cursor)
     arg_types = [argtype(func_type, i) for i in 0:length(args)-1]
@@ -83,6 +83,7 @@ function wrap!(::Val{CXCursor_EnumDecl}, cursor::CXCursor, ctx::AbstractContext)
             cursor_name = name(next_cursor)
         end
     end
+    !isempty(ctx.force_name) && (cursor_name = ctx.force_name;)
     cursor_name == "" && (@warn("Skipping unnamed EnumDecl: $cursor"); return ctx)
 
     enum_sym = symbol_safe(cursor_name)
@@ -128,6 +129,7 @@ function wrap!(::Val{CXCursor_StructDecl}, cursor::CXCursor, ctx::AbstractContex
             cursor_name = name(next_cursor)
         end
     end
+    !isempty(ctx.force_name) && (cursor_name = ctx.force_name;)
     cursor_name == "" && (@warn("Skipping unnamed StructDecl: $cursor"); return ctx)
 
     struct_sym = symbol_safe(cursor_name)
@@ -183,6 +185,7 @@ function wrap!(::Val{CXCursor_UnionDecl}, cursor::CXCursor, ctx::AbstractContext
             cursor_name = name(next_cursor)
         end
     end
+    !isempty(ctx.force_name) && (cursor_name = ctx.force_name;)
     cursor_name == "" && (@warn("Skipping unnamed UnionDecl: $cursor"); return ctx)
 
     union_sym = symbol_safe(cursor_name)
@@ -205,7 +208,7 @@ Subroutine for handling typedef declarations.
 """
 function wrap!(::Val{CXCursor_TypedefDecl}, cursor::CXCursor, ctx::AbstractContext)
     td_type = underlying_type(cursor)
-    td_sym = Symbol(spelling(cursor))
+    td_sym = isempty(ctx.force_name) ? Symbol(spelling(cursor)) : ctx.force_name
     buffer = ctx.common_buffer
     if kind(td_type) == CXType_Unexposed
         # TODO: which corner case will trigger this pass?

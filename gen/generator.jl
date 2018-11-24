@@ -43,7 +43,7 @@ for trans_unit in ctx.trans_units
     println(api_stream, "# Julia wrapper for header: $header")
     println(api_stream, "# Automatically generated using Clang.jl\n")
     print_buffer(api_stream, ctx.api_buffer)
-    ctx.api_buffer = Expr[]  # clean up api_buffer for the next header
+    empty!(ctx.api_buffer)  # clean up api_buffer for the next header
 end
 close(api_stream)
 
@@ -54,6 +54,6 @@ open(common_file, "w") do f
     print_buffer(f, dump_to_buffer(ctx.common_buffer))
 end
 
-# generate CEnum.jl, ctypes.jl and a template
+# uncomment the following code to generate dependency and template files
 # copydeps(dirname(api_file))
 # print_template(joinpath(dirname(api_file), "LibTemplate.jl"))

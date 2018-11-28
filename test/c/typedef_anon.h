@@ -20,3 +20,6 @@ typedef struct __attribute__((aligned(2)))
 {
   signed char x,y;
 } char2;
+
+// anonymous typedef union
+typedef union {void *ptr; int id;} handle;

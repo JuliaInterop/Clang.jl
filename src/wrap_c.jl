@@ -188,17 +188,30 @@ function wrap!(::Val{CXCursor_UnionDecl}, cursor::CXCursor, ctx::AbstractContext
     !isempty(ctx.force_name) && (cursor_name = ctx.force_name;)
     cursor_name == "" && (@warn("Skipping unnamed UnionDecl: $cursor"); return ctx)
 
-    ismutable = get(ctx.options, "is_struct_mutable", false)
     union_sym = symbol_safe(cursor_name)
+    ismutable = get(ctx.options, "is_struct_mutable", false)
+    buffer = ctx.common_buffer
+
     block = Expr(:block)
     expr = Expr(:struct, ismutable, union_sym, block)
-    cursor_sym = Symbol("_", cursor_name)
-    cursor_max = largestfield(cursor)
-    target = clang2julia(cursor_max)
-    push!(block.args, Expr(:(::), cursor_sym, target))
+    deps = OrderedSet{Symbol}()
+    # find the largest union field and declare a block of bytes to match.
+    union_fields = children(cursor)
+    largest_field = union_fields[1]
+    max_size = typesize(type(largest_field))
+    for field_cursor in union_fields
+        field_size = typesize(type(field_cursor))
+        if field_size > max_size
+            largest_field = field_cursor
+            max_size = field_size
+        end
+    end
+    largest_field_sym = symbol_safe(name(largest_field))
+    repr = clang2julia(largest_field)
+    push!(block.args, Expr(:(::), largest_field_sym, repr))
+    push!(deps, target_type(repr))
 
-    # TODO: add other dependencies
-    ctx.common_buffer[cursor_sym] = ExprUnit(expr, Any[target])
+    buffer[union_sym] = ExprUnit(expr, deps)
 
     return ctx
 end

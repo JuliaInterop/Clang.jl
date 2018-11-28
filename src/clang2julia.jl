@@ -92,25 +92,6 @@ _typesize(::Val{CXType_Invalid}, t::CXType) = (@warn("  incorrect typesize for C
 typesize(c::CXCursor) = _typesize(Val(kind(c)), c)
 _typesize(::Val{CXCursor_TypedefDecl}, c::CXCursor) = typesize(underlying_type(c))
 
-
-"""
-Used for hacky union inclusion: we find the largest union field and declare a block of
-bytes to match.
-"""
-function largestfield(c::CXCursor)
-    maxsize, maxelem = -Inf, 0
-    fields = children(c)
-    for i in 1:length(fields)
-        field_size = typesize(type(fields[i]))
-        if field_size > maxsize
-            maxsize = field_size
-            maxelem = i
-        end
-    end
-    fields[maxelem]
-end
-
-
 """
     clang2julia(t::CXType) -> Symbol/Expr
 Convert libclang cursor/type to Julia.

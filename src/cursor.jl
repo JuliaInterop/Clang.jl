@@ -444,6 +444,7 @@ function_args(cursor::CXCursor) = search(cursor, CXCursor_ParmDecl)
 Return true if the current cursor is an typedef anonymous struct/enum.
 """
 function is_typedef_anon(current::CXCursor, next::CXCursor)
+    !isempty(name(current)) && return false
     refback = children(next)
     if kind(next) == CXCursor_TypedefDecl &&
        !isempty(refback) && name(refback[1]) == ""

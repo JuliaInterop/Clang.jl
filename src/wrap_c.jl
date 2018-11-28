@@ -188,6 +188,7 @@ function wrap!(::Val{CXCursor_UnionDecl}, cursor::CXCursor, ctx::AbstractContext
     !isempty(ctx.force_name) && (cursor_name = ctx.force_name;)
     cursor_name == "" && (@warn("Skipping unnamed UnionDecl: $cursor"); return ctx)
 
+    ismutable = get(ctx.options, "is_struct_mutable", false)
     union_sym = symbol_safe(cursor_name)
     block = Expr(:block)
     expr = Expr(:struct, ismutable, union_sym, block)

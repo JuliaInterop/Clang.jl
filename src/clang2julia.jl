@@ -98,7 +98,7 @@ Used for hacky union inclusion: we find the largest union field and declare a bl
 bytes to match.
 """
 function largestfield(c::CXCursor)
-    maxsize, maxelem = 0, 0
+    maxsize, maxelem = -Inf, 0
     fields = children(c)
     for i in 1:length(fields)
         field_size = typesize(type(fields[i]))

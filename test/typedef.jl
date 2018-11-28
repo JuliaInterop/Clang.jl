@@ -89,6 +89,25 @@ end
         @test kind(next_cursor) == CXCursor_TypedefDecl
         @test name(children(next_cursor)[1]) == ""
         @test is_typedef_anon(attribute_struct, next_cursor) == true
+        # case 5
+        anonymous_typedef_union = cursors[9]
+        @test name(anonymous_typedef_union) == ""
+        next_cursor = cursors[10]
+        @test name(next_cursor) == "handle"
+        @test kind(next_cursor) == CXCursor_TypedefDecl
+        @test name(children(next_cursor)[1]) == ""
+        @test is_typedef_anon(anonymous_typedef_union, next_cursor) == true
+
+        ctx = DefaultContext()
+        push!(ctx.trans_units, trans_unit)
+        ctx.children = cursors
+        ctx.children_index = 9
+        wrap!(ctx, anonymous_typedef_union)
+        expr = :(struct handle
+                     id::Cint
+                 end)
+        Base.remove_linenums!(expr)
+        @test ctx.common_buffer[:handle].items[1] == expr
     end
 end
 

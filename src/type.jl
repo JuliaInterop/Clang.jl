@@ -60,11 +60,11 @@ Return the type of the pointee for pointer types.
 pointee_type(t::CXType) = clang_getPointeeType(t)
 
 """
-    typedecl(t::CXType) -> CXCursor
+    typedecl(t::CXType) -> CLCursor
 Return the cursor for the declaration of the given type. To get the type of the cursor,
 see [`type`](@ref).
 """
-typedecl(t::CXType) = clang_getTypeDeclaration(t)
+typedecl(t::CXType)::CLCursor = clang_getTypeDeclaration(t)
 
 """
     spelling(t::CXType) -> String

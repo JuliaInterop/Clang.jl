@@ -4,10 +4,10 @@ Unsupported argument types
 const RESERVED_ARG_TYPES = ["va_list"]
 
 """
-    wrap!(::Val{CXCursor_FunctionDecl}, cursor::CXCursor, ctx::AbstractContext)
+    wrap!(ctx::AbstractContext, cursor::CLFunctionDecl)
 Subroutine for handling function declarations. Note that VarArg functions are not supported.
 """
-function wrap!(::Val{CXCursor_FunctionDecl}, cursor::CXCursor, ctx::AbstractContext)
+function wrap!(ctx::AbstractContext, cursor::CLFunctionDecl)
     func_type = type(cursor)
     if kind(func_type) == CXType_FunctionNoProto
         @warn "No Prototype for $cursor - assuming no arguments"
@@ -70,10 +70,10 @@ function eccall(func_name::Symbol, libname::Symbol, rtype, args, types)
 end
 
 """
-    wrap!(::Val{CXCursor_EnumDecl}, cursor::CXCursor, ctx::AbstractContext)
+    wrap!(ctx::AbstractContext, cursor::CLEnumDecl)
 Subroutine for handling enum declarations.
 """
-function wrap!(::Val{CXCursor_EnumDecl}, cursor::CXCursor, ctx::AbstractContext)
+function wrap!(ctx::AbstractContext, cursor::CLEnumDecl)
     cursor_name = name(cursor)
     # handle typedef anonymous enum
     idx = ctx.children_index
@@ -113,10 +113,10 @@ function wrap!(::Val{CXCursor_EnumDecl}, cursor::CXCursor, ctx::AbstractContext)
 end
 
 """
-    wrap!(::Val{CXCursor_StructDecl}, cursor::CXCursor, ctx::AbstractContext)
+    wrap!(ctx::AbstractContext, cursor::CLStructDecl)
 Subroutine for handling struct declarations.
 """
-function wrap!(::Val{CXCursor_StructDecl}, cursor::CXCursor, ctx::AbstractContext)
+function wrap!(ctx::AbstractContext, cursor::CLStructDecl)
     # make sure a empty struct is indeed an opaque struct typedef/typealias
     # cursor = canonical(cursor)  # this won't work
     cursor = type(cursor) |> canonical |> typedecl
@@ -172,10 +172,10 @@ function wrap!(::Val{CXCursor_StructDecl}, cursor::CXCursor, ctx::AbstractContex
 end
 
 """
-    wrap!(::Val{CXCursor_UnionDecl}, cursor::CXCursor, ctx::AbstractContext)
+    wrap!(ctx::AbstractContext, cursor::CLUnionDecl)
 Subroutine for handling union declarations.
 """
-function wrap!(::Val{CXCursor_UnionDecl}, cursor::CXCursor, ctx::AbstractContext)
+function wrap!(ctx::AbstractContext, cursor::CLUnionDecl)
     cursor_name = name(cursor)
     # handle typedef anonymous union
     idx = ctx.children_index
@@ -217,10 +217,10 @@ function wrap!(::Val{CXCursor_UnionDecl}, cursor::CXCursor, ctx::AbstractContext
 end
 
 """
-    wrap!(::Val{CXCursor_TypedefDecl}, cursor::CXCursor, ctx::AbstractContext)
+    wrap!(ctx::AbstractContext, cursor::CLTypedefDecl)
 Subroutine for handling typedef declarations.
 """
-function wrap!(::Val{CXCursor_TypedefDecl}, cursor::CXCursor, ctx::AbstractContext)
+function wrap!(ctx::AbstractContext, cursor::CLTypedefDecl)
     td_type = underlying_type(cursor)
     td_sym = isempty(ctx.force_name) ? Symbol(spelling(cursor)) : ctx.force_name
     buffer = ctx.common_buffer
@@ -331,10 +331,10 @@ get_symbols(e::Expr) = vcat(get_symbols(e.head), get_symbols(e.args))
 get_symbols(xs::Array) = reduce(vcat, [get_symbols(x) for x in xs])
 
 """
-    wrap!(::Val{CXCursor_MacroDefinition}, cursor::CXCursor, ctx::AbstractContext)
+    wrap!(ctx::AbstractContext, cursor::CLMacroDefinition)
 Subroutine for handling macro declarations.
 """
-function wrap!(::Val{CXCursor_MacroDefinition}, cursor::CXCursor, ctx::AbstractContext)
+function wrap!(ctx::AbstractContext, cursor::CLMacroDefinition)
     tokens = tokenize(cursor)
     # Skip any empty definitions
     tokens.size < 2 && return ctx
@@ -381,21 +381,15 @@ function wrap!(::Val{CXCursor_MacroDefinition}, cursor::CXCursor, ctx::AbstractC
 end
 
 """
-    wrap!(::Val{CXCursor_TypeRef}, cursor::CXCursor, ctx::AbstractContext)
+    wrap!(ctx::AbstractContext, cursor::CLTypeRef)
 For now, we just skip CXCursor_TypeRef cursors.
 """
-function wrap!(::Val{CXCursor_TypeRef}, cursor::CXCursor, ctx::AbstractContext)
+function wrap!(ctx::AbstractContext, cursor::CLTypeRef)
     @warn "Skipping CXCursor_TypeRef cursor: $cursor"
     return ctx
 end
 
-function wrap!(::Val, cursor::CXCursor, ctx::AbstractContext)
+function wrap!(ctx::AbstractContext, cursor::CLCursor)
     @warn "not wrapping $(cursor)"
     return ctx
 end
-
-"""
-    wrap!(ctx::AbstractContext, cursor::CXCursor)
-Wrap current cursor.
-"""
-wrap!(ctx::AbstractContext, cursor::CXCursor) = wrap!(Val(kind(cursor)), cursor, ctx)

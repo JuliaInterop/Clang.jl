@@ -41,11 +41,11 @@ end
 
 """
     getcursor(tu::TranslationUnit) -> CXCursor
-    getcursor(tu::CXTranslationUnit) -> CXCursor
+    getcursor(tu::CXTranslationUnit) -> CLCursor
 Return the cursor that represents the given translation unit.
 """
 getcursor(tu::CXTranslationUnit) = clang_getTranslationUnitCursor(tu)
-getcursor(tu::TranslationUnit) = getcursor(tu.ptr)
+getcursor(tu::TranslationUnit)::CLCursor = getcursor(tu.ptr)
 
 ## TODO:
 # clang_parseTranslationUnit2

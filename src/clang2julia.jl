@@ -144,19 +144,14 @@ function _clang2julia(::Val{CXType_IncompleteArray}, t::CXType)
 end
 
 """
-    clang2julia(c::Cursor) -> Symbol/Expr
+    clang2julia(c::CLCursor) -> Symbol/Expr
 Convert libclang cursor/type to Julia.
 """
-clang2julia(c::CXCursor) = _clang2julia(Val(kind(c)), c)
+clang2julia(c::CLCursor) = clang2julia(type(c))
+clang2julia(c::CLUnionDecl) = type(c) |> largestfield |> clang2julia
+clang2julia(c::CLEnumDecl) = integer_type(c) |> clang2julia
 
-# generic subroutine for CXType input
-_clang2julia(::Val, c::CXCursor) = clang2julia(type(c))
-
-_clang2julia(::Val{CXCursor_UnionDecl}, c::CXCursor) = type(c) |> largestfield |> clang2julia
-
-_clang2julia(::Val{CXCursor_EnumDecl}, c::CXCursor) = integer_type(c) |> clang2julia
-
-function _clang2julia(::Val{CXCursor_TypeRef}, c::CXCursor)
+function clang2julia(c::CLTypeRef)
     reftype = getref(c)
     refdef = getdef(reftype)
     refdefKind = kind(refdef)

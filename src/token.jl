@@ -79,6 +79,7 @@ extent(tu::TranslationUnit, token::CXToken) = extent(tu.ptr, token)
 
 """
     tokenize(c::CXCursor) -> TokenList
+    tokenize(c::CLCursor) -> TokenList
 Return a TokenList from the given cursor.
 """
 function tokenize(c::CXCursor)
@@ -86,5 +87,6 @@ function tokenize(c::CXCursor)
     sourcerange = clang_getCursorExtent(c)
     return TokenList(tu, sourcerange)
 end
+tokenize(c::CLCursor) = tokenize(c.cursor)
 
 # clang_annotateTokens

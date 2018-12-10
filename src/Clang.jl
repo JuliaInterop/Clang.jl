@@ -5,6 +5,9 @@ using .LibClang
 
 using DataStructures
 
+include("cltypes.jl")
+export CLCursor, CLType, CLToken
+
 include("index.jl")
 export Index
 

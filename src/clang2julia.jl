@@ -77,48 +77,42 @@ target_type(q) = error("target_type: don't know how to handle $q")
 
 
 """
-    typesize(t::CXType) -> Int
-    typesize(c::CXCursor) -> Int
+    typesize(t::CLType) -> Int
+    typesize(c::CLCursor) -> Int
 Return field declaration size.
 """
-typesize(t::CXType) = _typesize(Val(kind(t)), t)
-_typesize(::Val, t::CXType) = sizeof(getfield(Base, CLANG_JULIA_TYPEMAP[kind(t)]))
-_typesize(::Val{CXType_ConstantArray}, t::CXType) = element_num(t)
-_typesize(::Val{CXType_Typedef}, t::CXType) = typesize(typedecl(t))
-_typesize(::Val{CXType_Record}, t::CXType) = (@warn("  incorrect typesize for CXType_Record field"); 0)
-_typesize(::Val{CXType_Unexposed}, t::CXType) = (@warn("  incorrect typesize for CXType_Unexposed field"); 0)
-_typesize(::Val{CXType_Invalid}, t::CXType) = (@warn("  incorrect typesize for CXType_Invalid field"); 0)
-
-typesize(c::CXCursor) = _typesize(Val(kind(c)), c)
-_typesize(::Val{CXCursor_TypedefDecl}, c::CXCursor) = typesize(underlying_type(c))
+typesize(t::CLType) = sizeof(getfield(Base, CLANG_JULIA_TYPEMAP[kind(t)]))
+typesize(t::CLConstantArray) = element_num(t)
+typesize(t::CLTypedef) = typesize(typedecl(t))
+typesize(t::CLRecord) = (@warn("  incorrect typesize for CXType_Record field"); 0)
+typesize(t::CLUnexposed) = (@warn("  incorrect typesize for CXType_Unexposed field"); 0)
+typesize(t::CLInvalid) = (@warn("  incorrect typesize for CXType_Invalid field"); 0)
+typesize(c::CLTypedefDecl) = typesize(underlying_type(c))
 
 """
-    clang2julia(t::CXType) -> Symbol/Expr
+    clang2julia(t::CLType) -> Symbol/Expr
 Convert libclang cursor/type to Julia.
 """
-clang2julia(t::CXType) = _clang2julia(Val(kind(t)), t)
-
-# generic subroutine for CXType input
-function _clang2julia(::Val, t::CXType)
-    typeKind = kind(t)
-    !haskey(CLANG_JULIA_TYPEMAP, typeKind) && error("No CXType translation available for: $typeKind")
-    return CLANG_JULIA_TYPEMAP[typeKind]
+function clang2julia(t::CLType)
+    type_kind = kind(t)
+    !haskey(CLANG_JULIA_TYPEMAP, type_kind) && error("No CXType translation available for: $type_kind")
+    return CLANG_JULIA_TYPEMAP[type_kind]
 end
 
 # get the original named type if the type is CXType_Elaborated
-_clang2julia(::Val{CXType_Elaborated}, t::CXType) = clang2julia(get_named_type(t))
+clang2julia(t::CLElaborated) = clang2julia(get_named_type(t))
 
 # CXType_Enum types are mapped into Cenums, so we only need to extract enum's names.
-_clang2julia(::Val{CXType_Enum}, t::CXType) = spelling(t) |> split |> last |> Symbol
+clang2julia(t::CLEnum) = spelling(t) |> split |> last |> Symbol
 
-function _clang2julia(::Union{Val{CXType_Record},Val{CXType_Typedef}}, t::CXType)
-    cursorName = spelling(typedecl(t))
-    typeName = isempty(cursorName) ? spelling(t) : cursorName  # handle anonymous typedef records
-    typeSym = Symbol(typeName)
-    return get(CLANG_JULIA_TYPEMAP, typeSym, typeSym)
+function clang2julia(t::Union{CLRecord,CLTypedef})
+    cursor_name = spelling(typedecl(t))
+    type_name = isempty(cursor_name) ? spelling(t) : cursor_name  # handle anonymous typedef records
+    type_sym = Symbol(type_name)
+    return get(CLANG_JULIA_TYPEMAP, type_sym, type_sym)
 end
 
-function _clang2julia(::Val{CXType_Pointer}, t::CXType)
+function clang2julia(t::CLPointer)
     ptee = pointee_type(t)
     pteeKind = kind(ptee)
     (pteeKind == CXType_Char_U || pteeKind == CXType_Char_S) && return :Cstring
@@ -126,19 +120,19 @@ function _clang2julia(::Val{CXType_Pointer}, t::CXType)
     Expr(:curly, :Ptr, clang2julia(ptee))
 end
 
-function _clang2julia(::Val{CXType_Unexposed}, t::CXType)
+function clang2julia(t::CLUnexposed)
     r = spelling(typedecl(t))
     r == "" ? :Cvoid : Symbol(r)
 end
 
-function _clang2julia(::Val{CXType_ConstantArray}, t::CXType)
+function clang2julia(t::CLConstantArray)
     # For ConstantArray declarations, we use NTuples
     arrsize = element_num(t)
     eltype = clang2julia(element_type(t))
     return :(NTuple{$arrsize, $eltype})
 end
 
-function _clang2julia(::Val{CXType_IncompleteArray}, t::CXType)
+function clang2julia(t::CLIncompleteArray)
     eltype = clang2julia(element_type(t))
     Expr(:curly, :Ptr, eltype)
 end

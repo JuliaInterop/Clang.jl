@@ -15,14 +15,14 @@ using Test
         toksCONST = tokenize(cursorCONST[1])
         @test kind(toksCONST[1]) == CXToken_Identifier
         @test kind(toksCONST[2]) == CXToken_Literal
-        @test spelling(toksCONST, 2) == "1"
+        @test toksCONST[2].text == "1"
         # search the second macro defination "#define CONSTADD CONST + 2"
         cursorCONSTADD = search(top, x->kind(x)==CXCursor_MacroDefinition && name(x) == "CONSTADD")
         toksCONSTADD = tokenize(cursorCONSTADD[1])
-        @test spelling(toksCONSTADD, 1) == "CONSTADD"
-        @test spelling(toksCONSTADD, 2) == "CONST"
-        @test spelling(toksCONSTADD, 3) == "+"
-        @test spelling(toksCONSTADD, 4) == "2"
+        @test toksCONSTADD[1].text == "CONSTADD"
+        @test toksCONSTADD[2].text == "CONST"
+        @test toksCONSTADD[3].text == "+"
+        @test toksCONSTADD[4].text == "2"
 
         # function arguments
         func1 = search(top, "func1")[1]

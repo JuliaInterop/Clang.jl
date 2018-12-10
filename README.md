@@ -131,3 +131,14 @@ LibClang is a thin wrapper over libclang. It's one-to-one mapped to the libclang
 By `using Clang.LibClang`, all of the `CX`/`clang_`-prefixed libclang APIs are imported into the
 current namespace, with which you could build up your own tools from the scratch. If you are
 unfamiliar with the Clang AST, a good starting point is the [Introduction to the Clang AST](http://clang.llvm.org/docs/IntroductionToTheClangAST.html).
+
+## Users
+Packages that use Clang.jl to generate their wrapper:
+* [Gtk.jl](https://github.com/JuliaLang/Gtk.jl): Julia Gtk bindings (uses heavily customized generator)
+* [CUDArt.jl](https://github.com/JuliaGPU/CUDArt.jl): Bindings to the CUDA Runtime library
+* [CUFFT.jl](https://github.com/JuliaGPU/CUFFT.jl): Bindings to CUDA FFT library
+* [Sundials.jl](https://github.com/tshort/Sundials.jl): interface to the LLNL "SUite of Nonlinear and DIfferential/ALgebraic equation Solvers" package
+* [LibCURL.jl](https://github.com/JuliaWeb/LibCURL.jl): wrapper of cURL
+* [VideoIO.jl](https://github.com/kmsquire/VideoIO.jl): Julia bindings for libav/ffmpeg
+* [WCSLIB.jl](https://github.com/JuliaAstro/WCSLIB.jl)
+* [NIDAQ.jl](https://github.com/JaneliaSciComp/NIDAQ.jl): wrapper for NIDAQ data acquisition library

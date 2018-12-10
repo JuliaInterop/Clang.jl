@@ -1,28 +1,3 @@
-using .LibClang.CEnum: enum_names, enum_name
-
-# each CXCursorKind enum gets a specific Julia type wrapping
-# so that we can dispatch directly on node kinds.
-abstract type CLCursor end
-
-cxname2clname(x::AbstractString) = split(x, '_') |> last |> x->"CL"*x
-cxname2clname(x::Symbol) = cxname2clname(string(x))
-
-const CXCursorMap = Dict()
-
-for sym in enum_names(CXCursorKind)
-    clsym = Symbol(cxname2clname(sym))
-    @eval begin
-        struct $(clsym) <: CLCursor
-            cursor::CXCursor
-        end
-        CXCursorMap[$sym] = $clsym
-    end
-end
-
-CLCursor(c::CXCursor) = CXCursorMap[c.kind](c)
-Base.convert(::Type{CXCursor}, x::T) where {T<:CLCursor} = x.cursor
-Base.convert(::Type{CLCursor}, x::CXCursor) = CLCursor(x)
-
 """
     isnull(c::CXCursor) -> Bool
     isnull(c::CLCursor) -> Bool
@@ -245,7 +220,7 @@ Return the type of a CXCursor (if any). To get the cursor from a type, see [`typ
 Wrapper for libclang's `clang_getCursorType`.
 """
 type(c::CXCursor) = clang_getCursorType(c)
-type(c::CLCursor) = type(c.cursor)  ## TODO: return CLtype
+type(c::CLCursor)::CLType = type(c.cursor)
 
 """
     underlying_type(c::CLTypedefDecl) -> CLType
@@ -253,7 +228,7 @@ Return the underlying type of a typedef declaration.
 Wrapper for libclang's `clang_getTypedefDeclUnderlyingType`.
 """
 underlying_type(c::CXCursor) = clang_getTypedefDeclUnderlyingType(c)
-underlying_type(c::CLTypedefDecl) = underlying_type(c.cursor)  ## TODO: return CLtype
+underlying_type(c::CLTypedefDecl)::CLType = underlying_type(c.cursor)
 
 """
     integer_type(c::CLEnumDecl) -> CLType
@@ -261,7 +236,7 @@ Retrieve the integer type of an enum declaration.
 Wrapper for libclang's `clang_getEnumDeclIntegerType`.
 """
 integer_type(c::CXCursor) = clang_getEnumDeclIntegerType(c)
-integer_type(c::CLEnumDecl) = integer_type(c.cursor)  ## TODO: return CLtype
+integer_type(c::CLEnumDecl)::CLType = integer_type(c.cursor)
 
 """
     value(c::CLCursor) -> Int
@@ -297,15 +272,15 @@ argnum(c::CLFunctionDecl) = argnum(c.cursor)
 argnum(c::CLCXXMethod) = argnum(c.cursor)
 
 """
-    argument(c::CXCursor, i::Integer) -> CXCursor
-    argument(c::CLFunctionDecl, i::Unsigned) -> CLCursor
-    argument(c::CLCXXMethod, i::Unsigned) -> CLCursor
+    argument(c::CXCursor, i::Unsigned) -> CXCursor
+    argument(c::CLFunctionDecl, i::Integer) -> CLCursor
+    argument(c::CLCXXMethod, i::Integer) -> CLCursor
 Return the argument cursor of a function or method.
 Wrapper for libclang's `clang_Cursor_getArgument`.
 """
-argument(c::CXCursor, i::Integer) = clang_Cursor_getArgument(c, i)
-argument(c::CLFunctionDecl, i::Unsigned)::CLCursor = argument(c, i)
-argument(c::CLCXXMethod, i::Unsigned)::CLCursor = argument(c, i)
+argument(c::CXCursor, i::Unsigned) = clang_Cursor_getArgument(c, i)
+argument(c::CLFunctionDecl, i::Integer)::CLCursor = argument(c, Unsigned(i))
+argument(c::CLCXXMethod, i::Integer)::CLCursor = argument(c, Unsigned(i))
 
 ## TODO:
 # clang_Cursor_getNumTemplateArguments
@@ -350,8 +325,8 @@ the cursor refers to a function or method.
 Wrapper for libclang's `clang_getCursorResultType`.
 """
 result_type(c::CXCursor) = clang_getCursorResultType(c)
-result_type(c::CLFunctionDecl) = result_type(c.cursor)  ## TODO: CLType
-result_type(c::CLCXXMethod) = result_type(c.cursor)  ## TODO: CLType
+result_type(c::CLFunctionDecl)::CLType = result_type(c.cursor)
+result_type(c::CLCXXMethod)::CLType = result_type(c.cursor)
 
 ## TODO:
 # clang_getCursorExceptionSpecificationType

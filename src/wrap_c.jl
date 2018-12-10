@@ -253,9 +253,8 @@ function handle_macro_exprn(tokens::TokenList, pos::Int)
     function trans(tok)
         ops = ["+" "-" "*" "~" ">>" "<<" "/" "\\" "%" "|" "||" "^" "&" "&&"]
         token_kind = kind(tok)
-        txt = spelling(tokens.tu, tok)
         (token_kind == CXToken_Literal || token_kind == CXToken_Identifier) && return 0
-        token_kind == CXToken_Punctuation && txt ∈ ops && return 1
+        token_kind == CXToken_Punctuation && tok.text ∈ ops && return 1
         return -1
     end
 
@@ -285,7 +284,7 @@ function handle_macro_exprn(tokens::TokenList, pos::Int)
         end
 
         token_kind = kind(tok)
-        txt = spelling(tokens.tu, tok) |> strip
+        txt = tok.text |> strip
         if token_kind == CXToken_Identifier || token_kind == CXToken_Punctuation
             # pass
         elseif token_kind == CXToken_Literal
@@ -341,12 +340,11 @@ function wrap!(ctx::AbstractContext, cursor::CLMacroDefinition)
     startswith(name(cursor), "_") && return ctx
 
     buffer = ctx.common_buffer
-    text = x->spelling(tokens.tu, x)
     pos = 1; exprn = ""
-    if text(tokens[2]) == "("
+    if tokens[2].text == "("
         exprn, pos = handle_macro_exprn(tokens, 3)
-        if pos != lastindex(tokens) || text(tokens[pos]) != ")" || exprn == ""
-            mdef_str = join([text(c) for c in tokens], " ")
+        if pos != lastindex(tokens) || tokens[pos].text != ")" || exprn == ""
+            mdef_str = join([c.text for c in tokens], " ")
             buffer[Symbol(mdef_str)] = ExprUnit(string("# Skipping MacroDefinition: ", replace(mdef_str, "\n"=>"\n#")))
             return ctx
         end
@@ -354,7 +352,7 @@ function wrap!(ctx::AbstractContext, cursor::CLMacroDefinition)
     else
         exprn, pos = handle_macro_exprn(tokens, 2)
         if pos != lastindex(tokens)
-            mdef_str = join([text(c) for c in tokens], " ")
+            mdef_str = join([c.text for c in tokens], " ")
             buffer[Symbol(mdef_str)] = ExprUnit(string("# Skipping MacroDefinition: ", replace(mdef_str, "\n"=>"#\n")))
             return ctx
         end
@@ -363,7 +361,7 @@ function wrap!(ctx::AbstractContext, cursor::CLMacroDefinition)
     # Occasionally, skipped definitions slip through
     (exprn == "" || exprn == "()") && return buffer
 
-    use_sym = symbol_safe(text(tokens[1]))
+    use_sym = symbol_safe(tokens[1].text)
 
     try
         target = Meta.parse(exprn)

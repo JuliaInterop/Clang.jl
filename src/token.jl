@@ -33,18 +33,21 @@ function Base.getindex(x::TokenList, i::Integer)
     !checkindex(Bool, 1:length(x), i) && throw(ArgumentError("BoundsError: TokenList miss at index $i"))
     GC.@preserve x begin
         token = unsafe_load(x.ptr, i)
+        token_kind = kind(token)
+        token_content = spelling(x.tu, token)
     end
-    return token
+    return CLTokenMap[token_kind](token_kind, token_content)
 end
 
 """
     kind(token::CXToken) -> CXTokenKind
+    kind(token::CLToken) -> CXTokenKind
 Return the kind of the given token.
 """
 kind(token::CXToken) = clang_getTokenKind(token)
+kind(token::CLToken) = token.kind
 
 """
-    spelling(list::TokenList, i::Integer) -> String
     spelling(tu::CXTranslationUnit, token::CXToken) -> String
 Return the spelling of the given token. The spelling of a token is the textual
 representation of that token, e.g., the text of an identifier or keyword.
@@ -59,7 +62,6 @@ function spelling(tu::CXTranslationUnit, token::CXToken)
     return s
 end
 spelling(tu::TranslationUnit, token::CXToken) = spelling(tu.ptr, token)
-spelling(list::TokenList, i::Integer) = spelling(list.tu, list[i])
 
 """
     location(tu::TranslationUnit, token::CXToken) -> CXSourceLocation

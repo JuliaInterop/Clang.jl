@@ -19,6 +19,28 @@ Same as [`name_safe`](@ref), but return a Symbol.
 """
 symbol_safe(name::AbstractString) = Symbol(name_safe(name))
 
+
+## dumpobj
+printind(ind::Int, st...) = println(join([repeat(" ", 2*ind), st...]))
+
+dumpobj(cursor::CLCursor) = dumpobj(0, cursor)
+dumpobj(t::CLType) = join(typeof(t), " ", spelling(t))
+dumpobj(t::CLInt) = t
+dumpobj(t::CLPointer) = pointee_type(t)
+dumpobj(ind::Int, t::CLType) = printind(ind, dumpobj(t))
+
+function dumpobj(ind::Int, cursor::Union{CLFieldDecl, CLParmDecl})
+    printind(ind+1, typeof(cursor), " ", dumpobj(type(cursor)), " ", name(cursor))
+end
+
+function dumpobj(ind::Int, node::Union{CLCursor,CLStructDecl,CLCompoundStmt,CLFunctionDecl,CLBinaryOperator})
+    printind(ind, " ", typeof(node), " ", name(node))
+    for c in children(node)
+        dumpobj(ind + 1, c)
+    end
+end
+
+
 """
     copydeps(dst)
 Copy dependencies to `dst`.

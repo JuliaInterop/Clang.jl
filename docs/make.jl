@@ -7,9 +7,8 @@ makedocs(
     linkcheck = !("skiplinks" in ARGS),
     pages = [
         "Introduction" => "index.md",
-        "Usage Guide" => "guide.md",
-        #"LibClang" => "libclang.md",
-        #"API Index" => "api.md",
+        "Tutorial" => "tutorial.md",
+        "API Reference" => "api.md",
     ],
 )
 

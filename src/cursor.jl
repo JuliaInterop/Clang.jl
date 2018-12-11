@@ -422,7 +422,7 @@ getdef(c::CXCursor) = clang_getCursorDefinition(c)
 getdef(c::CLCursor)::CLCursor = getdef(c.cursor)
 
 """
-    isdef(c::Cursor) -> Bool
+    isdef(c::CXCursor) -> Bool
     isdef(c::CLCursor) -> Bool
 Return true if the declaration pointed to by this cursor is also a definition of that entity.
 Wrapper for libclang's `clang_isCursorDefinition`.
@@ -538,15 +538,21 @@ function cu_children_visitor(cursor::CXCursor, parent::CXCursor, client_data::Pt
     return CXChildVisit_Continue
 end
 
-function children(cursor::CLCursor)
+"""
+    children(cursor::CXCursor) -> Vector{CXCursor}
+    children(cursor::CLCursor) -> Vector{CLCursor}
+Return a child cursor vector of the given cursor.
+"""
+function children(cursor::CXCursor)
     # TODO: possible to use sizehint! here?
     list = CXCursor[]
     GC.@preserve cursor begin
         cu_visitor_cb = @cfunction(cu_children_visitor, Cuint, (CXCursor, CXCursor, Ptr{Cvoid}))
         clang_visitChildren(cursor, cu_visitor_cb, pointer_from_objref(list))
     end
-    return Vector{CLCursor}(list)
+    return list
 end
+children(c::CLCursor)::Vector{CLCursor} = children(c.cursor)
 
 """
     function_args(cursor::CLCursor) -> Vector{CLCursor}

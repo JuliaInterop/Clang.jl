@@ -7,6 +7,12 @@ using DataStructures
 
 include("cltypes.jl")
 export CLCursor, CLType, CLToken
+foreach(names(@__MODULE__, all=true)) do s
+    x = getfield(@__MODULE__, s)
+    if x isa DataType && supertype(x) in [CLCursor, CLType, CLToken]
+        @eval export $s
+    end
+end
 
 include("index.jl")
 export Index
@@ -39,6 +45,7 @@ include("show.jl")
 include("utils.jl")
 export name_safe, symbol_safe
 export copydeps, print_template
+export printobj
 
 include("clang2julia.jl")
 export clang2julia, target_type, typesize

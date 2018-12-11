@@ -241,3 +241,4 @@ Note that a generic `printobj` function has been defined for the abstract `CLTyp
 ```julia
 function printobj(ind::Int, node::Union{CLCursor, CLStructDecl, CLCompoundStmt, CLFunctionDecl})
 ```
+Now, `printobj` has been moved into Clang.jl with a new name: `dumpobj`.

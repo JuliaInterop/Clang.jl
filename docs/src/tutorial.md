@@ -1,12 +1,10 @@
-# Usage Guide
+# Tutorial
 Clang is an open-source compiler built on the LLVM framework and targeting C, C++, and Objective-C (LLVM is also the JIT backend for Julia). Due to a highly modular design, Clang has in recent years become the core of a growing number of projects utilizing pieces of the compiler, such as tools for source-to-source translation, static analysis and security evaluation, and editor tools for code completion, formatting, etc.
 
 While LLVM and Clang are written in C++, the Clang project maintains a C-exported interface called "libclang" which provides access to the abstract syntax tree and type representations. Thanks to the ubiquity of support for C calling conventions, a number of languages have utilized libclang as a basis for tooling related to C and C++.
 
 The Clang.jl Julia package wraps libclang, provides a small convenience API for Julia-style programming, and provides a C-to-Julia wrapper generator built on libclang functionality.
 
-## Parsing and Wrapping C with Clang and Julia
-In this section, I will introduce Clang.jl and explore both C parsing and C/Julia wrapper generation.
 Here is the header file `example.h` used in the following examples:  
 ```c
 // example.h
@@ -24,7 +22,7 @@ void* ExFunction (int kind, char* name, float* data) {
 }
 ```
 
-### Printing Struct Fields
+## Printing Struct Fields
 To motivate the discussion with a succinct example, consider this struct:
 ```c
 struct ExStruct {
@@ -63,7 +61,7 @@ Cursor: CLCursor (CLFieldDecl) data
   Type: CLType (CLPointer)
 ```
 
-#### AST Representation
+### AST Representation
 Let's examine the example above, starting with the variable `trans_unit`:
 ```julia
 julia> trans_unit
@@ -120,7 +118,7 @@ julia> search(root_cursor, "ExStruct")
  CLCursor (CLStructDecl) ExStruct
 ```
 
-#### Type representation
+### Type representation
 The above example also demonstrates querying of the type associated with a given cursor using
 the helper function `type`. In the output:
 
@@ -242,3 +240,15 @@ Note that a generic `printobj` function has been defined for the abstract `CLTyp
 function printobj(ind::Int, node::Union{CLCursor, CLStructDecl, CLCompoundStmt, CLFunctionDecl})
 ```
 Now, `printobj` has been moved into Clang.jl with a new name: `dumpobj`.
+
+## Parsing Summary
+As discussed above, there are several key aspects of the Clang.jl/libclang API:
+
+* tree of Cursor nodes representing the AST, notes have unique children.
+* each Cursor node has a Julia type identifying the syntactic construct represented by the node.
+* each node also has an associated CLType referencing either intrinsic or user-defined datatypes.
+
+There are a number of details omitted from this post, especially concerning the full variety of `CLCursor` and `CLType` representations available via libclang. For further information, please see the [libclang documentation](http://clang.llvm.org/doxygen/group__CINDEX.html).
+
+## Acknowledgement
+Eli Bendersky's post [Parsing C++ in Python with Clang](http://eli.thegreenplace.net/2011/07/03/parsing-c-in-python-with-clang/) has been an extremely helpful reference.

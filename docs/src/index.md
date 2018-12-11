@@ -12,16 +12,16 @@ could simply install it by running:
 pkg> add Clang
 ```
 
-## Usage
-### C-bindings generator
+## C-bindings generator
 The package includes a generator to create Julia wrappers for C libraries from a collection of header files. The following declarations are currently supported:
 
+- constants: translated to Julia `const` declarations
+- preprocessor constants: translated to `const` declarations
 - function: translated to Julia ccall(`va_list` and vararg argument are not supported)
 - struct: translated to Julia struct
 - enum: translated to `CEnum`
 - union: translated to Julia struct
-- typedef: translated to Julia typealias to underlying intrinsic type
-- macro: limited support(see src/wrap_c.jl)
+- typedef: translated to Julia type alias to underlying intrinsic type
 
 Here is a simple example:
 ```julia
@@ -43,7 +43,7 @@ wc = init(; headers = CLANG_HEADERS,
 run(wc)
 ```
 
-#### Backward compatibility
+### Backward compatibility
 If you miss those old behaviors before v0.8, you could simply make the following change in your old generator script:
 ```julia
 using Clang: LLVM_INCLUDE
@@ -51,13 +51,13 @@ using Clang.Deprecated.wrap_c
 using Clang.Deprecated.cindex
 ```
 
-### Build a custom C-bindings generator
+## Build a custom C-bindings generator
 A custom C-bindings generator tends to be used on large codebases, often with multiple API versions to support. Building a generator requires some customization effort, so for small libraries the initial
 investment may not pay off.
 
 The above-mentioned C-bindings generator only exposes several entry points for customization.
 In fact, it's actually not that hard to directly build your own C-bindings generator,
-for example, the following script is used for generating `LibClang`, you could refer to [Examples](@ref) for
+for example, the following script is used for generating `LibClang`, you could refer to [Tutorial](@ref) for
 further details.
 ```julia
 using Clang
@@ -121,7 +121,7 @@ end
 # print_template(joinpath(dirname(api_file), "LibTemplate.jl"))
 ```
 
-### LibClang
+## LibClang
 LibClang is a thin wrapper over libclang. It's one-to-one mapped to the libclang APIs.
 By `using Clang.LibClang`, all of the `CX`/`clang_`-prefixed libclang APIs are imported into the
 current namespace, with which you could build up your own tools from the scratch. If you are

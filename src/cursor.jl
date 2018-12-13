@@ -63,13 +63,13 @@ isexpr(k::CXCursorKind)::Bool = clang_isExpression(k)
 isexpr(c::CLCursor) = isexpr(kind(c))
 
 """
-    isstat(k::CXcursorKind) -> Bool
-    isstat(c::CLCursor) -> Bool
+    isstmt(k::CXcursorKind) -> Bool
+    isstmt(c::CLCursor) -> Bool
 Return true if the given cursor kind represents a statement.
 Wrapper for libclang's `clang_isStatement`.
 """
-isstat(k::CXCursorKind)::Bool = clang_isStatement(k)
-isstat(c::CLCursor) = isstat(kind(c))
+isstmt(k::CXCursorKind)::Bool = clang_isStatement(k)
+isstmt(c::CLCursor) = isstat(kind(c))
 
 """
     isattr(k::CXcursorKind) -> Bool

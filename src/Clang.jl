@@ -21,7 +21,7 @@ include("trans_unit.jl")
 export TranslationUnit, spelling, getcursor, parse_header, parse_headers
 
 include("cursor.jl")
-export isnull, isdecl, isref, isexpr, isstat, isattr, hasattr
+export isnull, isdecl, isref, isexpr, isstmt, isattr, hasattr
 export ispreprocessing, isunexposed, is_translation_unit, isfunctionlike, isbuiltin
 export isinlined, isbit, isdef, isvariadic, is_typedef_anon
 export get_translation_unit, get_semantic_parent, get_lexical_parent, get_included_file

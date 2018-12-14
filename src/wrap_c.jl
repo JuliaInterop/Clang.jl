@@ -301,6 +301,10 @@ typesize(t::Invalid) = begin @warn("  incorrect typesize for Invalid field"); 0 
 function largestfield(cu::UnionDecl)
     maxsize,maxelem = 0,0
     fields = children(cu)
+    if length(fields) == 0
+        # this union must be undefined
+        return InvalidCode(CXCursor())
+    end
     for i in 1:length(fields)
         field_size = typesize(cu_type(fields[i]))
         if field_size > maxsize

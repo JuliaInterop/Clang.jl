@@ -280,7 +280,7 @@ struct CXCursor
     kind::Cint
     xdata::Cint
     data::NTuple{3, Csize_t}
-    CXCursor() = new(0,0,0)
+    CXCursor() = new(0,0,(0,0,0))
 end
 
 struct CXType

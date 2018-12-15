@@ -94,12 +94,11 @@ function Base.run(wc::WrapContext)
     filehandles = Dict{String,IOStream}()
     getfile(f) = (f in keys(filehandles)) ? filehandles[f] : (filehandles[f] = open(f, "w"))
 
-    for header in wc.headers
-        # extract header to Expr[] array
-        @info "wrapping header: $header ..."
-        trans_unit = ctx.trans_units[header]
+    for trans_unit in ctx.trans_units
         root_cursor = getcursor(trans_unit)
         push!(ctx.cursor_stack, root_cursor)
+        header = spelling(root_cursor)
+        @info "wrapping header: $header ..."
 
         # loop over all of the child cursors and wrap them, if appropriate.
         ctx.children = children(root_cursor)

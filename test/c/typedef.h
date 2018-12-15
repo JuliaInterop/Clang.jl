@@ -20,3 +20,6 @@ typedef enum _bar {
   BAR,
   BAZ
 } bar;
+
+// issue #214
+typedef union secretunion SECRET;

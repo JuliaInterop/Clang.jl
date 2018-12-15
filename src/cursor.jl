@@ -40,7 +40,7 @@ Return true if the given cursor kind represents a declaration.
 Wrapper for libclang's `clang_isDeclaration`.
 """
 isdecl(k::CXCursorKind)::Bool = clang_isDeclaration(k)
-isdecl(c::CLCursor) = isdecal(kind(c))
+isdecl(c::CLCursor) = isdecl(kind(c))
 
 """
     isref(k::CXcursorKind) -> Bool

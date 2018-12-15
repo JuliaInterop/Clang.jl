@@ -176,6 +176,8 @@ end
 Subroutine for handling union declarations.
 """
 function wrap!(ctx::AbstractContext, cursor::CLUnionDecl)
+    # make sure a empty union is indeed an opaque union typedef/typealias
+    cursor = type(cursor) |> canonical |> typedecl
     cursor_name = name(cursor)
     # handle typedef anonymous union
     idx = ctx.children_index
@@ -197,21 +199,26 @@ function wrap!(ctx::AbstractContext, cursor::CLUnionDecl)
     deps = OrderedSet{Symbol}()
     # find the largest union field and declare a block of bytes to match.
     union_fields = children(cursor)
-    largest_field = union_fields[1]
-    max_size = typesize(type(largest_field))
-    for field_cursor in union_fields
-        field_size = typesize(type(field_cursor))
-        if field_size > max_size
-            largest_field = field_cursor
-            max_size = field_size
+    if !isempty(union_fields)
+        largest_field = union_fields[1]
+        max_size = typesize(type(largest_field))
+        for field_cursor in union_fields
+            field_size = typesize(type(field_cursor))
+            if field_size > max_size
+                largest_field = field_cursor
+                max_size = field_size
+            end
         end
+        largest_field_sym = symbol_safe(name(largest_field))
+        repr = clang2julia(largest_field)
+        push!(block.args, Expr(:(::), largest_field_sym, repr))
+        push!(deps, target_type(repr))
+        buffer[union_sym] = ExprUnit(expr, deps)
+    elseif !(union_sym in keys(buffer)) || buffer[union_sym].state == :empty
+        buffer[union_sym] = ExprUnit(:(const $union_sym = Cvoid), deps, state=:empty)
+    else
+        @warn "Skipping union: \"$cursor\" due to unknown cases."
     end
-    largest_field_sym = symbol_safe(name(largest_field))
-    repr = clang2julia(largest_field)
-    push!(block.args, Expr(:(::), largest_field_sym, repr))
-    push!(deps, target_type(repr))
-
-    buffer[union_sym] = ExprUnit(expr, deps)
 
     return ctx
 end

@@ -43,11 +43,20 @@ using Test
         node_typedef_type = underlying_type(node_typedef)
         @test kind(node_typedef_type) != CXType_Unexposed
         @test spelling(node_typedef) == "Node"
-
+        # issue #213
         wrap!(ctx, cursors[9])
         expr = :(const bar = _bar)
         Base.remove_linenums!(expr)
         @test ctx.common_buffer[:bar].items[1] == expr
+        # issue #214
+        wrap!(ctx, cursors[10])
+        expr = :(const secretunion = Cvoid)
+        Base.remove_linenums!(expr)
+        @test ctx.common_buffer[:secretunion].items[1] == expr
+        wrap!(ctx, cursors[11])
+        expr = :(const SECRET = secretunion)
+        Base.remove_linenums!(expr)
+        @test ctx.common_buffer[:SECRET].items[1] == expr
     end
 end
 

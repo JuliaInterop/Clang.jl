@@ -3,6 +3,8 @@
 [![Build status](https://api.travis-ci.org/ihnorton/Clang.jl.svg?branch=master)](https://travis-ci.org/ihnorton/Clang.jl)
 [![Build status](https://ci.appveyor.com/api/projects/status/lh0t84w6w69b79j4/branch/master?svg=true)](https://ci.appveyor.com/project/Gnimuc/clang-jl-mewcd/branch/master)
 [![codecov.io](http://codecov.io/github/ihnorton/Clang.jl/coverage.svg?branch=master)](http://codecov.io/github/ihnorton/Clang.jl?branch=master)
+[![](https://img.shields.io/badge/docs-stable-blue.svg)](https://ihnorton.github.io/Clang.jl/stable)
+[![](https://img.shields.io/badge/docs-dev-blue.svg)](https://ihnorton.github.io/Clang.jl/dev)
 
 This package provides a Julia language wrapper for libclang: the stable, C-exported
 interface to the LLVM Clang compiler. The [libclang API documentation](http://clang.llvm.org/doxygen/group__CINDEX.html)

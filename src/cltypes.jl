@@ -54,9 +54,12 @@ for sym in enum_names(CXTokenKind)
     clsym = split(string(sym), '_', limit=2) |> last |> Symbol
     @eval begin
         struct $clsym <: CLToken
+            token::CXToken
             kind::CXTokenKind
             text::String
         end
         CLTokenMap[$sym] = $clsym
     end
 end
+
+Base.convert(::Type{CXToken}, x::T) where {T<:CLToken} = x.token

@@ -38,7 +38,7 @@ export pointee_type, argtype, element_type, element_num
 export resolve_type, get_named_type
 
 include("token.jl")
-export tokenize
+export TokenList, tokenize, annotate
 
 include("show.jl")
 

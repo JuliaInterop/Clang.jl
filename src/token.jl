@@ -36,48 +36,55 @@ function Base.getindex(x::TokenList, i::Integer)
         token_kind = kind(token)
         token_content = spelling(x.tu, token)
     end
-    return CLTokenMap[token_kind](token_kind, token_content)
+    return CLTokenMap[token_kind](token, token_kind, token_content)
 end
 
 """
-    kind(token::CXToken) -> CXTokenKind
-    kind(token::CLToken) -> CXTokenKind
+    kind(t::CXToken) -> CXTokenKind
+    kind(t::CLToken) -> CXTokenKind
 Return the kind of the given token.
 """
-kind(token::CXToken) = clang_getTokenKind(token)
-kind(token::CLToken) = token.kind
+kind(t::CXToken) = clang_getTokenKind(t)
+kind(t::CLToken) = t.kind
 
 """
-    spelling(tu::CXTranslationUnit, token::CXToken) -> String
+    spelling(tu::TranslationUnit, t::CLToken) -> String
+    spelling(tu::TranslationUnit, t::CXToken) -> String
+    spelling(tu::CXTranslationUnit, t::CXToken) -> String
 Return the spelling of the given token. The spelling of a token is the textual
 representation of that token, e.g., the text of an identifier or keyword.
 """
-function spelling(tu::CXTranslationUnit, token::CXToken)
+function spelling(tu::CXTranslationUnit, t::CXToken)
     GC.@preserve tu begin
-        cxstr = clang_getTokenSpelling(tu, token)
+        cxstr = clang_getTokenSpelling(tu, t)
         ptr = clang_getCString(cxstr)
         s = unsafe_string(ptr)
         clang_disposeString(cxstr)
     end
     return s
 end
-spelling(tu::TranslationUnit, token::CXToken) = spelling(tu.ptr, token)
+spelling(tu::TranslationUnit, t::CXToken) = spelling(tu.ptr, t)
+spelling(tu::TranslationUnit, t::CLToken) = spelling(tu.ptr, t.token)
 
 """
-    location(tu::TranslationUnit, token::CXToken) -> CXSourceLocation
-    location(tu::CXTranslationUnit, token::CXToken) -> CXSourceLocation
+    location(tu::TranslationUnit, t::CLToken) -> CXSourceLocation
+    location(tu::TranslationUnit, t::CXToken) -> CXSourceLocation
+    location(tu::CXTranslationUnit, t::CXToken) -> CXSourceLocation
 Return the source location of the given token.
 """
-location(tu::CXTranslationUnit, token::CXToken) = clang_getTokenLocation(tu, token)
-location(tu::TranslationUnit, token::CXToken) = location(tu.ptr, token)
+location(tu::CXTranslationUnit, t::CXToken) = clang_getTokenLocation(tu, t)
+location(tu::TranslationUnit, t::CXToken) = location(tu.ptr, t)
+location(tu::TranslationUnit, t::CLToken) = location(tu.ptr, t.token)
 
 """
-    extent(tu::TranslationUnit, token::CXToken) -> CXSourceRange
-    extent(tu::CXTranslationUnit, token::CXToken) -> CXSourceRange
+    extent(tu::TranslationUnit, t::CLToken) -> CXSourceRange
+    extent(tu::TranslationUnit, t::CXToken) -> CXSourceRange
+    extent(tu::CXTranslationUnit, t::CXToken) -> CXSourceRange
 Return a source range that covers the given token.
 """
-extent(tu::CXTranslationUnit, token::CXToken) = clang_getTokenExtent(tu, token)
-extent(tu::TranslationUnit, token::CXToken) = extent(tu.ptr, token)
+extent(tu::CXTranslationUnit, t::CXToken) = clang_getTokenExtent(tu, t)
+extent(tu::TranslationUnit, t::CXToken) = extent(tu.ptr, t)
+extent(tu::TranslationUnit, t::CLToken) = extent(tu.ptr, t.token)
 
 """
     tokenize(c::CXCursor) -> TokenList
@@ -91,4 +98,11 @@ function tokenize(c::CXCursor)
 end
 tokenize(c::CLCursor) = tokenize(c.cursor)
 
-# clang_annotateTokens
+"""
+    annotate(tu::TranslationUnit, tokens, token_num, cursors)
+    annotate(tu::CXTranslationUnit, tokens, token_num, cursors)
+Annotate the given set of tokens by providing cursors for each token that can be mapped to
+a specific entity within the abstract syntax tree.
+"""
+annotate(tu::CXTranslationUnit, tokens, token_num, cursors) = clang_annotateTokens(tu, tokens, Unsigned(token_num), cursors)
+annotate(tu::TranslationUnit, tokens, token_num, cursors) = annotate(tu.ptr, tokens, token_num, cursors)

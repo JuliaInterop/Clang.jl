@@ -29,7 +29,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Introduction",
     "title": "C-bindings generator",
     "category": "section",
-    "text": "The package includes a generator to create Julia wrappers for C libraries from a collection of header files. The following declarations are currently supported:constants: translated to Julia const declarations\npreprocessor constants: translated to const declarations\nfunction: translated to Julia ccall(va_list and vararg argument are not supported)\nstruct: translated to Julia struct\nenum: translated to CEnum\nunion: translated to Julia struct\ntypedef: translated to Julia type alias to underlying intrinsic typeHere is a simple example:using Clang\n\nconst LIBCLANG_INCLUDE = joinpath(@__DIR__, \"..\", \"deps\", \"usr\", \"include\", \"clang-c\") |> normpath\nconst LIBCLANG_HEADERS = [joinpath(LIBCLANG_INCLUDE, header) for header in readdir(LIBCLANG_INCLUDE) if endswith(header, \".h\")]\n\nwc = init(; headers = CLANG_HEADERS,\n            output_file = joinpath(@__DIR__, \"libclang_api.jl\"),\n            common_file = joinpath(@__DIR__, \"libclang_common.jl\"),\n            clang_includes = vcat(LIBCLANG_INCLUDE, LLVM_INCLUDE),\n            clang_args = [\"-I\", joinpath(LIBCLANG_INCLUDE, \"..\")],\n            header_wrapped = (root, current)->root == current,\n            header_library = x->\"libclang\",\n            clang_diagnostics = true,\n            )\n\nrun(wc)"
+    "text": "The package includes a generator to create Julia wrappers for C libraries from a collection of header files. The following declarations are currently supported:constants: translated to Julia const declarations\npreprocessor constants: translated to const declarations\nfunction: translated to Julia ccall(va_list and vararg argument are not supported)\nstruct: translated to Julia struct\nenum: translated to CEnum\nunion: translated to Julia struct\ntypedef: translated to Julia type alias to underlying intrinsic typeHere is a simple example:using Clang\n\nconst LIBCLANG_INCLUDE = joinpath(@__DIR__, \"..\", \"deps\", \"usr\", \"include\", \"clang-c\") |> normpath\nconst LIBCLANG_HEADERS = [joinpath(LIBCLANG_INCLUDE, header) for header in readdir(LIBCLANG_INCLUDE) if endswith(header, \".h\")]\n\nwc = init(; headers = CLANG_HEADERS,\n            output_file = joinpath(@__DIR__, \"libclang_api.jl\"),\n            common_file = joinpath(@__DIR__, \"libclang_common.jl\"),\n            clang_includes = vcat(LIBCLANG_INCLUDE, CLANG_INCLUDE),\n            clang_args = [\"-I\", joinpath(LIBCLANG_INCLUDE, \"..\")],\n            header_wrapped = (root, current)->root == current,\n            header_library = x->\"libclang\",\n            clang_diagnostics = true,\n            )\n\nrun(wc)"
 },
 
 {
@@ -37,7 +37,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Introduction",
     "title": "Backward compatibility",
     "category": "section",
-    "text": "If you miss those old behaviors before v0.8, you could simply make the following change in your old generator script:using Clang: LLVM_INCLUDE\nusing Clang.Deprecated.wrap_c\nusing Clang.Deprecated.cindex"
+    "text": "If you miss those old behaviors before v0.8, you could simply make the following change in your old generator script:using Clang: CLANG_INCLUDE\nusing Clang.Deprecated.wrap_c\nusing Clang.Deprecated.cindex"
 },
 
 {
@@ -45,7 +45,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Introduction",
     "title": "Build a custom C-bindings generator",
     "category": "section",
-    "text": "A custom C-bindings generator tends to be used on large codebases, often with multiple API versions to support. Building a generator requires some customization effort, so for small libraries the initial investment may not pay off.The above-mentioned C-bindings generator only exposes several entry points for customization. In fact, it\'s actually not that hard to directly build your own C-bindings generator, for example, the following script is used for generating LibClang, you could refer to Tutorial for further details.using Clang\n\nconst LIBCLANG_INCLUDE = joinpath(@__DIR__, \"..\", \"deps\", \"usr\", \"include\", \"clang-c\") |> normpath\nconst LIBCLANG_HEADERS = [joinpath(LIBCLANG_INCLUDE, header) for header in readdir(LIBCLANG_INCLUDE) if endswith(header, \".h\")]\n\n# create a work context\nctx = DefaultContext()\n\n# parse headers\nparse_headers!(ctx, LIBCLANG_HEADERS,\n               args=[\"-I\", joinpath(LIBCLANG_INCLUDE, \"..\")],\n               includes=vcat(LIBCLANG_INCLUDE, LLVM_INCLUDE),\n               )\n\n# settings\nctx.libname = \"libclang\"\nctx.options[\"is_function_strictly_typed\"] = false\nctx.options[\"is_struct_mutable\"] = false\n\n# write output\napi_file = joinpath(@__DIR__, \"libclang_api.jl\")\napi_stream = open(api_file, \"w\")\n\nfor trans_unit in ctx.trans_units\n    root_cursor = getcursor(trans_unit)\n    push!(ctx.cursor_stack, root_cursor)\n    header = spelling(root_cursor)\n    @info \"wrapping header: $header ...\"\n    # loop over all of the child cursors and wrap them, if appropriate.\n    ctx.children = children(root_cursor)\n    for (i, child) in enumerate(ctx.children)\n        child_name = name(child)\n        child_header = filename(child)\n        ctx.children_index = i\n        # choose which cursor to wrap\n        startswith(child_name, \"__\") && continue  # skip compiler definitions\n        child_name in keys(ctx.common_buffer) && continue  # already wrapped\n        child_header != header && continue  # skip if cursor filename is not in the headers to be wrapped\n\n        wrap!(ctx, child)\n    end\n    @info \"writing $(api_file)\"\n    println(api_stream, \"# Julia wrapper for header: $header\")\n    println(api_stream, \"# Automatically generated using Clang.jl\\n\")\n    print_buffer(api_stream, ctx.api_buffer)\n    empty!(ctx.api_buffer)  # clean up api_buffer for the next header\nend\nclose(api_stream)\n\n# write \"common\" definitions: types, typealiases, etc.\ncommon_file = joinpath(@__DIR__, \"libclang_common.jl\")\nopen(common_file, \"w\") do f\n    println(f, \"# Automatically generated using Clang.jl\\n\")\n    print_buffer(f, dump_to_buffer(ctx.common_buffer))\nend\n\n# uncomment the following code to generate dependency and template files\n# copydeps(dirname(api_file))\n# print_template(joinpath(dirname(api_file), \"LibTemplate.jl\"))"
+    "text": "A custom C-bindings generator tends to be used on large codebases, often with multiple API versions to support. Building a generator requires some customization effort, so for small libraries the initial investment may not pay off.The above-mentioned C-bindings generator only exposes several entry points for customization. In fact, it\'s actually not that hard to directly build your own C-bindings generator, for example, the following script is used for generating LibClang, you could refer to Tutorial for further details.using Clang\n\nconst LIBCLANG_INCLUDE = joinpath(@__DIR__, \"..\", \"deps\", \"usr\", \"include\", \"clang-c\") |> normpath\nconst LIBCLANG_HEADERS = [joinpath(LIBCLANG_INCLUDE, header) for header in readdir(LIBCLANG_INCLUDE) if endswith(header, \".h\")]\n\n# create a work context\nctx = DefaultContext()\n\n# parse headers\nparse_headers!(ctx, LIBCLANG_HEADERS,\n               args=[\"-I\", joinpath(LIBCLANG_INCLUDE, \"..\")],\n               includes=vcat(LIBCLANG_INCLUDE, CLANG_INCLUDE),\n               )\n\n# settings\nctx.libname = \"libclang\"\nctx.options[\"is_function_strictly_typed\"] = false\nctx.options[\"is_struct_mutable\"] = false\n\n# write output\napi_file = joinpath(@__DIR__, \"libclang_api.jl\")\napi_stream = open(api_file, \"w\")\n\nfor trans_unit in ctx.trans_units\n    root_cursor = getcursor(trans_unit)\n    push!(ctx.cursor_stack, root_cursor)\n    header = spelling(root_cursor)\n    @info \"wrapping header: $header ...\"\n    # loop over all of the child cursors and wrap them, if appropriate.\n    ctx.children = children(root_cursor)\n    for (i, child) in enumerate(ctx.children)\n        child_name = name(child)\n        child_header = filename(child)\n        ctx.children_index = i\n        # choose which cursor to wrap\n        startswith(child_name, \"__\") && continue  # skip compiler definitions\n        child_name in keys(ctx.common_buffer) && continue  # already wrapped\n        child_header != header && continue  # skip if cursor filename is not in the headers to be wrapped\n\n        wrap!(ctx, child)\n    end\n    @info \"writing $(api_file)\"\n    println(api_stream, \"# Julia wrapper for header: $header\")\n    println(api_stream, \"# Automatically generated using Clang.jl\\n\")\n    print_buffer(api_stream, ctx.api_buffer)\n    empty!(ctx.api_buffer)  # clean up api_buffer for the next header\nend\nclose(api_stream)\n\n# write \"common\" definitions: types, typealiases, etc.\ncommon_file = joinpath(@__DIR__, \"libclang_common.jl\")\nopen(common_file, \"w\") do f\n    println(f, \"# Automatically generated using Clang.jl\\n\")\n    print_buffer(f, dump_to_buffer(ctx.common_buffer))\nend\n\n# uncomment the following code to generate dependency and template files\n# copydeps(dirname(api_file))\n# print_template(joinpath(dirname(api_file), \"LibTemplate.jl\"))"
 },
 
 {
@@ -142,6 +142,14 @@ var documenterSearchIndex = {"docs": [
     "title": "Clang.address_space",
     "category": "method",
     "text": "address_space(t::CXType)\naddress_space(t::CLType)\n\nReturns the address space of the given type. Wrapper for libclang\'s clang_getAddressSpace.\n\n\n\n\n\n"
+},
+
+{
+    "location": "api/#Clang.annotate-Tuple{Ptr{Nothing},Any,Any,Any}",
+    "page": "API Reference",
+    "title": "Clang.annotate",
+    "category": "method",
+    "text": "annotate(tu::TranslationUnit, tokens, token_num, cursors)\nannotate(tu::CXTranslationUnit, tokens, token_num, cursors)\n\nAnnotate the given set of tokens by providing cursors for each token that can be mapped to a specific entity within the abstract syntax tree.\n\n\n\n\n\n"
 },
 
 {
@@ -261,7 +269,7 @@ var documenterSearchIndex = {"docs": [
     "page": "API Reference",
     "title": "Clang.extent",
     "category": "method",
-    "text": "extent(tu::TranslationUnit, token::CXToken) -> CXSourceRange\nextent(tu::CXTranslationUnit, token::CXToken) -> CXSourceRange\n\nReturn a source range that covers the given token.\n\n\n\n\n\n"
+    "text": "extent(tu::TranslationUnit, t::CLToken) -> CXSourceRange\nextent(tu::TranslationUnit, t::CXToken) -> CXSourceRange\nextent(tu::CXTranslationUnit, t::CXToken) -> CXSourceRange\n\nReturn a source range that covers the given token.\n\n\n\n\n\n"
 },
 
 {
@@ -549,7 +557,7 @@ var documenterSearchIndex = {"docs": [
     "page": "API Reference",
     "title": "Clang.kind",
     "category": "method",
-    "text": "kind(token::CXToken) -> CXTokenKind\nkind(token::CLToken) -> CXTokenKind\n\nReturn the kind of the given token.\n\n\n\n\n\n"
+    "text": "kind(t::CXToken) -> CXTokenKind\nkind(t::CLToken) -> CXTokenKind\n\nReturn the kind of the given token.\n\n\n\n\n\n"
 },
 
 {
@@ -573,7 +581,7 @@ var documenterSearchIndex = {"docs": [
     "page": "API Reference",
     "title": "Clang.location",
     "category": "method",
-    "text": "location(tu::TranslationUnit, token::CXToken) -> CXSourceLocation\nlocation(tu::CXTranslationUnit, token::CXToken) -> CXSourceLocation\n\nReturn the source location of the given token.\n\n\n\n\n\n"
+    "text": "location(tu::TranslationUnit, t::CLToken) -> CXSourceLocation\nlocation(tu::TranslationUnit, t::CXToken) -> CXSourceLocation\nlocation(tu::CXTranslationUnit, t::CXToken) -> CXSourceLocation\n\nReturn the source location of the given token.\n\n\n\n\n\n"
 },
 
 {
@@ -693,7 +701,7 @@ var documenterSearchIndex = {"docs": [
     "page": "API Reference",
     "title": "Clang.spelling",
     "category": "method",
-    "text": "spelling(tu::CXTranslationUnit, token::CXToken) -> String\n\nReturn the spelling of the given token. The spelling of a token is the textual representation of that token, e.g., the text of an identifier or keyword.\n\n\n\n\n\n"
+    "text": "spelling(tu::TranslationUnit, t::CLToken) -> String\nspelling(tu::TranslationUnit, t::CXToken) -> String\nspelling(tu::CXTranslationUnit, t::CXToken) -> String\n\nReturn the spelling of the given token. The spelling of a token is the textual representation of that token, e.g., the text of an identifier or keyword.\n\n\n\n\n\n"
 },
 
 {
@@ -841,6 +849,14 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
+    "location": "api/#Clang.TokenList",
+    "page": "API Reference",
+    "title": "Clang.TokenList",
+    "category": "type",
+    "text": "Tokenizer access\n\n\n\n\n\n"
+},
+
+{
     "location": "api/#Clang.TranslationUnit",
     "page": "API Reference",
     "title": "Clang.TranslationUnit",
@@ -905,7 +921,7 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "api/#Clang.handle_macro_exprn-Tuple{Clang.TokenList,Int64}",
+    "location": "api/#Clang.handle_macro_exprn-Tuple{TokenList,Int64}",
     "page": "API Reference",
     "title": "Clang.handle_macro_exprn",
     "category": "method",
@@ -942,14 +958,6 @@ var documenterSearchIndex = {"docs": [
     "title": "Clang.linkage",
     "category": "method",
     "text": "linkage(c::CXCursor) -> CXLinkageKind\nlinkage(c::CLCursor) -> CXLinkageKind\n\nReturn the linkage of the entity referred to by a given cursor. Wrapper for libclang\'s clang_getCursorLinkage.\n\n\n\n\n\n"
-},
-
-{
-    "location": "api/#Clang.TokenList",
-    "page": "API Reference",
-    "title": "Clang.TokenList",
-    "category": "type",
-    "text": "Tokenizer access\n\n\n\n\n\n"
 },
 
 {

@@ -7,14 +7,14 @@ const LIBCLANG_HEADERS = [joinpath(LIBCLANG_INCLUDE, header) for header in readd
 wc = init(; headers = CLANG_HEADERS,
             output_file = joinpath(@__DIR__, &quot;libclang_api.jl&quot;),
             common_file = joinpath(@__DIR__, &quot;libclang_common.jl&quot;),
-            clang_includes = vcat(LIBCLANG_INCLUDE, LLVM_INCLUDE),
+            clang_includes = vcat(LIBCLANG_INCLUDE, CLANG_INCLUDE),
             clang_args = [&quot;-I&quot;, joinpath(LIBCLANG_INCLUDE, &quot;..&quot;)],
             header_wrapped = (root, current)-&gt;root == current,
             header_library = x-&gt;&quot;libclang&quot;,
             clang_diagnostics = true,
             )
 
-run(wc)</code></pre><h3><a class="nav-anchor" id="Backward-compatibility-1" href="#Backward-compatibility-1">Backward compatibility</a></h3><p>If you miss those old behaviors before v0.8, you could simply make the following change in your old generator script:</p><pre><code class="language-julia">using Clang: LLVM_INCLUDE
+run(wc)</code></pre><h3><a class="nav-anchor" id="Backward-compatibility-1" href="#Backward-compatibility-1">Backward compatibility</a></h3><p>If you miss those old behaviors before v0.8, you could simply make the following change in your old generator script:</p><pre><code class="language-julia">using Clang: CLANG_INCLUDE
 using Clang.Deprecated.wrap_c
 using Clang.Deprecated.cindex</code></pre><h2><a class="nav-anchor" id="Build-a-custom-C-bindings-generator-1" href="#Build-a-custom-C-bindings-generator-1">Build a custom C-bindings generator</a></h2><p>A custom C-bindings generator tends to be used on large codebases, often with multiple API versions to support. Building a generator requires some customization effort, so for small libraries the initial investment may not pay off.</p><p>The above-mentioned C-bindings generator only exposes several entry points for customization. In fact, it&#39;s actually not that hard to directly build your own C-bindings generator, for example, the following script is used for generating <code>LibClang</code>, you could refer to <a href="tutorial/#Tutorial-1">Tutorial</a> for further details.</p><pre><code class="language-julia">using Clang
 
@@ -27,7 +27,7 @@ ctx = DefaultContext()
 # parse headers
 parse_headers!(ctx, LIBCLANG_HEADERS,
                args=[&quot;-I&quot;, joinpath(LIBCLANG_INCLUDE, &quot;..&quot;)],
-               includes=vcat(LIBCLANG_INCLUDE, LLVM_INCLUDE),
+               includes=vcat(LIBCLANG_INCLUDE, CLANG_INCLUDE),
                )
 
 # settings

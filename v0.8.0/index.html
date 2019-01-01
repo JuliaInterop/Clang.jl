@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Introduction · Clang.jl</title><link href="https://cdnjs.cloudflare.com/ajax/libs/normalize/4.2.0/normalize.min.css" rel="stylesheet" type="text/css"/><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.3/css/font-awesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.2.0/require.min.js" data-main="assets/documenter.js"></script><script src="siteinfo.js"></script><script src="../versions.js"></script><link href="assets/documenter.css" rel="stylesheet" type="text/css"/></head><body><nav class="toc"><h1>Clang.jl</h1><select id="version-selector" onChange="window.location.href=this.value" style="visibility: hidden"></select><form class="search" id="search-form" action="search/"><input id="search-query" name="q" type="text" placeholder="Search docs"/></form><ul><li class="current"><a class="toctext" href>Introduction</a><ul class="internal"><li><a class="toctext" href="#Installation-1">Installation</a></li><li><a class="toctext" href="#C-bindings-generator-1">C-bindings generator</a></li><li><a class="toctext" href="#Build-a-custom-C-bindings-generator-1">Build a custom C-bindings generator</a></li><li><a class="toctext" href="#LibClang-1">LibClang</a></li></ul></li><li><a class="toctext" href="tutorial/">Tutorial</a></li><li><a class="toctext" href="api/">API Reference</a></li></ul></nav><article id="docs"><header><nav><ul><li><a href>Introduction</a></li></ul><a class="edit-page" href="https://github.com/ihnorton/Clang.jl/blob/master/docs/src/index.md"><span class="fa"></span> Edit on GitHub</a></nav><hr/><div id="topbar"><span>Introduction</span><a class="fa fa-bars" href="#"></a></div></header><h1><a class="nav-anchor" id="Clang-1" href="#Clang-1">Clang</a></h1><p>This package provides a Julia language wrapper for libclang: the stable, C-exported interface to the LLVM Clang compiler. The <a href="http://clang.llvm.org/doxygen/group__CINDEX.html">libclang API documentation</a> provides background on the functionality available through libclang, and thus through the Julia wrapper. The repository also hosts related tools built on top of libclang functionality.</p><h2><a class="nav-anchor" id="Installation-1" href="#Installation-1">Installation</a></h2><p>Now, the package provides an out-of-box installation experience on Linux, macOS and Windows. You could simply install it by running:</p><pre><code class="language-none">pkg&gt; add Clang</code></pre><h2><a class="nav-anchor" id="C-bindings-generator-1" href="#C-bindings-generator-1">C-bindings generator</a></h2><p>The package includes a generator to create Julia wrappers for C libraries from a collection of header files. The following declarations are currently supported:</p><ul><li>constants: translated to Julia <code>const</code> declarations</li><li>preprocessor constants: translated to <code>const</code> declarations</li><li>function: translated to Julia ccall(<code>va_list</code> and vararg argument are not supported)</li><li>struct: translated to Julia struct</li><li>enum: translated to <code>CEnum</code></li><li>union: translated to Julia struct</li><li>typedef: translated to Julia type alias to underlying intrinsic type</li></ul><p>Here is a simple example:</p><pre><code class="language-julia">using Clang
+
+const LIBCLANG_INCLUDE = joinpath(@__DIR__, &quot;..&quot;, &quot;deps&quot;, &quot;usr&quot;, &quot;include&quot;, &quot;clang-c&quot;) |&gt; normpath
+const LIBCLANG_HEADERS = [joinpath(LIBCLANG_INCLUDE, header) for header in readdir(LIBCLANG_INCLUDE) if endswith(header, &quot;.h&quot;)]
+
+wc = init(; headers = CLANG_HEADERS,
+            output_file = joinpath(@__DIR__, &quot;libclang_api.jl&quot;),
+            common_file = joinpath(@__DIR__, &quot;libclang_common.jl&quot;),
+            clang_includes = vcat(LIBCLANG_INCLUDE, CLANG_INCLUDE),
+            clang_args = [&quot;-I&quot;, joinpath(LIBCLANG_INCLUDE, &quot;..&quot;)],
+            header_wrapped = (root, current)-&gt;root == current,
+            header_library = x-&gt;&quot;libclang&quot;,
+            clang_diagnostics = true,
+            )
+
+run(wc)</code></pre><h3><a class="nav-anchor" id="Backward-compatibility-1" href="#Backward-compatibility-1">Backward compatibility</a></h3><p>If you miss those old behaviors before v0.8, you could simply make the following change in your old generator script:</p><pre><code class="language-julia">using Clang: CLANG_INCLUDE
+using Clang.Deprecated.wrap_c
+using Clang.Deprecated.cindex</code></pre><h2><a class="nav-anchor" id="Build-a-custom-C-bindings-generator-1" href="#Build-a-custom-C-bindings-generator-1">Build a custom C-bindings generator</a></h2><p>A custom C-bindings generator tends to be used on large codebases, often with multiple API versions to support. Building a generator requires some customization effort, so for small libraries the initial investment may not pay off.</p><p>The above-mentioned C-bindings generator only exposes several entry points for customization. In fact, it&#39;s actually not that hard to directly build your own C-bindings generator, for example, the following script is used for generating <code>LibClang</code>, you could refer to <a href="tutorial/#Tutorial-1">Tutorial</a> for further details.</p><pre><code class="language-julia">using Clang
+
+const LIBCLANG_INCLUDE = joinpath(@__DIR__, &quot;..&quot;, &quot;deps&quot;, &quot;usr&quot;, &quot;include&quot;, &quot;clang-c&quot;) |&gt; normpath
+const LIBCLANG_HEADERS = [joinpath(LIBCLANG_INCLUDE, header) for header in readdir(LIBCLANG_INCLUDE) if endswith(header, &quot;.h&quot;)]
+
+# create a work context
+ctx = DefaultContext()
+
+# parse headers
+parse_headers!(ctx, LIBCLANG_HEADERS,
+               args=[&quot;-I&quot;, joinpath(LIBCLANG_INCLUDE, &quot;..&quot;)],
+               includes=vcat(LIBCLANG_INCLUDE, CLANG_INCLUDE),
+               )
+
+# settings
+ctx.libname = &quot;libclang&quot;
+ctx.options[&quot;is_function_strictly_typed&quot;] = false
+ctx.options[&quot;is_struct_mutable&quot;] = false
+
+# write output
+api_file = joinpath(@__DIR__, &quot;libclang_api.jl&quot;)
+api_stream = open(api_file, &quot;w&quot;)
+
+for trans_unit in ctx.trans_units
+    root_cursor = getcursor(trans_unit)
+    push!(ctx.cursor_stack, root_cursor)
+    header = spelling(root_cursor)
+    @info &quot;wrapping header: $header ...&quot;
+    # loop over all of the child cursors and wrap them, if appropriate.
+    ctx.children = children(root_cursor)
+    for (i, child) in enumerate(ctx.children)
+        child_name = name(child)
+        child_header = filename(child)
+        ctx.children_index = i
+        # choose which cursor to wrap
+        startswith(child_name, &quot;__&quot;) &amp;&amp; continue  # skip compiler definitions
+        child_name in keys(ctx.common_buffer) &amp;&amp; continue  # already wrapped
+        child_header != header &amp;&amp; continue  # skip if cursor filename is not in the headers to be wrapped
+
+        wrap!(ctx, child)
+    end
+    @info &quot;writing $(api_file)&quot;
+    println(api_stream, &quot;# Julia wrapper for header: $header&quot;)
+    println(api_stream, &quot;# Automatically generated using Clang.jl\n&quot;)
+    print_buffer(api_stream, ctx.api_buffer)
+    empty!(ctx.api_buffer)  # clean up api_buffer for the next header
+end
+close(api_stream)
+
+# write &quot;common&quot; definitions: types, typealiases, etc.
+common_file = joinpath(@__DIR__, &quot;libclang_common.jl&quot;)
+open(common_file, &quot;w&quot;) do f
+    println(f, &quot;# Automatically generated using Clang.jl\n&quot;)
+    print_buffer(f, dump_to_buffer(ctx.common_buffer))
+end
+
+# uncomment the following code to generate dependency and template files
+# copydeps(dirname(api_file))
+# print_template(joinpath(dirname(api_file), &quot;LibTemplate.jl&quot;))</code></pre><h2><a class="nav-anchor" id="LibClang-1" href="#LibClang-1">LibClang</a></h2><p>LibClang is a thin wrapper over libclang. It&#39;s one-to-one mapped to the libclang APIs. By <code>using Clang.LibClang</code>, all of the <code>CX</code>/<code>clang_</code>-prefixed libclang APIs are imported into the current namespace, with which you could build up your own tools from the scratch. If you are unfamiliar with the Clang AST, a good starting point is the <a href="http://clang.llvm.org/docs/IntroductionToTheClangAST.html">Introduction to the Clang AST</a>.</p><footer><hr/><a class="next" href="tutorial/"><span class="direction">Next</span><span class="title">Tutorial</span></a></footer></article></body></html>

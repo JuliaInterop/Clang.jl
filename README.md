@@ -34,13 +34,14 @@ Here is a simple example:
 ```julia
 using Clang
 
+# LIBCLANG_HEADERS are those headers to be wrapped.
 const LIBCLANG_INCLUDE = joinpath(@__DIR__, "..", "deps", "usr", "include", "clang-c") |> normpath
 const LIBCLANG_HEADERS = [joinpath(LIBCLANG_INCLUDE, header) for header in readdir(LIBCLANG_INCLUDE) if endswith(header, ".h")]
 
-wc = init(; headers = CLANG_HEADERS,
+wc = init(; headers = LIBCLANG_HEADERS,
             output_file = joinpath(@__DIR__, "libclang_api.jl"),
             common_file = joinpath(@__DIR__, "libclang_common.jl"),
-            clang_includes = vcat(LIBCLANG_INCLUDE, LLVM_INCLUDE),
+            clang_includes = vcat(LIBCLANG_INCLUDE, CLANG_INCLUDE),
             clang_args = ["-I", joinpath(LIBCLANG_INCLUDE, "..")],
             header_wrapped = (root, current)->root == current,
             header_library = x->"libclang",
@@ -53,7 +54,7 @@ run(wc)
 #### Backward compatibility
 If you miss those old behaviors before v0.8, you could simply make the following change in your old generator script:
 ```julia
-using Clang: LLVM_INCLUDE
+using Clang: CLANG_INCLUDE
 using Clang.Deprecated.wrap_c
 using Clang.Deprecated.cindex
 ```
@@ -78,7 +79,7 @@ ctx = DefaultContext()
 # parse headers
 parse_headers!(ctx, LIBCLANG_HEADERS,
                args=["-I", joinpath(LIBCLANG_INCLUDE, "..")],
-               includes=vcat(LIBCLANG_INCLUDE, LLVM_INCLUDE),
+               includes=vcat(LIBCLANG_INCLUDE, CLANG_INCLUDE),
                )
 
 # settings

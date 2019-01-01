@@ -9,7 +9,7 @@ ctx = DefaultContext()
 # parse headers
 parse_headers!(ctx, LIBCLANG_HEADERS,
                args=["-I", joinpath(LIBCLANG_INCLUDE, "..")],
-               includes=vcat(LIBCLANG_INCLUDE, LLVM_INCLUDE),
+               includes=vcat(LIBCLANG_INCLUDE, CLANG_INCLUDE),
                )
 
 # settings

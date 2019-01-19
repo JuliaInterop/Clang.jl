@@ -13,6 +13,6 @@ makedocs(
 )
 
 deploydocs(
-    repo = "github.com/ihnorton/Clang.jl.git",
+    repo = "github.com/JuliaInterop/Clang.jl.git",
     target = "build",
 )

@@ -3,8 +3,8 @@
 [![Build Status](https://travis-ci.org/JuliaInterop/Clang.jl.svg?branch=master)](https://travis-ci.org/JuliaInterop/Clang.jl)
 [![Build status](https://ci.appveyor.com/api/projects/status/lh0t84w6w69b79j4/branch/master?svg=true)](https://ci.appveyor.com/project/Gnimuc/clang-jl-mewcd/branch/master)
 [![codecov.io](http://codecov.io/github/ihnorton/Clang.jl/coverage.svg?branch=master)](http://codecov.io/github/ihnorton/Clang.jl?branch=master)
-[![](https://img.shields.io/badge/docs-stable-blue.svg)](https://ihnorton.github.io/Clang.jl/stable)
-[![](https://img.shields.io/badge/docs-dev-blue.svg)](https://ihnorton.github.io/Clang.jl/dev)
+[![](https://img.shields.io/badge/docs-stable-blue.svg)](https://JuliaInterop.github.io/Clang.jl/stable)
+[![](https://img.shields.io/badge/docs-dev-blue.svg)](https://JuliaInterop.github.io/Clang.jl/dev)
 
 This package provides a Julia language wrapper for libclang: the stable, C-exported
 interface to the LLVM Clang compiler. The [libclang API documentation](http://clang.llvm.org/doxygen/group__CINDEX.html)
@@ -65,7 +65,7 @@ investment may not pay off.
 
 The above-mentioned C-bindings generator only exposes several entry points for customization.
 In fact, it's actually not that hard to directly build your own C-bindings generator,
-for example, the following script is used for generating `LibClang`, you could refer to [Examples](@ref) for
+for example, the following script is used for generating `LibClang`, you could refer to docs for
 further details.
 ```julia
 using Clang

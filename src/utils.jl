@@ -46,7 +46,6 @@ end
 Copy dependencies to `dst`.
 """
 function copydeps(dst)
-    cp(joinpath(@__DIR__, "CEnum.jl"), joinpath(dst, "CEnum.jl"), force=true)
     cp(joinpath(@__DIR__, "ctypes.jl"), joinpath(dst, "ctypes.jl"), force=true)
 end
 
@@ -68,8 +67,7 @@ function print_template(path, libname="LibXXX")
             check_deps()
         end
 
-        include("CEnum.jl")
-        using .CEnum
+        using CEnum
 
         include("ctypes.jl")
         export Ctm, Ctime_t, Cclock_t

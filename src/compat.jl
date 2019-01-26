@@ -121,7 +121,7 @@ function Base.run(wc::WrapContext)
             try
                 wrap!(ctx, child)
             catch err
-                push!(ctx.cursor_stack, cursor)
+                push!(ctx.cursor_stack, child)
                 @error "error thrown. Last cursor available in context.cursor_stack."
                 rethrow(err)
             end

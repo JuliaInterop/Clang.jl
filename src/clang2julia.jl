@@ -46,7 +46,8 @@ const CLANG_JULIA_TYPEMAP = Dict(
     :uintptr_t              => :Csize_t,
     :tm                     => :Ctm,
     :time_t                 => :Ctime_t,
-    :clock_t                 => :Cclock_t,
+    :clock_t                => :Cclock_t,
+    :wchar_t                => :Cwchar_t, 
     )
 
 const INT_CONVERSION = Dict(

@@ -59,7 +59,7 @@ function print_template(path, libname="LibXXX")
         # Load in `deps.jl`, complaining if it does not exist
         const depsjl_path = joinpath(@__DIR__, "..", "deps", "deps.jl")
         if !isfile(depsjl_path)
-            error("$libname was not build properly. Please run Pkg.build(\"$libname\").")
+            error("$libname was not build properly. Please run Pkg.build(\\"$libname\\").")
         end
         include(depsjl_path)
         # Module initialization function

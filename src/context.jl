@@ -11,10 +11,11 @@ mutable struct DefaultContext <: AbstractContext
     cursor_stack::Vector{CLCursor}
     children::Vector{CLCursor}
     children_index::Int
+    anonymous_counter::Int
 end
 DefaultContext(index::Index) = DefaultContext(index, TranslationUnit[], Dict{String,Bool}(),
                                               "libxxx", "", OrderedDict{Symbol,ExprUnit}(), Expr[],
-                                              CLCursor[], CLCursor[], -1)
+                                              CLCursor[], CLCursor[], -1, 0)
 DefaultContext(diagnostic::Bool=true) = DefaultContext(Index(diagnostic))
 
 parse_header!(ctx::AbstractContext, header::AbstractString; args...) = push!(ctx.trans_units, parse_header(header; args...))

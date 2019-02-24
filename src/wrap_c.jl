@@ -200,17 +200,30 @@ function wrap!(ctx::AbstractContext, cursor::CLUnionDecl)
     # find the largest union field and declare a block of bytes to match.
     union_fields = children(cursor)
     if !isempty(union_fields)
-        largest_field = union_fields[1]
-        max_size = typesize(type(largest_field))
-        for field_cursor in union_fields
+        max_size = 0
+        largest_field_idx = 0
+        for i = 1:length(union_fields)
+            field_cursor = union_fields[i]
+            field_kind = kind(field_cursor)
+            (field_kind == CXCursor_StructDecl || field_kind == CXCursor_UnionDecl) && continue
             field_size = typesize(type(field_cursor))
             if field_size > max_size
-                largest_field = field_cursor
                 max_size = field_size
+                largest_field_idx = i
             end
         end
+        largest_field = union_fields[largest_field_idx]
+        if occursin("anonymous", string(clang2julia(largest_field)))
+            anonymous_record = union_fields[largest_field_idx-1]
+            ctx.anonymous_counter += 1
+            ctx.force_name = "ANONYMOUS$(ctx.anonymous_counter)_"*spelling(largest_field)
+            wrap!(ctx, anonymous_record)
+            repr = symbol_safe(ctx.force_name)
+            ctx.force_name = ""
+        else
+            repr = clang2julia(largest_field)
+        end
         largest_field_sym = symbol_safe(spelling(largest_field))
-        repr = clang2julia(largest_field)
         push!(block.args, Expr(:(::), largest_field_sym, repr))
         push!(deps, target_type(repr))
         buffer[union_sym] = ExprUnit(expr, deps)

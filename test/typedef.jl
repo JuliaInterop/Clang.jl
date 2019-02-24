@@ -113,7 +113,7 @@ end
         ctx.children_index = 9
         wrap!(ctx, anonymous_typedef_union)
         expr = :(struct handle
-                     id::Cint
+                     ptr::Ptr{Cvoid}
                  end)
         Base.remove_linenums!(expr)
         @test ctx.common_buffer[:handle].items[1] == expr

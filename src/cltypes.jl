@@ -41,7 +41,7 @@ for sym in enum_names(CXTypeKind)
 end
 
 CLType(c::CXType) = CLTypeMap[c.kind](c)
-Base.convert(::Type{CXType}, x::T) where {T<:CLType} = x.cursor
+Base.convert(::Type{CXType}, x::T) where {T<:CLType} = x.type
 Base.convert(::Type{CLType}, x::CXType) = CLType(x)
 
 

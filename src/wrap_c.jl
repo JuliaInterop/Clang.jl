@@ -209,7 +209,7 @@ function wrap!(ctx::AbstractContext, cursor::CLUnionDecl)
                 max_size = field_size
             end
         end
-        largest_field_sym = symbol_safe(name(largest_field))
+        largest_field_sym = symbol_safe(spelling(largest_field))
         repr = clang2julia(largest_field)
         push!(block.args, Expr(:(::), largest_field_sym, repr))
         push!(deps, target_type(repr))

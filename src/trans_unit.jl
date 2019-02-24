@@ -78,7 +78,7 @@ function parse_header(header::AbstractString; index::Index=Index(), args::Vector
     # TODO: support parsing in-memory with CXUnsavedFile arg
     #       to _parseTranslationUnit.jj
     #unsaved_file = CXUnsavedFile()
-    !isfile(header) && throw(ArgumentError(header, " not found"))
+    !isfile(header) && throw(ArgumentError("$header not found."))
 
     !isempty(includes) && foreach(includes) do x
         push!(args, "-I", x)

@@ -24,3 +24,28 @@ using Test
         @test clang2julia(array_field_cursor) == :(NTuple{3, Ptr{Cvoid}})
     end
 end
+
+@testset "struct_enum_field" begin
+    # parse file
+    trans_unit = parse_header(joinpath(@__DIR__, "c", "struct_nested.h"))
+    GC.@preserve trans_unit begin
+        # get root cursor
+        root_cursor = getcursor(trans_unit)
+        cursors = children(root_cursor)
+        ctx = DefaultContext()
+        push!(ctx.trans_units, trans_unit)
+        # case 1
+        wrap!(ctx, cursors[1])
+        expr = :(struct ANONYMOUS1_union_in_struct
+                    x::Cstring
+                end)
+        Base.remove_linenums!(expr)
+        @test ctx.common_buffer[:ANONYMOUS1_union_in_struct].items[1] == expr
+        expr = :(struct nested_struct
+                    union_in_struct::ANONYMOUS1_union_in_struct
+                    struct_in_struct::ANONYMOUS2_struct_in_struct
+                end)
+        Base.remove_linenums!(expr)
+        @test ctx.common_buffer[:nested_struct].items[1] == expr
+    end
+end

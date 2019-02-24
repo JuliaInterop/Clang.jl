@@ -141,7 +141,7 @@ function wrap!(ctx::AbstractContext, cursor::CLStructDecl)
     expr = Expr(:struct, ismutable, struct_sym, block)
     deps = OrderedSet{Symbol}()
     struct_fields = children(cursor)
-    for field_cursor in struct_fields
+    for (field_idx, field_cursor) in enumerate(struct_fields)
         field_name = name(field_cursor)
         field_kind = kind(field_cursor)
         if field_kind == CXCursor_StructDecl || field_kind == CXCursor_UnionDecl
@@ -153,7 +153,17 @@ function wrap!(ctx::AbstractContext, cursor::CLStructDecl)
         elseif isempty(field_name)
             error("Unnamed struct member in: $cursor ... cursor: $field_cursor")
         end
-        repr = clang2julia(field_cursor)
+
+        if occursin("anonymous", string(clang2julia(field_cursor)))
+            anonymous_record = struct_fields[field_idx-1]
+            ctx.anonymous_counter += 1
+            ctx.force_name = "ANONYMOUS$(ctx.anonymous_counter)_"*spelling(field_cursor)
+            wrap!(ctx, anonymous_record)
+            repr = symbol_safe(ctx.force_name)
+            ctx.force_name = ""
+        else
+            repr = clang2julia(field_cursor)
+        end
         push!(block.args, Expr(:(::), symbol_safe(field_name), repr))
         push!(deps, target_type(repr))
     end

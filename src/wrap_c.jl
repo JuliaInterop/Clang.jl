@@ -155,12 +155,18 @@ function wrap!(ctx::AbstractContext, cursor::CLStructDecl)
         end
 
         if occursin("anonymous", string(clang2julia(field_cursor)))
-            anonymous_record = struct_fields[field_idx-1]
+            idx = field_idx-1
+            anonymous_record = struct_fields[idx]
+            while idx != 0 && kind(anonymous_record) == CXCursor_FieldDecl
+                idx -= 1
+                anonymous_record = struct_fields[idx]
+            end
             ctx.anonymous_counter += 1
-            ctx.force_name = "ANONYMOUS$(ctx.anonymous_counter)_"*spelling(field_cursor)
+            anon_name = "ANONYMOUS$(ctx.anonymous_counter)_"*spelling(field_cursor)
+            ctx.force_name = anon_name
             wrap!(ctx, anonymous_record)
-            repr = symbol_safe(ctx.force_name)
             ctx.force_name = ""
+            repr = symbol_safe(anon_name)
         else
             repr = clang2julia(field_cursor)
         end
@@ -224,12 +230,18 @@ function wrap!(ctx::AbstractContext, cursor::CLUnionDecl)
         end
         largest_field = union_fields[largest_field_idx]
         if occursin("anonymous", string(clang2julia(largest_field)))
-            anonymous_record = union_fields[largest_field_idx-1]
+            idx = largest_field_idx-1
+            anonymous_record = union_fields[idx]
+            while idx != 0 && kind(anonymous_record) == CXCursor_FieldDecl
+                idx -= 1
+                anonymous_record = union_fields[idx]
+            end
             ctx.anonymous_counter += 1
-            ctx.force_name = "ANONYMOUS$(ctx.anonymous_counter)_"*spelling(largest_field)
+            anon_name = "ANONYMOUS$(ctx.anonymous_counter)_"*spelling(largest_field)
+            ctx.force_name = anon_name
             wrap!(ctx, anonymous_record)
-            repr = symbol_safe(ctx.force_name)
             ctx.force_name = ""
+            repr = symbol_safe(anon_name)
         else
             repr = clang2julia(largest_field)
         end

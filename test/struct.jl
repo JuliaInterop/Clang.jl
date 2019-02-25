@@ -47,5 +47,30 @@ end
                 end)
         Base.remove_linenums!(expr)
         @test ctx.common_buffer[:nested_struct].items[1] == expr
+        # case 2
+        ctx.anonymous_counter = 0
+        wrap!(ctx, cursors[3])
+        expr = :(struct ANONYMOUS2_nest2
+                    x::Cint
+                end)
+        Base.remove_linenums!(expr)
+        @test ctx.common_buffer[:ANONYMOUS2_nest2].items[1] == expr
+        expr = :(struct ANONYMOUS3_nest3
+                    x::Cint
+                end)
+        Base.remove_linenums!(expr)
+        @test ctx.common_buffer[:ANONYMOUS3_nest3].items[1] == expr
+        expr = :(struct ANONYMOUS1_nest1
+                    nest2::ANONYMOUS2_nest2
+                    nest3::ANONYMOUS3_nest3
+                    s::UInt8
+                end)
+        Base.remove_linenums!(expr)
+        @test ctx.common_buffer[:ANONYMOUS1_nest1].items[1] == expr
+        expr = :(struct nested_struct2
+                    nest1::ANONYMOUS1_nest1
+                end)
+        Base.remove_linenums!(expr)
+        @test ctx.common_buffer[:nested_struct2].items[1] == expr
     end
 end

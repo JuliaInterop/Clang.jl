@@ -161,12 +161,17 @@ function wrap!(ctx::AbstractContext, cursor::CLStructDecl)
                 idx -= 1
                 anonymous_record = struct_fields[idx]
             end
-            ctx.anonymous_counter += 1
-            anon_name = "ANONYMOUS$(ctx.anonymous_counter)_"*spelling(field_cursor)
-            ctx.force_name = anon_name
-            wrap!(ctx, anonymous_record)
-            ctx.force_name = ""
-            repr = symbol_safe(anon_name)
+            if idx == field_idx-1
+                ctx.anonymous_counter += 1
+                anon_name = "ANONYMOUS$(ctx.anonymous_counter)_"*spelling(field_cursor)
+                ctx.force_name = anon_name
+                wrap!(ctx, anonymous_record)
+                ctx.force_name = ""
+                repr = symbol_safe(anon_name)
+            else
+                anon_name = "ANONYMOUS$(ctx.anonymous_counter)_"*spelling(struct_fields[idx+1])
+                repr = symbol_safe(anon_name)
+            end
         else
             repr = clang2julia(field_cursor)
         end

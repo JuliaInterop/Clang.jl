@@ -25,7 +25,7 @@ using Test
     end
 end
 
-@testset "struct_enum_field" begin
+@testset "struct_nested" begin
     # parse file
     trans_unit = parse_header(joinpath(@__DIR__, "c", "struct_nested.h"))
     GC.@preserve trans_unit begin

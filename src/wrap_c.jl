@@ -91,6 +91,7 @@ function wrap!(ctx::AbstractContext, cursor::CLEnumDecl)
     name2value = Tuple{Symbol,Int}[]
     # extract values and names
     for item_cursor in children(cursor)
+        kind(item_cursor) == CXCursor_PackedAttr && (@warn("this is a `__attribute__((packed))` enum, the underlying alignment of generated structure may not be compatible with the original one in C!"; continue)
         item_name = spelling(item_cursor)
         isempty(item_name) && continue
         item_sym = symbol_safe(item_name)

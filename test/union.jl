@@ -2,7 +2,7 @@ using Clang
 using Clang.LibClang
 using Test
 
-@testset "typedef" begin
+@testset "nested_union" begin
     trans_unit = parse_header(joinpath(@__DIR__, "c", "union.h"))
     GC.@preserve trans_unit begin
         # get root cursor

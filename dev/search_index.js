@@ -217,6 +217,14 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
+    "location": "api/#Clang.clang2julia-Tuple{CLConstantArray}",
+    "page": "API Reference",
+    "title": "Clang.clang2julia",
+    "category": "method",
+    "text": "clang2julia(t::CLConstantArray)\n\nConstantArrays are translated to NTuples.\n\n\n\n\n\n"
+},
+
+{
     "location": "api/#Clang.clang2julia-Tuple{CLCursor}",
     "page": "API Reference",
     "title": "Clang.clang2julia",
@@ -225,11 +233,35 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
+    "location": "api/#Clang.clang2julia-Tuple{CLIncompleteArray}",
+    "page": "API Reference",
+    "title": "Clang.clang2julia",
+    "category": "method",
+    "text": "clang2julia(t::CLIncompleteArray)\n\nIncompleteArrays are translated to pointers, so one need to deal with the byte offsets directly.\n\n\n\n\n\n"
+},
+
+{
+    "location": "api/#Clang.clang2julia-Tuple{CLPointer}",
+    "page": "API Reference",
+    "title": "Clang.clang2julia",
+    "category": "method",
+    "text": "clang2julia(t::CLPointer)\n\nPointers are translated to Ptrs.\n\n\n\n\n\n"
+},
+
+{
     "location": "api/#Clang.clang2julia-Tuple{CLType}",
     "page": "API Reference",
     "title": "Clang.clang2julia",
     "category": "method",
     "text": "clang2julia(t::CLType) -> Symbol/Expr\n\nConvert libclang cursor/type to Julia.\n\n\n\n\n\n"
+},
+
+{
+    "location": "api/#Clang.clang2julia-Tuple{CLUnexposed}",
+    "page": "API Reference",
+    "title": "Clang.clang2julia",
+    "category": "method",
+    "text": "clang2julia(t::CLUnexposed)\n\nUnexposed Clang types are translated to the symbol of its cursor name(if exist).\n\n\n\n\n\n"
 },
 
 {

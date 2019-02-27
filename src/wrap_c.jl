@@ -91,6 +91,7 @@ function wrap!(ctx::AbstractContext, cursor::CLEnumDecl)
     name2value = Tuple{Symbol,Int}[]
     # extract values and names
     for item_cursor in children(cursor)
+        kind(item_cursor) == CXCursor_PackedAttr && (@warn("this is a `__attribute__((packed))` enum, the underlying alignment of generated structure may not be compatible with the original one in C!"); continue)
         item_name = spelling(item_cursor)
         isempty(item_name) && continue
         item_sym = symbol_safe(item_name)
@@ -141,7 +142,7 @@ function wrap!(ctx::AbstractContext, cursor::CLStructDecl)
     expr = Expr(:struct, ismutable, struct_sym, block)
     deps = OrderedSet{Symbol}()
     struct_fields = children(cursor)
-    for field_cursor in struct_fields
+    for (field_idx, field_cursor) in enumerate(struct_fields)
         field_name = name(field_cursor)
         field_kind = kind(field_cursor)
         if field_kind == CXCursor_StructDecl || field_kind == CXCursor_UnionDecl
@@ -153,7 +154,28 @@ function wrap!(ctx::AbstractContext, cursor::CLStructDecl)
         elseif isempty(field_name)
             error("Unnamed struct member in: $cursor ... cursor: $field_cursor")
         end
-        repr = clang2julia(field_cursor)
+
+        if occursin("anonymous", string(clang2julia(field_cursor)))
+            idx = field_idx-1
+            anonymous_record = struct_fields[idx]
+            while idx != 0 && kind(anonymous_record) == CXCursor_FieldDecl
+                idx -= 1
+                anonymous_record = struct_fields[idx]
+            end
+            if idx == field_idx-1
+                ctx.anonymous_counter += 1
+                anon_name = "ANONYMOUS$(ctx.anonymous_counter)_"*spelling(field_cursor)
+                ctx.force_name = anon_name
+                wrap!(ctx, anonymous_record)
+                ctx.force_name = ""
+                repr = symbol_safe(anon_name)
+            else
+                anon_name = "ANONYMOUS$(ctx.anonymous_counter)_"*spelling(struct_fields[idx+1])
+                repr = symbol_safe(anon_name)
+            end
+        else
+            repr = clang2julia(field_cursor)
+        end
         push!(block.args, Expr(:(::), symbol_safe(field_name), repr))
         push!(deps, target_type(repr))
     end
@@ -200,17 +222,36 @@ function wrap!(ctx::AbstractContext, cursor::CLUnionDecl)
     # find the largest union field and declare a block of bytes to match.
     union_fields = children(cursor)
     if !isempty(union_fields)
-        largest_field = union_fields[1]
-        max_size = typesize(type(largest_field))
-        for field_cursor in union_fields
+        max_size = 0
+        largest_field_idx = 0
+        for i = 1:length(union_fields)
+            field_cursor = union_fields[i]
+            field_kind = kind(field_cursor)
+            (field_kind == CXCursor_StructDecl || field_kind == CXCursor_UnionDecl) && continue
             field_size = typesize(type(field_cursor))
             if field_size > max_size
-                largest_field = field_cursor
                 max_size = field_size
+                largest_field_idx = i
             end
         end
-        largest_field_sym = symbol_safe(name(largest_field))
-        repr = clang2julia(largest_field)
+        largest_field = union_fields[largest_field_idx]
+        if occursin("anonymous", string(clang2julia(largest_field)))
+            idx = largest_field_idx-1
+            anonymous_record = union_fields[idx]
+            while idx != 0 && kind(anonymous_record) == CXCursor_FieldDecl
+                idx -= 1
+                anonymous_record = union_fields[idx]
+            end
+            ctx.anonymous_counter += 1
+            anon_name = "ANONYMOUS$(ctx.anonymous_counter)_"*spelling(largest_field)
+            ctx.force_name = anon_name
+            wrap!(ctx, anonymous_record)
+            ctx.force_name = ""
+            repr = symbol_safe(anon_name)
+        else
+            repr = clang2julia(largest_field)
+        end
+        largest_field_sym = symbol_safe(spelling(largest_field))
         push!(block.args, Expr(:(::), largest_field_sym, repr))
         push!(deps, target_type(repr))
         buffer[union_sym] = ExprUnit(expr, deps)

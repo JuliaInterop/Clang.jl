@@ -47,7 +47,7 @@ const CLANG_JULIA_TYPEMAP = Dict(
     :tm                     => :Ctm,
     :time_t                 => :Ctime_t,
     :clock_t                => :Cclock_t,
-    :wchar_t                => :Cwchar_t, 
+    :wchar_t                => :Cwchar_t,
     )
 
 const INT_CONVERSION = Dict(
@@ -82,11 +82,10 @@ target_type(q) = error("target_type: don't know how to handle $q")
     typesize(c::CLCursor) -> Int
 Return field declaration size.
 """
-typesize(t::CLType) = sizeof(getfield(Base, CLANG_JULIA_TYPEMAP[kind(t)]))
-typesize(t::CLConstantArray) = element_num(t)
+typesize(t::CLType) = clang_Type_getSizeOf(t)
 typesize(t::CLTypedef) = typesize(typedecl(t))
-typesize(t::CLRecord) = (@warn("  incorrect typesize for CXType_Record field"); 0)
-typesize(t::CLUnexposed) = (@warn("  incorrect typesize for CXType_Unexposed field"); 0)
+typesize(t::CLElaborated) = typesize(get_named_type(t))
+typesize(t::CLConstantArray) = element_num(t)
 typesize(t::CLInvalid) = (@warn("  incorrect typesize for CXType_Invalid field"); 0)
 typesize(c::CLTypedefDecl) = typesize(underlying_type(c))
 
@@ -113,30 +112,42 @@ function clang2julia(t::Union{CLRecord,CLTypedef})
     return get(CLANG_JULIA_TYPEMAP, type_sym, type_sym)
 end
 
+"""
+    clang2julia(t::CLPointer)
+Pointers are translated to `Ptr`s.
+"""
 function clang2julia(t::CLPointer)
-    ptee = pointee_type(t)
-    pteeKind = kind(ptee)
-    (pteeKind == CXType_Char_U || pteeKind == CXType_Char_S) && return :Cstring
-    pteeKind == CXType_WChar && return :Cwstring
-    Expr(:curly, :Ptr, clang2julia(ptee))
+    ptree = pointee_type(t)
+    ptree_kind = kind(ptree)
+    (ptree_kind == CXType_Char_U || ptree_kind == CXType_Char_S) && return :Cstring
+    ptree_kind == CXType_WChar && return :Cwstring
+    Expr(:curly, :Ptr, clang2julia(ptree))
 end
 
+"""
+    clang2julia(t::CLUnexposed)
+Unexposed Clang types are translated to the symbol of its cursor name(if exist).
+"""
 function clang2julia(t::CLUnexposed)
-    r = spelling(typedecl(t))
-    r == "" ? :Cvoid : Symbol(r)
+    cursor_name = spelling(typedecl(t))
+    isempty(cursor_name) ? :Cvoid : Symbol(cursor_name)
 end
 
+"""
+    clang2julia(t::CLConstantArray)
+`ConstantArray`s are translated to `NTuple`s.
+"""
 function clang2julia(t::CLConstantArray)
-    # For ConstantArray declarations, we use NTuples
     arrsize = element_num(t)
     eltype = clang2julia(element_type(t))
     return :(NTuple{$arrsize, $eltype})
 end
 
-function clang2julia(t::CLIncompleteArray)
-    eltype = clang2julia(element_type(t))
-    Expr(:curly, :Ptr, eltype)
-end
+"""
+    clang2julia(t::CLIncompleteArray)
+`IncompleteArray`s are translated to pointers, so one need to deal with the byte offsets directly.
+"""
+clang2julia(t::CLIncompleteArray) = Expr(:curly, :Ptr, clang2julia(element_type(t)))
 
 """
     clang2julia(c::CLCursor) -> Symbol/Expr

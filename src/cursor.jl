@@ -568,7 +568,7 @@ function is_typedef_anon(current::CLCursor, next::CLCursor)
     !isempty(name(current)) && return false
     refback = children(next)
     if kind(next) == CXCursor_TypedefDecl &&
-       !isempty(refback) && name(refback[1]) == ""
+       !isempty(refback) && isempty(name(refback[1]))
         return true
     else
         return false

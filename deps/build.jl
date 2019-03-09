@@ -45,7 +45,7 @@ download_info = Dict(
 # Install unsatisfied or updated dependencies:
 unsatisfied = any(!satisfied(p; verbose=verbose) for p in products)
 @static if Sys.iswindows()
-    dl_info = download_info[Windows(:x86_64, compiler_abi=CompilerABI(:gcc7))]
+    dl_info = download_info[Windows(Sys.WORD_SIZE == 64 ? :x86_64 : :i686, compiler_abi=CompilerABI(:gcc7))]
 else
     dl_info = choose_download(download_info, platform_key_abi())
 end

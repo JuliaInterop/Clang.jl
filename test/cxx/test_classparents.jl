@@ -13,7 +13,7 @@ clsname = "Derived"
   tu = cindex.tu_parse(idx, hpath,
     ["-x", "c++",
      "-I./",
-     "-I$JULIA_HOME/../../deps/llvm-3.2/build/Release/lib/clang/3.3/include",
+     "-I$Sys.BINDIR/../../deps/llvm-3.2/build/Release/lib/clang/3.3/include",
      "-v", "-c"], 0)
 
   topcu = cindex.getTranslationUnitCursor(tu)
@@ -30,13 +30,13 @@ clsname = "Derived"
     end
   end
 
-function cxxclass_cb(cursor::Ptr{Uint8}, data::Ptr{Void})
+function cxxclass_cb(cursor::Ptr{Uint8}, data::Ptr{Cvoid})
          cu = CXCursor()
-         ccall(:memcpy, Void, (Ptr{Void},Ptr{Void}, Uint), cu.data, cursor, cindex.CXCursor_size)
+         ccall(:memcpy, Cvoid, (Ptr{Cvoid},Ptr{Cvoid}, Uint), cu.data, cursor, cindex.CXCursor_size)
          println("callback with: ", name(cu))
          return int(0)
        end
 
-_cb = cfunction(cxxclass_cb, Int, (Ptr{Uint8},Ptr{Void}))
+_cb = cfunction(cxxclass_cb, Int, (Ptr{Uint8},Ptr{Cvoid}))
 
-ccall( (:wci_getCXXClassParents, :libwrapclang), Int, (Ptr{Uint8}, Ptr{Void}), clscu.data, _cb)
+ccall( (:wci_getCXXClassParents, :libwrapclang), Int, (Ptr{Uint8}, Ptr{Cvoid}), clscu.data, _cb)

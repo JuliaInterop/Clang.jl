@@ -4,7 +4,7 @@ using BinaryProvider # requires BinaryProvider 0.3.0 or later
 const verbose = "--verbose" in ARGS
 const prefix = Prefix(get([a for a in ARGS if a != "--verbose"], 1, joinpath(@__DIR__, "usr")))
 products = [
-    LibraryProduct(prefix, ["libLLVM"], :libLLVM),
+    #LibraryProduct(prefix, ["libLLVM"], :libLLVM),
     LibraryProduct(prefix, ["libclang"], :libclang),
 ]
 
@@ -44,7 +44,12 @@ download_info = Dict(
 
 # Install unsatisfied or updated dependencies:
 unsatisfied = any(!satisfied(p; verbose=verbose) for p in products)
-dl_info = choose_download(download_info, platform_key_abi())
+@static if Sys.iswindows()
+    dl_info = download_info[Windows(:x86_64, compiler_abi=CompilerABI(:gcc7))]
+else
+    dl_info = choose_download(download_info, platform_key_abi())
+end
+
 if dl_info === nothing && unsatisfied
     # If we don't have a compatible .tar.gz to download, complain.
     # Alternatively, you could attempt to install from a separate provider,
@@ -56,7 +61,11 @@ end
 # trying to install is not itself installed) then load it up!
 if unsatisfied || !isinstalled(dl_info...; prefix=prefix)
     # Download and install binaries
-    install(dl_info...; prefix=prefix, force=true, verbose=verbose)
+    @static if Sys.iswindows()
+        install(dl_info...; prefix=prefix, force=true, verbose=verbose, ignore_platform=true)
+    else
+        install(dl_info...; prefix=prefix, force=true, verbose=verbose)
+    end
 end
 
 # Write out a deps.jl file that will contain mappings for our products

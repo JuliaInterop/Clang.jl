@@ -672,7 +672,6 @@ end
 )
 
 const CXCursorVisitor = Ptr{Cvoid}
-const CXCursorVisitorBlock = Cvoid
 
 @cenum(CXObjCPropertyAttrKind,
     CXObjCPropertyAttr_noattr = 0,
@@ -819,7 +818,6 @@ end
     CXResult_VisitBreak = 2,
 )
 
-const CXCursorAndRangeVisitorBlock = Cvoid
 const CXIdxClientFile = Ptr{Cvoid}
 const CXIdxClientEntity = Ptr{Cvoid}
 const CXIdxClientContainer = Ptr{Cvoid}

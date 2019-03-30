@@ -9,8 +9,8 @@ const LIBCLANG_INCLUDE = joinpath(@__DIR__, "..", "deps", "usr", "include", "cla
 const LIBCLANG_HEADERS = [joinpath(LIBCLANG_INCLUDE, header) for header in readdir(LIBCLANG_INCLUDE) if endswith(header, ".h")]
 
 @testset "generator" begin
-    api_path = joinpath(@__DIR__, "..", "gen", "libclang_api.jl")
-    common_path = joinpath(@__DIR__, "..", "gen", "libclang_common.jl")
+    api_path = joinpath(@__DIR__, "..", "gen", "libclang_api.jl") |> normpath
+    common_path = joinpath(@__DIR__, "..", "gen", "libclang_common.jl") |> normpath
     test_api_path = joinpath(@__DIR__, "test_api.jl")
     test_common_path = joinpath(@__DIR__, "test_common.jl")
     wc = init(; headers = LIBCLANG_HEADERS,
@@ -21,7 +21,7 @@ const LIBCLANG_HEADERS = [joinpath(LIBCLANG_INCLUDE, header) for header in readd
                 header_wrapped = (root, current)->root == current,
                 header_library = x->"libclang",
                 clang_diagnostics = true)
-    run(wc, false)
+    run(wc)
     @test read(test_api_path, String) == read(api_path, String)
     @test read(test_common_path, String) == read(common_path, String)
 end

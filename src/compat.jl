@@ -135,8 +135,8 @@ function Base.run(wc::WrapContext)
         @info "writing $(out_file)"
 
         out_stream = getfile(out_file)
-        println(out_stream, "# Julia wrapper for header: $header")
-        println(out_stream, "# Automatically generated using Clang.jl wrap_c\n")
+        println(out_stream, "# Julia wrapper for header: $(basename(header))")
+        println(out_stream, "# Automatically generated using Clang.jl\n")
         print_buffer(out_stream, ctx.api_buffer)
         ctx.api_buffer = Expr[]  # clean api_buffer for the next header
     end

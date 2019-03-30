@@ -11,3 +11,6 @@ deps/build.log
 gen/LibTemplate.jl
 gen/CEnum.jl
 gen/ctypes.jl
+
+test/test_api.jl
+test/test_common.jl

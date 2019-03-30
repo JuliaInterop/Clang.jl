@@ -37,7 +37,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Introduction",
     "title": "Backward compatibility",
     "category": "section",
-    "text": "If you miss those old behaviors before v0.8, you could simply make the following change in your old generator script:using Clang: CLANG_INCLUDE\nusing Clang.Deprecated.wrap_c\nusing Clang.Deprecated.cindex"
+    "text": "If you miss those old behaviors before v0.8, please Pkg.pin the package to v0.8 and make the following change in your old generator script:using Clang: CLANG_INCLUDE\nusing Clang.Deprecated.wrap_c\nusing Clang.Deprecated.cindex"
 },
 
 {

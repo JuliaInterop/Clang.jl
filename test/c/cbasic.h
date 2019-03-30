@@ -10,3 +10,4 @@ typedef enum {
 
 int func1(int a, double b, double* c, void* d);
 
+int func_constarr_arg(double x[3]);

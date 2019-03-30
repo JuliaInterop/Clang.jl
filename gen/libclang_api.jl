@@ -293,8 +293,8 @@ function clang_getFileName(SFile)
     ccall((:clang_getFileName, libclang), CXString, (CXFile,), SFile)
 end
 
-function clang_getFileTime()
-    ccall((:clang_getFileTime, libclang), Cint, ())
+function clang_getFileTime(SFile)
+    ccall((:clang_getFileTime, libclang), Ctime_t, (CXFile,), SFile)
 end
 
 function clang_getFileUniqueID(file, outID)
@@ -310,7 +310,7 @@ function clang_getFile(tu, file_name)
 end
 
 function clang_getFileContents(tu, file, size)
-    ccall((:clang_getFileContents, libclang), Cstring, (CXTranslationUnit, CXFile, Ptr{Cint}), tu, file, size)
+    ccall((:clang_getFileContents, libclang), Cstring, (CXTranslationUnit, CXFile, Ptr{Csize_t}), tu, file, size)
 end
 
 function clang_File_isEqual(file1, file2)
@@ -957,10 +957,6 @@ function clang_visitChildren(parent, visitor, client_data)
     ccall((:clang_visitChildren, libclang), UInt32, (CXCursor, CXCursorVisitor, CXClientData), parent, visitor, client_data)
 end
 
-function clang_visitChildrenWithBlock(parent, block)
-    ccall((:clang_visitChildrenWithBlock, libclang), UInt32, (CXCursor, CXCursorVisitorBlock), parent, block)
-end
-
 function clang_getCursorUSR(arg1)
     ccall((:clang_getCursorUSR, libclang), CXString, (CXCursor,), arg1)
 end
@@ -1371,14 +1367,6 @@ end
 
 function clang_findIncludesInFile(TU, file, visitor)
     ccall((:clang_findIncludesInFile, libclang), CXResult, (CXTranslationUnit, CXFile, CXCursorAndRangeVisitor), TU, file, visitor)
-end
-
-function clang_findReferencesInFileWithBlock(arg1, arg2, arg3)
-    ccall((:clang_findReferencesInFileWithBlock, libclang), CXResult, (CXCursor, CXFile, CXCursorAndRangeVisitorBlock), arg1, arg2, arg3)
-end
-
-function clang_findIncludesInFileWithBlock(arg1, arg2, arg3)
-    ccall((:clang_findIncludesInFileWithBlock, libclang), CXResult, (CXTranslationUnit, CXFile, CXCursorAndRangeVisitorBlock), arg1, arg2, arg3)
 end
 
 function clang_index_isEntityObjCContainerKind(arg1)

@@ -52,7 +52,8 @@ run(wc)
 ```
 
 #### Backward compatibility
-If you miss those old behaviors before v0.8, you could simply make the following change in your old generator script:
+If you miss those old behaviors before v0.8, please `Pkg.pin` the package to v0.8 and
+make the following change in your old generator script:
 ```julia
 using Clang: CLANG_INCLUDE
 using Clang.Deprecated.wrap_c

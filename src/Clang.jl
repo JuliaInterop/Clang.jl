@@ -80,6 +80,4 @@ const CLANG_INCLUDE = LLVM_INCLUDE
 
 export LLVM_VERSION, LLVM_LIBDIR, LLVM_INCLUDE, CLANG_INCLUDE
 
-include("deprecated/Deprecated.jl")
-
 end

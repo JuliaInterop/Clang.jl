@@ -21,6 +21,13 @@ function wrap!(ctx::AbstractContext, cursor::CLFunctionDecl)
     args = function_args(cursor)
     arg_types = [argtype(func_type, i) for i in 0:length(args)-1]
     arg_reps = clang2julia.(arg_types)
+    for (i, arg) in enumerate(arg_reps)
+        # constant array argument should be converted to Ptr
+        # e.g. double f[3] => Ptr{Cdouble} instead of NTuple{3, Cdouble}
+        if Meta.isexpr(arg, :curly) && first(arg.args) == :NTuple
+            arg_reps[i] = Expr(:curly, :Ptr, last(arg.args))
+        end
+    end
 
     # check whether any argument types are blocked
     for t in arg_types

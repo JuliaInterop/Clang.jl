@@ -84,7 +84,7 @@ function init(; headers::Vector{String}                    = String[],
     return context
 end
 
-function Base.run(wc::WrapContext)
+function Base.run(wc::WrapContext, generate_template=true)
     # parse headers
     ctx = DefaultContext(wc.index)
     parse_headers!(ctx, wc.headers, args=wc.clang_args, includes=wc.clang_includes)
@@ -148,12 +148,14 @@ function Base.run(wc::WrapContext)
 
     # write "common" definitions: types, typealiases, etc.
     open(wc.common_file, "w") do f
-        println(f, "# Automatically generated using Clang.jl wrap_c\n")
+        println(f, "# Automatically generated using Clang.jl\n")
         print_buffer(f, common_buf)
     end
 
     map(close, values(filehandles))
 
-    copydeps(dirname(wc.common_file))
-    print_template(joinpath(dirname(wc.common_file), "LibTemplate.jl"))
+    if generate_template
+        copydeps(dirname(wc.common_file))
+        print_template(joinpath(dirname(wc.common_file), "LibTemplate.jl"))
+    end
 end

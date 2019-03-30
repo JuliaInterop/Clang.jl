@@ -41,18 +41,14 @@ download_info = Dict(
     FreeBSD(:x86_64, compiler_abi=CompilerABI(:gcc4)) => ("$bin_prefix/LLVM.v6.0.1.x86_64-unknown-freebsd11.1-gcc4.tar.gz", "8bbc4db3cf4435bf3ea5e5558659ee8796840d1c1e5b738ada17b273a0349047"),
     FreeBSD(:x86_64, compiler_abi=CompilerABI(:gcc7)) => ("$bin_prefix/LLVM.v6.0.1.x86_64-unknown-freebsd11.1-gcc7.tar.gz", "91bffae12a1727b4218c8c698de6bc7ef2ee6270224046d3a69aa284708f15f2"),
     FreeBSD(:x86_64, compiler_abi=CompilerABI(:gcc8)) => ("$bin_prefix/LLVM.v6.0.1.x86_64-unknown-freebsd11.1-gcc8.tar.gz", "313171f8959e78ecb197163b19c9e0b97b5fec48062d3c5ded9b16ca9c303d56"),
-    Windows(:x86_64, compiler_abi=CompilerABI(:gcc4)) => ("$bin_prefix/LLVM.v6.0.1.x86_64-w64-mingw32-gcc4.tar.gz", "661bd6e7ac6a977d00822053c28b0d903973f27028ed8685c843aa7cdbfc01e4"),
-    Windows(:x86_64, compiler_abi=CompilerABI(:gcc7)) => ("$bin_prefix/LLVM.v6.0.1.x86_64-w64-mingw32-gcc7.tar.gz", "998a1932884121f15d7d5b2e75fb977695a4d448dd3888c10a18aafa83faf8c9"),
+    # Windows(:x86_64, compiler_abi=CompilerABI(:gcc4)) => ("$bin_prefix/LLVM.v6.0.1.x86_64-w64-mingw32-gcc4.tar.gz", "661bd6e7ac6a977d00822053c28b0d903973f27028ed8685c843aa7cdbfc01e4"),
+    Windows(:x86_64) => ("$bin_prefix/LLVM.v6.0.1.x86_64-w64-mingw32-gcc7.tar.gz", "998a1932884121f15d7d5b2e75fb977695a4d448dd3888c10a18aafa83faf8c9"),
     Windows(:x86_64, compiler_abi=CompilerABI(:gcc8)) => ("$bin_prefix/LLVM.v6.0.1.x86_64-w64-mingw32-gcc8.tar.gz", "9218695814f413b9423228d6fbef2eeba5812a1c99023f9c500bdf6fa55ce972"),
 )
 
 # Install unsatisfied or updated dependencies:
 unsatisfied = any(!satisfied(p; verbose=verbose) for p in products)
-@static if Sys.iswindows()
-    dl_info = download_info[Windows(Sys.WORD_SIZE == 64 ? :x86_64 : :i686, compiler_abi=CompilerABI(:gcc7))]
-else
-    dl_info = choose_download(download_info, platform_key_abi())
-end
+dl_info = choose_download(download_info, platform_key_abi())
 
 if dl_info === nothing && unsatisfied
     # If we don't have a compatible .tar.gz to download, complain.
@@ -65,11 +61,7 @@ end
 # trying to install is not itself installed) then load it up!
 if unsatisfied || !isinstalled(dl_info...; prefix=prefix)
     # Download and install binaries
-    @static if Sys.iswindows()
-        install(dl_info...; prefix=prefix, force=true, verbose=verbose, ignore_platform=true)
-    else
-        install(dl_info...; prefix=prefix, force=true, verbose=verbose)
-    end
+    install(dl_info...; prefix=prefix, force=true, verbose=verbose, ignore_platform=true)
 end
 
 # Write out a deps.jl file that will contain mappings for our products

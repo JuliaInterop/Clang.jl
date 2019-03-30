@@ -1,4 +1,4 @@
-# Julia wrapper for header: /Users/gnimuc/.julia/dev/Clang/deps/usr/include/clang-c/BuildSystem.h
+# Julia wrapper for header: BuildSystem.h
 # Automatically generated using Clang.jl
 
 
@@ -49,7 +49,7 @@ end
 function clang_ModuleMapDescriptor_dispose(arg1)
     ccall((:clang_ModuleMapDescriptor_dispose, libclang), Cvoid, (CXModuleMapDescriptor,), arg1)
 end
-# Julia wrapper for header: /Users/gnimuc/.julia/dev/Clang/deps/usr/include/clang-c/CXCompilationDatabase.h
+# Julia wrapper for header: CXCompilationDatabase.h
 # Automatically generated using Clang.jl
 
 
@@ -108,10 +108,10 @@ end
 function clang_CompileCommand_getMappedSourceContent(arg1, I)
     ccall((:clang_CompileCommand_getMappedSourceContent, libclang), CXString, (CXCompileCommand, UInt32), arg1, I)
 end
-# Julia wrapper for header: /Users/gnimuc/.julia/dev/Clang/deps/usr/include/clang-c/CXErrorCode.h
+# Julia wrapper for header: CXErrorCode.h
 # Automatically generated using Clang.jl
 
-# Julia wrapper for header: /Users/gnimuc/.julia/dev/Clang/deps/usr/include/clang-c/CXString.h
+# Julia wrapper for header: CXString.h
 # Automatically generated using Clang.jl
 
 
@@ -126,7 +126,7 @@ end
 function clang_disposeStringSet(set)
     ccall((:clang_disposeStringSet, libclang), Cvoid, (Ptr{CXStringSet},), set)
 end
-# Julia wrapper for header: /Users/gnimuc/.julia/dev/Clang/deps/usr/include/clang-c/Documentation.h
+# Julia wrapper for header: Documentation.h
 # Automatically generated using Clang.jl
 
 
@@ -265,7 +265,7 @@ end
 function clang_FullComment_getAsXML(Comment)
     ccall((:clang_FullComment_getAsXML, libclang), CXString, (CXComment,), Comment)
 end
-# Julia wrapper for header: /Users/gnimuc/.julia/dev/Clang/deps/usr/include/clang-c/Index.h
+# Julia wrapper for header: Index.h
 # Automatically generated using Clang.jl
 
 
@@ -293,8 +293,8 @@ function clang_getFileName(SFile)
     ccall((:clang_getFileName, libclang), CXString, (CXFile,), SFile)
 end
 
-function clang_getFileTime(SFile)
-    ccall((:clang_getFileTime, libclang), Ctime_t, (CXFile,), SFile)
+function clang_getFileTime()
+    ccall((:clang_getFileTime, libclang), Cint, ())
 end
 
 function clang_getFileUniqueID(file, outID)
@@ -310,7 +310,7 @@ function clang_getFile(tu, file_name)
 end
 
 function clang_getFileContents(tu, file, size)
-    ccall((:clang_getFileContents, libclang), Cstring, (CXTranslationUnit, CXFile, Ptr{Csize_t}), tu, file, size)
+    ccall((:clang_getFileContents, libclang), Cstring, (CXTranslationUnit, CXFile, Ptr{Cint}), tu, file, size)
 end
 
 function clang_File_isEqual(file1, file2)
@@ -1460,6 +1460,6 @@ end
 function clang_Type_visitFields(T, visitor, client_data)
     ccall((:clang_Type_visitFields, libclang), UInt32, (CXType, CXFieldVisitor, CXClientData), T, visitor, client_data)
 end
-# Julia wrapper for header: /Users/gnimuc/.julia/dev/Clang/deps/usr/include/clang-c/Platform.h
+# Julia wrapper for header: Platform.h
 # Automatically generated using Clang.jl
 

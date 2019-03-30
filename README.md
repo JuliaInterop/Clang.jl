@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/JuliaInterop/Clang.jl.svg?branch=master)](https://travis-ci.org/JuliaInterop/Clang.jl)
 [![Build status](https://ci.appveyor.com/api/projects/status/u4rkpvm2y4o8bo8r/branch/master?svg=true)](https://ci.appveyor.com/project/Gnimuc/clang-jl/branch/master)
-[![codecov.io](http://codecov.io/github/ihnorton/Clang.jl/coverage.svg?branch=master)](http://codecov.io/github/ihnorton/Clang.jl?branch=master)
+[![codecov](https://codecov.io/gh/JuliaInterop/Clang.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/JuliaInterop/Clang.jl)
 [![](https://img.shields.io/badge/docs-stable-blue.svg)](https://JuliaInterop.github.io/Clang.jl/stable)
 [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://JuliaInterop.github.io/Clang.jl/dev)
 

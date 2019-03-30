@@ -22,9 +22,11 @@ download_info = Dict(
     Linux(:i686, libc=:glibc, compiler_abi=CompilerABI(:gcc4)) => ("$bin_prefix/LLVM.v6.0.1.i686-linux-gnu-gcc4.tar.gz", "0e631d89d8d7afac8d0c41a10ec33b69e6fdf376828c7e6fde63fe807fd94aca"),
     Linux(:i686, libc=:glibc, compiler_abi=CompilerABI(:gcc7)) => ("$bin_prefix/LLVM.v6.0.1.i686-linux-gnu-gcc7.tar.gz", "177d35b2ef323cc3e46e2f890e15e1c143965ac0201a182c32b64f3b1077d50f"),
     Linux(:i686, libc=:glibc, compiler_abi=CompilerABI(:gcc8)) => ("$bin_prefix/LLVM.v6.0.1.i686-linux-gnu-gcc8.tar.gz", "602dc54bebb49c1571f34979f09fd3d29efd2957878eab7f192201fc093897ce"),
-    Windows(:i686, compiler_abi=CompilerABI(:gcc4)) => ("$bin_prefix/LLVM.v6.0.1.i686-w64-mingw32-gcc4.tar.gz", "8749ddb21111ea921c384904720ab02d1f35524d0a40b7b3cbb1c8e18c3c42a6"),
-    Windows(:i686, compiler_abi=CompilerABI(:gcc7)) => ("$bin_prefix/LLVM.v6.0.1.i686-w64-mingw32-gcc7.tar.gz", "be708ffeca9a896da1e2a7fc55cdd69697606d7cdd19ebe0b5907d02abe04609"),
-    Windows(:i686, compiler_abi=CompilerABI(:gcc8)) => ("$bin_prefix/LLVM.v6.0.1.i686-w64-mingw32-gcc8.tar.gz", "86ebb8926e57821431a3d2ccd6ff76f47e6a4d621ceefecf353df0598363c1bd"),
+    # welp, we still use 1.0 binaries on 32bit Windows. 
+    Windows(:i686) => ("https://github.com/ihnorton/Clang.jl/releases/download/Julia1.0-compatible/LLVM.v6.0.0.i686-w64-mingw32.tar.gz", "6e2f786ece1fc434ea09f2c67cc71a5f8254ac724430ba018238c1e94b4f053b"),
+    # Windows(:i686, compiler_abi=CompilerABI(:gcc4)) => ("$bin_prefix/LLVM.v6.0.1.i686-w64-mingw32-gcc4.tar.gz", "8749ddb21111ea921c384904720ab02d1f35524d0a40b7b3cbb1c8e18c3c42a6"),
+    # Windows(:i686, compiler_abi=CompilerABI(:gcc7)) => ("$bin_prefix/LLVM.v6.0.1.i686-w64-mingw32-gcc7.tar.gz", "be708ffeca9a896da1e2a7fc55cdd69697606d7cdd19ebe0b5907d02abe04609"),
+    # Windows(:i686, compiler_abi=CompilerABI(:gcc8)) => ("$bin_prefix/LLVM.v6.0.1.i686-w64-mingw32-gcc8.tar.gz", "86ebb8926e57821431a3d2ccd6ff76f47e6a4d621ceefecf353df0598363c1bd"),
     Linux(:powerpc64le, libc=:glibc, compiler_abi=CompilerABI(:gcc4)) => ("$bin_prefix/LLVM.v6.0.1.powerpc64le-linux-gnu-gcc4.tar.gz", "bb2a00ddc00febd345ab87e64d2e071f409727148b6bf9f77129360e695de25f"),
     Linux(:powerpc64le, libc=:glibc, compiler_abi=CompilerABI(:gcc7)) => ("$bin_prefix/LLVM.v6.0.1.powerpc64le-linux-gnu-gcc7.tar.gz", "43301b92a54aabf5b21a8a00c6904ecb8e9d18d7275051a3af383e20dfc1b5cc"),
     Linux(:powerpc64le, libc=:glibc, compiler_abi=CompilerABI(:gcc8)) => ("$bin_prefix/LLVM.v6.0.1.powerpc64le-linux-gnu-gcc8.tar.gz", "6f0533b16bbdc4bfc661eb27b404f361422de42cc41c0477b53433c3b219464c"),
@@ -41,8 +43,9 @@ download_info = Dict(
     FreeBSD(:x86_64, compiler_abi=CompilerABI(:gcc4)) => ("$bin_prefix/LLVM.v6.0.1.x86_64-unknown-freebsd11.1-gcc4.tar.gz", "8bbc4db3cf4435bf3ea5e5558659ee8796840d1c1e5b738ada17b273a0349047"),
     FreeBSD(:x86_64, compiler_abi=CompilerABI(:gcc7)) => ("$bin_prefix/LLVM.v6.0.1.x86_64-unknown-freebsd11.1-gcc7.tar.gz", "91bffae12a1727b4218c8c698de6bc7ef2ee6270224046d3a69aa284708f15f2"),
     FreeBSD(:x86_64, compiler_abi=CompilerABI(:gcc8)) => ("$bin_prefix/LLVM.v6.0.1.x86_64-unknown-freebsd11.1-gcc8.tar.gz", "313171f8959e78ecb197163b19c9e0b97b5fec48062d3c5ded9b16ca9c303d56"),
-    # Windows(:x86_64, compiler_abi=CompilerABI(:gcc4)) => ("$bin_prefix/LLVM.v6.0.1.x86_64-w64-mingw32-gcc4.tar.gz", "661bd6e7ac6a977d00822053c28b0d903973f27028ed8685c843aa7cdbfc01e4"),
     Windows(:x86_64) => ("$bin_prefix/LLVM.v6.0.1.x86_64-w64-mingw32-gcc7.tar.gz", "998a1932884121f15d7d5b2e75fb977695a4d448dd3888c10a18aafa83faf8c9"),
+    # Windows(:x86_64, compiler_abi=CompilerABI(:gcc4)) => ("$bin_prefix/LLVM.v6.0.1.x86_64-w64-mingw32-gcc4.tar.gz", "661bd6e7ac6a977d00822053c28b0d903973f27028ed8685c843aa7cdbfc01e4"),
+    # Windows(:x86_64, compiler_abi=CompilerABI(:gcc7)) => ("$bin_prefix/LLVM.v6.0.1.x86_64-w64-mingw32-gcc7.tar.gz", "998a1932884121f15d7d5b2e75fb977695a4d448dd3888c10a18aafa83faf8c9"),
     Windows(:x86_64, compiler_abi=CompilerABI(:gcc8)) => ("$bin_prefix/LLVM.v6.0.1.x86_64-w64-mingw32-gcc8.tar.gz", "9218695814f413b9423228d6fbef2eeba5812a1c99023f9c500bdf6fa55ce972"),
 )
 

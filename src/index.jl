@@ -16,7 +16,7 @@ mutable struct Index
         obj = new(ptr, exclude_decls_from_PCH, display_diagnostics)
         finalizer(obj) do x
             if x.ptr != C_NULL
-                clang_disposeIndex(x.ptr)
+                clang_disposeIndex(x)
                 x.ptr = C_NULL
             end
         end
@@ -26,6 +26,7 @@ end
 Index(diagnostic::Bool) = Index(false, diagnostic)
 Index() = Index(true)
 
+Base.unsafe_convert(::Type{CXIndex}, x::Index) = x.ptr
 
 ## TODO:
 # clang_CXIndex_setGlobalOptions

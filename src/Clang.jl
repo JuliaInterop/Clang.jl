@@ -64,13 +64,10 @@ include("compat.jl")
 export WrapContext, init
 
 function version()
-    GC.@preserve begin
-        cxstr = clang_getClangVersion()
-        ptr = clang_getCString(cxstr)
-        s = unsafe_string(ptr)
-        clang_disposeString(cxstr)
-    end
-    return s
+    cxstr = clang_getClangVersion()
+    ptr = clang_getCString(cxstr)
+    clang_disposeString(cxstr)
+    return unsafe_string(ptr)
 end
 
 const LLVM_VERSION = match(r"[0-9]+.[0-9]+.[0-9]+", version()).match

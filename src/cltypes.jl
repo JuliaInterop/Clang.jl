@@ -20,9 +20,9 @@ for sym in enum_names(CXCursorKind)
 end
 
 CLCursor(c::CXCursor) = CXCursorMap[c.kind](c)
-Base.convert(::Type{CXCursor}, x::T) where {T<:CLCursor} = x.cursor
-Base.convert(::Type{CLCursor}, x::CXCursor) = CLCursor(x)
-
+Base.convert(::Type{CXCursor}, x::CLCursor) = x.cursor
+Base.convert(::Type{T}, x::CXCursor) where {T<:CLCursor} = CLCursor(x)
+Base.unsafe_convert(::Type{CXCursor}, x::CLCursor) = x.cursor
 
 # each CXTypeKind enum gets a specific Julia type wrapping
 # so that we can dispatch directly on node kinds.
@@ -41,9 +41,9 @@ for sym in enum_names(CXTypeKind)
 end
 
 CLType(c::CXType) = CLTypeMap[c.kind](c)
-Base.convert(::Type{CXType}, x::T) where {T<:CLType} = x.type
-Base.convert(::Type{CLType}, x::CXType) = CLType(x)
-
+Base.convert(::Type{CXType}, x::CLType) = x.type
+Base.convert(::Type{T}, x::CXType) where {T<:CLType} = CLType(x)
+Base.unsafe_convert(::Type{CXType}, x::CLType) = x.type
 
 # CLToken
 abstract type CLToken end
@@ -62,4 +62,5 @@ for sym in enum_names(CXTokenKind)
     end
 end
 
-Base.convert(::Type{CXToken}, x::T) where {T<:CLToken} = x.token
+Base.convert(::Type{CXToken}, x::CLToken) = x.token
+Base.unsafe_convert(::Type{CXToken}, x::CLToken) = x.token

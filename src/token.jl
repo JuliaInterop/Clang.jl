@@ -7,13 +7,11 @@ mutable struct TokenList
     size::Cuint
     tu::CXTranslationUnit
     function TokenList(tu::CXTranslationUnit, sr::CXSourceRange)
-        GC.@preserve tu sr begin
-            ptr_ref = Ref{Ptr{CXToken}}(C_NULL)
-            num_ref = Ref{Cuint}(0)
-            clang_tokenize(tu, sr, ptr_ref, num_ref)
-            @assert ptr_ref[] != C_NULL
-            obj = new(ptr_ref[], num_ref[], tu)
-        end
+        ptr_ref = Ref{Ptr{CXToken}}(C_NULL)
+        num_ref = Ref{Cuint}(0)
+        clang_tokenize(tu, sr, ptr_ref, num_ref)
+        @assert ptr_ref[] != C_NULL
+        obj = new(ptr_ref[], num_ref[], tu)
         finalizer(obj) do x
             if x.ptr != C_NULL
                 clang_disposeTokens(x.tu, x.ptr, x.size)
@@ -55,13 +53,10 @@ Return the spelling of the given token. The spelling of a token is the textual
 representation of that token, e.g., the text of an identifier or keyword.
 """
 function spelling(tu::CXTranslationUnit, t::CXToken)
-    GC.@preserve tu begin
-        cxstr = clang_getTokenSpelling(tu, t)
-        ptr = clang_getCString(cxstr)
-        s = unsafe_string(ptr)
-        clang_disposeString(cxstr)
-    end
-    return s
+    cxstr = clang_getTokenSpelling(tu, t)
+    ptr = clang_getCString(cxstr)
+    clang_disposeString(cxstr)
+    return unsafe_string(ptr)
 end
 spelling(tu::TranslationUnit, t::CXToken) = spelling(tu.ptr, t)
 spelling(tu::TranslationUnit, t::CLToken) = spelling(tu.ptr, t.token)
@@ -93,26 +88,24 @@ Return a TokenList from the given cursor.
 """
 function tokenize(c::CXCursor)
     tu = clang_Cursor_getTranslationUnit(c)
-    GC.@preserve tu begin
-        source_range = clang_getCursorExtent(c)
-        range_start = clang_getRangeStart(source_range)
-        range_end = clang_getRangeEnd(source_range)
+    source_range = clang_getCursorExtent(c)
+    range_start = clang_getRangeStart(source_range)
+    range_end = clang_getRangeEnd(source_range)
 
-        file = Ref{CXFile}(C_NULL)
-        start_line = Ref{Cuint}(0)
-        end_line = Ref{Cuint}(0)
-        start_column = Ref{Cuint}(0)
-        end_column = Ref{Cuint}(0)
-        offset = Ref{Cuint}(0)
-        clang_getExpansionLocation(range_start, file, start_line, start_column, offset)
-        clang_getExpansionLocation(range_end, file, end_line, end_column, offset)
+    file = Ref{CXFile}(C_NULL)
+    start_line = Ref{Cuint}(0)
+    end_line = Ref{Cuint}(0)
+    start_column = Ref{Cuint}(0)
+    end_column = Ref{Cuint}(0)
+    offset = Ref{Cuint}(0)
+    clang_getExpansionLocation(range_start, file, start_line, start_column, offset)
+    clang_getExpansionLocation(range_end, file, end_line, end_column, offset)
 
-        expanded_start = clang_getLocation(tu, file[], start_line[], start_column[])
-        expanded_end = clang_getLocation(tu, file[], end_line[], end_column[])
-        expanded_range = clang_getRange(expanded_start, expanded_end)
-        list = TokenList(tu, expanded_range)
-    end
-    return list
+    expanded_start = clang_getLocation(tu, file[], start_line[], start_column[])
+    expanded_end = clang_getLocation(tu, file[], end_line[], end_column[])
+    expanded_range = clang_getRange(expanded_start, expanded_end)
+
+    return TokenList(tu, expanded_range)
 end
 tokenize(c::CLCursor) = tokenize(c.cursor)
 

@@ -31,8 +31,9 @@ Return the original translation unit source file name.
 function spelling(tu::TranslationUnit)
     cxstr = clang_getTranslationUnitSpelling(tu)
     ptr = clang_getCString(cxstr)
+    s = unsafe_string(ptr)
     clang_disposeString(cxstr)
-    return unsafe_string(ptr)
+    return s
 end
 
 """

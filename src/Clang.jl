@@ -66,8 +66,9 @@ export WrapContext, init
 function version()
     cxstr = clang_getClangVersion()
     ptr = clang_getCString(cxstr)
+    s = unsafe_string(ptr)
     clang_disposeString(cxstr)
-    return unsafe_string(ptr)
+    return s
 end
 
 const LLVM_VERSION = match(r"[0-9]+.[0-9]+.[0-9]+", version()).match

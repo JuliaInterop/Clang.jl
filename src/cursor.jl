@@ -376,8 +376,9 @@ Return a name for the entity referenced by this cursor.
 function spelling(c::Union{CXCursor,CLCursor})
     cxstr = clang_getCursorSpelling(c)
     ptr = clang_getCString(cxstr)
+    s = unsafe_string(ptr)
     clang_disposeString(cxstr)
-    return unsafe_string(ptr)
+    return s
 end
 
 # clang_Cursor_getSpellingNameRange
@@ -390,8 +391,9 @@ Return the display name for the entity referenced by this cursor.
 function name(c::Union{CXCursor,CLCursor})
     cxstr = clang_getCursorDisplayName(c)
     ptr = clang_getCString(cxstr)
+    s = unsafe_string(ptr)
     clang_disposeString(cxstr)
-    return unsafe_string(ptr)
+    return s
 end
 
 """
@@ -453,8 +455,9 @@ isvariadic(c::CLCursor) = clang_Cursor_isVariadic(c) != 0
 function spelling(k::CXCursorKind)
     cxstr = clang_getCursorKindSpelling(k)
     ptr = clang_getCString(cxstr)
+    s = unsafe_string(ptr)
     clang_disposeString(cxstr)
-    return unsafe_string(ptr)
+    return s
 end
 
 
@@ -474,8 +477,9 @@ function filename(c::Union{CXCursor,CLCursor})
     if file[] != C_NULL
         cxstr = clang_getFileName(file[])
         ptr = clang_getCString(cxstr)
+        s = unsafe_string(ptr)
         clang_disposeString(cxstr)
-        return unsafe_string(ptr)
+        return s
     else
         return ""
     end

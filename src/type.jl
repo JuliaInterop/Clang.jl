@@ -61,8 +61,9 @@ Wrapper for libclang's `clang_getTypedefName`.
 function typedef_name(t::Union{CXType,CLType})
     cxstr = clang_getTypedefName(t)
     ptr = clang_getCString(cxstr)
+    s = unsafe_string(ptr)
     clang_disposeString(cxstr)
-    return unsafe_string(ptr)
+    return s
 end
 
 """
@@ -93,8 +94,9 @@ Wrapper for libclang's `clang_getTypeSpelling`.
 function spelling(t::Union{CXType,CLType})
     cxstr = clang_getTypeSpelling(t)
     ptr = clang_getCString(cxstr)
+    s = unsafe_string(ptr)
     clang_disposeString(cxstr)
-    return unsafe_string(ptr)
+    return s
 end
 
 """
@@ -104,8 +106,9 @@ Return the spelling of a given CXTypeKind.
 function spelling(kind::CXTypeKind)
     cxstr = clang_getTypeKindSpelling(kind)
     ptr = clang_getCString(cxstr)
+    s = unsafe_string(ptr)
     clang_disposeString(cxstr)
-    return unsafe_string(ptr)
+    return s
 end
 
 """

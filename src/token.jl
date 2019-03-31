@@ -55,8 +55,9 @@ representation of that token, e.g., the text of an identifier or keyword.
 function spelling(tu::CXTranslationUnit, t::CXToken)
     cxstr = clang_getTokenSpelling(tu, t)
     ptr = clang_getCString(cxstr)
+    s = unsafe_string(ptr)
     clang_disposeString(cxstr)
-    return unsafe_string(ptr)
+    return s
 end
 spelling(tu::TranslationUnit, t::CXToken) = spelling(tu.ptr, t)
 spelling(tu::TranslationUnit, t::CLToken) = spelling(tu.ptr, t.token)

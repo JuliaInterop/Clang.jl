@@ -5,16 +5,13 @@ Parse the given source file and the translation unit corresponding to that file.
 """
 mutable struct TranslationUnit
     ptr::CXTranslationUnit
-    idx::Index
     function TranslationUnit(idx::Index, source_filename, command_line_args, num_command_line_args, unsaved_files, num_unsaved_files, options)
-        GC.@preserve idx begin
-            ptr = clang_parseTranslationUnit(idx.ptr, source_filename, command_line_args, num_command_line_args, unsaved_files, num_unsaved_files, options)
-            @assert ptr != C_NULL "failed to parse file: $source_filename"
-            obj = new(ptr, idx)
-        end
+        ptr = clang_parseTranslationUnit(idx, source_filename, command_line_args, num_command_line_args, unsaved_files, num_unsaved_files, options)
+        @assert ptr != C_NULL "failed to parse file: $source_filename"
+        obj = new(ptr)
         finalizer(obj) do x
             if x.ptr != C_NULL
-                clang_disposeTranslationUnit(x.ptr)
+                clang_disposeTranslationUnit(x)
                 x.ptr = C_NULL
             end
         end
@@ -25,27 +22,26 @@ TranslationUnit(idx, source, args, unsavedFiles, options) = TranslationUnit(idx,
 TranslationUnit(idx, source, args, options) = TranslationUnit(idx, source, args, length(args), C_NULL, 0, options)
 TranslationUnit(idx, source, args) = TranslationUnit(idx, source, args, length(args), C_NULL, 0, CXTranslationUnit_None)
 
+Base.unsafe_convert(::Type{CXTranslationUnit}, x::TranslationUnit) = x.ptr
+
 """
     spelling(tu::TranslationUnit) -> String
 Return the original translation unit source file name.
 """
 function spelling(tu::TranslationUnit)
-    GC.@preserve tu begin
-        cxstr = clang_getTranslationUnitSpelling(tu.ptr)
-        ptr = clang_getCString(cxstr)
-        s = unsafe_string(ptr)
-        clang_disposeString(cxstr)
-    end
-    return s
+    cxstr = clang_getTranslationUnitSpelling(tu)
+    ptr = clang_getCString(cxstr)
+    clang_disposeString(cxstr)
+    return unsafe_string(ptr)
 end
 
 """
-    getcursor(tu::TranslationUnit) -> CXCursor
-    getcursor(tu::CXTranslationUnit) -> CLCursor
+    getcursor(tu::TranslationUnit) -> CLCursor
+    getcursor(tu::CXTranslationUnit) -> CXCursor
 Return the cursor that represents the given translation unit.
 """
 getcursor(tu::CXTranslationUnit) = clang_getTranslationUnitCursor(tu)
-getcursor(tu::TranslationUnit)::CLCursor = getcursor(tu.ptr)
+getcursor(tu::TranslationUnit)::CLCursor = clang_getTranslationUnitCursor(tu)
 
 ## TODO:
 # clang_parseTranslationUnit2
@@ -89,20 +85,10 @@ end
 
 """
     parse_headers(headers::Vector{String}; index::Index=Index(), args::Vector{String}=String[], includes::Vector{String}=String[],
-        flags = CXTranslationUnit_DetailedPreprocessingRecord | CXTranslationUnit_SkipFunctionBodies) -> Dict
-Return a TranslationUnit Dict for the given headers. See also [`parse_header`](@ref).
+        flags = CXTranslationUnit_DetailedPreprocessingRecord | CXTranslationUnit_SkipFunctionBodies) -> Vector{TranslationUnit}
+Return a [`TranslationUnit`](@ref) vector for the given headers. See also [`parse_header`](@ref).
 """
-function parse_headers(headers::Vector{String};
-                       index::Index = Index(),
-                       args::Vector{String} = String[],
-                       includes::Vector{String} = String[],
-                       flags = CXTranslationUnit_DetailedPreprocessingRecord |
-                               CXTranslationUnit_SkipFunctionBodies)
-    trans_units = TranslationUnit[]
-    # Parse the headers
-    for header in unique(headers)
-        tu = parse_header(header; index=index, args=args, includes=includes, flags=flags)
-        push!(trans_units, tu)
-    end
-    return trans_units
-end
+parse_headers(headers::Vector{String}; index::Index=Index(), args::Vector{String}=String[],
+    includes::Vector{String}=String[], flags=CXTranslationUnit_DetailedPreprocessingRecord |
+    CXTranslationUnit_SkipFunctionBodies) = [parse_header(header; index=index, args=args,
+                                                          includes=includes, flags=flags) for header in unique(headers)]

@@ -11,7 +11,7 @@ For example, if 'T' is a typedef for 'int', the canonical type for 'T' would be 
 Wrapper for libclang's `clang_getCanonicalType`.
 """
 canonical(t::CXType) = clang_getCanonicalType(t)
-canonical(t::CLType)::CLType = canonical(t.type)
+canonical(t::CLType)::CLType = clang_getCanonicalType(t)
 
 """
     isconst(t::CXType) -> Bool
@@ -21,7 +21,7 @@ that may have added "const" at a different level.
 Wrapper for libclang's `clang_isConstQualifiedType`.
 """
 Base.isconst(t::CXType)::Bool = clang_isConstQualifiedType(t)
-Base.isconst(t::CLType) = isconst(t.type)
+Base.isconst(t::CLType)::Bool = clang_isConstQualifiedType(t)
 
 """
     isvolatile(t::CXType) -> Bool
@@ -31,7 +31,7 @@ that may have added "volatile" at a different level.
 Wrapper for libclang's `clang_isVolatileQualifiedType`.
 """
 isvolatile(t::CXType)::Bool = clang_isVolatileQualifiedType(t)
-isvolatile(t::CLType) = isvolatile(t.type)
+isvolatile(t::CLType)::Bool = clang_isVolatileQualifiedType(t)
 
 """
     isrestrict(t::CXType) -> Bool
@@ -41,7 +41,7 @@ that may have added "restrict" at a different level.
 Wrapper for libclang's `clang_isRestrictQualifiedType`.
 """
 isrestrict(t::CXType)::Bool = clang_isRestrictQualifiedType(t)
-isrestrict(t::CLType) = isrestrict(t.type)
+isrestrict(t::CLType)::Bool = clang_isRestrictQualifiedType(t)
 
 """
     address_space(t::CXType)
@@ -50,7 +50,7 @@ Returns the address space of the given type.
 Wrapper for libclang's `clang_getAddressSpace`.
 """
 address_space(t::CXType) = clang_getAddressSpace(t)
-address_space(t::CLType) = address_space(t.type)
+address_space(t::CLType) = clang_getAddressSpace(t)
 
 """
     typedef_name(t::CXType) -> String
@@ -58,16 +58,12 @@ address_space(t::CLType) = address_space(t.type)
 Return the typedef name of the given type.
 Wrapper for libclang's `clang_getTypedefName`.
 """
-function typedef_name(t::CXType)
-    GC.@preserve t begin
-        cxstr = clang_getTypedefName(t)
-        ptr = clang_getCString(cxstr)
-        s = unsafe_string(ptr)
-        clang_disposeString(cxstr)
-    end
-    return s
+function typedef_name(t::Union{CXType,CLType})
+    cxstr = clang_getTypedefName(t)
+    ptr = clang_getCString(cxstr)
+    clang_disposeString(cxstr)
+    return unsafe_string(ptr)
 end
-typedef_name(t::CLType) = typedef_name(t.type)
 
 """
     pointee_type(t::CXType) -> CXType
@@ -76,7 +72,7 @@ Return the type of the pointee for pointer types.
 Wrapper for libclang's `clang_getPointeeType`.
 """
 pointee_type(t::CXType) = clang_getPointeeType(t)
-pointee_type(t::CLType)::CLType = pointee_type(t.type)
+pointee_type(t::CLType)::CLType = clang_getPointeeType(t)
 
 """
     typedecl(t::CXType) -> CXCursor
@@ -85,7 +81,7 @@ Return the cursor for the declaration of the given type. To get the type of the 
 see [`type`](@ref). Wrapper for libclang's `clang_getTypeDeclaration`.
 """
 typedecl(t::CXType) = clang_getTypeDeclaration(t)
-typedecl(t::CLType)::CLCursor = typedecl(t.type)
+typedecl(t::CLType)::CLCursor = clang_getTypeDeclaration(t)
 
 """
     spelling(t::CXType) -> String
@@ -94,29 +90,22 @@ Pretty-print the underlying type using the rules of the language of the translat
 from which it came. If the type is invalid, an empty string is returned.
 Wrapper for libclang's `clang_getTypeSpelling`.
 """
-function spelling(t::CXType)
-    GC.@preserve t begin
-        cxstr = clang_getTypeSpelling(t)
-        ptr = clang_getCString(cxstr)
-        s = unsafe_string(ptr)
-        clang_disposeString(cxstr)
-    end
-    return s
+function spelling(t::Union{CXType,CLType})
+    cxstr = clang_getTypeSpelling(t)
+    ptr = clang_getCString(cxstr)
+    clang_disposeString(cxstr)
+    return unsafe_string(ptr)
 end
-spelling(t::CLType) = spelling(t.type)
 
 """
     spelling(kind::CXTypeKind) -> String
 Return the spelling of a given CXTypeKind.
 """
 function spelling(kind::CXTypeKind)
-    GC.@preserve kind begin
-        cxstr = clang_getTypeKindSpelling(kind)
-        ptr = clang_getCString(cxstr)
-        s = unsafe_string(ptr)
-        clang_disposeString(cxstr)
-    end
-    return s
+    cxstr = clang_getTypeKindSpelling(kind)
+    ptr = clang_getCString(cxstr)
+    clang_disposeString(cxstr)
+    return unsafe_string(ptr)
 end
 
 """
@@ -127,8 +116,8 @@ Return the calling convention associated with a function type.
 Wrapper for libclang's `clang_getFunctionTypeCallingConv`.
 """
 calling_conv(t::CXType)::CXCallingConv = clang_getFunctionTypeCallingConv(t)
-calling_conv(t::CLFunctionNoProto) = calling_conv(t.type)
-calling_conv(t::CLFunctionProto) = calling_conv(t.type)
+calling_conv(t::CLFunctionNoProto) = clang_getFunctionTypeCallingConv(t)
+calling_conv(t::CLFunctionProto) = clang_getFunctionTypeCallingConv(t)
 
 """
     result_type(t::CXType) -> CXType
@@ -138,8 +127,8 @@ Return the return type associated with a function type.
 Wrapper for libclang's `clang_getResultType`.
 """
 result_type(t::CXType) = clang_getResultType(t)
-result_type(t::CLFunctionNoProto)::CLType = result_type(t.type)
-result_type(t::CLFunctionProto)::CLType = result_type(t.type)
+result_type(t::CLFunctionNoProto)::CLType = clang_getResultType(t)
+result_type(t::CLFunctionProto)::CLType = clang_getResultType(t)
 
 ## TODO:
 # clang_getExceptionSpecificationType
@@ -152,8 +141,8 @@ Return the number of non-variadic parameters associated with a function type.
 Wrapper for libclang's `clang_getNumArgTypes`.
 """
 argnum(t::CXType)::Int = clang_getNumArgTypes(t)
-argnum(t::CLFunctionNoProto) = argnum(t.type)
-argnum(t::CLFunctionProto) = argnum(t.type)
+argnum(t::CLFunctionNoProto) = clang_getNumArgTypes(t)
+argnum(t::CLFunctionProto) = clang_getNumArgTypes(t)
 
 """
     argtype(t::CXType, i::Unsigned) -> CXType
@@ -173,7 +162,7 @@ Return true if the CXType is a variadic function type.
 Wrapper for libclang's `clang_isFunctionTypeVariadic`.
 """
 isvariadic(t::CXType)::Bool = clang_isFunctionTypeVariadic(t)
-isvariadic(t::CLType) = isvariadic(t.type)
+isvariadic(t::CLType)::Bool = clang_isFunctionTypeVariadic(t)
 
 """
     is_plain_old_data(t::CXType) -> Bool
@@ -182,7 +171,7 @@ Return true if the CXType is a plain old data type.
 Wrapper for libclang's `clang_isPODType`.
 """
 is_plain_old_data(t::CXType)::Bool = clang_isPODType(t)
-is_plain_old_data(t::CLType) = is_plain_old_data(t.type)
+is_plain_old_data(t::CLType)::Bool = clang_isPODType(t)
 
 """
     element_type(t::CXType) -> CXType
@@ -196,12 +185,12 @@ Return the element type of an array, complex, or vector type.
 Wrapper for libclang's `clang_getElementType`.
 """
 element_type(t::CXType)::CLType = clang_getElementType(t)
-element_type(t::CLVector)::CLType = element_type(t.type)
-element_type(t::CLConstantArray)::CLType = element_type(t.type)
-element_type(t::CLIncompleteArray)::CLType = element_type(t.type)
-element_type(t::CLVariableArray)::CLType = element_type(t.type)
-element_type(t::CLDependentSizedArray)::CLType = element_type(t.type)
-element_type(t::CLComplex)::CLType = element_type(t.type)
+element_type(t::CLVector)::CLType = clang_getElementType(t)
+element_type(t::CLConstantArray)::CLType = clang_getElementType(t)
+element_type(t::CLIncompleteArray)::CLType = clang_getElementType(t)
+element_type(t::CLVariableArray)::CLType = clang_getElementType(t)
+element_type(t::CLDependentSizedArray)::CLType = clang_getElementType(t)
+element_type(t::CLComplex)::CLType = clang_getElementType(t)
 # old API: clang_getArrayElementType
 
 """
@@ -215,11 +204,11 @@ Return the number of elements of an array or vector type.
 Wrapper for libclang's `clang_getNumElements`.
 """
 element_num(t::CXType)::Int = clang_getNumElements(t)
-element_num(t::CLVector) = element_num(t.type)
-element_num(t::CLConstantArray) = element_num(t.type)
-element_num(t::CLIncompleteArray) = element_num(t.type)
-element_num(t::CLVariableArray) = element_num(t.type)
-element_num(t::CLDependentSizedArray) = element_num(t.type)
+element_num(t::CLVector) = clang_getNumElements(t)
+element_num(t::CLConstantArray) = clang_getNumElements(t)
+element_num(t::CLIncompleteArray) = clang_getNumElements(t)
+element_num(t::CLVariableArray) = clang_getNumElements(t)
+element_num(t::CLDependentSizedArray) = clang_getNumElements(t)
 # old API: clang_getArraySize
 
 """
@@ -229,7 +218,7 @@ Return the type named by the qualified-id.
 Wrapper for libclang's `clang_Type_getNamedType`.
 """
 get_named_type(t::CXType) = clang_Type_getNamedType(t)
-get_named_type(t::CLElaborated)::CLType = get_named_type(t.type)
+get_named_type(t::CLElaborated)::CLType = clang_Type_getNamedType(t)
 
 
 ## TODO:

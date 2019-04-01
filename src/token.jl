@@ -63,31 +63,22 @@ spelling(tu::TranslationUnit, t::CXToken) = spelling(tu.ptr, t)
 spelling(tu::TranslationUnit, t::CLToken) = spelling(tu.ptr, t.token)
 
 """
-    location(tu::TranslationUnit, t::CLToken) -> CXSourceLocation
-    location(tu::TranslationUnit, t::CXToken) -> CXSourceLocation
-    location(tu::CXTranslationUnit, t::CXToken) -> CXSourceLocation
+    location(tu::Union{CXTranslationUnit,TranslationUnit}, t::Union{CXToken,CLToken}) -> CXSourceLocation
 Return the source location of the given token.
 """
-location(tu::CXTranslationUnit, t::CXToken) = clang_getTokenLocation(tu, t)
-location(tu::TranslationUnit, t::CXToken) = location(tu.ptr, t)
-location(tu::TranslationUnit, t::CLToken) = location(tu.ptr, t.token)
+location(tu::Union{CXTranslationUnit,TranslationUnit}, t::Union{CXToken,CLToken}) = clang_getTokenLocation(tu, t)
 
 """
-    extent(tu::TranslationUnit, t::CLToken) -> CXSourceRange
-    extent(tu::TranslationUnit, t::CXToken) -> CXSourceRange
-    extent(tu::CXTranslationUnit, t::CXToken) -> CXSourceRange
+    extent(tu::Union{CXTranslationUnit,TranslationUnit}, t::Union{CXToken,CLToken}) -> CXSourceRange
 Return a source range that covers the given token.
 """
-extent(tu::CXTranslationUnit, t::CXToken) = clang_getTokenExtent(tu, t)
-extent(tu::TranslationUnit, t::CXToken) = extent(tu.ptr, t)
-extent(tu::TranslationUnit, t::CLToken) = extent(tu.ptr, t.token)
+extent(tu::Union{CXTranslationUnit,TranslationUnit}, t::Union{CXToken,CLToken}) = clang_getTokenExtent(tu, t)
 
 """
-    tokenize(c::CXCursor) -> TokenList
-    tokenize(c::CLCursor) -> TokenList
+    tokenize(c::Union{CXCursor,CLCursor}) -> TokenList
 Return a TokenList from the given cursor.
 """
-function tokenize(c::CXCursor)
+function tokenize(c::Union{CXCursor,CLCursor})
     tu = clang_Cursor_getTranslationUnit(c)
     source_range = clang_getCursorExtent(c)
     range_start = clang_getRangeStart(source_range)
@@ -108,13 +99,10 @@ function tokenize(c::CXCursor)
 
     return TokenList(tu, expanded_range)
 end
-tokenize(c::CLCursor) = tokenize(c.cursor)
 
 """
     annotate(tu::TranslationUnit, tokens, token_num, cursors)
-    annotate(tu::CXTranslationUnit, tokens, token_num, cursors)
 Annotate the given set of tokens by providing cursors for each token that can be mapped to
 a specific entity within the abstract syntax tree.
 """
-annotate(tu::CXTranslationUnit, tokens, token_num, cursors) = clang_annotateTokens(tu, tokens, Unsigned(token_num), cursors)
-annotate(tu::TranslationUnit, tokens, token_num, cursors) = annotate(tu.ptr, tokens, token_num, cursors)
+annotate(tu::Union{CXTranslationUnit,TranslationUnit}, tokens, token_num, cursors) = clang_annotateTokens(tu, tokens, Unsigned(token_num), cursors)

@@ -494,8 +494,10 @@ Return a child cursor vector of the given cursor.
 function children(cursor::CXCursor)
     # TODO: possible to use sizehint! here?
     list = CXCursor[]
-    cu_visitor_cb = @cfunction(cu_children_visitor, Cuint, (CXCursor, CXCursor, Ptr{Cvoid}))
-    clang_visitChildren(cursor, cu_visitor_cb, pointer_from_objref(list))
+    GC.@preserve list begin
+        cu_visitor_cb = @cfunction(cu_children_visitor, Cuint, (CXCursor, CXCursor, Ptr{Cvoid}))
+        clang_visitChildren(cursor, cu_visitor_cb, pointer_from_objref(list))
+    end
     return list
 end
 children(c::CLCursor)::Vector{CLCursor} = children(c.cursor)

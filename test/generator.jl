@@ -22,7 +22,7 @@ const LIBCLANG_HEADERS = [joinpath(LIBCLANG_INCLUDE, header) for header in readd
                 header_library = x->"libclang",
                 clang_diagnostics = true)
     run(wc)
-    # @test read(test_api_path, String) == read(api_path, String)
+    @test read(test_api_path, String) == read(api_path, String)
     @test read(test_common_path, String) == read(common_path, String)
 end
 

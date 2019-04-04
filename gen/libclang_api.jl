@@ -954,7 +954,7 @@ function clang_getIBOutletCollectionType(arg1)
 end
 
 function clang_visitChildren(parent, visitor, client_data)
-    ccall((:clang_visitChildren, libclang), UInt32, (CXCursor, CXCursorVisitor, Any), parent, visitor, client_data)
+    ccall((:clang_visitChildren, libclang), UInt32, (CXCursor, CXCursorVisitor, CXClientData), parent, visitor, client_data)
 end
 
 function clang_getCursorUSR(arg1)
@@ -1450,3 +1450,4 @@ function clang_Type_visitFields(T, visitor, client_data)
 end
 # Julia wrapper for header: Platform.h
 # Automatically generated using Clang.jl
+

@@ -480,8 +480,7 @@ search(c::CLCursor, s::String) = search(c, x->spelling(x)==s)
 search(c::CLCursor, k::CXCursorKind) = search(c, x->kind(x)==k)
 
 # visitor
-function cu_children_visitor(cursor::CXCursor, parent::CXCursor, client_data::Ptr{Cvoid})::Cuint
-    list = unsafe_pointer_to_objref(client_data)
+function cu_children_visitor(cursor::CXCursor, parent::CXCursor, list)::Cuint
     push!(list, cursor)
     return CXChildVisit_Continue
 end
@@ -494,10 +493,8 @@ Return a child cursor vector of the given cursor.
 function children(cursor::CXCursor)
     # TODO: possible to use sizehint! here?
     list = CXCursor[]
-    GC.@preserve list begin
-        cu_visitor_cb = @cfunction(cu_children_visitor, Cuint, (CXCursor, CXCursor, Ptr{Cvoid}))
-        clang_visitChildren(cursor, cu_visitor_cb, pointer_from_objref(list))
-    end
+    cu_visitor_cb = @cfunction(cu_children_visitor, Cuint, (CXCursor, CXCursor, Ref{Vector{CXCursor}}))
+    GC.@preserve list ccall((:clang_visitChildren, LibClang.libclang), UInt32, (CXCursor, CXCursorVisitor, Any), cursor, cu_visitor_cb, list)
     return list
 end
 children(c::CLCursor)::Vector{CLCursor} = children(c.cursor)

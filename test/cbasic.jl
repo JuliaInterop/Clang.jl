@@ -5,8 +5,10 @@ using Test
 @testset "c basic" begin
     # parse file
     trans_unit = parse_header(joinpath(@__DIR__, "c", "cbasic.h"),
-                             flags = CXTranslationUnit_DetailedPreprocessingRecord |
-                                     CXTranslationUnit_SkipFunctionBodies)
+                              flags = CXTranslationUnit_DetailedPreprocessingRecord |
+                                      CXTranslationUnit_SkipFunctionBodies)
+    ctx = DefaultContext()
+    push!(ctx.trans_units, trans_unit)
     # get root cursor
     root_cursor = getcursor(trans_unit)
     # search the first macro defination "#define CONST 1"
@@ -33,10 +35,7 @@ using Test
 
     # function constant array arguments should be converted to common Ptr
     func_arg = search(root_cursor, "func_constarr_arg")[1]
-    ctx = DefaultContext()
-    push!(ctx.trans_units, trans_unit)
     wrap!(ctx, func_arg)
-
     expr = :(function func_constarr_arg(x)
                  ccall((:func_constarr_arg, libxxx), Cint, (Ptr{Cdouble},), x)
              end)

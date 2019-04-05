@@ -4,33 +4,35 @@ using Test
 @testset "struct_enum_field" begin
     # parse file
     trans_unit = parse_header(joinpath(@__DIR__, "c", "struct_enum_field.h"))
-    # get root cursor
-    root_cursor = getcursor(trans_unit)
-    cursors = children(root_cursor)
-    # enum
-    enum_cursor = cursors[1]
-    @test name(enum_cursor) == "Fruit"
-    # struct
-    struct_cursor = cursors[2]
-    @test name(struct_cursor) == "Foo"
-    # field
-    struct_fields = children(struct_cursor)
-    enum_field_cursor = struct_fields[1]
-    int_field_cursor = struct_fields[2]
-    array_field_cursor = struct_fields[3]
-    @test clang2julia(enum_field_cursor) == :Fruit
-    @test clang2julia(int_field_cursor) == :Cint
-    @test clang2julia(array_field_cursor) == :(NTuple{3, Ptr{Cvoid}})
+    GC.@preserve trans_unit begin
+        # get root cursor
+        root_cursor = getcursor(trans_unit)
+        cursors = children(root_cursor)
+        # enum
+        enum_cursor = cursors[1]
+        @test name(enum_cursor) == "Fruit"
+        # struct
+        struct_cursor = cursors[2]
+        @test name(struct_cursor) == "Foo"
+        # field
+        struct_fields = children(struct_cursor)
+        enum_field_cursor = struct_fields[1]
+        int_field_cursor = struct_fields[2]
+        array_field_cursor = struct_fields[3]
+        @test clang2julia(enum_field_cursor) == :Fruit
+        @test clang2julia(int_field_cursor) == :Cint
+        @test clang2julia(array_field_cursor) == :(NTuple{3, Ptr{Cvoid}})
+    end
 end
 
 @testset "struct_nested" begin
     # parse file
     trans_unit = parse_header(joinpath(@__DIR__, "c", "struct_nested.h"))
+    ctx = DefaultContext()
+    push!(ctx.trans_units, trans_unit)
     # get root cursor
     root_cursor = getcursor(trans_unit)
     cursors = children(root_cursor)
-    ctx = DefaultContext()
-    push!(ctx.trans_units, trans_unit)
     # case 1
     wrap!(ctx, cursors[1])
     expr = :(struct ANONYMOUS1_union_in_struct

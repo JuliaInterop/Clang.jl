@@ -4,11 +4,12 @@ using Test
 
 @testset "nested_union" begin
     trans_unit = parse_header(joinpath(@__DIR__, "c", "union.h"))
+    ctx = DefaultContext()
+    push!(ctx.trans_units, trans_unit)
+
     # get root cursor
     root_cursor = getcursor(trans_unit)
     cursors = children(root_cursor)
-    ctx = DefaultContext()
-    push!(ctx.trans_units, trans_unit)
     # case 1
     wrap!(ctx, cursors[1])
     expr = :(struct ANONYMOUS1_bar

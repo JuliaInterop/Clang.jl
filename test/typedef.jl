@@ -4,6 +4,9 @@ using Test
 
 @testset "typedef" begin
     trans_unit = parse_header(joinpath(@__DIR__, "c", "typedef.h"))
+    ctx = DefaultContext()
+    push!(ctx.trans_units, trans_unit)
+
     # get root cursor
     root_cursor = getcursor(trans_unit)
     cursors = children(root_cursor)
@@ -27,9 +30,6 @@ using Test
     node_type = type(node)
     @test canonical(node) == cursors[5]
     @test canonical(node_type) |> typedecl == cursors[7]
-
-    ctx = DefaultContext()
-    push!(ctx.trans_units, trans_unit)
     wrap!(ctx, cursors[5])
     expr = :(struct Node
                 data::Cint
@@ -61,6 +61,9 @@ end
 @testset "typedef_anon" begin
     # parse file
     trans_unit = parse_header(joinpath(@__DIR__, "c", "typedef_anon.h"))
+    ctx = DefaultContext()
+    push!(ctx.trans_units, trans_unit)
+
     # get root cursor
     root_cursor = getcursor(trans_unit)
     cursors = children(root_cursor)
@@ -104,8 +107,6 @@ end
     @test name(children(next_cursor)[1]) == ""
     @test is_typedef_anon(anonymous_typedef_union, next_cursor) == true
 
-    ctx = DefaultContext()
-    push!(ctx.trans_units, trans_unit)
     ctx.children = cursors
     ctx.children_index = 9
     wrap!(ctx, anonymous_typedef_union)
@@ -118,6 +119,9 @@ end
 
 @testset "typedef_pointer" begin
     trans_unit = parse_header(joinpath(@__DIR__, "c", "typedef_pointer.h"))
+    ctx = DefaultContext()
+    push!(ctx.trans_units, trans_unit)
+
     # get root cursor
     root_cursor = getcursor(trans_unit)
     cursors = children(root_cursor)
@@ -138,8 +142,6 @@ end
     FOOP = cursors[5]
     @test clang2julia(underlying_type(FOOP)) == :(Ptr{FOO})
 
-    ctx = DefaultContext()
-    push!(ctx.trans_units, trans_unit)
     wrap!(ctx, cursors[6])
     expr = :(
         function test1(a::Cdouble,b::Cdouble,c::FOOP)

@@ -137,35 +137,35 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "api/#Clang.address_space-Tuple{Clang.LibClang.CXType}",
+    "location": "api/#Clang.address_space-Tuple{Union{CXType, CLType}}",
     "page": "API Reference",
     "title": "Clang.address_space",
     "category": "method",
-    "text": "address_space(t::CXType)\naddress_space(t::CLType)\n\nReturns the address space of the given type. Wrapper for libclang\'s clang_getAddressSpace.\n\n\n\n\n\n"
+    "text": "address_space(t::Union{CXType,CLType})\n\nReturns the address space of the given type. Wrapper for libclang\'s clang_getAddressSpace.\n\n\n\n\n\n"
 },
 
 {
-    "location": "api/#Clang.annotate-Tuple{Ptr{Nothing},Any,Any,Any}",
+    "location": "api/#Clang.annotate-Tuple{Union{Ptr{Nothing}, TranslationUnit},Any,Any,Any}",
     "page": "API Reference",
     "title": "Clang.annotate",
     "category": "method",
-    "text": "annotate(tu::TranslationUnit, tokens, token_num, cursors)\nannotate(tu::CXTranslationUnit, tokens, token_num, cursors)\n\nAnnotate the given set of tokens by providing cursors for each token that can be mapped to a specific entity within the abstract syntax tree.\n\n\n\n\n\n"
+    "text": "annotate(tu::TranslationUnit, tokens, token_num, cursors)\n\nAnnotate the given set of tokens by providing cursors for each token that can be mapped to a specific entity within the abstract syntax tree.\n\n\n\n\n\n"
 },
 
 {
-    "location": "api/#Clang.argnum-Tuple{Clang.LibClang.CXCursor}",
+    "location": "api/#Clang.argnum-Tuple{Union{CLCXXMethod, CLFunctionDecl, CXCursor}}",
     "page": "API Reference",
     "title": "Clang.argnum",
     "category": "method",
-    "text": "argnum(c::CXCursor) -> Int\nargnum(c::CLCXXMethod) -> Int\nargnum(c::CLFunctionDecl) -> Int\n\nReturn the number of non-variadic arguments associated with a given cursor. Wrapper for libclang\'s clang_Cursor_getNumArguments.\n\n\n\n\n\n"
+    "text": "argnum(c::Union{CXCursor,CLFunctionDecl,CLCXXMethod}) -> Int\n\nReturn the number of non-variadic arguments associated with a given cursor. Wrapper for libclang\'s clang_Cursor_getNumArguments.\n\n\n\n\n\n"
 },
 
 {
-    "location": "api/#Clang.argnum-Tuple{Clang.LibClang.CXType}",
+    "location": "api/#Clang.argnum-Tuple{Union{CLFunctionNoProto, CLFunctionProto, CXType}}",
     "page": "API Reference",
     "title": "Clang.argnum",
     "category": "method",
-    "text": "argnum(t::CXType) -> Int\nargnum(t::CLFunctionProto) -> Int\nargnum(t::CLFunctionNoProto) -> Int\n\nReturn the number of non-variadic parameters associated with a function type. Wrapper for libclang\'s clang_getNumArgTypes.\n\n\n\n\n\n"
+    "text": "argnum(t::Union{CXType,CLFunctionNoProto,CLFunctionProto}) -> Int\n\nReturn the number of non-variadic parameters associated with a function type. Wrapper for libclang\'s clang_getNumArgTypes.\n\n\n\n\n\n"
 },
 
 {
@@ -173,15 +173,15 @@ var documenterSearchIndex = {"docs": [
     "page": "API Reference",
     "title": "Clang.argtype",
     "category": "method",
-    "text": "argtype(t::CXType, i::Unsigned) -> CXType\nargtype(t::CLFunctionProto, i::Integer) -> CLType\nargtype(t::CLFunctionNoProto, i::Integer) -> CLType\n\nReturn the type of a parameter of a function type. Wrapper for libclang\'s clang_getArgType.\n\n\n\n\n\n"
+    "text": "argtype(t::CXType, i::Unsigned) -> CXType\nargtype(t::Union{CLFunctionNoProto,CLFunctionProto}, i::Integer) -> CLType\n\nReturn the type of a parameter of a function type. Wrapper for libclang\'s clang_getArgType.\n\n\n\n\n\n"
 },
 
 {
-    "location": "api/#Clang.argument-Tuple{Clang.LibClang.CXCursor,Unsigned}",
+    "location": "api/#Clang.argument-Tuple{Clang.LibClang.CXCursor,Integer}",
     "page": "API Reference",
     "title": "Clang.argument",
     "category": "method",
-    "text": "argument(c::CXCursor, i::Unsigned) -> CXCursor\nargument(c::CLFunctionDecl, i::Integer) -> CLCursor\nargument(c::CLCXXMethod, i::Integer) -> CLCursor\n\nReturn the argument cursor of a function or method. Wrapper for libclang\'s clang_Cursor_getArgument.\n\n\n\n\n\n"
+    "text": "argument(c::CXCursor, i::Integer) -> CXCursor\nargument(c::Union{CLFunctionDecl,CLCXXMethod}, i::Integer) -> CLCursor\n\nReturn the argument cursor of a function or method. Wrapper for libclang\'s clang_Cursor_getArgument.\n\n\n\n\n\n"
 },
 
 {
@@ -273,11 +273,11 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "api/#Clang.element_num-Tuple{Clang.LibClang.CXType}",
+    "location": "api/#Clang.element_num-Tuple{Union{CLConstantArray, CLDependentSizedArray, CLIncompleteArray, CLVariableArray, CLVector, CXType}}",
     "page": "API Reference",
     "title": "Clang.element_num",
     "category": "method",
-    "text": "element_num(t::CXType) -> Int\nelement_num(t::CLVector) -> Int\nelement_num(t::CLConstantArray) -> Int\nelement_num(t::CLIncompleteArray) -> Int\nelement_num(t::CLVariableArray) -> Int\nelement_num(t::CLDependentSizedArray) -> Int\n\nReturn the number of elements of an array or vector type. Wrapper for libclang\'s clang_getNumElements.\n\n\n\n\n\n"
+    "text": "element_num(t::Union{CXType,CLVector,CLConstantArray,CLIncompleteArray,CLVariableArray,CLDependentSizedArray}) -> Int\n\nReturn the number of elements of an array or vector type. Wrapper for libclang\'s clang_getNumElements.\n\n\n\n\n\n"
 },
 
 {
@@ -285,31 +285,31 @@ var documenterSearchIndex = {"docs": [
     "page": "API Reference",
     "title": "Clang.element_type",
     "category": "method",
-    "text": "element_type(t::CXType) -> CXType\nelement_type(t::CLVector) -> CLType\nelement_type(t::CLConstantArray) -> CLType\nelement_type(t::CLIncompleteArray) -> CLType\nelement_type(t::CLVariableArray) -> CLType\nelement_type(t::CLDependentSizedArray) -> CLType\nelement_type(t::CLComplex) -> CLType\n\nReturn the element type of an array, complex, or vector type. Wrapper for libclang\'s clang_getElementType.\n\n\n\n\n\n"
+    "text": "element_type(t::CXType) -> CXType\nelement_type(t::Union{CLVector,CLConstantArray,CLIncompleteArray,CLVariableArray,CLDependentSizedArray,CLComplex}) -> CLType\n\nReturn the element type of an array, complex, or vector type. Wrapper for libclang\'s clang_getElementType.\n\n\n\n\n\n"
 },
 
 {
-    "location": "api/#Clang.extent-Tuple{Clang.LibClang.CXCursor}",
+    "location": "api/#Clang.extent-Tuple{Union{CXCursor, CLCursor}}",
     "page": "API Reference",
     "title": "Clang.extent",
     "category": "method",
-    "text": "extent(c::CXCursor) -> CXSourceRange\nextent(c::CLCursor) -> CXSourceRange\n\nReturn the physical extent of the source construct referenced by the given cursor.\n\nThe extent of a cursor starts with the file/line/column pointing at the first character within the source construct that the cursor refers to and ends with the last character within that source construct. For a declaration, the extent covers the declaration itself. For a reference, the extent covers the location of the reference (e.g., where the referenced entity was actually used). Wrapper for libclang\'s clang_getCursorExtent.\n\n\n\n\n\n"
+    "text": "extent(c::Union{CXCursor,CLCursor}) -> CXSourceRange\n\nReturn the physical extent of the source construct referenced by the given cursor.\n\nThe extent of a cursor starts with the file/line/column pointing at the first character within the source construct that the cursor refers to and ends with the last character within that source construct. For a declaration, the extent covers the declaration itself. For a reference, the extent covers the location of the reference (e.g., where the referenced entity was actually used). Wrapper for libclang\'s clang_getCursorExtent.\n\n\n\n\n\n"
 },
 
 {
-    "location": "api/#Clang.extent-Tuple{Ptr{Nothing},Clang.LibClang.CXToken}",
+    "location": "api/#Clang.extent-Tuple{Union{Ptr{Nothing}, TranslationUnit},Union{CXToken, CLToken}}",
     "page": "API Reference",
     "title": "Clang.extent",
     "category": "method",
-    "text": "extent(tu::TranslationUnit, t::CLToken) -> CXSourceRange\nextent(tu::TranslationUnit, t::CXToken) -> CXSourceRange\nextent(tu::CXTranslationUnit, t::CXToken) -> CXSourceRange\n\nReturn a source range that covers the given token.\n\n\n\n\n\n"
+    "text": "extent(tu::Union{CXTranslationUnit,TranslationUnit}, t::Union{CXToken,CLToken}) -> CXSourceRange\n\nReturn a source range that covers the given token.\n\n\n\n\n\n"
 },
 
 {
-    "location": "api/#Clang.filename-Tuple{Clang.LibClang.CXCursor}",
+    "location": "api/#Clang.filename-Tuple{Union{CXCursor, CLCursor}}",
     "page": "API Reference",
     "title": "Clang.filename",
     "category": "method",
-    "text": "filename(c::CXCursor) -> String\nfilename(c::CLCursor) -> String\n\nReturn the complete file and path name of the given file referenced by the input cursor.\n\n\n\n\n\n"
+    "text": "filename(c::Union{CXCursor,CLCursor}) -> String\n\nReturn the complete file and path name of the given file referenced by the input cursor.\n\n\n\n\n\n"
 },
 
 {
@@ -321,11 +321,11 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "api/#Clang.get_included_file-Tuple{Clang.LibClang.CXCursor}",
+    "location": "api/#Clang.get_included_file-Tuple{Union{CXCursor, CLCursor}}",
     "page": "API Reference",
     "title": "Clang.get_included_file",
     "category": "method",
-    "text": "get_included_file(c::CXCursor) -> CXFile\nget_included_file(c::CLCursor) -> CXFile\n\nReturn the file that is included by the given inclusion directive cursor. Wrapper for libclang\'s clang_getIncludedFile.\n\n\n\n\n\n"
+    "text": "get_included_file(c::Union{CXCursor,CLCursor}) -> CXFile\n\nReturn the file that is included by the given inclusion directive cursor. Wrapper for libclang\'s clang_getIncludedFile.\n\n\n\n\n\n"
 },
 
 {
@@ -353,11 +353,11 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "api/#Clang.get_translation_unit-Tuple{Clang.LibClang.CXCursor}",
+    "location": "api/#Clang.get_translation_unit-Tuple{Union{CXCursor, CLCursor}}",
     "page": "API Reference",
     "title": "Clang.get_translation_unit",
     "category": "method",
-    "text": "get_translation_unit(c::CXCursor) -> CXTranslationUnit\nget_translation_unit(c::CLCursor) -> CXTranslationUnit\n\nReturns the translation unit that a cursor originated from. Wrapper for libclang\'s clang_Cursor_getTranslationUnit.\n\n\n\n\n\n"
+    "text": "get_translation_unit(c::Union{CXCursor,CLCursor}) -> CXTranslationUnit\n\nReturns the translation unit that a cursor originated from. Wrapper for libclang\'s clang_Cursor_getTranslationUnit.\n\n\n\n\n\n"
 },
 
 {
@@ -365,7 +365,7 @@ var documenterSearchIndex = {"docs": [
     "page": "API Reference",
     "title": "Clang.getcursor",
     "category": "method",
-    "text": "getcursor(tu::TranslationUnit) -> CXCursor\ngetcursor(tu::CXTranslationUnit) -> CLCursor\n\nReturn the cursor that represents the given translation unit.\n\n\n\n\n\n"
+    "text": "getcursor(tu::TranslationUnit) -> CLCursor\ngetcursor(tu::CXTranslationUnit) -> CXCursor\n\nReturn the cursor that represents the given translation unit.\n\n\n\n\n\n"
 },
 
 {
@@ -393,11 +393,11 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "api/#Clang.hasattr-Tuple{Clang.LibClang.CXCursor}",
+    "location": "api/#Clang.hasattr-Tuple{Union{CXCursor, CLCursor}}",
     "page": "API Reference",
     "title": "Clang.hasattr",
     "category": "method",
-    "text": "hasattr(c::CXCursor) -> Bool\nhasattr(c::CLCursor) -> Bool\n\nDetermine whether the given cursor has any attributes. Wrapper for libclang\'s clang_Cursor_hasAttrs.\n\n\n\n\n\n"
+    "text": "hasattr(c::Union{CXCursor,CLCursor}) -> Bool\n\nDetermine whether the given cursor has any attributes. Wrapper for libclang\'s clang_Cursor_hasAttrs.\n\n\n\n\n\n"
 },
 
 {
@@ -413,7 +413,7 @@ var documenterSearchIndex = {"docs": [
     "page": "API Reference",
     "title": "Clang.is_plain_old_data",
     "category": "method",
-    "text": "is_plain_old_data(t::CXType) -> Bool\nis_plain_old_data(t::CLType) -> Bool\n\nReturn true if the CXType is a plain old data type. Wrapper for libclang\'s clang_isPODType.\n\n\n\n\n\n"
+    "text": "is_plain_old_data(t::Union{CXType,CLType}) -> Bool\n\nReturn true if the CXType is a plain old data type. Wrapper for libclang\'s clang_isPODType.\n\n\n\n\n\n"
 },
 
 {
@@ -441,19 +441,19 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "api/#Clang.isbit-Tuple{Clang.LibClang.CXCursor}",
+    "location": "api/#Clang.isbit-Tuple{Union{CXCursor, CLCursor}}",
     "page": "API Reference",
     "title": "Clang.isbit",
     "category": "method",
-    "text": "isbit(c::CXCursor) -> Bool\nisbit(c::CLCursor) -> Bool\n\nReturn true if the cursor specifies a Record member that is a bitfield. Wrapper for libclang\'s clang_Cursor_isBitField.\n\n\n\n\n\n"
+    "text": "isbit(c::Union{CXCursor,CLCursor}) -> Bool\n\nReturn true if the cursor specifies a Record member that is a bitfield. Wrapper for libclang\'s clang_Cursor_isBitField.\n\n\n\n\n\n"
 },
 
 {
-    "location": "api/#Clang.isbuiltin-Tuple{Clang.LibClang.CXCursor}",
+    "location": "api/#Clang.isbuiltin-Tuple{Union{CXCursor, CLCursor}}",
     "page": "API Reference",
     "title": "Clang.isbuiltin",
     "category": "method",
-    "text": "isbuiltin(c::CXCursor) -> Bool\nisbuiltin(c::CLCursor) -> Bool\n\nDetermine whether a  CXCursor that is a macro, is a builtin one. Wrapper for libclang\'s clang_Cursor_isMacroBuiltin.\n\n\n\n\n\n"
+    "text": "isbuiltin(c::Union{CXCursor,CLCursor}) -> Bool\n\nDetermine whether a  CXCursor that is a macro, is a builtin one. Wrapper for libclang\'s clang_Cursor_isMacroBuiltin.\n\n\n\n\n\n"
 },
 
 {
@@ -465,11 +465,11 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "api/#Clang.isdef-Tuple{Clang.LibClang.CXCursor}",
+    "location": "api/#Clang.isdef-Tuple{Union{CXCursor, CLCursor}}",
     "page": "API Reference",
     "title": "Clang.isdef",
     "category": "method",
-    "text": "isdef(c::CXCursor) -> Bool\nisdef(c::CLCursor) -> Bool\n\nReturn true if the declaration pointed to by this cursor is also a definition of that entity. Wrapper for libclang\'s clang_isCursorDefinition.\n\n\n\n\n\n"
+    "text": "isdef(c::Union{CXCursor,CLCursor}) -> Bool\n\nReturn true if the declaration pointed to by this cursor is also a definition of that entity. Wrapper for libclang\'s clang_isCursorDefinition.\n\n\n\n\n\n"
 },
 
 {
@@ -481,27 +481,27 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "api/#Clang.isfunctionlike-Tuple{Clang.LibClang.CXCursor}",
+    "location": "api/#Clang.isfunctionlike-Tuple{Union{CXCursor, CLCursor}}",
     "page": "API Reference",
     "title": "Clang.isfunctionlike",
     "category": "method",
-    "text": "isfunctionlike(c::CXCursor) -> Bool\nisfunctionlike(c::CLCursor) -> Bool\n\nDetermine whether a CXCursor that is a macro, is function like. Wrapper for libclang\'s clang_Cursor_isMacroFunctionLike.\n\n\n\n\n\n"
+    "text": "isfunctionlike(c::Union{CXCursor,CLCursor}) -> Bool\n\nDetermine whether a CXCursor that is a macro, is function like. Wrapper for libclang\'s clang_Cursor_isMacroFunctionLike.\n\n\n\n\n\n"
 },
 
 {
-    "location": "api/#Clang.isinlined-Tuple{Clang.LibClang.CXCursor}",
+    "location": "api/#Clang.isinlined-Tuple{Union{CXCursor, CLCursor}}",
     "page": "API Reference",
     "title": "Clang.isinlined",
     "category": "method",
-    "text": "isinlined(c::CXCursor) -> Bool\nisinlined(c::CLCursor) -> Bool\n\nDetermine whether a CXCursor that is a function declaration, is an inline declaration. Wrapper for libclang\'s clang_Cursor_isFunctionInlined.\n\n\n\n\n\n"
+    "text": "isinlined(c::Union{CXCursor,CLCursor}) -> Bool\n\nDetermine whether a CXCursor that is a function declaration, is an inline declaration. Wrapper for libclang\'s clang_Cursor_isFunctionInlined.\n\n\n\n\n\n"
 },
 
 {
-    "location": "api/#Clang.isnull-Tuple{Clang.LibClang.CXCursor}",
+    "location": "api/#Clang.isnull-Tuple{Union{CXCursor, CLCursor}}",
     "page": "API Reference",
     "title": "Clang.isnull",
     "category": "method",
-    "text": "isnull(c::CXCursor) -> Bool\nisnull(c::CLCursor) -> Bool\n\nReturn true if cursor is null. Wrapper for libclang\'s clang_Cursor_isNull.\n\n\n\n\n\n"
+    "text": "isnull(c::Union{CXCursor,CLCursor}) -> Bool\n\nReturn true if cursor is null. Wrapper for libclang\'s clang_Cursor_isNull.\n\n\n\n\n\n"
 },
 
 {
@@ -521,11 +521,11 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "api/#Clang.isrestrict-Tuple{Clang.LibClang.CXType}",
+    "location": "api/#Clang.isrestrict-Tuple{Union{CXType, CLType}}",
     "page": "API Reference",
     "title": "Clang.isrestrict",
     "category": "method",
-    "text": "isrestrict(t::CXType) -> Bool\nisrestrict(t::CLType) -> Bool\n\nDetermine whether a CXType has the \"restrict\" qualifier set, without looking through typedefs that may have added \"restrict\" at a different level. Wrapper for libclang\'s clang_isRestrictQualifiedType.\n\n\n\n\n\n"
+    "text": "isrestrict(t::Union{CXType,CLType}) -> Bool\n\nDetermine whether a CXType has the \"restrict\" qualifier set, without looking through typedefs that may have added \"restrict\" at a different level. Wrapper for libclang\'s clang_isRestrictQualifiedType.\n\n\n\n\n\n"
 },
 
 {
@@ -545,19 +545,19 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "api/#Clang.isvariadic-Tuple{Clang.LibClang.CXCursor}",
+    "location": "api/#Clang.isvariadic-Tuple{Union{CXCursor, CLCursor}}",
     "page": "API Reference",
     "title": "Clang.isvariadic",
     "category": "method",
-    "text": "isvariadic(c::CXCursor) -> Bool\nisvariadic(c::CLCursor) -> Bool\n\nReturn true if the given cursor is a variadic function or method. Wrapper for libclang\'s clang_Cursor_isVariadic.\n\n\n\n\n\n"
+    "text": "isvariadic(c::Union{CXCursor,CLCursor}) -> Bool\n\nReturn true if the given cursor is a variadic function or method. Wrapper for libclang\'s clang_Cursor_isVariadic.\n\n\n\n\n\n"
 },
 
 {
-    "location": "api/#Clang.isvariadic-Tuple{Clang.LibClang.CXType}",
+    "location": "api/#Clang.isvariadic-Tuple{Union{CXType, CLType}}",
     "page": "API Reference",
     "title": "Clang.isvariadic",
     "category": "method",
-    "text": "isvariadic(t::CXType) -> Bool\nisvariadic(t::CLType) -> Bool\n\nReturn true if the CXType is a variadic function type. Wrapper for libclang\'s clang_isFunctionTypeVariadic.\n\n\n\n\n\n"
+    "text": "isvariadic(t::Union{CXType,CLType}) -> Bool\n\nReturn true if the CXType is a variadic function type. Wrapper for libclang\'s clang_isFunctionTypeVariadic.\n\n\n\n\n\n"
 },
 
 {
@@ -565,7 +565,7 @@ var documenterSearchIndex = {"docs": [
     "page": "API Reference",
     "title": "Clang.isvolatile",
     "category": "method",
-    "text": "isvolatile(t::CXType) -> Bool\nisvolatile(t::CLType) -> Bool\n\nDetermine whether a CXType has the \"volatile\" qualifier set, without looking through typedefs that may have added \"volatile\" at a different level. Wrapper for libclang\'s clang_isVolatileQualifiedType.\n\n\n\n\n\n"
+    "text": "isvolatile(t::Union{CXType,CLType}) -> Bool\n\nDetermine whether a CXType has the \"volatile\" qualifier set, without looking through typedefs that may have added \"volatile\" at a different level. Wrapper for libclang\'s clang_isVolatileQualifiedType.\n\n\n\n\n\n"
 },
 
 {
@@ -601,27 +601,27 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "api/#Clang.location-Tuple{Clang.LibClang.CXCursor}",
+    "location": "api/#Clang.location-Tuple{Union{CXCursor, CLCursor}}",
     "page": "API Reference",
     "title": "Clang.location",
     "category": "method",
-    "text": "location(c::CXCursor) -> CXSourceLocation\nlocation(c::CLCursor) -> CXSourceLocation\n\nReturn the physical location of the source constructor referenced by the given cursor. Wrapper for libclang\'s clang_getCursorLocation.\n\n\n\n\n\n"
+    "text": "location(c::Union{CXCursor,CLCursor}) -> CXSourceLocation\n\nReturn the physical location of the source constructor referenced by the given cursor. Wrapper for libclang\'s clang_getCursorLocation.\n\n\n\n\n\n"
 },
 
 {
-    "location": "api/#Clang.location-Tuple{Ptr{Nothing},Clang.LibClang.CXToken}",
+    "location": "api/#Clang.location-Tuple{Union{Ptr{Nothing}, TranslationUnit},Union{CXToken, CLToken}}",
     "page": "API Reference",
     "title": "Clang.location",
     "category": "method",
-    "text": "location(tu::TranslationUnit, t::CLToken) -> CXSourceLocation\nlocation(tu::TranslationUnit, t::CXToken) -> CXSourceLocation\nlocation(tu::CXTranslationUnit, t::CXToken) -> CXSourceLocation\n\nReturn the source location of the given token.\n\n\n\n\n\n"
+    "text": "location(tu::Union{CXTranslationUnit,TranslationUnit}, t::Union{CXToken,CLToken}) -> CXSourceLocation\n\nReturn the source location of the given token.\n\n\n\n\n\n"
 },
 
 {
-    "location": "api/#Clang.name-Tuple{Clang.LibClang.CXCursor}",
+    "location": "api/#Clang.name-Tuple{Union{CXCursor, CLCursor}}",
     "page": "API Reference",
     "title": "Clang.name",
     "category": "method",
-    "text": "name(c::CXCursor) -> String\nname(c::CLCursor) -> String\n\nReturn the display name for the entity referenced by this cursor.\n\n\n\n\n\n"
+    "text": "name(c::Union{CXCursor,CLCursor}) -> String\n\nReturn the display name for the entity referenced by this cursor.\n\n\n\n\n\n"
 },
 
 {
@@ -645,7 +645,7 @@ var documenterSearchIndex = {"docs": [
     "page": "API Reference",
     "title": "Clang.parse_headers",
     "category": "method",
-    "text": "parse_headers(headers::Vector{String}; index::Index=Index(), args::Vector{String}=String[], includes::Vector{String}=String[],\n    flags = CXTranslationUnit_DetailedPreprocessingRecord | CXTranslationUnit_SkipFunctionBodies) -> Dict\n\nReturn a TranslationUnit Dict for the given headers. See also parse_header.\n\n\n\n\n\n"
+    "text": "parse_headers(headers::Vector{String}; index::Index=Index(), args::Vector{String}=String[], includes::Vector{String}=String[],\n    flags = CXTranslationUnit_DetailedPreprocessingRecord | CXTranslationUnit_SkipFunctionBodies) -> Vector{TranslationUnit}\n\nReturn a TranslationUnit vector for the given headers. See also parse_header.\n\n\n\n\n\n"
 },
 
 {
@@ -677,7 +677,7 @@ var documenterSearchIndex = {"docs": [
     "page": "API Reference",
     "title": "Clang.result_type",
     "category": "method",
-    "text": "result_type(c::CXCursor) -> CXType\nresult_type(c::CLFunctionDecl) -> CLType\nresult_type(c::CLCXXMethod) -> CLType\n\nReturn the return type associated with a given cursor. This only returns a valid type if the cursor refers to a function or method. Wrapper for libclang\'s clang_getCursorResultType.\n\n\n\n\n\n"
+    "text": "result_type(c::CXCursor) -> CXType\nresult_type(c::Union{CLFunctionDecl,CLCXXMethod}) -> CLType\n\nReturn the return type associated with a given cursor. This only returns a valid type if the cursor refers to a function or method. Wrapper for libclang\'s clang_getCursorResultType.\n\n\n\n\n\n"
 },
 
 {
@@ -685,7 +685,7 @@ var documenterSearchIndex = {"docs": [
     "page": "API Reference",
     "title": "Clang.result_type",
     "category": "method",
-    "text": "result_type(t::CXType) -> CXType\nresult_type(t::CLFunctionProto) -> CLType\nresult_type(t::CLFunctionNoProto) -> CLType\n\nReturn the return type associated with a function type. Wrapper for libclang\'s clang_getResultType.\n\n\n\n\n\n"
+    "text": "result_type(t::CXType) -> CXType\nresult_type(t::Union{CLFunctionNoProto,CLFunctionProto}) -> CLType\n\nReturn the return type associated with a function type. Wrapper for libclang\'s clang_getResultType.\n\n\n\n\n\n"
 },
 
 {
@@ -697,19 +697,11 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "api/#Clang.search-Tuple{Array{CLCursor,1},Function}",
+    "location": "api/#Clang.search-Union{Tuple{T}, Tuple{Array{T,1},Function}} where T<:CLCursor",
     "page": "API Reference",
     "title": "Clang.search",
     "category": "method",
     "text": "search(cursors::Vector{CLCursor}, ismatch::Function) -> Vector{CLCursor}\n\nReturn vector of CLCursors that match predicate. ismatch is a function that accepts a CLCursor argument.\n\n\n\n\n\n"
-},
-
-{
-    "location": "api/#Clang.spelling-Tuple{Clang.LibClang.CXCursor}",
-    "page": "API Reference",
-    "title": "Clang.spelling",
-    "category": "method",
-    "text": "spelling(c::CXCursor) -> String\nspelling(c::CLCursor) -> String\n\nReturn a name for the entity referenced by this cursor.\n\n\n\n\n\n"
 },
 
 {
@@ -718,14 +710,6 @@ var documenterSearchIndex = {"docs": [
     "title": "Clang.spelling",
     "category": "method",
     "text": "spelling(kind::CXTypeKind) -> String\n\nReturn the spelling of a given CXTypeKind.\n\n\n\n\n\n"
-},
-
-{
-    "location": "api/#Clang.spelling-Tuple{Clang.LibClang.CXType}",
-    "page": "API Reference",
-    "title": "Clang.spelling",
-    "category": "method",
-    "text": "spelling(t::CXType) -> String\nspelling(t::CLType) -> String\n\nPretty-print the underlying type using the rules of the language of the translation unit from which it came. If the type is invalid, an empty string is returned. Wrapper for libclang\'s clang_getTypeSpelling.\n\n\n\n\n\n"
 },
 
 {
@@ -745,6 +729,22 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
+    "location": "api/#Clang.spelling-Tuple{Union{CXCursor, CLCursor}}",
+    "page": "API Reference",
+    "title": "Clang.spelling",
+    "category": "method",
+    "text": "spelling(c::Union{CXCursor,CLCursor}) -> String\n\nReturn a name for the entity referenced by this cursor.\n\n\n\n\n\n"
+},
+
+{
+    "location": "api/#Clang.spelling-Tuple{Union{CXType, CLType}}",
+    "page": "API Reference",
+    "title": "Clang.spelling",
+    "category": "method",
+    "text": "spelling(t::Union{CXType,CLType}) -> String\n\nPretty-print the underlying type using the rules of the language of the translation unit from which it came. If the type is invalid, an empty string is returned. Wrapper for libclang\'s clang_getTypeSpelling.\n\n\n\n\n\n"
+},
+
+{
     "location": "api/#Clang.symbol_safe-Tuple{AbstractString}",
     "page": "API Reference",
     "title": "Clang.symbol_safe",
@@ -753,11 +753,11 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "api/#Clang.tokenize-Tuple{Clang.LibClang.CXCursor}",
+    "location": "api/#Clang.tokenize-Tuple{Union{CXCursor, CLCursor}}",
     "page": "API Reference",
     "title": "Clang.tokenize",
     "category": "method",
-    "text": "tokenize(c::CXCursor) -> TokenList\ntokenize(c::CLCursor) -> TokenList\n\nReturn a TokenList from the given cursor.\n\n\n\n\n\n"
+    "text": "tokenize(c::Union{CXCursor,CLCursor}) -> TokenList\n\nReturn a TokenList from the given cursor.\n\n\n\n\n\n"
 },
 
 {
@@ -777,11 +777,11 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "api/#Clang.typedef_name-Tuple{Clang.LibClang.CXType}",
+    "location": "api/#Clang.typedef_name-Tuple{Union{CXType, CLType}}",
     "page": "API Reference",
     "title": "Clang.typedef_name",
     "category": "method",
-    "text": "typedef_name(t::CXType) -> String\ntypedef_name(t::CLType) -> String\n\nReturn the typedef name of the given type. Wrapper for libclang\'s clang_getTypedefName.\n\n\n\n\n\n"
+    "text": "typedef_name(t::Union{CXType,CLType}) -> String\n\nReturn the typedef name of the given type. Wrapper for libclang\'s clang_getTypedefName.\n\n\n\n\n\n"
 },
 
 {
@@ -929,11 +929,11 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "api/#Base.isconst-Tuple{Clang.LibClang.CXType}",
+    "location": "api/#Base.isconst-Tuple{Union{CXType, CLType}}",
     "page": "API Reference",
     "title": "Base.isconst",
     "category": "method",
-    "text": "isconst(t::CXType) -> Bool\nisconst(t::CLType) -> Bool\n\nDetermine whether a CXType has the \"const\" qualifier set, without looking through typedefs that may have added \"const\" at a different level. Wrapper for libclang\'s clang_isConstQualifiedType.\n\n\n\n\n\n"
+    "text": "isconst(t::Union{CXType,CLType}) -> Bool\n\nDetermine whether a CXType has the \"const\" qualifier set, without looking through typedefs that may have added \"const\" at a different level. Wrapper for libclang\'s clang_isConstQualifiedType.\n\n\n\n\n\n"
 },
 
 {
@@ -945,11 +945,11 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "api/#Clang.calling_conv-Tuple{Clang.LibClang.CXType}",
+    "location": "api/#Clang.calling_conv-Tuple{Union{CLFunctionNoProto, CLFunctionProto, CXType}}",
     "page": "API Reference",
     "title": "Clang.calling_conv",
     "category": "method",
-    "text": "calling_conv(t::CXType) -> CXCallingConv\ncalling_conv(t::CLFunctionProto) -> CXCallingConv\ncalling_conv(t::CLFunctionNoProto) -> CXCallingConv\n\nReturn the calling convention associated with a function type. Wrapper for libclang\'s clang_getFunctionTypeCallingConv.\n\n\n\n\n\n"
+    "text": "calling_conv(t::Union{CXType,CLFunctionNoProto,CLFunctionProto}) -> CXCallingConv\n\nReturn the calling convention associated with a function type. Wrapper for libclang\'s clang_getFunctionTypeCallingConv.\n\n\n\n\n\n"
 },
 
 {
@@ -961,11 +961,11 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "api/#Clang.isanonymous-Tuple{Clang.LibClang.CXCursor}",
+    "location": "api/#Clang.isanonymous-Tuple{Union{CXCursor, CLCursor}}",
     "page": "API Reference",
     "title": "Clang.isanonymous",
     "category": "method",
-    "text": "isanonymous(c::CXCursor) -> Bool\nisanonymous(c::CLCursor) -> Bool\n\nReturn true if the given cursor represents an anonymous record declaration(C++). Wrapper for libclang\'s clang_Cursor_isAnonymous.\n\n\n\n\n\n"
+    "text": "isanonymous(c::Union{CXCursor,CLCursor}) -> Bool\n\nReturn true if the given cursor represents an anonymous record declaration(C++). Wrapper for libclang\'s clang_Cursor_isAnonymous.\n\n\n\n\n\n"
 },
 
 {
@@ -977,19 +977,19 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "api/#Clang.isvirtual-Tuple{Clang.LibClang.CXCursor}",
+    "location": "api/#Clang.isvirtual-Tuple{Union{CXCursor, CLCursor}}",
     "page": "API Reference",
     "title": "Clang.isvirtual",
     "category": "method",
-    "text": "isvirtual(c::CXCursor) -> Bool\nisvirtual(c::CLCursor) -> Bool\n\nReturn true if the base class specified by the cursor with kind CXCXXBaseSpecifier is virtual. Wrapper for libclang\'s `clangisVirtualBase`.\n\n\n\n\n\n"
+    "text": "isvirtual(c::Union{CXCursor,CLCursor}) -> Bool\n\nReturn true if the base class specified by the cursor with kind CXCXXBaseSpecifier is virtual. Wrapper for libclang\'s `clangisVirtualBase`.\n\n\n\n\n\n"
 },
 
 {
-    "location": "api/#Clang.linkage-Tuple{Clang.LibClang.CXCursor}",
+    "location": "api/#Clang.linkage-Tuple{Union{CXCursor, CLCursor}}",
     "page": "API Reference",
     "title": "Clang.linkage",
     "category": "method",
-    "text": "linkage(c::CXCursor) -> CXLinkageKind\nlinkage(c::CLCursor) -> CXLinkageKind\n\nReturn the linkage of the entity referred to by a given cursor. Wrapper for libclang\'s clang_getCursorLinkage.\n\n\n\n\n\n"
+    "text": "linkage(c::Union{CXCursor,CLCursor}) -> CXLinkageKind\n\nReturn the linkage of the entity referred to by a given cursor. Wrapper for libclang\'s clang_getCursorLinkage.\n\n\n\n\n\n"
 },
 
 {

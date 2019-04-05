@@ -5,10 +5,11 @@ Parse the given source file and the translation unit corresponding to that file.
 """
 mutable struct TranslationUnit
     ptr::CXTranslationUnit
+    idx::Index
     function TranslationUnit(idx::Index, source_filename, command_line_args, num_command_line_args, unsaved_files, num_unsaved_files, options)
         ptr = clang_parseTranslationUnit(idx, source_filename, command_line_args, num_command_line_args, unsaved_files, num_unsaved_files, options)
         @assert ptr != C_NULL "failed to parse file: $source_filename"
-        obj = new(ptr)
+        obj = new(ptr, idx)
         finalizer(obj) do x
             if x.ptr != C_NULL
                 clang_disposeTranslationUnit(x)

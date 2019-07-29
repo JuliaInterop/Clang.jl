@@ -1,7 +1,7 @@
 name = "Clang"
 uuid = "40e3b903-d033-50b4-a0cc-940c62c95e31"
 authors = ["Isaiah Norton"]
-version = "0.9.0"
+version = "0.9.1"
 
 [deps]
 BinaryProvider = "b99e7846-7c00-51b0-8f62-c81ae34c0232"

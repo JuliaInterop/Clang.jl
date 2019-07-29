@@ -86,3 +86,25 @@ function print_template(path, libname="LibXXX")
         """)
     end
 end
+
+function find_std_headers()
+    headers = String[]
+    @static if Sys.isapple()
+        cmd_path = strip(read(`xcode-select --print-path`, String))
+        sdk_path = joinpath(cmd_path, "SDKs", "MacOSX.sdk")
+        xcode_path = cmd_path
+        occursin("Xcode", xcode_path) && (xcode_path *= "/Toolchains/XcodeDefault.xctoolchain/")
+        didfind = false
+        lib = joinpath(xcode_path, "usr", "lib", "c++", "v1")
+        inc = joinpath(xcode_path, "usr", "include", "c++", "v1")
+        isdir(lib) && (push!(headers, lib); didfind = true;)
+        isdir(inc) && (push!(headers, inc); didfind = true;)
+        if isdir("/usr/include")
+            push!(headers, "/usr/include")
+        else isdir(joinpath(sdk_path, "usr", "include"))
+            push!(headers, joinpath(sdk_path, "usr", "include"))
+        end
+        didfind || error("Could not find C++ standard library. Is XCode or CommandLineTools installed?")
+    end
+    return headers
+end

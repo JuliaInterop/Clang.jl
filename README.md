@@ -50,11 +50,14 @@ wc = init(; headers = LIBCLANG_HEADERS,
 
 run(wc)
 ```
-Note that it might complain about missing some stdlibs, e.g. `fatal error: 'time.h' file not found`,
+Note that it might complain about missing some std headers, e.g. `fatal error: 'time.h' file not found`,
 which could be fixed by adding `-Istdlib/include/on/your/specific/platform` to `clang_args`, for example,
 ```
 # on macOS
-push!(clang_args, "-I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.14.sdk/usr/include")
+using Clang: find_std_headers
+for header in find_std_headers()
+    push!(clang_args, "-I"*header)
+end
 ```
 
 #### Backward compatibility

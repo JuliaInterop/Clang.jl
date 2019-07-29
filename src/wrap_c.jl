@@ -105,17 +105,14 @@ function wrap!(ctx::AbstractContext, cursor::CLEnumDecl)
         push!(name2value, (item_sym, value(item_cursor)))
     end
 
-    if enum_type == UInt32
-        expr = Expr(:macrocall, Symbol("@cenum"), nothing, enum_sym)
-    else
-        expr = Expr(:macrocall, Symbol("@cenum"), nothing, Expr(:curly, enum_sym, enum_type))
-    end
-
+    expr = Expr(:macrocall, Symbol("@cenum"), nothing, Expr(:(::), enum_sym, enum_type))
+    enum_pairs = Expr(:block)
     ctx.common_buffer[enum_sym] = ExprUnit(expr)
     for (name,value) in name2value
         ctx.common_buffer[name] = ctx.common_buffer[enum_sym]  ##???
-        push!(expr.args, :($name = $value))
+        push!(enum_pairs.args, :($name = $value))
     end
+    push!(expr.args, enum_pairs)
 
     return ctx
 end

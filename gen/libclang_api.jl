@@ -1450,3 +1450,4 @@ function clang_Type_visitFields(T, visitor, client_data)
 end
 # Julia wrapper for header: Platform.h
 # Automatically generated using Clang.jl
+

@@ -7,14 +7,14 @@ mutable struct DefaultContext <: AbstractContext
     libname::String
     force_name::String
     common_buffer::OrderedDict{Symbol,ExprUnit}
-    api_buffer::Vector{Expr}
+    api_buffer::Vector
     cursor_stack::Vector{CLCursor}
     children::Vector{CLCursor}
     children_index::Int
     anonymous_counter::Int
 end
 DefaultContext(index::Index) = DefaultContext(index, TranslationUnit[], Dict{String,Bool}(),
-                                              "libxxx", "", OrderedDict{Symbol,ExprUnit}(), Expr[],
+                                              "libxxx", "", OrderedDict{Symbol,ExprUnit}(), [],
                                               CLCursor[], CLCursor[], -1, 0)
 DefaultContext(diagnostic::Bool=true) = DefaultContext(Index(diagnostic))
 

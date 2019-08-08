@@ -128,7 +128,7 @@ function Base.run(wc::WrapContext, generate_template=true)
         end
 
         # apply user-supplied transformation
-        wc.rewriter(ctx.api_buffer)
+        ctx.api_buffer = wc.rewriter(ctx.api_buffer)
 
         # write output
         out_file = wc.header_outputfile(header)

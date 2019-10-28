@@ -125,7 +125,7 @@ result_type(t::Union{CLFunctionNoProto,CLFunctionProto})::CLType = clang_getResu
 Return the number of non-variadic parameters associated with a function type.
 Wrapper for libclang's `clang_getNumArgTypes`.
 """
-argnum(t::Union{CXType,CLFunctionNoProto,CLFunctionProto})::Int = clang_getNumArgTypes(t)
+argnum(t::Union{CXType,CLFunctionNoProto,CLFunctionProto,CLUnexposed})::Int = clang_getNumArgTypes(t)
 
 """
     argtype(t::CXType, i::Unsigned) -> CXType
@@ -134,7 +134,7 @@ Return the type of a parameter of a function type.
 Wrapper for libclang's `clang_getArgType`.
 """
 argtype(t::CXType, i::Unsigned) = clang_getArgType(t, Unsigned(i))
-argtype(t::Union{CLFunctionNoProto,CLFunctionProto}, i::Integer)::CLType = argtype(t.type, Unsigned(i))
+argtype(t::Union{CLFunctionNoProto,CLFunctionProto,CLUnexposed}, i::Integer)::CLType = argtype(t.type, Unsigned(i))
 
 """
     isvariadic(t::Union{CXType,CLType}) -> Bool

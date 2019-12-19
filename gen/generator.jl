@@ -36,6 +36,12 @@ for trans_unit in ctx.trans_units
         startswith(child_name, "__") && continue  # skip compiler definitions
         child_name in keys(ctx.common_buffer) && continue  # already wrapped
         child_header != header && continue  # skip if cursor filename is not in the headers to be wrapped
+        
+        # issues#243
+        if occursin("clang_CompileCommand_getNumMappedSources", child_name)
+            @info "Ignore $child_name, because this function is not export anymore."
+            continue
+        end
 
         wrap!(ctx, child)
     end

@@ -97,10 +97,6 @@ function clang_CompileCommand_getArg(arg1, I)
     ccall((:clang_CompileCommand_getArg, libclang), CXString, (CXCompileCommand, UInt32), arg1, I)
 end
 
-function clang_CompileCommand_getNumMappedSources(arg1)
-    ccall((:clang_CompileCommand_getNumMappedSources, libclang), UInt32, (CXCompileCommand,), arg1)
-end
-
 function clang_CompileCommand_getMappedSourcePath(arg1, I)
     ccall((:clang_CompileCommand_getMappedSourcePath, libclang), CXString, (CXCompileCommand, UInt32), arg1, I)
 end

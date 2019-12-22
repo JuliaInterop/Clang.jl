@@ -98,10 +98,12 @@ function clang_CompileCommand_getArg(arg1, I)
 end
 
 function clang_CompileCommand_getMappedSourcePath(arg1, I)
+    @warn "`clang_CompileCommand_getMappedSourcePath` Left here for backward compatibility.\nNo mapped sources exists in the C++ backend anymore.\nThis function just return Null `CXString`.\n\nSee:\n- [Remove unused CompilationDatabase::MappedSources](https://reviews.llvm.org/D32351)\n"
     ccall((:clang_CompileCommand_getMappedSourcePath, libclang), CXString, (CXCompileCommand, UInt32), arg1, I)
 end
 
 function clang_CompileCommand_getMappedSourceContent(arg1, I)
+    @warn "`clang_CompileCommand_getMappedSourceContent` Left here for backward compatibility.\nNo mapped sources exists in the C++ backend anymore.\nThis function just return Null `CXString`.\n\nSee:\n- [Remove unused CompilationDatabase::MappedSources](https://reviews.llvm.org/D32351)\n"
     ccall((:clang_CompileCommand_getMappedSourceContent, libclang), CXString, (CXCompileCommand, UInt32), arg1, I)
 end
 # Julia wrapper for header: CXErrorCode.h

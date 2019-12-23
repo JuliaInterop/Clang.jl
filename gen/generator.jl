@@ -3,6 +3,33 @@ using Clang
 const LIBCLANG_INCLUDE = joinpath(@__DIR__, "..", "deps", "usr", "include", "clang-c") |> normpath
 const LIBCLANG_HEADERS = [joinpath(LIBCLANG_INCLUDE, header) for header in readdir(LIBCLANG_INCLUDE) if endswith(header, ".h")]
 
+
+function rewrite!(e::Expr)
+    # Add deprecated warning to some functions
+    #   ref: [Remove unused CompilationDatabase::MappedSources](https://reviews.llvm.org/D32351)
+    fname = e.args[1].args[1]
+    deprecated_func = [
+        # :clang_CompileCommand_getNumMappedSources, # not export
+        :clang_CompileCommand_getMappedSourcePath,
+        :clang_CompileCommand_getMappedSourceContent,
+    ]
+    
+    if e.head == :function && fname in deprecated_func
+        msg = """
+        `$fname` Left here for backward compatibility.
+        No mapped sources exists in the C++ backend anymore.
+        This function just return Null `CXString`.
+        
+        See:
+        - [Remove unused CompilationDatabase::MappedSources](https://reviews.llvm.org/D32351)
+        """
+        insert!(e.args[2].args, 1, Expr(:macrocall, Symbol("@warn"), :Base, msg))
+    end
+    e
+end
+rewrite!(x) = x
+rewrite(v::Vector) = map(rewrite!, v)
+
 # create a work context
 ctx = DefaultContext()
 
@@ -36,12 +63,19 @@ for trans_unit in ctx.trans_units
         startswith(child_name, "__") && continue  # skip compiler definitions
         child_name in keys(ctx.common_buffer) && continue  # already wrapped
         child_header != header && continue  # skip if cursor filename is not in the headers to be wrapped
+        
+        # issues#243
+        if occursin("clang_CompileCommand_getNumMappedSources", child_name)
+            @info "Ignore $child_name, because this function is not export anymore."
+            continue
+        end
 
         wrap!(ctx, child)
     end
     @info "writing $(api_file)"
     println(api_stream, "# Julia wrapper for header: $(basename(header))")
     println(api_stream, "# Automatically generated using Clang.jl\n")
+    ctx.api_buffer = rewrite(ctx.api_buffer)
     print_buffer(api_stream, ctx.api_buffer)
     empty!(ctx.api_buffer)  # clean up api_buffer for the next header
 end

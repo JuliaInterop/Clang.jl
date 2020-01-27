@@ -701,6 +701,7 @@ end
 
 
 const CXCursorVisitor = Ptr{Cvoid}
+const CXCursorVisitorBlock = Cvoid
 
 @cenum CXObjCPropertyAttrKind::UInt32 begin
     CXObjCPropertyAttr_noattr = 0
@@ -857,6 +858,7 @@ end
 end
 
 
+const CXCursorAndRangeVisitorBlock = Cvoid
 const CXIdxClientFile = Ptr{Cvoid}
 const CXIdxClientEntity = Ptr{Cvoid}
 const CXIdxClientContainer = Ptr{Cvoid}

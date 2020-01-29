@@ -151,6 +151,8 @@ function wrap!(ctx::AbstractContext, cursor::CLStructDecl)
         field_kind = kind(field_cursor)
         if field_kind == CXCursor_StructDecl || field_kind == CXCursor_UnionDecl
             continue
+        elseif field_kind == CXCursor_FirstAttr
+            continue
         elseif field_kind != CXCursor_FieldDecl || field_kind == CXCursor_TypeRef
             buffer[struct_sym] = ExprUnit(Poisoned())
             @warn "Skipping struct: \"$cursor\" due to unsupported field: $field_cursor"
@@ -232,6 +234,7 @@ function wrap!(ctx::AbstractContext, cursor::CLUnionDecl)
             field_cursor = union_fields[i]
             field_kind = kind(field_cursor)
             (field_kind == CXCursor_StructDecl || field_kind == CXCursor_UnionDecl) && continue
+            field_kind == CXCursor_FirstAttr && continue
             field_size = typesize(type(field_cursor))
             if field_size > max_size
                 max_size = field_size

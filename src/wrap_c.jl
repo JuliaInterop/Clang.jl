@@ -443,3 +443,8 @@ function wrap!(ctx::AbstractContext, cursor::CLCursor)
     @warn "not wrapping $(cursor)"
     return ctx
 end
+
+function wrap!(ctx::AbstractContext, cursor::Union{CLLastPreprocessing,CLMacroInstantiation})
+    @debug "not wrapping $(cursor)"
+    return ctx
+end

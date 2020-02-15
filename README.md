@@ -25,7 +25,7 @@ The package includes a generator to create Julia wrappers for C libraries from a
 
 - function: translated to Julia ccall(`va_list` and vararg argument are not supported)
 - struct: translated to Julia struct
-- enum: translated to `CEnum`
+- enum: translated to [`CEnum`](https://github.com/JuliaInterop/CEnum.jl)
 - union: translated to Julia struct
 - typedef: translated to Julia typealias to underlying intrinsic type
 - macro: limited support(see src/wrap_c.jl)
@@ -33,9 +33,10 @@ The package includes a generator to create Julia wrappers for C libraries from a
 Here is a simple example:
 ```julia
 using Clang
+using LLVM_jll # `pkg> activate Clang`
 
 # LIBCLANG_HEADERS are those headers to be wrapped.
-const LIBCLANG_INCLUDE = joinpath(@__DIR__, "..", "deps", "usr", "include", "clang-c") |> normpath
+const LIBCLANG_INCLUDE = joinpath(dirname(LLVM_jll.libclang_path), "include", "clang-c") |> normpath
 const LIBCLANG_HEADERS = [joinpath(LIBCLANG_INCLUDE, header) for header in readdir(LIBCLANG_INCLUDE) if endswith(header, ".h")]
 
 wc = init(; headers = LIBCLANG_HEADERS,
@@ -79,8 +80,9 @@ for example, the following script is used for generating `LibClang`, you could r
 further details.
 ```julia
 using Clang
+using LLVM_jll # `pkg> activate Clang`
 
-const LIBCLANG_INCLUDE = joinpath(@__DIR__, "..", "deps", "usr", "include", "clang-c") |> normpath
+const LIBCLANG_INCLUDE = joinpath(dirname(LLVM_jll.libclang_path), "include", "clang-c") |> normpath
 const LIBCLANG_HEADERS = [joinpath(LIBCLANG_INCLUDE, header) for header in readdir(LIBCLANG_INCLUDE) if endswith(header, ".h")]
 
 # create a work context

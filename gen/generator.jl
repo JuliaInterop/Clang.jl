@@ -1,6 +1,7 @@
 using Clang
+using LLVM_jll
 
-const LIBCLANG_INCLUDE = joinpath(@__DIR__, "..", "deps", "usr", "include", "clang-c") |> normpath
+const LIBCLANG_INCLUDE = joinpath(dirname(LLVM_jll.libclang_path), "..", "include", "clang-c") |> normpath
 const LIBCLANG_HEADERS = [joinpath(LIBCLANG_INCLUDE, header) for header in readdir(LIBCLANG_INCLUDE) if endswith(header, ".h")]
 
 
@@ -13,13 +14,13 @@ function rewrite!(e::Expr)
         :clang_CompileCommand_getMappedSourcePath,
         :clang_CompileCommand_getMappedSourceContent,
     ]
-    
+
     if e.head == :function && fname in deprecated_func
         msg = """
         `$fname` Left here for backward compatibility.
         No mapped sources exists in the C++ backend anymore.
         This function just return Null `CXString`.
-        
+
         See:
         - [Remove unused CompilationDatabase::MappedSources](https://reviews.llvm.org/D32351)
         """
@@ -63,7 +64,7 @@ for trans_unit in ctx.trans_units
         startswith(child_name, "__") && continue  # skip compiler definitions
         child_name in keys(ctx.common_buffer) && continue  # already wrapped
         child_header != header && continue  # skip if cursor filename is not in the headers to be wrapped
-        
+
         # issues#243
         if occursin("clang_CompileCommand_getNumMappedSources", child_name)
             @info "Ignore $child_name, because this function is not export anymore."

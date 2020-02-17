@@ -15,22 +15,23 @@ pkg> add Clang
 ## C-bindings generator
 The package includes a generator to create Julia wrappers for C libraries from a collection of header files. The following declarations are currently supported:
 
-- constants: translated to Julia `const` declarations
-- preprocessor constants: translated to `const` declarations
 - function: translated to Julia ccall(`va_list` and vararg argument are not supported)
 - struct: translated to Julia struct
-- enum: translated to `CEnum`
+- enum: translated to [`CEnum`](https://github.com/JuliaInterop/CEnum.jl)
 - union: translated to Julia struct
-- typedef: translated to Julia type alias to underlying intrinsic type
+- typedef: translated to Julia typealias to underlying intrinsic type
+- macro: limited support(see src/wrap_c.jl)
 
 Here is a simple example:
 ```julia
 using Clang
+using LLVM_jll # `pkg> activate Clang`
 
-const LIBCLANG_INCLUDE = joinpath(@__DIR__, "..", "deps", "usr", "include", "clang-c") |> normpath
+# LIBCLANG_HEADERS are those headers to be wrapped.
+const LIBCLANG_INCLUDE = joinpath(dirname(LLVM_jll.libclang_path), "include", "clang-c") |> normpath
 const LIBCLANG_HEADERS = [joinpath(LIBCLANG_INCLUDE, header) for header in readdir(LIBCLANG_INCLUDE) if endswith(header, ".h")]
 
-wc = init(; headers = CLANG_HEADERS,
+wc = init(; headers = LIBCLANG_HEADERS,
             output_file = joinpath(@__DIR__, "libclang_api.jl"),
             common_file = joinpath(@__DIR__, "libclang_common.jl"),
             clang_includes = vcat(LIBCLANG_INCLUDE, CLANG_INCLUDE),
@@ -42,11 +43,14 @@ wc = init(; headers = CLANG_HEADERS,
 
 run(wc)
 ```
-Note that it might complain about missing some stdlibs, e.g. `fatal error: 'time.h' file not found`,
+Note that it might complain about missing some std headers, e.g. `fatal error: 'time.h' file not found`,
 which could be fixed by adding `-Istdlib/include/on/your/specific/platform` to `clang_args`, for example,
 ```
 # on macOS
-push!(clang_args, "-I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.14.sdk/usr/include")
+using Clang: find_std_headers
+for header in find_std_headers()
+    push!(clang_args, "-I"*header)
+end
 ```
 
 #### Backward compatibility
@@ -68,8 +72,9 @@ for example, the following script is used for generating `LibClang`, you could r
 further details.
 ```julia
 using Clang
+using LLVM_jll # `pkg> activate Clang`
 
-const LIBCLANG_INCLUDE = joinpath(@__DIR__, "..", "deps", "usr", "include", "clang-c") |> normpath
+const LIBCLANG_INCLUDE = joinpath(dirname(LLVM_jll.libclang_path), "include", "clang-c") |> normpath
 const LIBCLANG_HEADERS = [joinpath(LIBCLANG_INCLUDE, header) for header in readdir(LIBCLANG_INCLUDE) if endswith(header, ".h")]
 
 # create a work context

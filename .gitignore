@@ -15,3 +15,5 @@ gen/ctypes.jl
 test/test_api.jl
 test/test_common.jl
 Manifest.toml
+test/libclang_api.jl
+test/libclang_common.jl

@@ -5,7 +5,7 @@ using Test
 if get(ENV, "TRAVIS_OS_NAME", "") == "linux"
 
 # LIBCLANG_HEADERS are those headers to be wrapped.
-const LIBCLANG_INCLUDE = joinpath(@__DIR__, "..", "deps", "usr", "include", "clang-c") |> normpath
+const LIBCLANG_INCLUDE = joinpath(dirname(Clang.LibClang.LLVM_jll.libclang_path), "..", "include", "clang-c") |> normpath
 const LIBCLANG_HEADERS = [joinpath(LIBCLANG_INCLUDE, header) for header in readdir(LIBCLANG_INCLUDE) if endswith(header, ".h")]
 
 @testset "generator" begin

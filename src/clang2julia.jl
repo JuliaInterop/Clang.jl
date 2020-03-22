@@ -33,6 +33,7 @@ const CLANG_JULIA_TYPEMAP = Dict(
     CXType_BlockPointer     => :Cvoid,
     CXType_Elaborated       => :Cvoid,
     CXType_Invalid          => :Cvoid,
+    CXType_FunctionProto    => :Cvoid,
     :size_t                 => :Csize_t,
     :ptrdiff_t              => :Cptrdiff_t,
     :uint64_t               => :UInt64,

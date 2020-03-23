@@ -72,7 +72,7 @@ end
 
 
 const CINDEX_VERSION_MAJOR = 0
-const CINDEX_VERSION_MINOR = 45
+const CINDEX_VERSION_MINOR = 50
 
 # Skipping MacroDefinition: CINDEX_VERSION_ENCODE ( major , minor ) ( ( ( major ) * 10000 ) + ( ( minor ) * 1 ) )
 # Skipping MacroDefinition: CINDEX_VERSION CINDEX_VERSION_ENCODE ( CINDEX_VERSION_MAJOR , CINDEX_VERSION_MINOR )
@@ -188,6 +188,9 @@ end
     CXTranslationUnit_CreatePreambleOnFirstParse = 256
     CXTranslationUnit_KeepGoing = 512
     CXTranslationUnit_SingleFileParse = 1024
+    CXTranslationUnit_LimitSkipFunctionBodiesToPreamble = 2048
+    CXTranslationUnit_IncludeAttributedTypes = 4096
+    CXTranslationUnit_VisitImplicitAttributes = 8192
 end
 
 @cenum CXSaveTranslationUnit_Flags::UInt32 begin
@@ -349,7 +352,8 @@ end
     CXCursor_ObjCSelfExpr = 146
     CXCursor_OMPArraySectionExpr = 147
     CXCursor_ObjCAvailabilityCheckExpr = 148
-    CXCursor_LastExpr = 148
+    CXCursor_FixedPointLiteral = 149
+    CXCursor_LastExpr = 149
     CXCursor_FirstStmt = 200
     CXCursor_UnexposedStmt = 200
     CXCursor_LabelStmt = 201
@@ -455,7 +459,25 @@ end
     CXCursor_VisibilityAttr = 417
     CXCursor_DLLExport = 418
     CXCursor_DLLImport = 419
-    CXCursor_LastAttr = 419
+    CXCursor_NSReturnsRetained = 420
+    CXCursor_NSReturnsNotRetained = 421
+    CXCursor_NSReturnsAutoreleased = 422
+    CXCursor_NSConsumesSelf = 423
+    CXCursor_NSConsumed = 424
+    CXCursor_ObjCException = 425
+    CXCursor_ObjCNSObject = 426
+    CXCursor_ObjCIndependentClass = 427
+    CXCursor_ObjCPreciseLifetime = 428
+    CXCursor_ObjCReturnsInnerPointer = 429
+    CXCursor_ObjCRequiresSuper = 430
+    CXCursor_ObjCRootClass = 431
+    CXCursor_ObjCSubclassingRestricted = 432
+    CXCursor_ObjCExplicitProtocolImpl = 433
+    CXCursor_ObjCDesignatedInitializer = 434
+    CXCursor_ObjCRuntimeVisible = 435
+    CXCursor_ObjCBoxable = 436
+    CXCursor_FlagEnum = 437
+    CXCursor_LastAttr = 437
     CXCursor_PreprocessingDirective = 500
     CXCursor_MacroDefinition = 501
     CXCursor_MacroExpansion = 502
@@ -555,8 +577,14 @@ const CXCursorSet = Ptr{CXCursorSetImpl}
     CXType_Float128 = 30
     CXType_Half = 31
     CXType_Float16 = 32
+    CXType_ShortAccum = 33
+    CXType_Accum = 34
+    CXType_LongAccum = 35
+    CXType_UShortAccum = 36
+    CXType_UAccum = 37
+    CXType_ULongAccum = 38
     CXType_FirstBuiltin = 2
-    CXType_LastBuiltin = 32
+    CXType_LastBuiltin = 38
     CXType_Complex = 100
     CXType_Pointer = 101
     CXType_BlockPointer = 102
@@ -618,6 +646,21 @@ const CXCursorSet = Ptr{CXCursorSetImpl}
     CXType_OCLEvent = 158
     CXType_OCLQueue = 159
     CXType_OCLReserveID = 160
+    CXType_ObjCObject = 161
+    CXType_ObjCTypeParam = 162
+    CXType_Attributed = 163
+    CXType_OCLIntelSubgroupAVCMcePayload = 164
+    CXType_OCLIntelSubgroupAVCImePayload = 165
+    CXType_OCLIntelSubgroupAVCRefPayload = 166
+    CXType_OCLIntelSubgroupAVCSicPayload = 167
+    CXType_OCLIntelSubgroupAVCMceResult = 168
+    CXType_OCLIntelSubgroupAVCImeResult = 169
+    CXType_OCLIntelSubgroupAVCRefResult = 170
+    CXType_OCLIntelSubgroupAVCSicResult = 171
+    CXType_OCLIntelSubgroupAVCImeResultSingleRefStreamout = 172
+    CXType_OCLIntelSubgroupAVCImeResultDualRefStreamout = 173
+    CXType_OCLIntelSubgroupAVCImeSingleRefStreamin = 174
+    CXType_OCLIntelSubgroupAVCImeDualRefStreamin = 175
 end
 
 @cenum CXCallingConv::UInt32 begin
@@ -638,6 +681,7 @@ end
     CXCallingConv_Swift = 13
     CXCallingConv_PreserveMost = 14
     CXCallingConv_PreserveAll = 15
+    CXCallingConv_AArch64VectorCall = 16
     CXCallingConv_Invalid = 100
     CXCallingConv_Unexposed = 200
 end
@@ -659,6 +703,13 @@ end
     CXTemplateArgumentKind_Expression = 7
     CXTemplateArgumentKind_Pack = 8
     CXTemplateArgumentKind_Invalid = 9
+end
+
+@cenum CXTypeNullabilityKind::UInt32 begin
+    CXTypeNullability_NonNull = 0
+    CXTypeNullability_Nullable = 1
+    CXTypeNullability_Unspecified = 2
+    CXTypeNullability_Invalid = 3
 end
 
 @cenum CXTypeLayoutError::Int32 begin
@@ -702,6 +753,37 @@ end
 
 const CXCursorVisitor = Ptr{Cvoid}
 const CXCursorVisitorBlock = Cvoid
+const CXPrintingPolicy = Ptr{Cvoid}
+
+@cenum CXPrintingPolicyProperty::UInt32 begin
+    CXPrintingPolicy_Indentation = 0
+    CXPrintingPolicy_SuppressSpecifiers = 1
+    CXPrintingPolicy_SuppressTagKeyword = 2
+    CXPrintingPolicy_IncludeTagDefinition = 3
+    CXPrintingPolicy_SuppressScope = 4
+    CXPrintingPolicy_SuppressUnwrittenScope = 5
+    CXPrintingPolicy_SuppressInitializers = 6
+    CXPrintingPolicy_ConstantArraySizeAsWritten = 7
+    CXPrintingPolicy_AnonymousTagLocations = 8
+    CXPrintingPolicy_SuppressStrongLifetime = 9
+    CXPrintingPolicy_SuppressLifetimeQualifiers = 10
+    CXPrintingPolicy_SuppressTemplateArgsInCXXConstructors = 11
+    CXPrintingPolicy_Bool = 12
+    CXPrintingPolicy_Restrict = 13
+    CXPrintingPolicy_Alignof = 14
+    CXPrintingPolicy_UnderscoreAlignof = 15
+    CXPrintingPolicy_UseVoidForZeroParams = 16
+    CXPrintingPolicy_TerseOutput = 17
+    CXPrintingPolicy_PolishForDeclaration = 18
+    CXPrintingPolicy_Half = 19
+    CXPrintingPolicy_MSWChar = 20
+    CXPrintingPolicy_IncludeNewlines = 21
+    CXPrintingPolicy_MSVCFormatting = 22
+    CXPrintingPolicy_ConstantsAsWritten = 23
+    CXPrintingPolicy_SuppressImplicitBase = 24
+    CXPrintingPolicy_FullyQualifiedName = 25
+    CXPrintingPolicy_LastProperty = 25
+end
 
 @cenum CXObjCPropertyAttrKind::UInt32 begin
     CXObjCPropertyAttr_noattr = 0
@@ -794,6 +876,8 @@ end
     CXCodeComplete_IncludeMacros = 1
     CXCodeComplete_IncludeCodePatterns = 2
     CXCodeComplete_IncludeBriefComments = 4
+    CXCodeComplete_SkipPreamble = 8
+    CXCodeComplete_IncludeCompletionsWithFixIts = 16
 end
 
 @cenum CXCompletionContext::UInt32 begin
@@ -820,7 +904,8 @@ end
     CXCompletionContext_ObjCSelectorName = 524288
     CXCompletionContext_MacroName = 1048576
     CXCompletionContext_NaturalLanguage = 2097152
-    CXCompletionContext_Unknown = 4194303
+    CXCompletionContext_IncludedFile = 4194304
+    CXCompletionContext_Unknown = 8388607
 end
 
 
@@ -1047,6 +1132,19 @@ end
     CXIdxEntityRef_Implicit = 2
 end
 
+@cenum CXSymbolRole::UInt32 begin
+    CXSymbolRole_None = 0
+    CXSymbolRole_Declaration = 1
+    CXSymbolRole_Definition = 2
+    CXSymbolRole_Reference = 4
+    CXSymbolRole_Read = 8
+    CXSymbolRole_Write = 16
+    CXSymbolRole_Call = 32
+    CXSymbolRole_Dynamic = 64
+    CXSymbolRole_AddressOf = 128
+    CXSymbolRole_Implicit = 256
+end
+
 
 struct CXIdxEntityRefInfo
     kind::CXIdxEntityRefKind
@@ -1055,6 +1153,7 @@ struct CXIdxEntityRefInfo
     referencedEntity::Ptr{CXIdxEntityInfo}
     parentEntity::Ptr{CXIdxEntityInfo}
     container::Ptr{CXIdxContainerInfo}
+    role::CXSymbolRole
 end
 
 struct IndexerCallbacks

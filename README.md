@@ -34,10 +34,10 @@ The package includes a generator to create Julia wrappers for C libraries from a
 Here is a simple example:
 ```julia
 using Clang
-using LLVM_jll # `pkg> activate Clang`
+using Clang.LibClang.LLVM_jll
 
 # LIBCLANG_HEADERS are those headers to be wrapped.
-const LIBCLANG_INCLUDE = joinpath(dirname(LLVM_jll.libclang_path), "include", "clang-c") |> normpath
+const LIBCLANG_INCLUDE = joinpath(dirname(LLVM_jll.libclang_path), "..", "include", "clang-c") |> normpath
 const LIBCLANG_HEADERS = [joinpath(LIBCLANG_INCLUDE, header) for header in readdir(LIBCLANG_INCLUDE) if endswith(header, ".h")]
 
 wc = init(; headers = LIBCLANG_HEADERS,
@@ -81,7 +81,7 @@ for example, the following script is used for generating `LibClang`, you could r
 further details.
 ```julia
 using Clang
-using LLVM_jll # `pkg> activate Clang`
+using Clang.LibClang.LLVM_jll
 
 const LIBCLANG_INCLUDE = joinpath(dirname(LLVM_jll.libclang_path), "include", "clang-c") |> normpath
 const LIBCLANG_HEADERS = [joinpath(LIBCLANG_INCLUDE, header) for header in readdir(LIBCLANG_INCLUDE) if endswith(header, ".h")]

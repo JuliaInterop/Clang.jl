@@ -315,6 +315,10 @@ function clang_File_isEqual(file1, file2)
     ccall((:clang_File_isEqual, libclang), Cint, (CXFile, CXFile), file1, file2)
 end
 
+function clang_File_tryGetRealPathName(file)
+    ccall((:clang_File_tryGetRealPathName, libclang), CXString, (CXFile,), file)
+end
+
 function clang_getNullLocation()
     ccall((:clang_getNullLocation, libclang), CXSourceLocation, ())
 end
@@ -595,6 +599,10 @@ function clang_isDeclaration(arg1)
     ccall((:clang_isDeclaration, libclang), UInt32, (CXCursorKind,), arg1)
 end
 
+function clang_isInvalidDeclaration(arg1)
+    ccall((:clang_isInvalidDeclaration, libclang), UInt32, (CXCursor,), arg1)
+end
+
 function clang_isReference(arg1)
     ccall((:clang_isReference, libclang), UInt32, (CXCursorKind,), arg1)
 end
@@ -847,6 +855,26 @@ function clang_getArgType(T, i)
     ccall((:clang_getArgType, libclang), CXType, (CXType, UInt32), T, i)
 end
 
+function clang_Type_getObjCObjectBaseType(T)
+    ccall((:clang_Type_getObjCObjectBaseType, libclang), CXType, (CXType,), T)
+end
+
+function clang_Type_getNumObjCProtocolRefs(T)
+    ccall((:clang_Type_getNumObjCProtocolRefs, libclang), UInt32, (CXType,), T)
+end
+
+function clang_Type_getObjCProtocolDecl(T, i)
+    ccall((:clang_Type_getObjCProtocolDecl, libclang), CXCursor, (CXType, UInt32), T, i)
+end
+
+function clang_Type_getNumObjCTypeArgs(T)
+    ccall((:clang_Type_getNumObjCTypeArgs, libclang), UInt32, (CXType,), T)
+end
+
+function clang_Type_getObjCTypeArg(T, i)
+    ccall((:clang_Type_getObjCTypeArg, libclang), CXType, (CXType, UInt32), T, i)
+end
+
 function clang_isFunctionTypeVariadic(T)
     ccall((:clang_isFunctionTypeVariadic, libclang), UInt32, (CXType,), T)
 end
@@ -887,6 +915,10 @@ function clang_Type_isTransparentTagTypedef(T)
     ccall((:clang_Type_isTransparentTagTypedef, libclang), UInt32, (CXType,), T)
 end
 
+function clang_Type_getNullability(T)
+    ccall((:clang_Type_getNullability, libclang), CXTypeNullabilityKind, (CXType,), T)
+end
+
 function clang_Type_getAlignOf(T)
     ccall((:clang_Type_getAlignOf, libclang), Clonglong, (CXType,), T)
 end
@@ -901,6 +933,10 @@ end
 
 function clang_Type_getOffsetOf(T, S)
     ccall((:clang_Type_getOffsetOf, libclang), Clonglong, (CXType, Cstring), T, S)
+end
+
+function clang_Type_getModifiedType(T)
+    ccall((:clang_Type_getModifiedType, libclang), CXType, (CXType,), T)
 end
 
 function clang_Cursor_getOffsetOfField(C)
@@ -995,6 +1031,26 @@ function clang_Cursor_getSpellingNameRange(arg1, pieceIndex, options)
     ccall((:clang_Cursor_getSpellingNameRange, libclang), CXSourceRange, (CXCursor, UInt32, UInt32), arg1, pieceIndex, options)
 end
 
+function clang_PrintingPolicy_getProperty(Policy, Property)
+    ccall((:clang_PrintingPolicy_getProperty, libclang), UInt32, (CXPrintingPolicy, CXPrintingPolicyProperty), Policy, Property)
+end
+
+function clang_PrintingPolicy_setProperty(Policy, Property, Value)
+    ccall((:clang_PrintingPolicy_setProperty, libclang), Cvoid, (CXPrintingPolicy, CXPrintingPolicyProperty, UInt32), Policy, Property, Value)
+end
+
+function clang_getCursorPrintingPolicy(arg1)
+    ccall((:clang_getCursorPrintingPolicy, libclang), CXPrintingPolicy, (CXCursor,), arg1)
+end
+
+function clang_PrintingPolicy_dispose(Policy)
+    ccall((:clang_PrintingPolicy_dispose, libclang), Cvoid, (CXPrintingPolicy,), Policy)
+end
+
+function clang_getCursorPrettyPrinted(Cursor, Policy)
+    ccall((:clang_getCursorPrettyPrinted, libclang), CXString, (CXCursor, CXPrintingPolicy), Cursor, Policy)
+end
+
 function clang_getCursorDisplayName(arg1)
     ccall((:clang_getCursorDisplayName, libclang), CXString, (CXCursor,), arg1)
 end
@@ -1029,6 +1085,14 @@ end
 
 function clang_Cursor_getObjCPropertyAttributes(C, reserved)
     ccall((:clang_Cursor_getObjCPropertyAttributes, libclang), UInt32, (CXCursor, UInt32), C, reserved)
+end
+
+function clang_Cursor_getObjCPropertyGetterName(C)
+    ccall((:clang_Cursor_getObjCPropertyGetterName, libclang), CXString, (CXCursor,), C)
+end
+
+function clang_Cursor_getObjCPropertySetterName(C)
+    ccall((:clang_Cursor_getObjCPropertySetterName, libclang), CXString, (CXCursor,), C)
 end
 
 function clang_Cursor_getObjCDeclQualifiers(C)
@@ -1167,6 +1231,10 @@ function clang_getCursorReferenceNameRange(C, NameFlags, PieceIndex)
     ccall((:clang_getCursorReferenceNameRange, libclang), CXSourceRange, (CXCursor, UInt32, UInt32), C, NameFlags, PieceIndex)
 end
 
+function clang_getToken(TU, Location)
+    ccall((:clang_getToken, libclang), Ptr{CXToken}, (CXTranslationUnit, CXSourceLocation), TU, Location)
+end
+
 function clang_getTokenKind(arg1)
     ccall((:clang_getTokenKind, libclang), CXTokenKind, (CXToken,), arg1)
 end
@@ -1253,6 +1321,14 @@ end
 
 function clang_getCursorCompletionString(cursor)
     ccall((:clang_getCursorCompletionString, libclang), CXCompletionString, (CXCursor,), cursor)
+end
+
+function clang_getCompletionNumFixIts(results, completion_index)
+    ccall((:clang_getCompletionNumFixIts, libclang), UInt32, (Ptr{CXCodeCompleteResults}, UInt32), results, completion_index)
+end
+
+function clang_getCompletionFixIt(results, completion_index, fixit_index, replacement_range)
+    ccall((:clang_getCompletionFixIt, libclang), CXString, (Ptr{CXCodeCompleteResults}, UInt32, UInt32, Ptr{CXSourceRange}), results, completion_index, fixit_index, replacement_range)
 end
 
 function clang_defaultCodeCompleteOptions()

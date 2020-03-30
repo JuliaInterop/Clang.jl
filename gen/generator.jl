@@ -1,7 +1,7 @@
 using Clang
-using Clang.LibClang.LLVM_jll
+using Clang.LibClang.Clang_jll
 
-const LIBCLANG_INCLUDE = joinpath(dirname(LLVM_jll.libclang_path), "..", "include", "clang-c") |> normpath
+const LIBCLANG_INCLUDE = joinpath(dirname(Clang_jll.libclang_path), "..", "include", "clang-c") |> normpath
 const LIBCLANG_HEADERS = [joinpath(LIBCLANG_INCLUDE, header) for header in readdir(LIBCLANG_INCLUDE) if endswith(header, ".h")]
 
 

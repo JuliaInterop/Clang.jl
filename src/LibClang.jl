@@ -1,7 +1,7 @@
 module LibClang
 
-using LLVM_jll
-export LLVM_jll
+using Clang_jll
+export Clang_jll
 
 using CEnum
 

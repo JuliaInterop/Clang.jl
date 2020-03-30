@@ -73,7 +73,7 @@ function version()
 end
 
 const LLVM_VERSION = match(r"[0-9]+.[0-9]+.[0-9]+", version()).match
-const LLVM_LIBDIR = dirname(LibClang.LLVM_jll.libclang_path)
+const LLVM_LIBDIR = dirname(LibClang.Clang_jll.libclang_path)
 const LLVM_INCLUDE = joinpath(LLVM_LIBDIR, "clang", LLVM_VERSION, "include")
 const CLANG_INCLUDE = LLVM_INCLUDE
 

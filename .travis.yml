@@ -9,7 +9,7 @@ julia:
   - nightly
 matrix:
   allow_failures:
-    - julia: nightly
+    - julia: 1.4
   fast_finish: true
 notifications:
   email: false

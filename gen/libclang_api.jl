@@ -947,6 +947,14 @@ function clang_Cursor_isAnonymous(C)
     ccall((:clang_Cursor_isAnonymous, libclang), UInt32, (CXCursor,), C)
 end
 
+function clang_Cursor_isAnonymousRecordDecl(C)
+    ccall((:clang_Cursor_isAnonymousRecordDecl, libclang), UInt32, (CXCursor,), C)
+end
+
+function clang_Cursor_isInlineNamespace(C)
+    ccall((:clang_Cursor_isInlineNamespace, libclang), UInt32, (CXCursor,), C)
+end
+
 function clang_Type_getNumTemplateArguments(T)
     ccall((:clang_Type_getNumTemplateArguments, libclang), Cint, (CXType,), T)
 end

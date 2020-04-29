@@ -142,8 +142,8 @@ function wrap!(ctx::AbstractContext, cursor::CLStructDecl)
     buffer = ctx.common_buffer
 
     # generate struct declaration
-    block = Expr(:block)
-    expr = Expr(:struct, ismutable, struct_sym, block)
+    block = Expr(:bracescat)
+    expr = Expr(:macrocall, Symbol("@cstruct"), nothing, struct_sym, block)
     deps = OrderedSet{Symbol}()
     struct_fields = children(cursor)
     for (field_idx, field_cursor) in enumerate(struct_fields)

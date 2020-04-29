@@ -57,6 +57,16 @@ function print_buffer(out_stream, out_buffer)
             continue
         end
 
+        if isa(e, Expr) && e.head == :macrocall && first(e.args) == Symbol("@cstruct")
+            println(out_stream, "@cstruct $(e.args[3]) {")
+            for elem in e.args[4].args
+                println(out_stream, "    $elem")
+            end
+            println(out_stream, "}")
+            println(out_stream)
+            continue
+        end
+
         println(out_stream, e)
     end
 end

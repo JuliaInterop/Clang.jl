@@ -149,7 +149,7 @@ function wrap!(ctx::AbstractContext, cursor::CLStructDecl)
     for (field_idx, field_cursor) in enumerate(struct_fields)
         field_name = name(field_cursor)
         field_kind = kind(field_cursor)
-        if field_kind == CXCursor_StructDecl || field_kind == CXCursor_UnionDecl
+        if field_kind == CXCursor_StructDecl || field_kind == CXCursor_UnionDecl || field_kind == CXCursor_EnumDecl
             continue
         elseif field_kind == CXCursor_FirstAttr
             continue
@@ -163,6 +163,23 @@ function wrap!(ctx::AbstractContext, cursor::CLStructDecl)
 
         # anonymous field
         if occursin("anonymous", string(clang2julia(field_cursor)))
+            children_cursors = children(field_cursor)
+
+            # union field
+            if kind(children_cursors[1]) == CXCursor_UnionDecl
+                union_block = Expr(:bracescat)
+                union_expr = Expr(:macrocall, Symbol("@cunion"), nothing, union_block)
+
+                for union_field in children(children_cursors[1])
+                    repr = clang2julia(union_field)
+                    union_field_name = name(union_field)
+                    push!(union_block.args, Expr(:(::), symbol_safe(union_field_name), repr))
+                    push!(deps, target_type(repr))
+                end
+                push!(block.args, union_expr)
+                continue
+            end
+
             idx = field_idx-1
             anonymous_record = struct_fields[idx]
             while idx != 0 && kind(anonymous_record) == CXCursor_FieldDecl

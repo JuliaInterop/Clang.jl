@@ -30,6 +30,7 @@ export kind, name, spelling, type, extent, value, location, filename
 export canonical, underlying_type, integer_type, result_type, return_type, typedef_type
 export bitwidth, argnum, argument, function_args
 export search, children
+export is_forward_declaration
 
 include("type.jl")
 export isvolatile, isrestrict, isvariadic, is_plain_old_data

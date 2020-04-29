@@ -42,7 +42,7 @@ function init(; headers::Vector{String}                    = String[],
                 header_wrapped                             = (header, cursorname) -> true,
                 header_library                             = nothing,
                 header_outputfile::Union{Function,Nothing} = nothing,
-                cursor_wrapped                             = (cursorname, cursor) -> true,
+                cursor_wrapped                             = (cursorname, cursor) -> !is_forward_declaration(cursor) || kind(cursor) == CXCursor_FunctionDecl,
                 options                                    = InternalOptions(),
                 rewriter                                   = x -> x)
 

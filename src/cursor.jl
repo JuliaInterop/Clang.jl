@@ -519,3 +519,22 @@ function is_typedef_anon(current::CLCursor, next::CLCursor)
         return false
     end
 end
+
+"""
+    is_forward_declaration(cursor::CLCursor) -> Bool
+Return true if the current cursor is a forward declaration.
+"""
+function is_forward_declaration(cursor::CLCursor)
+    definition = clang_getCursorDefinition(cursor)
+
+    # If the definition is null, then there is no definition in this translation
+    # unit, so this cursor must be a forward declaration.
+    if clang_equalCursors(definition, clang_getNullCursor()) == 1
+        return true
+    end
+
+    # If there is a definition, then the forward declaration and the definition
+    # are in the same translation unit. This cursor is the forward declaration if
+    # it is not the definition.
+    return clang_equalCursors(cursor, definition) == 0
+end

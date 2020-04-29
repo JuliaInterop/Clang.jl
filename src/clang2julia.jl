@@ -71,6 +71,8 @@ function target_type(e::Expr)
         return target_type(e.args[2])
     elseif  e.head == :curly && e.args[1] == :NTuple
         return target_type(e.args[3])
+    elseif  e.head == :ref # constant array
+        return target_type(e.args[1])
     else
         error("target_type: don't know how to handle $e")
     end
@@ -136,12 +138,11 @@ end
 
 """
     clang2julia(t::CLConstantArray)
-`ConstantArray`s are translated to `NTuple`s.
 """
 function clang2julia(t::CLConstantArray)
     arrsize = element_num(t)
     eltype = clang2julia(element_type(t))
-    return :(NTuple{$arrsize, $eltype})
+    return :($eltype[$arrsize])
 end
 
 """

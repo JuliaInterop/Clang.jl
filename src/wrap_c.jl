@@ -161,6 +161,7 @@ function wrap!(ctx::AbstractContext, cursor::CLStructDecl)
             error("Unnamed struct member in: $cursor ... cursor: $field_cursor")
         end
 
+        # anonymous field
         if occursin("anonymous", string(clang2julia(field_cursor)))
             idx = field_idx-1
             anonymous_record = struct_fields[idx]
@@ -179,9 +180,23 @@ function wrap!(ctx::AbstractContext, cursor::CLStructDecl)
                 anon_name = "ANONYMOUS$(ctx.anonymous_counter)_"*spelling(struct_fields[idx+1])
                 repr = symbol_safe(anon_name)
             end
-        else
-            repr = clang2julia(field_cursor)
+
+            push!(block.args, Expr(:(::), symbol_safe(field_name), repr))
+            push!(deps, target_type(repr))
+            continue
         end
+
+        # bitfield
+        if clang_Cursor_isBitField(field_cursor) == 1
+            repr = clang2julia(field_cursor)
+            bit_width = clang_getFieldDeclBitWidth(field_cursor)
+            symbol = symbol_safe(field_name)
+            push!(block.args, Expr(:(::), :($symbol:$bit_width), repr))
+            push!(deps, target_type(repr))
+            continue
+        end
+
+        repr = clang2julia(field_cursor)
         push!(block.args, Expr(:(::), symbol_safe(field_name), repr))
         push!(deps, target_type(repr))
     end

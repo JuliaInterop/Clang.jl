@@ -132,7 +132,7 @@ function clang2julia(t::CLPointer)
     ptree_kind = kind(ptree)
     (ptree_kind == CXType_Char_U || ptree_kind == CXType_Char_S) && return :Cstring
     ptree_kind == CXType_WChar && return :Cwstring
-    Expr(:curly, :Ptr, clang2julia(ptree))
+    Expr(:curly, :Ptr, :Cvoid)
 end
 
 """

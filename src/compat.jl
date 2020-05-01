@@ -16,14 +16,7 @@ mutable struct WrapContext
     common_file::String
     clang_includes::Vector{String}               # clang include paths
     clang_args::Vector{String}                   # additional {"-Arg", "value"} pairs for clang
-    header_wrapped::Function                     # called to determine header inclusion status
-                                                 #   (top_header, cursor_header) -> Bool
     header_library::Function                     # called to determine shared library for given header
-                                                 #   (header_name) -> library_name::AbstractString
-    header_outputfile::Function                  # called to determine output file group for given header
-                                                 #   (header_name) -> output_file::AbstractString
-    cursor_wrapped::Function                     # called to determine cursor inclusion status
-                                                 #   (cursor_name, cursor) -> Bool
     common_buf::OrderedDict{Symbol, ExprUnit}    # output buffer for common items: typedefs, enums, etc.
     output_bufs::DefaultOrderedDict{String, Array{Any}}
     options::InternalOptions
@@ -39,31 +32,26 @@ function init(; headers::Vector{String}                    = String[],
                 clang_args::Vector{String}                 = String[],
                 clang_includes::Vector{String}             = String[],
                 clang_diagnostics::Bool                    = true,
-                header_wrapped                             = (header, cursorname) -> true,
                 header_library                             = nothing,
-                header_outputfile::Union{Function,Nothing} = nothing,
-                cursor_wrapped                             = (cursorname, cursor) -> !is_forward_declaration(cursor) || kind(cursor) == CXCursor_FunctionDecl,
                 options                                    = InternalOptions(),
                 rewriter                                   = x -> x)
 
     # Set up some optional args if they are not explicitly passed.
     index == nothing && (index = Index(clang_diagnostics);)
 
-    if output_file == "" && header_outputfile == nothing
-        header_outputfile = x->joinpath(output_dir, strip(splitext(basename(x))[1]) * ".jl")
+    if output_file == ""
+        output_file = joinpath(output_dir, strip(splitext(basename(x))[1]) * ".jl")
     end
 
-    common_file == "" && (common_file = output_file;)
-    common_file = joinpath(output_dir, common_file)
+    if common_file == ""
+        common_file = joinpath(output_dir, common_file)
+    end
 
     if header_library == nothing
-        header_library = x->strip(splitext(basename(x))[1])
+        header_library = strip(splitext(basename(x))[1])
     elseif isa(header_library, String)
         libname = copy(header_library)
         header_library = x->libname
-    end
-    if header_outputfile == nothing
-        header_outputfile = x->joinpath(output_dir, output_file)
     end
 
     # Instantiate and return the WrapContext
@@ -73,10 +61,7 @@ function init(; headers::Vector{String}                    = String[],
                                  common_file,
                                  clang_includes,
                                  clang_args,
-                                 header_wrapped,
                                  header_library,
-                                 header_outputfile,
-                                 cursor_wrapped,
                                  OrderedDict{Symbol,ExprUnit}(),
                                  DefaultOrderedDict{String, Array{Any}}(()->Any[]),
                                  options,
@@ -89,57 +74,75 @@ function Base.run(wc::WrapContext, generate_template=true)
     ctx = DefaultContext(wc.index)
     parse_headers!(ctx, wc.headers, args=wc.clang_args, includes=wc.clang_includes)
     ctx.options["is_function_strictly_typed"] = false
-    ctx.options["is_struct_mutable"] = wc.options.ismutable
     # Helper to store file handles
     filehandles = Dict{String,IOStream}()
     getfile(f) = (f in keys(filehandles)) ? filehandles[f] : (filehandles[f] = open(f, "w"))
 
+    # First pass on the AST, add declarations to be translated to the queue.
+    # Declarations to be translated include:
+    # - enumerations
+    # - structures
+    # - unions
+    # - functions
+    # and consists only in declarations from selected headers.
+    # Types on which these declarations depend (e.g. parameters and return types of functions,
+    # types of fields in structures) will be added to the queue during the traversal.
     for trans_unit in ctx.trans_units
         root_cursor = getcursor(trans_unit)
-        push!(ctx.cursor_stack, root_cursor)
         header = spelling(root_cursor)
-        @info "wrapping header: $header ..."
 
-        # loop over all of the child cursors and wrap them, if appropriate.
-        ctx.children = children(root_cursor)
-        for (i, child) in enumerate(ctx.children)
+        root_children = children(root_cursor)
+        for (i, child) in enumerate(root_children)
+
+            # Save next cursor.
+            ctx.next_cursor[child] = length(root_children) < i+1 ? nothing : root_children[i+1]
+
+            child_kind = kind(child)
             child_name = name(child)
             child_header = filename(child)
-            ctx.children_index = i
-            # what should be wrapped:
-            #   1. wrap if context.header_wrapped(header, child_header) == True
-            #   2. wrap if context.cursor_wrapped(cursor_name, cursor) == True
-            #   3. skip compiler defs and cursors already wrapped
-            if !wc.header_wrapped(header, child_header) ||
-               !wc.cursor_wrapped(child_name, child) ||       # client callbacks
-               startswith(child_name, "__")          ||       # skip compiler definitions
-               child_name in keys(ctx.common_buffer)          # already wrapped
+
+            # Skip irrelevant cursors.
+            if child in ctx.visited || # already added to the queue
+                (is_forward_declaration(child) && child_kind != CXCursor_FunctionDecl) || # forward type declaration
+                startswith(child_name, "__") || # compiler definitions
+                child_header != header || # cursors from other headers
+                (child_kind != CXCursor_EnumDecl &&
+                 child_kind !=  CXCursor_StructDecl &&
+                 child_kind != CXCursor_UnionDecl &&
+                 child_kind != CXCursor_EnumConstantDecl &&
+                 child_kind != CXCursor_FunctionDecl)
                 continue
             end
-            ctx.libname = wc.header_library(child_header)
 
-            try
-                wrap!(ctx, child)
-            catch err
-                push!(ctx.cursor_stack, child)
-                @error "error thrown. Last cursor available in context.cursor_stack."
-                rethrow(err)
-            end
+            enqueue!(ctx.queue, child)
+            push!(ctx.visited, child)
         end
-
-        # apply user-supplied transformation
-        ctx.api_buffer = wc.rewriter(ctx.api_buffer)
-
-        # write output
-        out_file = wc.header_outputfile(header)
-        @info "writing $(out_file)"
-
-        out_stream = getfile(out_file)
-        println(out_stream, "# Julia wrapper for header: $(basename(header))")
-        println(out_stream, "# Automatically generated using Clang.jl\n")
-        print_buffer(out_stream, ctx.api_buffer)
-        ctx.api_buffer = Expr[]  # clean api_buffer for the next header
     end
+
+    # Wrap all cursors until the queue is empty.
+    # For each declaration wrapped, other declarations on which it depends will be added to the queue.
+    while !isempty(ctx.queue)
+        cursor = dequeue!(ctx.queue)
+        ctx.libname = wc.header_library(filename(cursor))
+        try
+            wrap!(ctx, cursor)
+        catch err
+            @error "error thrown."
+            rethrow(err)
+        end
+    end
+
+    # apply user-supplied transformation
+    ctx.api_buffer = wc.rewriter(ctx.api_buffer)
+
+    # write output
+    out_file = wc.output_file
+    @info "writing $(out_file)"
+
+    out_stream = getfile(out_file)
+    println(out_stream, "# Julia wrapper automatically generated using Clang.jl\n")
+    print_buffer(out_stream, ctx.api_buffer)
+    ctx.api_buffer = Expr[]  # clean api_buffer for the next header
 
     common_buf = dump_to_buffer(ctx.common_buffer)
 

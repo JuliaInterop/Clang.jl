@@ -3,6 +3,21 @@ Unsupported argument types
 """
 const RESERVED_ARG_TYPES = ["va_list"]
 
+function wrap_type!(ctx::AbstractContext, type::CLType)
+    decl_cursor::Union{CLCursor,Nothing} = nothing
+
+    if typeof(type) <: Union{CLVector,CLConstantArray,CLIncompleteArray,CLVariableArray,CLDependentSizedArray,CLComplex}
+        decl_cursor = clang_getCursorDefinition(typedecl(element_type(type)))
+    else
+        decl_cursor = clang_getCursorDefinition(typedecl((type)))
+    end
+
+    if !(decl_cursor in ctx.visited)
+        push!(ctx.visited, decl_cursor)
+        enqueue!(ctx.queue, decl_cursor)
+    end
+end
+
 """
     wrap!(ctx::AbstractContext, cursor::CLFunctionDecl)
 Subroutine for handling function declarations. Note that VarArg functions are not supported.
@@ -28,6 +43,13 @@ function wrap!(ctx::AbstractContext, cursor::CLFunctionDecl)
             arg_reps[i] = Expr(:curly, :Ptr, last(arg.args))
         end
     end
+
+    # Wrap return type and argument types
+    for arg_type in arg_types
+        println(arg_type)
+        wrap_type!(ctx, arg_type)
+    end
+    wrap_type!(ctx, return_type(cursor))
 
     # check whether any argument types are blocked
     for t in arg_types
@@ -83,13 +105,11 @@ Subroutine for handling enum declarations.
 function wrap!(ctx::AbstractContext, cursor::CLEnumDecl)
     cursor_name = name(cursor)
     # handle typedef anonymous enum
-    idx = ctx.children_index
-    if 0 < idx < length(ctx.children)
-        next_cursor = ctx.children[idx+1]
-        if is_typedef_anon(cursor, next_cursor)
-            cursor_name = name(next_cursor)
-        end
+    next_cursor = get(ctx.next_cursor, cursor, nothing)
+    if next_cursor != nothing && is_typedef_anon(cursor, next_cursor)
+        cursor_name = name(next_cursor)
     end
+
     !isempty(ctx.force_name) && (cursor_name = ctx.force_name;)
     cursor_name == "" && (@warn("Skipping unnamed EnumDecl: $cursor"); return ctx)
 
@@ -123,22 +143,17 @@ Subroutine for handling struct declarations.
 """
 function wrap!(ctx::AbstractContext, cursor::CLStructDecl)
     # make sure a empty struct is indeed an opaque struct typedef/typealias
-    # cursor = canonical(cursor)  # this won't work
     cursor = type(cursor) |> canonical |> typedecl
     cursor_name = name(cursor)
     # handle typedef anonymous struct
-    idx = ctx.children_index
-    if 0 < idx < length(ctx.children)
-        next_cursor = ctx.children[idx+1]
-        if is_typedef_anon(cursor, next_cursor)
-            cursor_name = name(next_cursor)
-        end
+    next_cursor = get(ctx.next_cursor,cursor,nothing)
+    if next_cursor != nothing && is_typedef_anon(cursor, next_cursor)
+        cursor_name = name(next_cursor)
     end
     !isempty(ctx.force_name) && (cursor_name = ctx.force_name;)
     cursor_name == "" && (@warn("Skipping unnamed StructDecl: $cursor"); return ctx)
 
     struct_sym = symbol_safe(cursor_name)
-    ismutable = get(ctx.options, "is_struct_mutable", false)
     buffer = ctx.common_buffer
 
     # generate struct declaration
@@ -149,6 +164,7 @@ function wrap!(ctx::AbstractContext, cursor::CLStructDecl)
     for (field_idx, field_cursor) in enumerate(struct_fields)
         field_name = name(field_cursor)
         field_kind = kind(field_cursor)
+
         if field_kind == CXCursor_StructDecl || field_kind == CXCursor_UnionDecl || field_kind == CXCursor_EnumDecl
             continue
         elseif field_kind == CXCursor_FirstAttr
@@ -175,6 +191,7 @@ function wrap!(ctx::AbstractContext, cursor::CLStructDecl)
                     union_field_name = name(union_field)
                     push!(union_block.args, Expr(:(::), symbol_safe(union_field_name), repr))
                     push!(deps, target_type(repr))
+                    wrap_type!(ctx, type(union_field))
                 end
                 push!(block.args, union_expr)
                 continue
@@ -214,6 +231,7 @@ function wrap!(ctx::AbstractContext, cursor::CLStructDecl)
         end
 
         repr = clang2julia(field_cursor)
+        wrap_type!(ctx, type(field_cursor))
         push!(block.args, Expr(:(::), symbol_safe(field_name), repr))
         push!(deps, target_type(repr))
     end
@@ -237,21 +255,18 @@ Subroutine for handling union declarations.
 """
 function wrap!(ctx::AbstractContext, cursor::CLUnionDecl)
     # make sure a empty union is indeed an opaque union typedef/typealias
+    # cursor = canonical(cursor)  # this won't work
     cursor = type(cursor) |> canonical |> typedecl
     cursor_name = name(cursor)
     # handle typedef anonymous union
-    idx = ctx.children_index
-    if 0 < idx < length(ctx.children)
-        next_cursor = ctx.children[idx+1]
-        if is_typedef_anon(cursor, next_cursor)
-            cursor_name = name(next_cursor)
-        end
+    next_cursor = ctx.next_cursor[cursor]
+    if next_cursor != nothing && is_typedef_anon(cursor, next_cursor)
+        cursor_name = name(next_cursor)
     end
     !isempty(ctx.force_name) && (cursor_name = ctx.force_name;)
     cursor_name == "" && (@warn("Skipping unnamed UnionDecl: $cursor"); return ctx)
 
     union_sym = symbol_safe(cursor_name)
-    ismutable = get(ctx.options, "is_struct_mutable", false)
     buffer = ctx.common_buffer
 
     # generate union declaration
@@ -278,6 +293,7 @@ function wrap!(ctx::AbstractContext, cursor::CLUnionDecl)
         repr = clang2julia(field_cursor)
         push!(block.args, Expr(:(::), symbol_safe(field_name), repr))
         push!(deps, target_type(repr))
+        wrap_type!(ctx, type(field_cursor))
     end
 
     # check for a previous forward ordering
@@ -315,8 +331,14 @@ function wrap!(ctx::AbstractContext, cursor::CLTypedefDecl)
     end
 
     td_target = clang2julia(td_type)
+
+    if td_target == td_sym
+        return wrap!(ctx, typedecl(typedef_type(cursor)))
+    end
+
     if !haskey(buffer, td_sym)
         buffer[td_sym] = ExprUnit(:(const $td_sym = $td_target), [td_target])
+        wrap_type!(ctx, typedef_type(cursor))
     end
     return ctx
 end

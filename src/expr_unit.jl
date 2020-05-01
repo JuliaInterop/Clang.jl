@@ -48,7 +48,7 @@ function print_buffer(out_stream, out_buffer)
         end
 
         if isa(e, Expr) && e.head == :macrocall && first(e.args) == Symbol("@cunion")
-            println(out_stream, "@cunion $(e.args[3].args[1]) {")
+            println(out_stream, "@cunion $(e.args[3]) {")
             for elem in e.args[4].args
                 println(out_stream, "    $elem,")
             end

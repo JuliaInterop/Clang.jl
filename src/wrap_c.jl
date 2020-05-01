@@ -254,50 +254,40 @@ function wrap!(ctx::AbstractContext, cursor::CLUnionDecl)
     ismutable = get(ctx.options, "is_struct_mutable", false)
     buffer = ctx.common_buffer
 
-    block = Expr(:block)
-    expr = Expr(:struct, ismutable, union_sym, block)
+    # generate union declaration
+    block = Expr(:bracescat)
+    expr = Expr(:macrocall, Symbol("@cunion"), nothing, union_sym, block)
     deps = OrderedSet{Symbol}()
-    # find the largest union field and declare a block of bytes to match.
     union_fields = children(cursor)
-    if !isempty(union_fields)
-        max_size = 0
-        largest_field_idx = 0
-        for i = 1:length(union_fields)
-            field_cursor = union_fields[i]
-            field_kind = kind(field_cursor)
-            (field_kind == CXCursor_StructDecl || field_kind == CXCursor_UnionDecl) && continue
-            field_kind == CXCursor_FirstAttr && continue
-            field_size = typesize(type(field_cursor))
-            if field_size > max_size
-                max_size = field_size
-                largest_field_idx = i
-            end
+    for (field_idx, field_cursor) in enumerate(union_fields)
+        field_name = name(field_cursor)
+        field_kind = kind(field_cursor)
+
+        if field_kind == CXCursor_StructDecl || field_kind == CXCursor_UnionDecl || field_kind == CXCursor_EnumDecl
+            continue
+        elseif field_kind == CXCursor_FirstAttr
+            continue
+        elseif field_kind != CXCursor_FieldDecl || field_kind == CXCursor_TypeRef
+            buffer[union_sym] = ExprUnit(Poisoned())
+            @warn "Skipping union: \"$cursor\" due to unsupported field: $field_cursor"
+            return ctx
+        elseif isempty(field_name)
+            error("Unnamed union member in: $cursor ... cursor: $field_cursor")
         end
-        largest_field = union_fields[largest_field_idx]
-        if occursin("anonymous", string(clang2julia(largest_field)))
-            idx = largest_field_idx-1
-            anonymous_record = union_fields[idx]
-            while idx != 0 && kind(anonymous_record) == CXCursor_FieldDecl
-                idx -= 1
-                anonymous_record = union_fields[idx]
-            end
-            ctx.anonymous_counter += 1
-            anon_name = "ANONYMOUS$(ctx.anonymous_counter)_"*spelling(largest_field)
-            ctx.force_name = anon_name
-            wrap!(ctx, anonymous_record)
-            ctx.force_name = ""
-            repr = symbol_safe(anon_name)
-        else
-            repr = clang2julia(largest_field)
-        end
-        largest_field_sym = symbol_safe(spelling(largest_field))
-        push!(block.args, Expr(:(::), largest_field_sym, repr))
+
+        repr = clang2julia(field_cursor)
+        push!(block.args, Expr(:(::), symbol_safe(field_name), repr))
         push!(deps, target_type(repr))
-        buffer[union_sym] = ExprUnit(expr, deps)
-    elseif !(union_sym in keys(buffer)) || buffer[union_sym].state == :empty
-        buffer[union_sym] = ExprUnit(:(const $union_sym = Cvoid), deps, state=:empty)
-    else
-        @warn "Skipping union: \"$cursor\" due to unknown cases."
+    end
+
+    # check for a previous forward ordering
+    if !(union_sym in keys(buffer)) || buffer[union_sym].state == :empty
+        if !isempty(union_fields)
+            buffer[union_sym] = ExprUnit(expr, deps)
+        else
+            # opaque union typedef/typealias
+            buffer[union_sym] = ExprUnit(:(const $union_sym = Cvoid), deps, state=:empty)
+        end
     end
 
     return ctx

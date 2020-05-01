@@ -164,7 +164,7 @@ clang2julia(t::CLIncompleteArray) = Expr(:curly, :Ptr, clang2julia(element_type(
 Convert libclang cursor/type to Julia.
 """
 clang2julia(c::CLCursor) = clang2julia(type(c))
-clang2julia(c::CLUnionDecl) = type(c) |> largestfield |> clang2julia
+clang2julia(c::CLUnionDecl) = type(c) |> clang2julia
 clang2julia(c::CLEnumDecl) = integer_type(c) |> clang2julia
 
 function clang2julia(c::CLTypeRef)

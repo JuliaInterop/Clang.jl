@@ -20,21 +20,23 @@ mutable struct WrapContext
     common_buf::OrderedDict{Symbol, ExprUnit}    # output buffer for common items: typedefs, enums, etc.
     output_bufs::DefaultOrderedDict{String, Array{Any}}
     options::InternalOptions
+    fields_align::Dict{Tuple{Symbol,Symbol},Int} # {struct_symbol,field_symbol} -> alignment
     rewriter::Function
 end
 
 ### Convenience function to initialize wrapping context with defaults
-function init(; headers::Vector{String}                    = String[],
-                index::Union{Index,Nothing}                = nothing,
-                output_dir::String                         = "",
-                output_file::String                        = "",
-                common_file::String                        = "",
-                clang_args::Vector{String}                 = String[],
-                clang_includes::Vector{String}             = String[],
-                clang_diagnostics::Bool                    = true,
-                header_library                             = nothing,
-                options                                    = InternalOptions(),
-                rewriter                                   = x -> x)
+function init(; headers::Vector{String}                     = String[],
+                index::Union{Index,Nothing}                 = nothing,
+                output_dir::String                          = "",
+                output_file::String                         = "",
+                common_file::String                         = "",
+                clang_args::Vector{String}                  = String[],
+                clang_includes::Vector{String}              = String[],
+                clang_diagnostics::Bool                     = true,
+                header_library                              = nothing,
+                options                                     = InternalOptions(),
+                fields_align::Dict{Tuple{Symbol,Symbol},Int} = Dict{Tuple{Symbol,Symbol},Int}(),
+                rewriter                                    = x -> x)
 
     # Set up some optional args if they are not explicitly passed.
     index == nothing && (index = Index(clang_diagnostics);)
@@ -65,13 +67,14 @@ function init(; headers::Vector{String}                    = String[],
                                  OrderedDict{Symbol,ExprUnit}(),
                                  DefaultOrderedDict{String, Array{Any}}(()->Any[]),
                                  options,
+                                 fields_align,
                                  rewriter)
     return context
 end
 
 function Base.run(wc::WrapContext, generate_template=true)
     # parse headers
-    ctx = DefaultContext(wc.index)
+    ctx = DefaultContext(wc.index, wc.fields_align)
     parse_headers!(ctx, wc.headers, args=wc.clang_args, includes=wc.clang_includes)
     ctx.options["is_function_strictly_typed"] = false
     # Helper to store file handles

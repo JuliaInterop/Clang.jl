@@ -46,7 +46,6 @@ function wrap!(ctx::AbstractContext, cursor::CLFunctionDecl)
 
     # Wrap return type and argument types
     for arg_type in arg_types
-        println(arg_type)
         wrap_type!(ctx, arg_type)
     end
     wrap_type!(ctx, return_type(cursor))
@@ -164,6 +163,11 @@ function wrap!(ctx::AbstractContext, cursor::CLStructDecl)
     for (field_idx, field_cursor) in enumerate(struct_fields)
         field_name = name(field_cursor)
         field_kind = kind(field_cursor)
+
+        alignment = get(ctx.fields_align, (struct_sym, symbol_safe(field_name)), nothing)
+        if alignment != nothing
+            push!(block.args, Expr(:macrocall, Symbol("@calign"), nothing, alignment))
+        end
 
         if field_kind == CXCursor_StructDecl || field_kind == CXCursor_UnionDecl || field_kind == CXCursor_EnumDecl
             continue

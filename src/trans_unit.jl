@@ -87,10 +87,9 @@ end
 
 """
     parse_headers(headers::Vector{String}; index::Index=Index(), args::Vector{String}=String[], includes::Vector{String}=String[],
-        flags = CXTranslationUnit_DetailedPreprocessingRecord | CXTranslationUnit_SkipFunctionBodies) -> Vector{TranslationUnit}
+        flags = CXTranslationUnit_DetailedPreprocessingRecord | CXTranslationUnit_IncludeAttributedTypes | CXTranslationUnit_VisitImplicitAttributes | CXTranslationUnit_SkipFunctionBodies) -> Vector{TranslationUnit}
 Return a [`TranslationUnit`](@ref) vector for the given headers. See also [`parse_header`](@ref).
 """
-parse_headers(headers::Vector{String}; index::Index=Index(), args::Vector{String}=String[],
-    includes::Vector{String}=String[], flags=CXTranslationUnit_DetailedPreprocessingRecord |
-    CXTranslationUnit_SkipFunctionBodies) = [parse_header(header; index=index, args=args,
-                                                          includes=includes, flags=flags) for header in unique(headers)]
+parse_headers(headers::Vector{String}; index::Index=Index(), args::Vector{String}=String[], includes::Vector{String}=String[],
+              flags=CXTranslationUnit_DetailedPreprocessingRecord | CXTranslationUnit_IncludeAttributedTypes | CXTranslationUnit_VisitImplicitAttributes | CXTranslationUnit_SkipFunctionBodies) =
+                  [parse_header(header; index=index, args=args, includes=includes, flags=flags) for header in unique(headers)]

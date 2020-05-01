@@ -75,7 +75,7 @@ end
 function Base.run(wc::WrapContext, generate_template=true)
     # parse headers
     ctx = DefaultContext(wc.index, wc.fields_align)
-    parse_headers!(ctx, wc.headers, args=wc.clang_args, includes=wc.clang_includes)
+    parse_headers!(ctx, wc.headers, args=wc.clang_args, includes=wc.clang_includes, index=wc.index)
     ctx.options["is_function_strictly_typed"] = false
     # Helper to store file handles
     filehandles = Dict{String,IOStream}()

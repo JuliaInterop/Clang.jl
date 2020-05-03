@@ -67,7 +67,7 @@ function print_template(path, libname="LibXXX")
             check_deps()
         end
 
-        using CEnum
+        using CBinding
 
         include("ctypes.jl")
         export Ctm, Ctime_t, Cclock_t

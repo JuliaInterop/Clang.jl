@@ -1,8 +1,3 @@
-"""
-Unsupported argument types
-"""
-const RESERVED_ARG_TYPES = ["va_list"]
-
 function wrap_type!(ctx::AbstractContext, type::CLType)
     decl_cursor::Union{CLCursor,Nothing} = nothing
 
@@ -26,9 +21,6 @@ function wrap!(ctx::AbstractContext, cursor::CLFunctionDecl)
     func_type = type(cursor)
     if kind(func_type) == CXType_FunctionNoProto
         @warn "No Prototype for $cursor - assuming no arguments"
-    elseif isvariadic(func_type)
-        @warn "Skipping VarArg Function $cursor"
-        return ctx
     end
 
     func_name = isempty(ctx.force_name) ? Symbol(spelling(cursor)) : ctx.force_name
@@ -50,29 +42,25 @@ function wrap!(ctx::AbstractContext, cursor::CLFunctionDecl)
     end
     wrap_type!(ctx, return_type(cursor))
 
-    # check whether any argument types are blocked
-    for t in arg_types
-        if spelling(t) in RESERVED_ARG_TYPES
-            @warn "Skipping $(name(cursor)) due to unsupported argument: $(spelling(t))"
-            return ctx
-        end
-    end
-
     # handle unnamed args and convert names to symbols
     arg_count = 0
     arg_names = map(args) do x
                     n = name_safe(name(x))
                     s = !isempty(n) ? n : "arg"*string(arg_count+=1)
                     Symbol(s)
-                end
+    end
 
-    isstrict = get(ctx.options, "is_function_strictly_typed", true)
-    signature = isstrict ? efunsig(func_name, arg_names, arg_reps) : Expr(:call, func_name, arg_names...)
+    signature = efunsig(func_name, arg_names, arg_reps)
+    if isvariadic(func_type)
+        push!(signature.args, Expr(:(...), :var_arg))
+    end
 
     ctx.libname == "libxxx" && @warn "default libname: \":libxxx\" are being used, did you forget to specify `context.libname`?"
-    body = eccall(func_name, Symbol(ctx.libname), ret_type, arg_names, arg_reps)
 
-    push!(ctx.api_buffer, Expr(:function, signature, Expr(:block, body)))
+
+    block = Expr(:block)
+    push!(ctx.api_buffer, Expr(:macrocall, Symbol("@cbindings"), nothing, ctx.libname, block))
+    push!(block.args, Expr(:macrocall, Symbol("@cextern"), nothing, Expr(:(::), signature, ret_type)))
 
     return ctx
 end
@@ -85,7 +73,7 @@ function is_ptr_type_expr(@nospecialize t)
 end
 
 function efunsig(name::Symbol, args::Vector{Symbol}, types)
-    x = [is_ptr_type_expr(t) ? a : Expr(:(::), a, t) for (a,t) in zip(args,types)]
+    x = [Expr(:(::), a, t) for (a,t) in zip(args,types)]
     Expr(:call, name, x...)
 end
 

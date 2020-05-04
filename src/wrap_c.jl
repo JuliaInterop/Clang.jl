@@ -335,19 +335,11 @@ function wrap!(ctx::AbstractContext, cursor::CLTypedefDecl)
     return ctx
 end
 
-
 """
-    handle_macro_exprn(tokens::TokenList, pos::Int)
-For handling of #define'd constants, allows basic expressions but bails out quickly.
+    wrap!(ctx::AbstractContext, cursor::CLMacroDefinition)
+Subroutine for handling macro declarations.
 """
-function handle_macro_exprn(tokens::TokenList, pos::Int)
-    function trans(tok)
-        ops = ["+" "-" "*" "~" ">>" "<<" "/" "\\" "%" "|" "||" "^" "&" "&&"]
-        token_kind = kind(tok)
-        (token_kind == CXToken_Literal || token_kind == CXToken_Identifier) && return 0
-        token_kind == CXToken_Punctuation && tok.text ∈ ops && return 1
-        return -1
-    end
+function wrap!(ctx::AbstractContext, cursor::CLMacroDefinition)
 
     # normalize literal with a size suffix
     function literally(tok)
@@ -357,113 +349,92 @@ function handle_macro_exprn(tokens::TokenList, pos::Int)
                            "U", "u", "L", "l", "F", "f"]
 
         function literal_totype(literal, txt)
-          literal = lowercase(literal)
+            literal = lowercase(literal)
 
-          # Floats following http://en.cppreference.com/w/cpp/language/floating_literal
-          float64 = occursin(".", txt) && occursin("l", literal)
-          float32 = occursin("f", literal)
+            # Floats following http://en.cppreference.com/w/cpp/language/floating_literal
+            float64 = occursin(".", txt) && occursin("l", literal)
+            float32 = occursin("f", literal)
 
-          if float64 || float32
-            float64 && return "Float64"
-            float32 && return "Float32"
-          end
+            if float64 || float32
+                float64 && return "Float64"
+                float32 && return "Float32"
+            end
 
-          # Integers following http://en.cppreference.com/w/cpp/language/integer_literal
-          unsigned = occursin("u", literal)
-          nbits = count(x -> x == 'l', literal) == 2 ? 64 : 32
-          return "$(unsigned ? "U" : "")Int$nbits"
+            # Integers following http://en.cppreference.com/w/cpp/language/integer_literal
+            unsigned = occursin("u", literal)
+            nbits = count(x -> x == 'l', literal) == 2 ? 64 : 32
+            return "$(unsigned ? "U" : "")Int$nbits"
         end
 
-        token_kind = kind(tok)
         txt = tok.text |> strip
-        if token_kind == CXToken_Identifier || token_kind == CXToken_Punctuation
-            # pass
-        elseif token_kind == CXToken_Literal
-            for sfx in literalsuffixes
-                if endswith(txt, sfx)
-                    type = literal_totype(sfx, txt)
-                    txt = txt[1:end-length(sfx)]
-                    txt = "$(type)($txt)"
-                    break
-                end
+        for sfx in literalsuffixes
+            if endswith(txt, sfx)
+                type = literal_totype(sfx, txt)
+                txt = txt[1:end-length(sfx)]
+                txt = "$(type)($txt)"
+                break
             end
         end
         return txt
     end
 
-    # check whether identifiers and literals alternate
-    # with punctuation
-    exprn = ""
-    pos > length(tokens) && return exprn, pos
-
-    prev = 1 >> trans(tokens[pos])
-    for lpos = pos:length(tokens)
-        pos = lpos
-        tok = tokens[lpos]
-        state = trans(tok)
-        if xor(state, prev) == 1
-            prev = state
-        else
-            break
-        end
-        exprn = exprn * literally(tok)
-    end
-    return exprn, pos
-end
-
-# TODO: This really returns many more symbols than we want,
-# Functionally, it shouldn't matter, but eventually, we
-# might want something more sophisticated.
-# (Check: Does this functionality already exist elsewhere?)
-get_symbols(s) = Any[]
-get_symbols(s::Symbol) = Any[s]
-get_symbols(e::Expr) = vcat(get_symbols(e.head), get_symbols(e.args))
-get_symbols(xs::Array) = reduce(vcat, [get_symbols(x) for x in xs])
-
-"""
-    wrap!(ctx::AbstractContext, cursor::CLMacroDefinition)
-Subroutine for handling macro declarations.
-"""
-function wrap!(ctx::AbstractContext, cursor::CLMacroDefinition)
     tokens = tokenize(cursor)
+
     # Skip any empty definitions
     tokens.size < 2 && return ctx
     startswith(name(cursor), "_") && return ctx
 
     buffer = ctx.common_buffer
-    pos = 1; exprn = ""
-    if tokens[2].text == "("
-        exprn, pos = handle_macro_exprn(tokens, 3)
-        if pos != lastindex(tokens) || tokens[pos].text != ")" || exprn == ""
-            mdef_str = join([c.text for c in tokens], " ")
-            buffer[Symbol(mdef_str)] = ExprUnit(string("# Skipping MacroDefinition: ", replace(mdef_str, "\n"=>"\n#")))
-            return ctx
-        end
-        exprn = "(" * exprn * ")"
-    else
-        exprn, pos = handle_macro_exprn(tokens, 2)
-        if pos != lastindex(tokens)
-            mdef_str = join([c.text for c in tokens], " ")
-            buffer[Symbol(mdef_str)] = ExprUnit(string("# Skipping MacroDefinition: ", replace(mdef_str, "\n"=>"#\n")))
-            return ctx
-        end
-    end
 
-    # Occasionally, skipped definitions slip through
-    (exprn == "" || exprn == "()") && return buffer
+    exprn = ""
+    deps = []
+    prev_kind = nothing
+    for i in 2:tokens.size
+        token = tokens[i]
+        token_kind = kind(token)
+        token_text = token.text
+        if token_kind == CXToken_Literal
+            if prev_kind == CXToken_Literal
+                @warn "Skipping CLMacroDefinition: $cursor"
+                return ctx
+            end
+            exprn *= literally(token)
+        elseif token_kind == CXToken_Identifier
+            exprn *= token.text
+            push!(deps, symbol_safe(token_text))
+        elseif token_kind == CXToken_Punctuation
+
+            # Do not translate macro containing function calls
+            if token_text == "(" && prev_kind == CXToken_Identifier
+                @warn "Skipping CLMacroDefinition: $cursor"
+                return ctx
+            end
+
+            if token_text ∈ ["+" "-" "*" "~" ">>" "<<" "/" "\\" "%" "|" "||" "^" "&" "&&" "(" ")"]
+                exprn *= token.text
+            else
+                @warn "Skipping CLMacroDefinition: $cursor"
+                return ctx
+            end
+        else
+            @warn "Skipping CLMacroDefinition: $cursor"
+            return ctx
+        end
+        prev_kind = token_kind
+    end
 
     use_sym = symbol_safe(tokens[1].text)
 
     try
         target = Meta.parse(exprn)
+        if use_sym == target
+            return ctx
+        end
+
         e = Expr(:const, Expr(:(=), use_sym, target))
-        deps = get_symbols(target)
         buffer[use_sym] = ExprUnit(e, deps)
     catch err
-        # this assumes all parsing failures are due to string-parsing
-        ## TODO: find a elegant way to solve this
-        e = :(const $use_sym = $(exprn[2:end-1]))
-        buffer[use_sym] = ExprUnit(e,[])
+        @warn "Skipping CLMacroDefinition: $cursor"
     end
 
     return ctx
@@ -483,7 +454,18 @@ function wrap!(ctx::AbstractContext, cursor::CLCursor)
     return ctx
 end
 
-function wrap!(ctx::AbstractContext, cursor::Union{CLLastPreprocessing,CLMacroInstantiation})
+function wrap!(ctx::AbstractContext, cursor::CLMacroInstantiation)
+    # tokens = tokenize(cursor)
+    # for token in tokens
+    #     print(token.text, " ")
+    # end
+    println(cursor, children(cursor))
+    @warn "not wrapping $(cursor)"
+    return ctx
+end
+
+
+function wrap!(ctx::AbstractContext, cursor::CLLastPreprocessing)
     @debug "not wrapping $(cursor)"
     return ctx
 end

@@ -86,6 +86,7 @@ function Base.run(wc::WrapContext, generate_template=true)
 
     # First pass on the AST, add declarations to be translated to the queue.
     # Declarations to be translated include:
+    # - macro definitions
     # - enumerations
     # - structures
     # - unions
@@ -109,7 +110,7 @@ function Base.run(wc::WrapContext, generate_template=true)
 
             # Skip irrelevant cursors.
             if child in ctx.visited || # already added to the queue
-                (is_forward_declaration(child) && child_kind != CXCursor_FunctionDecl) || # forward type declaration
+                (is_forward_declaration(child) && child_kind != CXCursor_FunctionDecl && child_kind != CXCursor_MacroDefinition) || # forward type declaration
                 startswith(child_name, "__") || # compiler definitions
                 child_header != header || # cursors from other headers
                 child_name in ctx.exclude_symbols ||
@@ -117,7 +118,8 @@ function Base.run(wc::WrapContext, generate_template=true)
                  child_kind !=  CXCursor_StructDecl &&
                  child_kind != CXCursor_UnionDecl &&
                  child_kind != CXCursor_EnumConstantDecl &&
-                 child_kind != CXCursor_FunctionDecl)
+                 child_kind != CXCursor_FunctionDecl &&
+                 child_kind != CXCursor_MacroDefinition)
                 continue
             end
 

@@ -20,6 +20,7 @@ mutable struct WrapContext
     common_buf::OrderedDict{Symbol, ExprUnit}    # output buffer for common items: typedefs, enums, etc.
     output_bufs::DefaultOrderedDict{String, Array{Any}}
     options::InternalOptions
+    exclude_symbols::Set{String}
     fields_align::Dict{Tuple{Symbol,Symbol},Int} # {struct_symbol,field_symbol} -> alignment
     rewriter::Function
 end
@@ -35,6 +36,7 @@ function init(; headers::Vector{String}                     = String[],
                 clang_diagnostics::Bool                     = true,
                 header_library                              = nothing,
                 options                                     = InternalOptions(),
+                exclude_symbols::Set{String}                = Set{String}(),
                 fields_align::Dict{Tuple{Symbol,Symbol},Int} = Dict{Tuple{Symbol,Symbol},Int}(),
                 rewriter                                    = x -> x)
 
@@ -67,6 +69,7 @@ function init(; headers::Vector{String}                     = String[],
                                  OrderedDict{Symbol,ExprUnit}(),
                                  DefaultOrderedDict{String, Array{Any}}(()->Any[]),
                                  options,
+                                 exclude_symbols,
                                  fields_align,
                                  rewriter)
     return context
@@ -74,7 +77,7 @@ end
 
 function Base.run(wc::WrapContext, generate_template=true)
     # parse headers
-    ctx = DefaultContext(wc.index, wc.fields_align)
+    ctx = DefaultContext(wc.index, wc.exclude_symbols, wc.fields_align)
     parse_headers!(ctx, wc.headers, args=wc.clang_args, includes=wc.clang_includes, index=wc.index)
     ctx.options["is_function_strictly_typed"] = false
     # Helper to store file handles
@@ -109,6 +112,7 @@ function Base.run(wc::WrapContext, generate_template=true)
                 (is_forward_declaration(child) && child_kind != CXCursor_FunctionDecl) || # forward type declaration
                 startswith(child_name, "__") || # compiler definitions
                 child_header != header || # cursors from other headers
+                child_name in ctx.exclude_symbols ||
                 (child_kind != CXCursor_EnumDecl &&
                  child_kind !=  CXCursor_StructDecl &&
                  child_kind != CXCursor_UnionDecl &&

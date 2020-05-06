@@ -55,11 +55,11 @@ function wrap!(ctx::AbstractContext, cursor::CLFunctionDecl)
         push!(signature.args, Expr(:(...), :var_arg))
     end
 
-    ctx.libname == "libxxx" && @warn "default libname: \":libxxx\" are being used, did you forget to specify `context.libname`?"
+    ctx.libname == "libxxx" && @warn "default libname: libxxx are being used, did you forget to specify `context.libname`?"
 
 
     block = Expr(:block)
-    push!(ctx.api_buffer, Expr(:macrocall, Symbol("@cbindings"), nothing, ctx.libname, block))
+    push!(ctx.api_buffer, Expr(:macrocall, Symbol("@cbindings"), nothing, symbol_safe(ctx.libname), block))
     push!(block.args, Expr(:macrocall, Symbol("@cextern"), nothing, Expr(:(::), signature, ret_type)))
 
     return ctx

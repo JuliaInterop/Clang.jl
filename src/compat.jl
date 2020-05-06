@@ -21,6 +21,7 @@ mutable struct WrapContext
     output_bufs::DefaultOrderedDict{String, Array{Any}}
     options::InternalOptions
     exclude_symbols::Set{String}
+    only_select_symbols::Set{String}
     fields_align::Dict{Tuple{Symbol,Symbol},Int} # {struct_symbol,field_symbol} -> alignment
     rewriter::Function
 end
@@ -37,6 +38,7 @@ function init(; headers::Vector{String}                     = String[],
                 header_library                              = nothing,
                 options                                     = InternalOptions(),
                 exclude_symbols::Set{String}                = Set{String}(),
+                only_select_symbols::Set{String}            = Set{String}(),
                 fields_align::Dict{Tuple{Symbol,Symbol},Int} = Dict{Tuple{Symbol,Symbol},Int}(),
                 rewriter                                    = x -> x)
 
@@ -70,6 +72,7 @@ function init(; headers::Vector{String}                     = String[],
                                  DefaultOrderedDict{String, Array{Any}}(()->Any[]),
                                  options,
                                  exclude_symbols,
+                                 only_select_symbols,
                                  fields_align,
                                  rewriter)
     return context
@@ -77,7 +80,7 @@ end
 
 function Base.run(wc::WrapContext, generate_template=true)
     # parse headers
-    ctx = DefaultContext(wc.index, wc.exclude_symbols, wc.fields_align)
+    ctx = DefaultContext(wc.index, wc.exclude_symbols, wc.only_select_symbols, wc.fields_align)
     parse_headers!(ctx, wc.headers, args=wc.clang_args, includes=wc.clang_includes, index=wc.index)
     ctx.options["is_function_strictly_typed"] = false
     # Helper to store file handles
@@ -105,7 +108,7 @@ function Base.run(wc::WrapContext, generate_template=true)
             ctx.next_cursor[child] = length(root_children) < i+1 ? nothing : root_children[i+1]
 
             child_kind = kind(child)
-            child_name = name(child)
+            child_name = split(name(child), "(")[1]
             child_header = filename(child)
 
             # Skip irrelevant cursors.
@@ -114,6 +117,7 @@ function Base.run(wc::WrapContext, generate_template=true)
                 startswith(child_name, "__") || # compiler definitions
                 child_header != header || # cursors from other headers
                 child_name in ctx.exclude_symbols ||
+                (length(ctx.only_select_symbols) > 0 && !(child_name in ctx.only_select_symbols)) ||
                 (child_kind != CXCursor_EnumDecl &&
                  child_kind !=  CXCursor_StructDecl &&
                  child_kind != CXCursor_UnionDecl &&

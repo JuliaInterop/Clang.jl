@@ -13,13 +13,14 @@ mutable struct DefaultContext <: AbstractContext
     visited::Set{CLCursor}
     anonymous_counter::Int
     exclude_symbols::Set{String}
+    only_select_symbols::Set{String}
     fields_align::Dict{Tuple{Symbol,Symbol},Int}
 end
-DefaultContext(index::Index, exclude_symbols, fields_align) = DefaultContext(index, TranslationUnit[], Dict{String,Bool}(),
+DefaultContext(index::Index, exclude_symbols, only_select_symbols, fields_align) = DefaultContext(index, TranslationUnit[], Dict{String,Bool}(),
                                               "libxxx", "", OrderedDict{Symbol,ExprUnit}(), [],
                                               Dict{CLCursor,Union{CLCursor,Nothing}}(),
                                               Queue{CLCursor}(), Set{CLCursor}(), 0,
-                                              exclude_symbols, fields_align)
+                                              exclude_symbols, only_select_symbols, fields_align)
 DefaultContext(diagnostic::Bool=true) = DefaultContext(Index(diagnostic))
 
 parse_header!(ctx::AbstractContext, header::AbstractString; args...) = push!(ctx.trans_units, parse_header(header; args...))

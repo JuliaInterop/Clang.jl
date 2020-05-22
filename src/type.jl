@@ -196,7 +196,7 @@ get_named_type(t::CLElaborated)::CLType = clang_Type_getNamedType(t)
     kind(t::CLType) -> CXTypeKind
 Return the kind of the given type.
 """
-kind(t::CXType) = CXTypeKind(t.kind)
+kind(t::CXType) = t.kind
 kind(t::CLType) = kind(t.type)
 
 """

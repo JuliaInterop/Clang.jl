@@ -1,10 +1,15 @@
-using Documenter, Clang
+using Clang
+using Documenter
 
-makedocs(
-    modules = [Clang],
-    clean = false,
-    sitename = "Clang.jl",
-    linkcheck = !("skiplinks" in ARGS),
+makedocs(;
+    modules=[Clang],
+    repo="https://github.com/JuliaInterop/Clang.jl/blob/{commit}{path}#L{line}",
+    sitename="Clang.jl",
+    format=Documenter.HTML(;
+        prettyurls=get(ENV, "CI", "false") == "true",
+        canonical="https://JuliaInterop.github.io/Clang.jl",
+        assets=String[],
+    ),
     pages = [
         "Introduction" => "index.md",
         "Tutorial" => "tutorial.md",
@@ -12,7 +17,6 @@ makedocs(
     ],
 )
 
-deploydocs(
-    repo = "github.com/JuliaInterop/Clang.jl.git",
-    target = "build",
+deploydocs(;
+    repo="github.com/JuliaInterop/Clang.jl.git",
 )

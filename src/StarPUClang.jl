@@ -1,4 +1,4 @@
-module Clang
+module StarPUClang
 
 include("LibClang.jl")
 using .LibClang

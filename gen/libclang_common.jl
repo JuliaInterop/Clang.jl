@@ -72,7 +72,7 @@ end
 
 
 const CINDEX_VERSION_MAJOR = 0
-const CINDEX_VERSION_MINOR = 50
+const CINDEX_VERSION_MINOR = 59
 
 # Skipping MacroDefinition: CINDEX_VERSION_ENCODE ( major , minor ) ( ( ( major ) * 10000 ) + ( ( minor ) * 1 ) )
 # Skipping MacroDefinition: CINDEX_VERSION CINDEX_VERSION_ENCODE ( CINDEX_VERSION_MAJOR , CINDEX_VERSION_MINOR )
@@ -115,6 +115,7 @@ end
     CXCursor_ExceptionSpecificationKind_Unevaluated = 6
     CXCursor_ExceptionSpecificationKind_Uninstantiated = 7
     CXCursor_ExceptionSpecificationKind_Unparsed = 8
+    CXCursor_ExceptionSpecificationKind_NoThrow = 9
 end
 
 @cenum CXGlobalOptFlags::UInt32 begin
@@ -191,6 +192,7 @@ end
     CXTranslationUnit_LimitSkipFunctionBodiesToPreamble = 2048
     CXTranslationUnit_IncludeAttributedTypes = 4096
     CXTranslationUnit_VisitImplicitAttributes = 8192
+    CXTranslationUnit_IgnoreNonErrorsFromIncludedFiles = 16384
 end
 
 @cenum CXSaveTranslationUnit_Flags::UInt32 begin
@@ -436,7 +438,8 @@ end
     CXCursor_OMPTargetTeamsDistributeParallelForDirective = 277
     CXCursor_OMPTargetTeamsDistributeParallelForSimdDirective = 278
     CXCursor_OMPTargetTeamsDistributeSimdDirective = 279
-    CXCursor_LastStmt = 279
+    CXCursor_BuiltinBitCastExpr = 280
+    CXCursor_LastStmt = 280
     CXCursor_TranslationUnit = 300
     CXCursor_FirstAttr = 400
     CXCursor_UnexposedAttr = 400
@@ -477,7 +480,11 @@ end
     CXCursor_ObjCRuntimeVisible = 435
     CXCursor_ObjCBoxable = 436
     CXCursor_FlagEnum = 437
-    CXCursor_LastAttr = 437
+    CXCursor_ConvergentAttr = 438
+    CXCursor_WarnUnusedAttr = 439
+    CXCursor_WarnUnusedResultAttr = 440
+    CXCursor_AlignedAttr = 441
+    CXCursor_LastAttr = 441
     CXCursor_PreprocessingDirective = 500
     CXCursor_MacroDefinition = 501
     CXCursor_MacroExpansion = 502
@@ -661,6 +668,7 @@ const CXCursorSet = Ptr{CXCursorSetImpl}
     CXType_OCLIntelSubgroupAVCImeResultDualRefStreamout = 173
     CXType_OCLIntelSubgroupAVCImeSingleRefStreamin = 174
     CXType_OCLIntelSubgroupAVCImeDualRefStreamin = 175
+    CXType_ExtVector = 176
 end
 
 @cenum CXCallingConv::UInt32 begin
@@ -718,6 +726,7 @@ end
     CXTypeLayoutError_Dependent = -3
     CXTypeLayoutError_NotConstantSize = -4
     CXTypeLayoutError_InvalidFieldName = -5
+    CXTypeLayoutError_Undeduced = -6
 end
 
 @cenum CXRefQualifierKind::UInt32 begin

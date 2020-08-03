@@ -1,7 +1,7 @@
 ## Clang
 
 [![Build Status](https://travis-ci.org/JuliaInterop/Clang.jl.svg?branch=master)](https://travis-ci.org/JuliaInterop/Clang.jl)
-[![Build status](https://ci.appveyor.com/api/projects/status/u4rkpvm2y4o8bo8r/branch/master?svg=true)](https://ci.appveyor.com/project/Gnimuc/clang-jl/branch/master)
+[![Build Status](https://github.com/JuliaInterop/Clang.jl/workflows/CI/badge.svg)](https://github.com/JuliaInterop/Clang.jl/actions)
 ![TagBot](https://github.com/JuliaInterop/Clang.jl/workflows/TagBot/badge.svg)
 [![codecov](https://codecov.io/gh/JuliaInterop/Clang.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/JuliaInterop/Clang.jl)
 [![](https://img.shields.io/badge/docs-stable-blue.svg)](https://JuliaInterop.github.io/Clang.jl/stable)

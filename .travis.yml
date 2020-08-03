@@ -5,11 +5,11 @@ os:
   - osx
   - windows
 julia:
-  - 1.4
+  - 1.5
   - nightly
 matrix:
   allow_failures:
-    - julia: 1.4
+    - julia: 1.5
   fast_finish: true
 notifications:
   email: false

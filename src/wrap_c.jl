@@ -306,7 +306,7 @@ For handling of #define'd constants, allows basic expressions but bails out quic
 """
 function handle_macro_exprn(tokens::TokenList, pos::Int)
     function trans(tok)
-        ops = ["+" "-" "*" "~" ">>" "<<" "/" "\\" "%" "|" "||" "^" "&" "&&"]
+        ops = ["+" "-" "*" "~" ">>" "<<" "/" "\\" "%" "|" "||" "^" "&" "&&" "=="]
         token_kind = kind(tok)
         (token_kind == CXToken_Literal || token_kind == CXToken_Identifier) && return 0
         token_kind == CXToken_Punctuation && tok.text ∈ ops && return 1

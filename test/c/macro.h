@@ -6,3 +6,5 @@ void macro_range(void) {
     int x = 0;
     x = FOO(foo, 1, x);
 }
+
+#define EQUALS_A_B (A == B)

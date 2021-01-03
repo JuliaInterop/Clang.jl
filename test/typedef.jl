@@ -56,6 +56,11 @@ using Test
     expr = :(const SECRET = secretunion)
     Base.remove_linenums!(expr)
     @test ctx.common_buffer[:SECRET].items[1] == expr
+    # opaque
+    wrap!(ctx, cursors[12])
+    expr = :(const VkInstance_T = Cvoid)
+    Base.remove_linenums!(expr)
+    @test ctx.common_buffer[:VkInstance_T].items[1] == expr
 end
 
 @testset "typedef_anon" begin

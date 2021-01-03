@@ -70,14 +70,13 @@ target_type(s::Symbol) = s
 function target_type(e::Expr)
     if e.head == :curly && e.args[1] == :Ptr
         return target_type(e.args[2])
-    elseif  e.head == :curly && e.args[1] == :NTuple
+    elseif e.head == :curly && e.args[1] == :NTuple
         return target_type(e.args[3])
     else
         error("target_type: don't know how to handle $e")
     end
 end
 target_type(q) = error("target_type: don't know how to handle $q")
-
 
 """
     typesize(t::CLType) -> Int
@@ -97,7 +96,8 @@ Convert libclang cursor/type to Julia.
 """
 function clang2julia(t::CLType)
     type_kind = kind(t)
-    !haskey(CLANG_JULIA_TYPEMAP, type_kind) && error("No CXType translation available for: $type_kind")
+    !haskey(CLANG_JULIA_TYPEMAP, type_kind) &&
+        error("No CXType translation available for: $type_kind")
     return CLANG_JULIA_TYPEMAP[type_kind]
 end
 
@@ -105,7 +105,7 @@ end
 clang2julia(t::CLElaborated) = clang2julia(get_named_type(t))
 
 # CXType_Enum types are mapped into Cenums, so we only need to extract enum's names.
-clang2julia(t::CLEnum) = spelling(t) |> split |> last |> Symbol
+clang2julia(t::CLEnum) = Symbol(last(split(spelling(t))))
 
 function clang2julia(t::Union{CLRecord,CLTypedef})
     cursor_name = spelling(typedecl(t))
@@ -123,7 +123,7 @@ function clang2julia(t::CLPointer)
     ptree_kind = kind(ptree)
     (ptree_kind == CXType_Char_U || ptree_kind == CXType_Char_S) && return :Cstring
     ptree_kind == CXType_WChar && return :Cwstring
-    Expr(:curly, :Ptr, clang2julia(ptree))
+    return Expr(:curly, :Ptr, clang2julia(ptree))
 end
 
 """
@@ -132,7 +132,7 @@ Unexposed Clang types are translated to the symbol of its cursor name(if exist).
 """
 function clang2julia(t::CLUnexposed)
     cursor_name = spelling(typedecl(t))
-    isempty(cursor_name) ? :Cvoid : Symbol(cursor_name)
+    return isempty(cursor_name) ? :Cvoid : Symbol(cursor_name)
 end
 
 """
@@ -142,7 +142,7 @@ end
 function clang2julia(t::CLConstantArray)
     arrsize = element_num(t)
     eltype = clang2julia(element_type(t))
-    return :(NTuple{$arrsize, $eltype})
+    return :(NTuple{$arrsize,$eltype})
 end
 
 """
@@ -156,14 +156,16 @@ clang2julia(t::CLIncompleteArray) = Expr(:curly, :Ptr, clang2julia(element_type(
 Convert libclang cursor/type to Julia.
 """
 clang2julia(c::CLCursor) = clang2julia(type(c))
-clang2julia(c::CLUnionDecl) = type(c) |> largestfield |> clang2julia
-clang2julia(c::CLEnumDecl) = integer_type(c) |> clang2julia
+clang2julia(c::CLUnionDecl) = clang2julia(largestfield(type(c)))
+clang2julia(c::CLEnumDecl) = clang2julia(integer_type(c))
 
 function clang2julia(c::CLTypeRef)
     reftype = getref(c)
     refdef = getdef(reftype)
     refdefKind = kind(refdef)
-    if isnull(refdef) || refdefKind == CXCursor_InvalidFile || refdefKind == CXCursor_FirstInvalid
+    if isnull(refdef) ||
+       refdefKind == CXCursor_InvalidFile ||
+       refdefKind == CXCursor_FirstInvalid
         return :Cvoid
     else
         return Symbol(spelling(reftype))

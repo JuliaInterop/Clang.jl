@@ -232,10 +232,12 @@ function value(c::CLEnumConstantDecl)::Int
     typeKind = kind(type(c))
     if typeKind == CXType_Int || typeKind == CXType_Long || typeKind == CXType_LongLong
         return clang_getEnumConstantDeclValue(c)
-    elseif typeKind == CXType_UInt || typeKind == CXType_ULong || typeKind == CXType_ULongLong
+    elseif typeKind == CXType_UInt ||
+           typeKind == CXType_ULong ||
+           typeKind == CXType_ULongLong
         return clang_getEnumConstantDeclUnsignedValue(c)
     end
-    error("Unknown EnumConstantDecl type: ", typeKind, " cursor: ", kind(c))
+    return error("Unknown EnumConstantDecl type: ", typeKind, " cursor: ", kind(c))
 end
 
 """
@@ -260,7 +262,8 @@ Return the argument cursor of a function or method.
 Wrapper for libclang's `clang_Cursor_getArgument`.
 """
 argument(c::CXCursor, i::Integer) = clang_Cursor_getArgument(c, Unsigned(i))
-argument(c::Union{CLFunctionDecl,CLCXXMethod}, i::Integer)::CLCursor = clang_Cursor_getArgument(c, Unsigned(i))
+argument(c::Union{CLFunctionDecl,CLCXXMethod}, i::Integer)::CLCursor =
+    clang_Cursor_getArgument(c, Unsigned(i))
 
 ## TODO:
 # clang_Cursor_getNumTemplateArguments
@@ -420,7 +423,6 @@ function spelling(k::CXCursorKind)
     return s
 end
 
-
 # helper
 """
     filename(c::Union{CXCursor,CLCursor}) -> String
@@ -476,8 +478,8 @@ function search(cursors::Vector{T}, ismatch::Function) where {T<:CLCursor}
     return matched
 end
 search(c::CLCursor, ismatch::Function) = search(children(c), ismatch)
-search(c::CLCursor, s::String) = search(c, x->spelling(x)==s)
-search(c::CLCursor, k::CXCursorKind) = search(c, x->kind(x)==k)
+search(c::CLCursor, s::String) = search(c, x -> spelling(x) == s)
+search(c::CLCursor, k::CXCursorKind) = search(c, x -> kind(x) == k)
 
 # visitor
 function cu_children_visitor(cursor::CXCursor, parent::CXCursor, list)::Cuint
@@ -493,8 +495,17 @@ Return a child cursor vector of the given cursor.
 function children(cursor::CXCursor)
     # TODO: possible to use sizehint! here?
     list = CXCursor[]
-    cu_visitor_cb = @cfunction(cu_children_visitor, Cuint, (CXCursor, CXCursor, Ref{Vector{CXCursor}}))
-    GC.@preserve list ccall((:clang_visitChildren, LibClang.libclang), UInt32, (CXCursor, CXCursorVisitor, Any), cursor, cu_visitor_cb, list)
+    cu_visitor_cb = @cfunction(
+        cu_children_visitor, Cuint, (CXCursor, CXCursor, Ref{Vector{CXCursor}})
+    )
+    GC.@preserve list ccall(
+        (:clang_visitChildren, LibClang.libclang),
+        UInt32,
+        (CXCursor, CXCursorVisitor, Any),
+        cursor,
+        cu_visitor_cb,
+        list,
+    )
     return list
 end
 children(c::CLCursor)::Vector{CLCursor} = children(c.cursor)
@@ -512,8 +523,7 @@ Return true if the current cursor is an typedef anonymous struct/enum.
 function is_typedef_anon(current::CLCursor, next::CLCursor)
     !isempty(name(current)) && return false
     refback = children(next)
-    if kind(next) == CXCursor_TypedefDecl &&
-       !isempty(refback) && isempty(name(refback[1]))
+    if kind(next) == CXCursor_TypedefDecl && !isempty(refback) && isempty(name(refback[1]))
         return true
     else
         return false

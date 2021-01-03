@@ -1,6 +1,6 @@
 using .LibClang.CEnum: name_value_pairs
 
-cxname2clname(x::AbstractString) = "CL" * last(split(x, '_', limit=2))
+cxname2clname(x::AbstractString) = "CL" * last(split(x, '_'; limit=2))
 cxname2clname(x::Symbol) = cxname2clname(string(x))
 
 # each CXCursorKind enum gets a specific Julia type wrapping
@@ -51,7 +51,7 @@ abstract type CLToken end
 const CLTokenMap = Dict()
 
 for (sym, val) in name_value_pairs(CXTokenKind)
-    clsym = split(string(sym), '_', limit=2) |> last |> Symbol
+    clsym = Symbol(last(split(string(sym), '_'; limit=2)))
     @eval begin
         struct $clsym <: CLToken
             token::CXToken

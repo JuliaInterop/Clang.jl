@@ -7,7 +7,7 @@ using DataStructures
 
 include("cltypes.jl")
 export CLCursor, CLType, CLToken
-foreach(names(@__MODULE__, all=true)) do s
+foreach(names(@__MODULE__; all=true)) do s
     x = getfield(@__MODULE__, s)
     if x isa DataType && supertype(x) in [CLCursor, CLType, CLToken]
         @eval export $s
@@ -73,7 +73,7 @@ function version()
 end
 
 const LLVM_VERSION = match(r"[0-9]+.[0-9]+.[0-9]+", version()).match
-const LLVM_DIR = joinpath(dirname(LibClang.Clang_jll.libclang_path), "..") |> normpath
+const LLVM_DIR = normpath(joinpath(dirname(LibClang.Clang_jll.libclang_path), ".."))
 const LLVM_LIBDIR = joinpath(LLVM_DIR, "lib")
 const LLVM_INCLUDE = joinpath(LLVM_LIBDIR, "clang", LLVM_VERSION, "include")
 const CLANG_INCLUDE = LLVM_INCLUDE

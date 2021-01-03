@@ -19,7 +19,7 @@ function wrap!(ctx::AbstractContext, cursor::CLFunctionDecl)
     func_name = isempty(ctx.force_name) ? Symbol(spelling(cursor)) : ctx.force_name
     ret_type = clang2julia(return_type(cursor))
     args = function_args(cursor)
-    arg_types = [argtype(func_type, i) for i in 0:length(args)-1]
+    arg_types = [argtype(func_type, i) for i in 0:(length(args) - 1)]
     arg_reps = clang2julia.(arg_types)
     for (i, arg) in enumerate(arg_reps)
         # constant array argument should be converted to Ptr
@@ -40,15 +40,20 @@ function wrap!(ctx::AbstractContext, cursor::CLFunctionDecl)
     # handle unnamed args and convert names to symbols
     arg_count = 0
     arg_names = map(args) do x
-                    n = name_safe(name(x))
-                    s = !isempty(n) ? n : "arg"*string(arg_count+=1)
-                    Symbol(s)
-                end
+        n = name_safe(name(x))
+        s = !isempty(n) ? n : "arg" * string(arg_count += 1)
+        return Symbol(s)
+    end
 
     isstrict = get(ctx.options, "is_function_strictly_typed", true)
-    signature = isstrict ? efunsig(func_name, arg_names, arg_reps) : Expr(:call, func_name, arg_names...)
+    signature = if isstrict
+        efunsig(func_name, arg_names, arg_reps)
+    else
+        Expr(:call, func_name, arg_names...)
+    end
 
-    ctx.libname == "libxxx" && @warn "default libname: \":libxxx\" are being used, did you forget to specify `context.libname`?"
+    ctx.libname == "libxxx" &&
+        @warn "default libname: \":libxxx\" are being used, did you forget to specify `context.libname`?"
     body = eccall(func_name, Symbol(ctx.libname), ret_type, arg_names, arg_reps)
 
     push!(ctx.api_buffer, Expr(:function, signature, Expr(:block, body)))
@@ -60,20 +65,18 @@ function is_ptr_type_expr(@nospecialize t)
     (t === :Cstring || t === :Cwstring) && return true
     isa(t, Expr) || return false
     t = t::Expr
-    t.head === :curly && t.args[1] === :Ptr
+    return t.head === :curly && t.args[1] === :Ptr
 end
 
 function efunsig(name::Symbol, args::Vector{Symbol}, types)
-    x = [is_ptr_type_expr(t) ? a : Expr(:(::), a, t) for (a,t) in zip(args,types)]
-    Expr(:call, name, x...)
+    x = [is_ptr_type_expr(t) ? a : Expr(:(::), a, t) for (a, t) in zip(args, types)]
+    return Expr(:call, name, x...)
 end
 
 function eccall(func_name::Symbol, libname::Symbol, rtype, args, types)
-  :(ccall(($(QuoteNode(func_name)), $libname),
-            $rtype,
-            $(Expr(:tuple, types...)),
-            $(args...))
-    )
+    return :(ccall(
+        ($(QuoteNode(func_name)), $libname), $rtype, $(Expr(:tuple, types...)), $(args...)
+    ))
 end
 
 """
@@ -85,12 +88,12 @@ function wrap!(ctx::AbstractContext, cursor::CLEnumDecl)
     # handle typedef anonymous enum
     idx = ctx.children_index
     if 0 < idx < length(ctx.children)
-        next_cursor = ctx.children[idx+1]
+        next_cursor = ctx.children[idx + 1]
         if is_typedef_anon(cursor, next_cursor)
             cursor_name = name(next_cursor)
         end
     end
-    !isempty(ctx.force_name) && (cursor_name = ctx.force_name;)
+    !isempty(ctx.force_name) && (cursor_name = ctx.force_name)
     cursor_name == "" && (@warn("Skipping unnamed EnumDecl: $cursor"); return ctx)
 
     enum_sym = symbol_safe(cursor_name)
@@ -98,7 +101,9 @@ function wrap!(ctx::AbstractContext, cursor::CLEnumDecl)
     name2value = Tuple{Symbol,Int}[]
     # extract values and names
     for item_cursor in children(cursor)
-        kind(item_cursor) == CXCursor_PackedAttr && (@warn("this is a `__attribute__((packed))` enum, the underlying alignment of generated structure may not be compatible with the original one in C!"); continue)
+        kind(item_cursor) == CXCursor_PackedAttr && (
+            @warn("this is a `__attribute__((packed))` enum, the underlying alignment of generated structure may not be compatible with the original one in C!"); continue
+        )
         item_name = spelling(item_cursor)
         isempty(item_name) && continue
         item_sym = symbol_safe(item_name)
@@ -108,7 +113,7 @@ function wrap!(ctx::AbstractContext, cursor::CLEnumDecl)
     expr = Expr(:macrocall, Symbol("@cenum"), nothing, Expr(:(::), enum_sym, enum_type))
     enum_pairs = Expr(:block)
     ctx.common_buffer[enum_sym] = ExprUnit(expr)
-    for (name,value) in name2value
+    for (name, value) in name2value
         ctx.common_buffer[name] = ctx.common_buffer[enum_sym]  ##???
         push!(enum_pairs.args, :($name = $value))
     end
@@ -124,17 +129,17 @@ Subroutine for handling struct declarations.
 function wrap!(ctx::AbstractContext, cursor::CLStructDecl)
     # make sure a empty struct is indeed an opaque struct typedef/typealias
     # cursor = canonical(cursor)  # this won't work
-    cursor = type(cursor) |> canonical |> typedecl
+    cursor = typedecl(canonical(type(cursor)))
     cursor_name = name(cursor)
     # handle typedef anonymous struct
     idx = ctx.children_index
     if 0 < idx < length(ctx.children)
-        next_cursor = ctx.children[idx+1]
+        next_cursor = ctx.children[idx + 1]
         if is_typedef_anon(cursor, next_cursor)
             cursor_name = name(next_cursor)
         end
     end
-    !isempty(ctx.force_name) && (cursor_name = ctx.force_name;)
+    !isempty(ctx.force_name) && (cursor_name = ctx.force_name)
     cursor_name == "" && (@warn("Skipping unnamed StructDecl: $cursor"); return ctx)
 
     struct_sym = symbol_safe(cursor_name)
@@ -162,21 +167,22 @@ function wrap!(ctx::AbstractContext, cursor::CLStructDecl)
         end
 
         if occursin("anonymous", string(clang2julia(field_cursor)))
-            idx = field_idx-1
+            idx = field_idx - 1
             anonymous_record = struct_fields[idx]
             while idx != 0 && kind(anonymous_record) == CXCursor_FieldDecl
                 idx -= 1
                 anonymous_record = struct_fields[idx]
             end
-            if idx == field_idx-1
+            if idx == field_idx - 1
                 ctx.anonymous_counter += 1
-                anon_name = "ANONYMOUS$(ctx.anonymous_counter)_"*spelling(field_cursor)
+                anon_name = "ANONYMOUS$(ctx.anonymous_counter)_" * spelling(field_cursor)
                 ctx.force_name = anon_name
                 wrap!(ctx, anonymous_record)
                 ctx.force_name = ""
                 repr = symbol_safe(anon_name)
             else
-                anon_name = "ANONYMOUS$(ctx.anonymous_counter)_"*spelling(struct_fields[idx+1])
+                anon_name =
+                    "ANONYMOUS$(ctx.anonymous_counter)_" * spelling(struct_fields[idx + 1])
                 repr = symbol_safe(anon_name)
             end
         else
@@ -192,7 +198,7 @@ function wrap!(ctx::AbstractContext, cursor::CLStructDecl)
             buffer[struct_sym] = ExprUnit(expr, deps)
         else
             # opaque struct typedef/typealias
-            buffer[struct_sym] = ExprUnit(:(const $struct_sym = Cvoid), deps, state=:empty)
+            buffer[struct_sym] = ExprUnit(:(const $struct_sym = Cvoid), deps; state=:empty)
         end
     end
 
@@ -205,17 +211,17 @@ Subroutine for handling union declarations.
 """
 function wrap!(ctx::AbstractContext, cursor::CLUnionDecl)
     # make sure a empty union is indeed an opaque union typedef/typealias
-    cursor = type(cursor) |> canonical |> typedecl
+    cursor = typedecl(canonical(type(cursor)))
     cursor_name = name(cursor)
     # handle typedef anonymous union
     idx = ctx.children_index
     if 0 < idx < length(ctx.children)
-        next_cursor = ctx.children[idx+1]
+        next_cursor = ctx.children[idx + 1]
         if is_typedef_anon(cursor, next_cursor)
             cursor_name = name(next_cursor)
         end
     end
-    !isempty(ctx.force_name) && (cursor_name = ctx.force_name;)
+    !isempty(ctx.force_name) && (cursor_name = ctx.force_name)
     cursor_name == "" && (@warn("Skipping unnamed UnionDecl: $cursor"); return ctx)
 
     union_sym = symbol_safe(cursor_name)
@@ -230,10 +236,11 @@ function wrap!(ctx::AbstractContext, cursor::CLUnionDecl)
     if !isempty(union_fields)
         max_size = 0
         largest_field_idx = 0
-        for i = 1:length(union_fields)
+        for i in 1:length(union_fields)
             field_cursor = union_fields[i]
             field_kind = kind(field_cursor)
-            (field_kind == CXCursor_StructDecl || field_kind == CXCursor_UnionDecl) && continue
+            (field_kind == CXCursor_StructDecl || field_kind == CXCursor_UnionDecl) &&
+                continue
             field_kind == CXCursor_FirstAttr && continue
             field_size = typesize(type(field_cursor))
             if field_size > max_size
@@ -243,14 +250,14 @@ function wrap!(ctx::AbstractContext, cursor::CLUnionDecl)
         end
         largest_field = union_fields[largest_field_idx]
         if occursin("anonymous", string(clang2julia(largest_field)))
-            idx = largest_field_idx-1
+            idx = largest_field_idx - 1
             anonymous_record = union_fields[idx]
             while idx != 0 && kind(anonymous_record) == CXCursor_FieldDecl
                 idx -= 1
                 anonymous_record = union_fields[idx]
             end
             ctx.anonymous_counter += 1
-            anon_name = "ANONYMOUS$(ctx.anonymous_counter)_"*spelling(largest_field)
+            anon_name = "ANONYMOUS$(ctx.anonymous_counter)_" * spelling(largest_field)
             ctx.force_name = anon_name
             wrap!(ctx, anonymous_record)
             ctx.force_name = ""
@@ -263,7 +270,7 @@ function wrap!(ctx::AbstractContext, cursor::CLUnionDecl)
         push!(deps, target_type(repr))
         buffer[union_sym] = ExprUnit(expr, deps)
     elseif !(union_sym in keys(buffer)) || buffer[union_sym].state == :empty
-        buffer[union_sym] = ExprUnit(:(const $union_sym = Cvoid), deps, state=:empty)
+        buffer[union_sym] = ExprUnit(:(const $union_sym = Cvoid), deps; state=:empty)
     else
         @warn "Skipping union: \"$cursor\" due to unknown cases."
     end
@@ -287,7 +294,9 @@ function wrap!(ctx::AbstractContext, cursor::CLTypedefDecl)
     if kind(td_type) == CXType_FunctionProto
         # TODO: need to find a test case too
         if !haskey(buffer, td_sym)
-            buffer[td_sym] = ExprUnit(string("# Skipping Typedef: CXType_FunctionProto ", spelling(cursor)))
+            buffer[td_sym] = ExprUnit(string(
+                "# Skipping Typedef: CXType_FunctionProto ", spelling(cursor)
+            ))
         end
         return ctx
     end
@@ -298,7 +307,6 @@ function wrap!(ctx::AbstractContext, cursor::CLTypedefDecl)
     end
     return ctx
 end
-
 
 """
     handle_macro_exprn(tokens::TokenList, pos::Int)
@@ -321,32 +329,32 @@ function handle_macro_exprn(tokens::TokenList, pos::Int)
                            "U", "u", "L", "l", "F", "f"]
 
         function literal_totype(literal, txt)
-          literal = lowercase(literal)
+            literal = lowercase(literal)
 
-          # Floats following http://en.cppreference.com/w/cpp/language/floating_literal
-          float64 = occursin(".", txt) && occursin("l", literal)
-          float32 = occursin("f", literal)
+            # Floats following http://en.cppreference.com/w/cpp/language/floating_literal
+            float64 = occursin(".", txt) && occursin("l", literal)
+            float32 = occursin("f", literal)
 
-          if float64 || float32
-            float64 && return "Float64"
-            float32 && return "Float32"
-          end
+            if float64 || float32
+                float64 && return "Float64"
+                float32 && return "Float32"
+            end
 
-          # Integers following http://en.cppreference.com/w/cpp/language/integer_literal
-          unsigned = occursin("u", literal)
-          nbits = count(x -> x == 'l', literal) == 2 ? 64 : 32
-          return "$(unsigned ? "U" : "")Int$nbits"
+            # Integers following http://en.cppreference.com/w/cpp/language/integer_literal
+            unsigned = occursin("u", literal)
+            nbits = count(x -> x == 'l', literal) == 2 ? 64 : 32
+            return "$(unsigned ? "U" : "")Int$nbits"
         end
 
         token_kind = kind(tok)
-        txt = tok.text |> strip
+        txt = strip(tok.text)
         if token_kind == CXToken_Identifier || token_kind == CXToken_Punctuation
             # pass
         elseif token_kind == CXToken_Literal
             for sfx in literalsuffixes
                 if endswith(txt, sfx)
                     type = literal_totype(sfx, txt)
-                    txt = txt[1:end-length(sfx)]
+                    txt = txt[1:(end - length(sfx))]
                     txt = "$(type)($txt)"
                     break
                 end
@@ -361,7 +369,7 @@ function handle_macro_exprn(tokens::TokenList, pos::Int)
     pos > length(tokens) && return exprn, pos
 
     prev = 1 >> trans(tokens[pos])
-    for lpos = pos:length(tokens)
+    for lpos in pos:length(tokens)
         pos = lpos
         tok = tokens[lpos]
         state = trans(tok)
@@ -395,12 +403,15 @@ function wrap!(ctx::AbstractContext, cursor::CLMacroDefinition)
     startswith(name(cursor), "_") && return ctx
 
     buffer = ctx.common_buffer
-    pos = 1; exprn = ""
+    pos = 1
+    exprn = ""
     if tokens[2].text == "("
         exprn, pos = handle_macro_exprn(tokens, 3)
         if pos != lastindex(tokens) || tokens[pos].text != ")" || exprn == ""
             mdef_str = join([c.text for c in tokens], " ")
-            buffer[Symbol(mdef_str)] = ExprUnit(string("# Skipping MacroDefinition: ", replace(mdef_str, "\n"=>"\n#")))
+            buffer[Symbol(mdef_str)] = ExprUnit(string(
+                "# Skipping MacroDefinition: ", replace(mdef_str, "\n" => "\n#")
+            ))
             return ctx
         end
         exprn = "(" * exprn * ")"
@@ -408,7 +419,9 @@ function wrap!(ctx::AbstractContext, cursor::CLMacroDefinition)
         exprn, pos = handle_macro_exprn(tokens, 2)
         if pos != lastindex(tokens)
             mdef_str = join([c.text for c in tokens], " ")
-            buffer[Symbol(mdef_str)] = ExprUnit(string("# Skipping MacroDefinition: ", replace(mdef_str, "\n"=>"#\n")))
+            buffer[Symbol(mdef_str)] = ExprUnit(string(
+                "# Skipping MacroDefinition: ", replace(mdef_str, "\n" => "#\n")
+            ))
             return ctx
         end
     end
@@ -426,8 +439,8 @@ function wrap!(ctx::AbstractContext, cursor::CLMacroDefinition)
     catch err
         # this assumes all parsing failures are due to string-parsing
         ## TODO: find a elegant way to solve this
-        e = :(const $use_sym = $(exprn[2:end-1]))
-        buffer[use_sym] = ExprUnit(e,[])
+        e = :(const $use_sym = $(exprn[2:(end - 1)]))
+        buffer[use_sym] = ExprUnit(e, [])
     end
 
     return ctx
@@ -447,7 +460,9 @@ function wrap!(ctx::AbstractContext, cursor::CLCursor)
     return ctx
 end
 
-function wrap!(ctx::AbstractContext, cursor::Union{CLLastPreprocessing,CLMacroInstantiation})
+function wrap!(
+    ctx::AbstractContext, cursor::Union{CLLastPreprocessing,CLMacroInstantiation}
+)
     @debug "not wrapping $(cursor)"
     return ctx
 end

@@ -16,78 +16,79 @@ mutable struct WrapContext
     common_file::String
     clang_includes::Vector{String}               # clang include paths
     clang_args::Vector{String}                   # additional {"-Arg", "value"} pairs for clang
-    header_wrapped::Function                     # called to determine header inclusion status
-                                                 #   (top_header, cursor_header) -> Bool
-    header_library::Function                     # called to determine shared library for given header
-                                                 #   (header_name) -> library_name::AbstractString
-    header_outputfile::Function                  # called to determine output file group for given header
-                                                 #   (header_name) -> output_file::AbstractString
-    cursor_wrapped::Function                     # called to determine cursor inclusion status
-                                                 #   (cursor_name, cursor) -> Bool
-    common_buf::OrderedDict{Symbol, ExprUnit}    # output buffer for common items: typedefs, enums, etc.
-    output_bufs::DefaultOrderedDict{String, Array{Any}}
+    header_wrapped::Function                     # called to determine header inclusion status: (top_header, cursor_header) -> Bool
+    header_library::Function                     # called to determine shared library for given header: (header_name) -> library_name::AbstractString
+    header_outputfile::Function                  # called to determine output file group for given header: (header_name) -> output_file::AbstractString
+    cursor_wrapped::Function                     # called to determine cursor inclusion status: (cursor_name, cursor) -> Bool
+    common_buf::OrderedDict{Symbol,ExprUnit}     # output buffer for common items: typedefs, enums, etc.
+    output_bufs::DefaultOrderedDict{String,Array{Any}}
     options::InternalOptions
     rewriter::Function
 end
 
 ### Convenience function to initialize wrapping context with defaults
-function init(; headers::Vector{String}                    = String[],
-                index::Union{Index,Nothing}                = nothing,
-                output_dir::String                         = "",
-                output_file::String                        = "",
-                common_file::String                        = "",
-                clang_args::Vector{String}                 = String[],
-                clang_includes::Vector{String}             = String[],
-                clang_diagnostics::Bool                    = true,
-                header_wrapped                             = (header, cursorname) -> true,
-                header_library                             = nothing,
-                header_outputfile::Union{Function,Nothing} = nothing,
-                cursor_wrapped                             = (cursorname, cursor) -> true,
-                options                                    = InternalOptions(),
-                rewriter                                   = x -> x)
+function init(;
+    headers::Vector{String}=String[],
+    index::Union{Index,Nothing}=nothing,
+    output_dir::String="",
+    output_file::String="",
+    common_file::String="",
+    clang_args::Vector{String}=String[],
+    clang_includes::Vector{String}=String[],
+    clang_diagnostics::Bool=true,
+    header_wrapped=(header, cursorname) -> true,
+    header_library=nothing,
+    header_outputfile::Union{Function,Nothing}=nothing,
+    cursor_wrapped=(cursorname, cursor) -> true,
+    options=InternalOptions(),
+    rewriter=x -> x,
+)
 
     # Set up some optional args if they are not explicitly passed.
-    index == nothing && (index = Index(clang_diagnostics);)
+    index == nothing && (index = Index(clang_diagnostics))
 
     if output_file == "" && header_outputfile == nothing
-        header_outputfile = x->joinpath(output_dir, strip(splitext(basename(x))[1]) * ".jl")
+        header_outputfile =
+            x -> joinpath(output_dir, strip(splitext(basename(x))[1]) * ".jl")
     end
 
-    common_file == "" && (common_file = output_file;)
+    common_file == "" && (common_file = output_file)
     common_file = joinpath(output_dir, common_file)
 
     if header_library == nothing
-        header_library = x->strip(splitext(basename(x))[1])
+        header_library = x -> strip(splitext(basename(x))[1])
     elseif isa(header_library, String)
         libname = copy(header_library)
-        header_library = x->libname
+        header_library = x -> libname
     end
     if header_outputfile == nothing
-        header_outputfile = x->joinpath(output_dir, output_file)
+        header_outputfile = x -> joinpath(output_dir, output_file)
     end
 
     # Instantiate and return the WrapContext
-    global context = WrapContext(index,
-                                 headers,
-                                 output_file,
-                                 common_file,
-                                 clang_includes,
-                                 clang_args,
-                                 header_wrapped,
-                                 header_library,
-                                 header_outputfile,
-                                 cursor_wrapped,
-                                 OrderedDict{Symbol,ExprUnit}(),
-                                 DefaultOrderedDict{String, Array{Any}}(()->Any[]),
-                                 options,
-                                 rewriter)
+    global context = WrapContext(
+        index,
+        headers,
+        output_file,
+        common_file,
+        clang_includes,
+        clang_args,
+        header_wrapped,
+        header_library,
+        header_outputfile,
+        cursor_wrapped,
+        OrderedDict{Symbol,ExprUnit}(),
+        DefaultOrderedDict{String,Array{Any}}(() -> Any[]),
+        options,
+        rewriter,
+    )
     return context
 end
 
 function Base.run(wc::WrapContext, generate_template=true)
     # parse headers
     ctx = DefaultContext(wc.index)
-    parse_headers!(ctx, wc.headers, args=wc.clang_args, includes=wc.clang_includes)
+    parse_headers!(ctx, wc.headers; args=wc.clang_args, includes=wc.clang_includes)
     ctx.options["is_function_strictly_typed"] = false
     ctx.options["is_struct_mutable"] = wc.options.ismutable
     # Helper to store file handles
@@ -112,7 +113,7 @@ function Base.run(wc::WrapContext, generate_template=true)
             #   3. skip compiler defs and cursors already wrapped
             if !wc.header_wrapped(header, child_header) ||
                !wc.cursor_wrapped(child_name, child) ||       # client callbacks
-               startswith(child_name, "__")          ||       # skip compiler definitions
+               startswith(child_name, "__") ||       # skip compiler definitions
                child_name in keys(ctx.common_buffer)          # already wrapped
                 continue
             end
@@ -149,7 +150,7 @@ function Base.run(wc::WrapContext, generate_template=true)
     # write "common" definitions: types, typealiases, etc.
     open(wc.common_file, "w") do f
         println(f, "# Automatically generated using Clang.jl\n")
-        print_buffer(f, common_buf)
+        return print_buffer(f, common_buf)
     end
 
     map(close, values(filehandles))

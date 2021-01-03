@@ -6,8 +6,24 @@ Parse the given source file and the translation unit corresponding to that file.
 mutable struct TranslationUnit
     ptr::CXTranslationUnit
     idx::Index
-    function TranslationUnit(idx::Index, source_filename, command_line_args, num_command_line_args, unsaved_files, num_unsaved_files, options)
-        ptr = clang_parseTranslationUnit(idx, source_filename, command_line_args, num_command_line_args, unsaved_files, num_unsaved_files, options)
+    function TranslationUnit(
+        idx::Index,
+        source_filename,
+        command_line_args,
+        num_command_line_args,
+        unsaved_files,
+        num_unsaved_files,
+        options,
+    )
+        ptr = clang_parseTranslationUnit(
+            idx,
+            source_filename,
+            command_line_args,
+            num_command_line_args,
+            unsaved_files,
+            num_unsaved_files,
+            options,
+        )
         @assert ptr != C_NULL "failed to parse file: $source_filename"
         obj = new(ptr, idx)
         finalizer(obj) do x
@@ -19,9 +35,19 @@ mutable struct TranslationUnit
         return obj
     end
 end
-TranslationUnit(idx, source, args, unsavedFiles, options) = TranslationUnit(idx, source, args, length(args), unsavedFiles, length(unsavedFiles), options)
-TranslationUnit(idx, source, args, options) = TranslationUnit(idx, source, args, length(args), C_NULL, 0, options)
-TranslationUnit(idx, source, args) = TranslationUnit(idx, source, args, length(args), C_NULL, 0, CXTranslationUnit_None)
+function TranslationUnit(idx, source, args, unsavedFiles, options)
+    return TranslationUnit(
+        idx, source, args, length(args), unsavedFiles, length(unsavedFiles), options
+    )
+end
+function TranslationUnit(idx, source, args, options)
+    return TranslationUnit(idx, source, args, length(args), C_NULL, 0, options)
+end
+function TranslationUnit(idx, source, args)
+    return TranslationUnit(
+        idx, source, args, length(args), C_NULL, 0, CXTranslationUnit_None
+    )
+end
 
 Base.unsafe_convert(::Type{CXTranslationUnit}, x::TranslationUnit) = x.ptr
 
@@ -56,7 +82,6 @@ getcursor(tu::TranslationUnit)::CLCursor = clang_getTranslationUnitCursor(tu)
 # clang_defaultReparseOptions
 # clang_reparseTranslationUnit
 
-
 # helper
 """
     parse_header(header::AbstractString; index::Index=Index(), args::Vector{String}=String[],
@@ -71,15 +96,20 @@ See also [`parse_headers`](@ref).
 - `includes::Vector{String}`: vector of extra include directories to search.
 - `flags`: bitwise OR of CXTranslationUnit_Flags.
 """
-function parse_header(header::AbstractString; index::Index=Index(), args::Vector{String}=String[],
-                      includes::Vector{String}=String[], flags=CXTranslationUnit_None)
+function parse_header(
+    header::AbstractString;
+    index::Index=Index(),
+    args::Vector{String}=String[],
+    includes::Vector{String}=String[],
+    flags=CXTranslationUnit_None,
+)
     # TODO: support parsing in-memory with CXUnsavedFile arg
     #       to _parseTranslationUnit.jj
     #unsaved_file = CXUnsavedFile()
     !isfile(header) && throw(ArgumentError("$header not found."))
 
     !isempty(includes) && foreach(includes) do x
-        push!(args, "-I", x)
+        return push!(args, "-I", x)
     end
 
     return TranslationUnit(index, header, args, flags)
@@ -90,7 +120,16 @@ end
         flags = CXTranslationUnit_DetailedPreprocessingRecord | CXTranslationUnit_SkipFunctionBodies) -> Vector{TranslationUnit}
 Return a [`TranslationUnit`](@ref) vector for the given headers. See also [`parse_header`](@ref).
 """
-parse_headers(headers::Vector{String}; index::Index=Index(), args::Vector{String}=String[],
-    includes::Vector{String}=String[], flags=CXTranslationUnit_DetailedPreprocessingRecord |
-    CXTranslationUnit_SkipFunctionBodies) = [parse_header(header; index=index, args=args,
-                                                          includes=includes, flags=flags) for header in unique(headers)]
+function parse_headers(
+    headers::Vector{String};
+    index::Index=Index(),
+    args::Vector{String}=String[],
+    includes::Vector{String}=String[],
+    flags=CXTranslationUnit_DetailedPreprocessingRecord |
+          CXTranslationUnit_SkipFunctionBodies,
+)
+    return [
+        parse_header(header; index=index, args=args, includes=includes, flags=flags)
+        for header in unique(headers)
+    ]
+end

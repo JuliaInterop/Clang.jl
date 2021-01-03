@@ -10,13 +10,11 @@ makedocs(;
         canonical="https://JuliaInterop.github.io/Clang.jl",
         assets=String[],
     ),
-    pages = [
+    pages=[
         "Introduction" => "index.md",
         "Tutorial" => "tutorial.md",
         "API Reference" => "api.md",
     ],
 )
 
-deploydocs(;
-    repo="github.com/JuliaInterop/Clang.jl.git",
-)
+deploydocs(; repo="github.com/JuliaInterop/Clang.jl.git")

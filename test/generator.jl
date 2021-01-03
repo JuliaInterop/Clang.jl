@@ -52,7 +52,7 @@ close(api_stream)
 common_file = joinpath(@__DIR__, "libclang_common.jl")
 open(common_file, "w") do f
     println(f, "# Automatically generated using Clang.jl\n")
-    print_buffer(f, dump_to_buffer(ctx.common_buffer))
+    return print_buffer(f, dump_to_buffer(ctx.common_buffer))
 end
 
 @testset "generator" begin

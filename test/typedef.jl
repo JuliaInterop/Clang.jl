@@ -29,7 +29,7 @@ using Test
     node = cursors[5]
     node_type = type(node)
     @test canonical(node) == cursors[5]
-    @test canonical(node_type) |> typedecl == cursors[7]
+    @test typedecl(canonical(node_type)) == cursors[7]
     wrap!(ctx, cursors[5])
     expr = :(struct Node
                 data::Cint

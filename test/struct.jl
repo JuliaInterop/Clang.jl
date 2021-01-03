@@ -21,7 +21,7 @@ using Test
         array_field_cursor = struct_fields[3]
         @test clang2julia(enum_field_cursor) == :Fruit
         @test clang2julia(int_field_cursor) == :Cint
-        @test clang2julia(array_field_cursor) == :(NTuple{3, Ptr{Cvoid}})
+        @test clang2julia(array_field_cursor) == :(NTuple{3,Ptr{Cvoid}})
     end
 end
 

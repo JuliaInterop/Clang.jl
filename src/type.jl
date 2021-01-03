@@ -177,7 +177,6 @@ Wrapper for libclang's `clang_Type_getNamedType`.
 get_named_type(t::CXType) = clang_Type_getNamedType(t)
 get_named_type(t::CLElaborated)::CLType = clang_Type_getNamedType(t)
 
-
 ## TODO:
 # clang_Type_isTransparentTagTypedef
 # clang_Type_getAlignOf
@@ -188,7 +187,6 @@ get_named_type(t::CLElaborated)::CLType = clang_Type_getNamedType(t)
 # clang_Type_getTemplateArgumentAsType
 # clang_Type_getCXXRefQualifier
 #
-
 
 # helper
 """

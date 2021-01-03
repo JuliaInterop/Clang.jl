@@ -7,13 +7,12 @@ mutable struct ExprUnit
 end
 
 function ExprUnit(a::Array, deps=[]; state::Symbol=:new)
-    ExprUnit(a, OrderedSet{Symbol}([target_type(dep) for dep in deps]), state)
+    return ExprUnit(a, OrderedSet{Symbol}([target_type(dep) for dep in deps]), state)
 end
 function ExprUnit(e::Union{Expr,Symbol,String,Poisoned}, deps=[]; state::Symbol=:new)
-    ExprUnit([e], OrderedSet{Symbol}([target_type(dep) for dep in deps]), state)
+    return ExprUnit([e], OrderedSet{Symbol}([target_type(dep) for dep in deps]), state)
 end
 ExprUnit() = ExprUnit([], OrderedSet{Symbol}(), :new)
-
 
 """
 Pretty-print a buffer of expressions (and comments) to an output stream
@@ -24,16 +23,24 @@ function print_buffer(out_stream, out_buffer)
     for e in out_buffer
         isa(e, Poisoned) && continue
         prev_state = state
-        state = (isa(e, AbstractString) ? :string :
-                 isa(e, Expr) ? e.head :
-                 error("output: can't handle type $(typeof(e))"))
+        state = (
+            if isa(e, AbstractString)
+                :string
+            elseif isa(e, Expr)
+                e.head
+            else
+                error("output: can't handle type $(typeof(e))")
+            end
+        )
 
         if state == :string && startswith(e, "# Skipping")
             state = :skipping
         end
 
-        if ((state != prev_state && prev_state != :string) ||
-            (state == prev_state && (state == :function || state == :struct)))
+        if (
+            (state != prev_state && prev_state != :string) ||
+            (state == prev_state && (state == :function || state == :struct))
+        )
             println(out_stream)
         end
 
@@ -50,7 +57,9 @@ function print_buffer(out_stream, out_buffer)
     end
 end
 
-function dump_to_buffer!(buffer::Vector, expr_dict::OrderedDict{Symbol,ExprUnit}, item::ExprUnit)
+function dump_to_buffer!(
+    buffer::Vector, expr_dict::OrderedDict{Symbol,ExprUnit}, item::ExprUnit
+)
     (item.state == :done || item.state == :processing) && return buffer
     item.state = :processing
     for dep in item.deps

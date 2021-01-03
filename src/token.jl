@@ -25,10 +25,11 @@ end
 Base.firstindex(x::TokenList) = 1
 Base.lastindex(x::TokenList) = length(x)
 Base.length(x::TokenList) = x.size
-Base.iterate(x::TokenList, state=1) = state > x.size ? nothing : (x[state], state+1)
+Base.iterate(x::TokenList, state=1) = state > x.size ? nothing : (x[state], state + 1)
 
 function Base.getindex(x::TokenList, i::Integer)
-    !checkindex(Bool, 1:length(x), i) && throw(ArgumentError("BoundsError: TokenList miss at index $i"))
+    !checkindex(Bool, 1:length(x), i) &&
+        throw(ArgumentError("BoundsError: TokenList miss at index $i"))
     GC.@preserve x begin
         token = unsafe_load(x.ptr, i)
         token_kind = kind(token)
@@ -66,13 +67,17 @@ spelling(tu::TranslationUnit, t::CLToken) = spelling(tu.ptr, t.token)
     location(tu::Union{CXTranslationUnit,TranslationUnit}, t::Union{CXToken,CLToken}) -> CXSourceLocation
 Return the source location of the given token.
 """
-location(tu::Union{CXTranslationUnit,TranslationUnit}, t::Union{CXToken,CLToken}) = clang_getTokenLocation(tu, t)
+function location(tu::Union{CXTranslationUnit,TranslationUnit}, t::Union{CXToken,CLToken})
+    return clang_getTokenLocation(tu, t)
+end
 
 """
     extent(tu::Union{CXTranslationUnit,TranslationUnit}, t::Union{CXToken,CLToken}) -> CXSourceRange
 Return a source range that covers the given token.
 """
-extent(tu::Union{CXTranslationUnit,TranslationUnit}, t::Union{CXToken,CLToken}) = clang_getTokenExtent(tu, t)
+function extent(tu::Union{CXTranslationUnit,TranslationUnit}, t::Union{CXToken,CLToken})
+    return clang_getTokenExtent(tu, t)
+end
 
 """
     tokenize(c::Union{CXCursor,CLCursor}) -> TokenList
@@ -105,4 +110,6 @@ end
 Annotate the given set of tokens by providing cursors for each token that can be mapped to
 a specific entity within the abstract syntax tree.
 """
-annotate(tu::Union{CXTranslationUnit,TranslationUnit}, tokens, token_num, cursors) = clang_annotateTokens(tu, tokens, Unsigned(token_num), cursors)
+function annotate(tu::Union{CXTranslationUnit,TranslationUnit}, tokens, token_num, cursors)
+    return clang_annotateTokens(tu, tokens, Unsigned(token_num), cursors)
+end

@@ -13,10 +13,26 @@ mutable struct DefaultContext <: AbstractContext
     children_index::Int
     anonymous_counter::Int
 end
-DefaultContext(index::Index) = DefaultContext(index, TranslationUnit[], Dict{String,Bool}(),
-                                              "libxxx", "", OrderedDict{Symbol,ExprUnit}(), [],
-                                              CLCursor[], CLCursor[], -1, 0)
+function DefaultContext(index::Index)
+    return DefaultContext(
+        index,
+        TranslationUnit[],
+        Dict{String,Bool}(),
+        "libxxx",
+        "",
+        OrderedDict{Symbol,ExprUnit}(),
+        [],
+        CLCursor[],
+        CLCursor[],
+        -1,
+        0,
+    )
+end
 DefaultContext(diagnostic::Bool=true) = DefaultContext(Index(diagnostic))
 
-parse_header!(ctx::AbstractContext, header::AbstractString; args...) = push!(ctx.trans_units, parse_header(header; args...))
-parse_headers!(ctx::AbstractContext, headers::Vector{String}; args...) = (ctx.trans_units = parse_headers(headers; args...);)
+function parse_header!(ctx::AbstractContext, header::AbstractString; args...)
+    return push!(ctx.trans_units, parse_header(header; args...))
+end
+function parse_headers!(ctx::AbstractContext, headers::Vector{String}; args...)
+    return (ctx.trans_units = parse_headers(headers; args...))
+end

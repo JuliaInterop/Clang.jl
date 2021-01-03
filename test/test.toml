@@ -1,0 +1,84 @@
+[general]
+# it could also be an expression as long as `Meta.parse` can parse this string successfully.
+library_name = "libclang"
+
+# the new generator is able to print everthing into one single file instead of a pair of two files.
+output_file_path = "./LibClang.jl"
+
+# if this entry is not empty, the generator will print the code below to the `output_file_path`.
+# module module_name
+# 
+# end # module
+module_name = "LibClang"
+
+# if this entry is not empty, the generator will print the code below to the `output_file_path`.
+# using jll_pkg_name
+# export jll_pkg_name
+jll_pkg_name = "Clang_jll"
+
+# identifiers that starts with the string listed in this entry will be exported.
+export_symbol_prefixes = ["CX", "clang_"]
+
+# the code in the following file will be copy-pasted to `output_file_path` before the generated code.
+# this is often used for applying custom patches, e.g. adding missing definitions.
+prologue_file_path = ""
+
+# the code in the following file will be copy-pasted to `output_file_path` after the generated code.
+# this is often used for applying custom patches.
+epilogue_file_path = ""
+
+# automatically detect system std headers for macOS users.
+auto_detect_system_headers = true
+
+# Julia's `@enum` do not allow duplicated values, so by default, C enums are translated to 
+# CEnum.jl's `@cenum`. 
+# if this entry is true, those duplicated enum constants are commented. 
+use_julia_native_enum_type = false
+
+# by default, only those declarations in the local header file are processed. 
+# for example, those declarations in the standard C library will be ignored. 
+# if you'd like to disable this behavior, please set this option to false.
+is_local_header_only = true
+
+# by default, we skip all of those compiler declarations.
+skip_compiler_definition = true
+
+# run `DeAnonymize` pass if this option is set to true.
+smart_de_anonymize = true
+
+[codegen]
+# map C's bool to Julia's Bool instead of `Cuchar` a.k.a `UInt8`.
+use_julia_bool = true
+
+# set this to true if the C routine always expects a NUL-terminated string.
+# TODO: support filtering
+always_NUL_terminated_string = true
+
+# generate strictly typed function
+is_function_strictly_typed = false
+
+# if true, opaque pointers in function arguments will be translated to `Ptr{Cvoid}`.
+opaque_func_arg_as_PtrCvoid = false
+
+# if true, opaque types are translated to `mutable struct` instead of `Cvoid`.
+opaque_as_mutable_struct = true
+
+[codegen.macro]
+
+
+[general.log]
+# CollectTopLevelNode_log = false
+# LinkTypedefToAnonymousTagType_log = false
+# IndexDefinition_log = false
+# ResolveDependency_log = false
+# RemoveCircularReference_log = false
+# TopologicalSort_log = false
+# CodegenPreprocessing_log = false
+# DeAnonymize_log = false
+# Audit_log = true
+# Codegen_log = false
+# CodegenPreprocessing_log = false
+# GeneralPrinter_log = true
+# ProloguePrinter_log = true
+# EpiloguePrinter_log = true
+

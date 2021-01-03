@@ -1,19 +1,8 @@
-*.so
-*.dylib
-*.o
-*.swp
-*~
-*.kate-swp
+*.jl.*.cov
+*.jl.cov
+*.jl.mem
+.DS_Store
+/Manifest.toml
 
-deps/usr
-deps/deps.jl
-deps/build.log
-gen/LibTemplate.jl
-gen/CEnum.jl
-gen/ctypes.jl
-
-test/test_api.jl
-test/test_common.jl
 Manifest.toml
-test/libclang_api.jl
-test/libclang_common.jl
+test/LibClang.jl

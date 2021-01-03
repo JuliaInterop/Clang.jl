@@ -113,7 +113,7 @@ for trans_unit in ctx.trans_units
     ctx.children = children(root_cursor)
     for (i, child) in enumerate(ctx.children)
         child_name = name(child)
-        child_header = filename(child)
+        child_header = get_filename(child)
         ctx.children_index = i
         # choose which cursor to wrap
         startswith(child_name, "__") && continue  # skip compiler definitions

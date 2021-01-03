@@ -9,7 +9,7 @@ using Test
     )
     ctx = DefaultContext()
     push!(ctx.trans_units, trans_unit)
-    root_cursor = getcursor(trans_unit)
+    root_cursor = getTranslationUnitCursor(trans_unit)
     cursors = children(root_cursor)
 
     # pure definition
@@ -126,7 +126,7 @@ end
     )
     ctx = DefaultContext()
     push!(ctx.trans_units, trans_unit)
-    root_cursor = getcursor(trans_unit)
+    root_cursor = getTranslationUnitCursor(trans_unit)
     cursors = children(root_cursor)
 
     # constant definition

@@ -220,3 +220,32 @@ function resolve_type(t::CLType)::CLType
     # otherwise, this will either be a builtin or unexposed client needs to sort out.
     return t
 end
+
+# visitor
+function ct_field_visitor(cursor::CXCursor, list)::CXVisitorResult
+    push!(list, cursor)
+    return CXVisit_Continue
+end
+
+"""
+    fields(ty::CXType) -> Vector{CXCursor}
+    fields(ty::CLType) -> Vector{CLCursor}
+Return a child cursor vector of the given cursor.
+"""
+function fields(ty::CXType)
+    # TODO: possible to use sizehint! here?
+    list = CXCursor[]
+    ct_visitor_cb = @cfunction(
+        ct_field_visitor, CXVisitorResult, (CXCursor, Ref{Vector{CXCursor}})
+    )
+    GC.@preserve list ccall(
+        (:clang_Type_visitFields, LibClang.libclang),
+        UInt32,
+        (CXType, CXFieldVisitor, Any),
+        ty,
+        ct_visitor_cb,
+        list,
+    )
+    return list
+end
+fields(ty::CLType)::Vector{CLCursor} = fields(ty.type)

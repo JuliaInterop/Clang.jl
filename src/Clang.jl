@@ -36,6 +36,7 @@ export isvolatile, isrestrict, isvariadic, is_plain_old_data
 export address_space, typedef_name, typedecl
 export pointee_type, argtype, element_type, element_num
 export resolve_type, get_named_type
+export fields
 
 include("token.jl")
 export TokenList, tokenize, annotate

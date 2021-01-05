@@ -20,10 +20,19 @@ function wrap!(ctx::AbstractContext, cursor::CLFunctionDecl)
     ret_type = clang2julia(return_type(cursor))
     args = function_args(cursor)
     arg_types = [argtype(func_type, i) for i in 0:(length(args) - 1)]
+    # if argtypes contains any ObjectveC's block pointer, then skip this function
+    for at in arg_types
+        if kind(canonical(at)) == CXType_BlockPointer
+            @info "  Skipping Function with ObjectveC's block pointer $cursor"
+            return ctx
+        end
+    end
+
     arg_reps = clang2julia.(arg_types)
     for (i, arg) in enumerate(arg_reps)
         # constant array argument should be converted to Ptr
         # e.g. double f[3] => Ptr{Cdouble} instead of NTuple{3, Cdouble}
+        # TODO: Julia 1.6+ `NTuple{3, Cdouble}` should be fine
         if Meta.isexpr(arg, :curly) && first(arg.args) == :NTuple
             arg_reps[i] = Expr(:curly, :Ptr, last(arg.args))
         end
@@ -94,7 +103,7 @@ function wrap!(ctx::AbstractContext, cursor::CLEnumDecl)
         end
     end
     !isempty(ctx.force_name) && (cursor_name = ctx.force_name)
-    cursor_name == "" && (@warn("Skipping unnamed EnumDecl: $cursor"); return ctx)
+    cursor_name == "" && (@warn("  Skipping unnamed EnumDecl: $cursor"); return ctx)
 
     enum_sym = symbol_safe(cursor_name)
     enum_type = INT_CONVERSION[clang2julia(cursor)]
@@ -140,7 +149,7 @@ function wrap!(ctx::AbstractContext, cursor::CLStructDecl)
         end
     end
     !isempty(ctx.force_name) && (cursor_name = ctx.force_name)
-    cursor_name == "" && (@warn("Skipping unnamed StructDecl: $cursor"); return ctx)
+    cursor_name == "" && (@warn("  Skipping unnamed StructDecl: $cursor"); return ctx)
 
     struct_sym = symbol_safe(cursor_name)
     ismutable = get(ctx.options, "is_struct_mutable", false)
@@ -222,7 +231,7 @@ function wrap!(ctx::AbstractContext, cursor::CLUnionDecl)
         end
     end
     !isempty(ctx.force_name) && (cursor_name = ctx.force_name)
-    cursor_name == "" && (@warn("Skipping unnamed UnionDecl: $cursor"); return ctx)
+    cursor_name == "" && (@warn("  Skipping unnamed UnionDecl: $cursor"); return ctx)
 
     union_sym = symbol_safe(cursor_name)
     ismutable = get(ctx.options, "is_struct_mutable", false)
@@ -288,7 +297,13 @@ function wrap!(ctx::AbstractContext, cursor::CLTypedefDecl)
     buffer = ctx.common_buffer
     if kind(td_type) == CXType_Unexposed
         # TODO: which corner case will trigger this pass?
-        @error "Skipping Typedef: CXType_Unexposed, $cursor, please report this on Github."
+        @error "  Skipping Typedef: CXType_Unexposed, $cursor, please report this on Github."
+    end
+
+    # skip ObjectveC's block pointers
+    if kind(td_type) == CXType_BlockPointer
+        @info "  Skipping Typedef: CXType_BlockPointer, $cursor, ObjectveC's block pointers are intendedly not supported."
+        return ctx
     end
 
     if kind(td_type) == CXType_FunctionProto
@@ -456,13 +471,13 @@ function wrap!(ctx::AbstractContext, cursor::CLTypeRef)
 end
 
 function wrap!(ctx::AbstractContext, cursor::CLCursor)
-    @warn "not wrapping $(cursor)"
+    @warn "Skipping without wrapping $(cursor)"
     return ctx
 end
 
 function wrap!(
     ctx::AbstractContext, cursor::Union{CLLastPreprocessing,CLMacroInstantiation}
 )
-    @debug "not wrapping $(cursor)"
+    @debug "Skipping without wrapping $(cursor)"
     return ctx
 end

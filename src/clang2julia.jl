@@ -1,10 +1,12 @@
 """
 Mapping from libclang types to Julia types
+
+Note that, this dict is merely for naive one-to-one mapping.
 """
 const CLANG_JULIA_TYPEMAP = Dict(
     CXType_Void             => :Cvoid,
     CXType_Bool             => :Bool,
-    CXType_Char_U           => :Cuchar,
+    CXType_Char_U           => :Cchar,
     CXType_UChar            => :Cuchar,
     # CXType_Char16           => :UInt16,  # C++11 char16_t
     # CXType_Char32           => :UInt32,  # C++11 char32_t
@@ -13,7 +15,7 @@ const CLANG_JULIA_TYPEMAP = Dict(
     CXType_ULong            => :Culong,
     CXType_ULongLong        => :Culonglong,
     CXType_UInt128          => :UInt128,
-    CXType_Char_S           => :UInt8,  # CAVEAT: this forces char to be unsigned
+    CXType_Char_S           => :Cchar,
     CXType_SChar            => :Int8,
     CXType_WChar            => :Cwchar_t,
     CXType_Short            => :Cshort,
@@ -29,9 +31,9 @@ const CLANG_JULIA_TYPEMAP = Dict(
     CXType_Float16          => :Float16,
     # CXType_Float128         => ?  # not defined in Julia, see Quadmath.jl
     # CXType_NullPtr          => :Cvoid,  # C++11 nullptr
-    # CXType_Pointer          => :Cvoid,  # should not be handled by this dict
+    # CXType_Pointer          => :Cvoid,  # see clang2julia(t::CLPointer)
     # CXType_BlockPointer     => :Cvoid,  # ObjectveC's block pointer
-    # CXType_Elaborated       => :Cvoid,  # should not be handled by this dict
+    # CXType_Elaborated       => :Cvoid,  # see clang2julia(t::CLElaborated)
     # CXType_Invalid          => :Cvoid,  # should not be handled by this dict
     # CXType_FunctionProto    => :Cvoid,  # should not be handled by this dict
     # CXType_FunctionNoProto  => :Cvoid,  # should not be handled by this dict
@@ -120,8 +122,14 @@ end
 Pointers are translated to `Ptr`s.
 """
 function clang2julia(t::CLPointer)
+    # we firstly handle function pointers
+    # if its canonical pointee type is CXType_FunctionProto, then it's a function pointer
+    kind(pointee_type(canonical(t))) == CXType_FunctionProto && return :(Ptr{Cvoid})
+    # then handle non-function pointers
+    # to preserve readability, `canonical` should not be used here
     ptree = pointee_type(t)
     ptree_kind = kind(ptree)
+    # TODO: add an option to let users decide the NUL-terminated string behavior
     (ptree_kind == CXType_Char_U || ptree_kind == CXType_Char_S) && return :Cstring
     ptree_kind == CXType_WChar && return :Cwstring
     return Expr(:curly, :Ptr, clang2julia(ptree))

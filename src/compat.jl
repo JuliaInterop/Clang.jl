@@ -24,6 +24,7 @@ mutable struct WrapContext
     output_bufs::DefaultOrderedDict{String,Array{Any}}
     options::InternalOptions
     rewriter::Function
+    context::Union{DefaultContext,Nothing}
 end
 
 ### Convenience function to initialize wrapping context with defaults
@@ -81,6 +82,7 @@ function init(;
         DefaultOrderedDict{String,Array{Any}}(() -> Any[]),
         options,
         rewriter,
+        nothing,
     )
     return context
 end
@@ -88,6 +90,7 @@ end
 function Base.run(wc::WrapContext, generate_template=true)
     # parse headers
     ctx = DefaultContext(wc.index)
+    wc.context = ctx
     parse_headers!(ctx, wc.headers; args=wc.clang_args, includes=wc.clang_includes)
     ctx.options["is_function_strictly_typed"] = false
     ctx.options["is_struct_mutable"] = wc.options.ismutable
@@ -123,7 +126,7 @@ function Base.run(wc::WrapContext, generate_template=true)
                 wrap!(ctx, child)
             catch err
                 push!(ctx.cursor_stack, child)
-                @error "error thrown. Last cursor available in context.cursor_stack."
+                @error "error thrown. Last cursor available in wc.context.cursor_stack."
                 rethrow(err)
             end
         end

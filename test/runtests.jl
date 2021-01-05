@@ -3,6 +3,7 @@ using Clang.LibClang
 using Test
 
 include("cbasic.jl")
+include("func_proto.jl")
 include("typedef.jl")
 include("struct.jl")
 include("wrap_c.jl")

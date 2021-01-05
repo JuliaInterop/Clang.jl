@@ -25,12 +25,12 @@ end
 
 struct CXString
     data::Ptr{Cvoid}
-    private_flags::UInt32
+    private_flags::Cuint
 end
 
 struct CXStringSet
     Strings::Ptr{CXString}
-    Count::UInt32
+    Count::Cuint
 end
 
 const CXTranslationUnitImpl = Cvoid
@@ -134,17 +134,17 @@ end
 
 struct CXSourceLocation
     ptr_data::NTuple{2, Ptr{Cvoid}}
-    int_data::UInt32
+    int_data::Cuint
 end
 
 struct CXSourceRange
     ptr_data::NTuple{2, Ptr{Cvoid}}
-    begin_int_data::UInt32
-    end_int_data::UInt32
+    begin_int_data::Cuint
+    end_int_data::Cuint
 end
 
 struct CXSourceRangeList
-    count::UInt32
+    count::Cuint
     ranges::Ptr{CXSourceRange}
 end
 
@@ -239,7 +239,7 @@ end
 
 struct CXTUResourceUsage
     data::Ptr{Cvoid}
-    numEntries::UInt32
+    numEntries::Cuint
     entries::Ptr{CXTUResourceUsageEntry}
 end
 
@@ -761,7 +761,6 @@ end
 
 
 const CXCursorVisitor = Ptr{Cvoid}
-const CXCursorVisitorBlock = Cvoid
 const CXPrintingPolicy = Ptr{Cvoid}
 
 @cenum CXPrintingPolicyProperty::UInt32 begin
@@ -840,7 +839,7 @@ end
 
 
 struct CXToken
-    int_data::NTuple{4, UInt32}
+    int_data::NTuple{4, Cuint}
     ptr_data::Ptr{Cvoid}
 end
 
@@ -878,7 +877,7 @@ end
 
 struct CXCodeCompleteResults
     Results::Ptr{CXCompletionResult}
-    NumResults::UInt32
+    NumResults::Cuint
 end
 
 @cenum CXCodeComplete_Flags::UInt32 begin
@@ -952,7 +951,6 @@ end
 end
 
 
-const CXCursorAndRangeVisitorBlock = Cvoid
 const CXIdxClientFile = Ptr{Cvoid}
 const CXIdxClientEntity = Ptr{Cvoid}
 const CXIdxClientContainer = Ptr{Cvoid}
@@ -960,7 +958,7 @@ const CXIdxClientASTFile = Ptr{Cvoid}
 
 struct CXIdxLoc
     ptr_data::NTuple{2, Ptr{Cvoid}}
-    int_data::UInt32
+    int_data::Cuint
 end
 
 struct CXIdxIncludedFileInfo
@@ -1046,7 +1044,7 @@ struct CXIdxEntityInfo
     USR::Cstring
     cursor::CXCursor
     attributes::Ptr{Ptr{CXIdxAttrInfo}}
-    numAttributes::UInt32
+    numAttributes::Cuint
 end
 
 struct CXIdxContainerInfo
@@ -1077,8 +1075,8 @@ struct CXIdxDeclInfo
     declAsContainer::Ptr{CXIdxContainerInfo}
     isImplicit::Cint
     attributes::Ptr{Ptr{CXIdxAttrInfo}}
-    numAttributes::UInt32
-    flags::UInt32
+    numAttributes::Cuint
+    flags::Cuint
 end
 
 @cenum CXIdxObjCContainerKind::UInt32 begin
@@ -1107,7 +1105,7 @@ end
 
 struct CXIdxObjCProtocolRefListInfo
     protocols::Ptr{Ptr{CXIdxObjCProtocolRefInfo}}
-    numProtocols::UInt32
+    numProtocols::Cuint
 end
 
 struct CXIdxObjCInterfaceDeclInfo
@@ -1133,7 +1131,7 @@ end
 struct CXIdxCXXClassDeclInfo
     declInfo::Ptr{CXIdxDeclInfo}
     bases::Ptr{Ptr{CXIdxBaseClassInfo}}
-    numBases::UInt32
+    numBases::Cuint
 end
 
 @cenum CXIdxEntityRefKind::UInt32 begin

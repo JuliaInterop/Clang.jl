@@ -57,7 +57,7 @@ end
     expr = :(struct ANONYMOUS1_nest1
                 nest2::ANONYMOUS2_nest2
                 nest3::ANONYMOUS2_nest2
-                s::UInt8
+                s::Cchar
             end)
     Base.remove_linenums!(expr)
     @test ctx.common_buffer[:ANONYMOUS1_nest1].items[1] == expr

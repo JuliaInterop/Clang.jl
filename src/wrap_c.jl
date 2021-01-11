@@ -492,6 +492,11 @@ function add_spaces_for_macros(lhs, rhs)
     end
 end
 
+function skip_macro!(buffer, tokens)
+    str = join([tok.text for tok in tokens], " ")
+    buffer[Symbol(str)] = ExprUnit("# Skipping MacroDefinition: " * str)
+    return buffer
+end
 
 """
     wrap!(ctx::AbstractContext, cursor::CLMacroDefinition)
@@ -505,8 +510,7 @@ function wrap!(ctx::AbstractContext, cursor::CLMacroDefinition)
     buffer = ctx.common_buffer
 
     if is_macro_has_compiler_reserved_keyword(tokens)
-        str = join([tok.text for tok in tokens], " ")
-        buffer[Symbol(str)] = ExprUnit("# Skipping MacroDefinition: " * str)
+        skip_macro!(buffer, tokens)
         return ctx
     end
 
@@ -520,15 +524,14 @@ function wrap!(ctx::AbstractContext, cursor::CLMacroDefinition)
             ex = Expr(:(=), sig_ex, nothing)
             buffer[lhs_sym] = ExprUnit(ex)
         else
+            body_toks = toks[1+i:end]
+            txts = [tok.kind == CXToken_Literal ? literally(tok) : tok.text for tok in body_toks]
+            str = reduce(add_spaces_for_macros, txts)
             try
-                body_toks = toks[1+i:end]
-                txts = [tok.kind == CXToken_Literal ? literally(tok) : tok.text for tok in body_toks]
-                str = reduce(add_spaces_for_macros, txts)
                 ex = Expr(:(=), sig_ex, Meta.parse(str))
                 buffer[lhs_sym] = ExprUnit(ex)
             catch err
-                str = join([tok.text for tok in tokens], " ")
-                buffer[Symbol(str)] = ExprUnit("# Skipping MacroDefinition: " * str)
+                skip_macro!(buffer, tokens)
             end
         end
         return ctx
@@ -569,14 +572,14 @@ function wrap!(ctx::AbstractContext, cursor::CLMacroDefinition)
             ex = Expr(:const, Expr(:(=), lhs_sym, rhs_sym))
             buffer[lhs_sym] = ExprUnit(ex)
         else
-            str = join([tok.text for tok in tokens], " ")
-            buffer[Symbol(str)] = ExprUnit("# Skipping MacroDefinition: " * str)
+            skip_macro!(buffer, tokens)
         end
         return ctx
     end
 
     # for all the other cases, we just blindly use Julia's Meta.parse to parse the C code.
-    if tokens.size > 1 && tokens[1].kind == CXToken_Identifier
+    is_aggresively_parse = get(ctx.options, "aggresively_parse_macros", true)
+    if tokens.size > 1 && tokens[1].kind == CXToken_Identifier && is_aggresively_parse
         sym = symbol_safe(tokens[1].text)
         try
             txts = [tok.kind == CXToken_Literal ? literally(tok) : tok.text for tok in collect(tokens)[2:end]]
@@ -584,9 +587,10 @@ function wrap!(ctx::AbstractContext, cursor::CLMacroDefinition)
             ex = Expr(:const, Expr(:(=), sym, Meta.parse(str)))
             buffer[sym] = ExprUnit(ex)
         catch err
-            str = join([tok.text for tok in tokens], " ")
-            buffer[Symbol(str)] = ExprUnit("# Skipping MacroDefinition: " * str)
+            skip_macro!(buffer, tokens)
         end
+    else
+        skip_macro!(buffer, tokens)
     end
     return ctx
 end

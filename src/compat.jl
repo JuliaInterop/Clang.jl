@@ -2,7 +2,9 @@
 mutable struct InternalOptions
     wrap_structs::Bool
     ismutable::Bool
+    aggresively_parse_macros::Bool
 end
+InternalOptions(wrap_structs, ismutable) = InternalOptions(wrap_structs, ismutable, true)
 InternalOptions() = InternalOptions(true, false)
 
 """
@@ -94,6 +96,7 @@ function Base.run(wc::WrapContext, generate_template=true)
     parse_headers!(ctx, wc.headers; args=wc.clang_args, includes=wc.clang_includes)
     ctx.options["is_function_strictly_typed"] = false
     ctx.options["is_struct_mutable"] = wc.options.ismutable
+    ctx.options["aggresively_parse_macros"] = wc.options.aggresively_parse_macros
     # Helper to store file handles
     filehandles = Dict{String,IOStream}()
     getfile(f) = (f in keys(filehandles)) ? filehandles[f] : (filehandles[f] = open(f, "w"))

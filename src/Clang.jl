@@ -41,8 +41,6 @@ export fields
 include("token.jl")
 export TokenList, tokenize, annotate
 
-include("show.jl")
-
 include("utils.jl")
 export name_safe, symbol_safe
 export copydeps, print_template

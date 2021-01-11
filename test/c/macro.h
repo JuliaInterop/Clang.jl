@@ -32,9 +32,11 @@
 #define CONSTANT_LITERALS_28 5l
 #define CONSTANT_LITERALS_29 6F
 #define CONSTANT_LITERALS_30 6f
+#define CONSTANT_LITERALS_31 0.5
 
 // issue #206
 #define ISSUE_206 "!$&'()*+,;="
+#define ISSUE_206_2 "$mat.gltf.unlit"
 
 // macro constants bracket version
 #define CONSTANT_LITERALS_BRACKET ( 0x10u )
@@ -50,15 +52,20 @@
 #define CONSTANT_ALIAS CONSTANT_LITERALS_1
 #define ALIAS_KEYWROD_1 int
 #define ALIAS_KEYWROD_2 unsigned int
-#define ALIAS_KEYWROD_3 extern API
-
+#define ALIAS_KEYWROD_3 long *
+#define ALIAS_KEYWROD_4 float **
+#define ALIAS_KEYWROD_5 extern API
+#define ALIAS_KEYWROD_6 noexcept
+#define ALIAS_RESERVED __attribute__ ( ( deprecated ) )
 #define ALIAS_1 EXTERN API
+#define ALIAS_CONST const
 
 // function-like macros
 #define SUM(a,b) (a + b)
 #define SQR(c)  ((c) * (c))
-#define VERSION(major,minor,sub) \
+#define TEST_VERSION(major,minor,sub) \
     (((major)*1000ULL + (minor))*1000ULL + (sub))
+#define AI_DEG_TO_RAD(x) ( ( x ) * ( ai_real ) 0.0174532925 )
 
 // issue #266: empty function-like macros
 #define EMPTY_FUNCLIKE(x)

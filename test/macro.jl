@@ -29,30 +29,67 @@ using Test
     expr = :(const ISSUE_206 = "!\$&'()*+,;=")
     @test ctx.common_buffer[:ISSUE_206].items[1] == expr
 
+    issue206_2 = search(cursors, x->name(x)=="ISSUE_206_2")[1]
+    wrap!(ctx, issue206_2)
+    expr = :(const ISSUE_206_2 = "\$mat.gltf.unlit")
+    @test ctx.common_buffer[:ISSUE_206_2].items[1] == expr
+
     bracket = search(cursors, x->name(x)=="CONSTANT_LITERALS_BRACKET")[1]
     wrap!(ctx, bracket)
     expr = :(const CONSTANT_LITERALS_BRACKET = Cuint(0x10))
     @test ctx.common_buffer[:CONSTANT_LITERALS_BRACKET].items[1] == expr
 
+    # macro alias
+    const_alias = search(cursors, x->name(x)=="CONSTANT_ALIAS")[1]
+    wrap!(ctx, const_alias)
+    expr = :(const CONSTANT_ALIAS = CONSTANT_LITERALS_1)
+    @test ctx.common_buffer[:CONSTANT_ALIAS].items[1] == expr
 
-    # # test tokenize for macro instantiation
-    # func = search(cursors, x -> kind(x) == CXCursor_FunctionDecl)[1]
-    # body = children(func)[1]
-    # op = children(body)[3]
-    # subop = children(op)[2]
-    # @test mapreduce(x -> x.text, *, tokenize(subop)) == "FOO(foo,1,x)"
-    # wrap!(ctx, func)
-    # @test !isempty(ctx.api_buffer)
+    keyword = search(cursors, x->name(x)=="ALIAS_KEYWROD_1")[1]
+    wrap!(ctx, keyword)
+    expr = :(const ALIAS_KEYWROD_1 = Cint)
+    @test ctx.common_buffer[:ALIAS_KEYWROD_1].items[1] == expr
 
-    # # Issue #270 Support '==' in macros
-    # equals_macro = search(cursors, x -> name(x) == "EQUALS_A_B")[1]
-    # wrap!(ctx, equals_macro)
-    # @test ctx.common_buffer[:EQUALS_A_B].items[1] == :(const EQUALS_A_B = A == B)
+    keyword = search(cursors, x->name(x)=="ALIAS_KEYWROD_2")[1]
+    wrap!(ctx, keyword)
+    expr = :(const ALIAS_KEYWROD_2 = Cuint)
+    @test ctx.common_buffer[:ALIAS_KEYWROD_2].items[1] == expr
 
-    # # Issue #103
-    # datatype_macros = search(cursors, x -> name(x) == "DATATYPE")[1]
-    # wrap!(ctx, datatype_macros)
-    # @test ctx.common_buffer[:DATATYPE].items[1] == :(const DATATYPE = int)
+    # TODO: keyword 3 4
+
+    keyword = search(cursors, x->name(x)=="ALIAS_KEYWROD_5")[1]
+    wrap!(ctx, keyword)
+    expr = :("# Skipping MacroDefinition: ALIAS_KEYWROD_5 extern API")
+    @test ctx.common_buffer[Symbol("ALIAS_KEYWROD_5 extern API")].items[1] == expr
+
+    keyword = search(cursors, x->name(x)=="ALIAS_1")[1]
+    wrap!(ctx, keyword)
+    expr = :("# Skipping MacroDefinition: ALIAS_1 EXTERN API")
+    @test ctx.common_buffer[Symbol("ALIAS_1 EXTERN API")].items[1] == expr
+
+    keyword = search(cursors, x->name(x)=="ALIAS_CONST")[1]
+    wrap!(ctx, keyword)
+    expr = :("# Skipping MacroDefinition: ALIAS_CONST const")
+    @test ctx.common_buffer[Symbol("ALIAS_CONST const")].items[1] == expr
+
+    reserved = search(cursors, x->name(x)=="ALIAS_RESERVED")[1]
+    wrap!(ctx, reserved)
+    expr = :("# Skipping MacroDefinition: ALIAS_RESERVED __attribute__ ( ( deprecated ) )")
+    @test ctx.common_buffer[Symbol("ALIAS_RESERVED __attribute__ ( ( deprecated ) )")].items[1] == expr
+
+    # test tokenize for macro instantiation
+    func = search(cursors, x -> kind(x) == CXCursor_FunctionDecl)[1]
+    body = children(func)[1]
+    op = children(body)[3]
+    subop = children(op)[2]
+    @test mapreduce(x -> x.text, *, tokenize(subop)) == "FOO(foo,1,x)"
+    wrap!(ctx, func)
+    @test !isempty(ctx.api_buffer)
+
+    # Issue #270 Support '==' in macros
+    equals_macro = search(cursors, x -> name(x) == "EQUALS_A_B")[1]
+    wrap!(ctx, equals_macro)
+    @test ctx.common_buffer[:EQUALS_A_B].items[1] == :(const EQUALS_A_B = A == B)
 end
 
 
@@ -216,4 +253,9 @@ end
     wrap!(ctx, consts)
     expr = :(const CONSTANT_LITERALS_30 = Float32(6))
     @test ctx.common_buffer[:CONSTANT_LITERALS_30].items[1] == expr
+
+    consts = search(cursors, x->name(x)=="CONSTANT_LITERALS_31")[1]
+    wrap!(ctx, consts)
+    expr = :(const CONSTANT_LITERALS_31 = 0.5)
+    @test ctx.common_buffer[:CONSTANT_LITERALS_31].items[1] == expr
 end

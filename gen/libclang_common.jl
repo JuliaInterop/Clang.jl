@@ -1,10 +1,12 @@
 # Automatically generated using Clang.jl
 
 
+const LLVM_CLANG_C_BUILDSYSTEM_H = nothing
 const CXVirtualFileOverlayImpl = Cvoid
 const CXVirtualFileOverlay = Ptr{CXVirtualFileOverlayImpl}
 const CXModuleMapDescriptorImpl = Cvoid
 const CXModuleMapDescriptor = Ptr{CXModuleMapDescriptorImpl}
+const LLVM_CLANG_C_CXCOMPILATIONDATABASE_H = nothing
 const CXCompilationDatabase = Ptr{Cvoid}
 const CXCompileCommands = Ptr{Cvoid}
 const CXCompileCommand = Ptr{Cvoid}
@@ -14,6 +16,9 @@ const CXCompileCommand = Ptr{Cvoid}
     CXCompilationDatabase_CanNotLoadDatabase = 1
 end
 
+
+const LLVM_CLANG_C_CXERRORCODE_H = nothing
+
 @cenum CXErrorCode::UInt32 begin
     CXError_Success = 0
     CXError_Failure = 1
@@ -22,6 +27,8 @@ end
     CXError_ASTReadError = 4
 end
 
+
+const LLVM_CLANG_C_CXSTRING_H = nothing
 
 struct CXString
     data::Ptr{Cvoid}
@@ -33,6 +40,7 @@ struct CXStringSet
     Count::Cuint
 end
 
+const LLVM_CLANG_C_DOCUMENTATION_H = nothing
 const CXTranslationUnitImpl = Cvoid
 const CXTranslationUnit = Ptr{CXTranslationUnitImpl}
 
@@ -71,15 +79,18 @@ end
 end
 
 
+const LLVM_CLANG_C_INDEX_H = nothing
 const CINDEX_VERSION_MAJOR = 0
 const CINDEX_VERSION_MINOR = 59
 
-# Skipping MacroDefinition: CINDEX_VERSION_ENCODE ( major , minor ) ( ( ( major ) * 10000 ) + ( ( minor ) * 1 ) )
-# Skipping MacroDefinition: CINDEX_VERSION CINDEX_VERSION_ENCODE ( CINDEX_VERSION_MAJOR , CINDEX_VERSION_MINOR )
-# Skipping MacroDefinition: CINDEX_VERSION_STRINGIZE_ ( major , minor ) # major "." # minor
-# Skipping MacroDefinition: CINDEX_VERSION_STRINGIZE ( major , minor ) CINDEX_VERSION_STRINGIZE_ ( major , minor )
-# Skipping MacroDefinition: CINDEX_VERSION_STRING CINDEX_VERSION_STRINGIZE ( CINDEX_VERSION_MAJOR , CINDEX_VERSION_MINOR )
+CINDEX_VERSION_ENCODE(major, minor) = major * 10000 + minor * 1
 
+const CINDEX_VERSION = CINDEX_VERSION_ENCODE(CINDEX_VERSION_MAJOR, CINDEX_VERSION_MINOR)
+
+CINDEX_VERSION_STRINGIZE_(major, minor) = nothing
+CINDEX_VERSION_STRINGIZE(major, minor) = CINDEX_VERSION_STRINGIZE_(major, minor)
+
+const CINDEX_VERSION_STRING = CINDEX_VERSION_STRINGIZE(CINDEX_VERSION_MAJOR, CINDEX_VERSION_MINOR)
 const CXIndex = Ptr{Cvoid}
 const CXTargetInfoImpl = Cvoid
 const CXTargetInfo = Ptr{CXTargetInfoImpl}
@@ -1187,5 +1198,7 @@ end
 
 
 const CXFieldVisitor = Ptr{Cvoid}
+const LLVM_CLANG_C_PLATFORM_H = nothing
+const CINDEX_LINKAGE = nothing
 
 # Skipping MacroDefinition: CINDEX_DEPRECATED __attribute__ ( ( deprecated ) )

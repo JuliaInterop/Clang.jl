@@ -33,6 +33,7 @@
 #define CONSTANT_LITERALS_29 6F
 #define CONSTANT_LITERALS_30 6f
 #define CONSTANT_LITERALS_31 0.5
+#define CONSTANT_LITERALS_32 0U
 
 // issue #206
 #define ISSUE_206 "!$&'()*+,;="
@@ -66,6 +67,7 @@
 #define TEST_VERSION(major,minor,sub) \
     (((major)*1000ULL + (minor))*1000ULL + (sub))
 #define AI_DEG_TO_RAD(x) ( ( x ) * ( ai_real ) 0.0174532925 )
+#define SODIUM_MIN(A, B) ( ( A ) < ( B ) ? ( A ) : ( B ) )
 
 // issue #266: empty function-like macros
 #define EMPTY_FUNCLIKE(x)

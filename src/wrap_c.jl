@@ -380,10 +380,8 @@ function normalize_literal(tok::Literal)
 end
 
 function literally(tok)
-    if tok.text != "0" &&
-        startswith(tok.text, "0") &&
-        !startswith(lowercase(tok.text), "0x") &&
-        !startswith(lowercase(tok.text), "0.")
+    m = match(r"^0[0-9]*\d$", tok.text)
+    if m !== nothing && m.match !== "0"
         literals = "0o"*normalize_literal(tok)
     else
         literals = normalize_literal(tok)
@@ -482,6 +480,19 @@ function is_macro_has_compiler_reserved_keyword(toks)
     return false
 end
 
+function add_spaces_for_macros(lhs, rhs)
+    if startswith(rhs, "(")  # handle function call
+        if endswith(lhs, "?") || endswith(lhs, ":") # handle trinary operator
+            return lhs * " " * rhs
+        else
+            return lhs * rhs
+        end
+    else
+        return lhs * " " * rhs
+    end
+end
+
+
 """
     wrap!(ctx::AbstractContext, cursor::CLMacroDefinition)
 Subroutine for handling macro declarations.
@@ -512,7 +523,7 @@ function wrap!(ctx::AbstractContext, cursor::CLMacroDefinition)
             try
                 body_toks = toks[1+i:end]
                 txts = [tok.kind == CXToken_Literal ? literally(tok) : tok.text for tok in body_toks]
-                str = reduce((x,y) -> startswith(y, "(") ? x*y : x*" "*y, txts)
+                str = reduce(add_spaces_for_macros, txts)
                 ex = Expr(:(=), sig_ex, Meta.parse(str))
                 buffer[lhs_sym] = ExprUnit(ex)
             catch err
@@ -569,7 +580,7 @@ function wrap!(ctx::AbstractContext, cursor::CLMacroDefinition)
         sym = symbol_safe(tokens[1].text)
         try
             txts = [tok.kind == CXToken_Literal ? literally(tok) : tok.text for tok in collect(tokens)[2:end]]
-            str = reduce((x,y) -> startswith(y, "(") ? x*y : x*" "*y, txts)
+            str = reduce(add_spaces_for_macros, txts)
             ex = Expr(:const, Expr(:(=), sym, Meta.parse(str)))
             buffer[sym] = ExprUnit(ex)
         catch err

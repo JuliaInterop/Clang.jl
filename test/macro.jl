@@ -77,6 +77,32 @@ using Test
     expr = :("# Skipping MacroDefinition: ALIAS_RESERVED __attribute__ ( ( deprecated ) )")
     @test ctx.common_buffer[Symbol("ALIAS_RESERVED __attribute__ ( ( deprecated ) )")].items[1] == expr
 
+    # function-like macros
+    func = search(cursors, x->name(x)=="SUM")[1]
+    wrap!(ctx, func)
+    str = "SUM(a, b) = a + b"
+    @test string(ctx.common_buffer[:SUM].items[1]) == str
+
+    func = search(cursors, x->name(x)=="SQR")[1]
+    wrap!(ctx, func)
+    str = "SQR(c) = c * c"
+    @test string(ctx.common_buffer[:SQR].items[1]) == str
+
+    func = search(cursors, x->name(x)=="TEST_VERSION")[1]
+    wrap!(ctx, func)
+    str = "TEST_VERSION(major, minor, sub) = (major * Culonglong(1000) + minor) * Culonglong(1000) + sub"
+    @test string(ctx.common_buffer[:TEST_VERSION].items[1]) == str
+
+    func = search(cursors, x->name(x)=="AI_DEG_TO_RAD")[1]
+    wrap!(ctx, func)
+    str = "AI_DEG_TO_RAD(x) = x * ai_real(0.0174532925)"
+    @test string(ctx.common_buffer[:AI_DEG_TO_RAD].items[1]) == str
+
+    func = search(cursors, x->name(x)=="SODIUM_MIN")[1]
+    wrap!(ctx, func)
+    str = "SODIUM_MIN(A, B) = if A < B\n        A\n    else\n        B\n    end"
+    @test string(ctx.common_buffer[:SODIUM_MIN].items[1]) == str
+
     # test tokenize for macro instantiation
     func = search(cursors, x -> kind(x) == CXCursor_FunctionDecl)[1]
     body = children(func)[1]
@@ -258,4 +284,9 @@ end
     wrap!(ctx, consts)
     expr = :(const CONSTANT_LITERALS_31 = 0.5)
     @test ctx.common_buffer[:CONSTANT_LITERALS_31].items[1] == expr
+
+    consts = search(cursors, x->name(x)=="CONSTANT_LITERALS_32")[1]
+    wrap!(ctx, consts)
+    expr = :(const CONSTANT_LITERALS_32 = Cuint(0))
+    @test ctx.common_buffer[:CONSTANT_LITERALS_32].items[1] == expr
 end

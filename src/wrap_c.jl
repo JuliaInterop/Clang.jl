@@ -5,7 +5,7 @@ const RESERVED_ARG_TYPES = ["va_list"]
 
 """
     wrap!(ctx::AbstractContext, cursor::CLFunctionDecl)
-Subroutine for handling function declarations. Note that VarArg functions are not supported.
+Subroutine for handling function declarations.
 """
 function wrap!(ctx::AbstractContext, cursor::CLFunctionDecl)
     func_type = type(cursor)
@@ -103,7 +103,10 @@ function wrap!(ctx::AbstractContext, cursor::CLEnumDecl)
         end
     end
     !isempty(ctx.force_name) && (cursor_name = ctx.force_name)
-    cursor_name == "" && (@warn("  Skipping unnamed EnumDecl: $cursor"); return ctx)
+    if cursor_name == ""
+        @warn "  Skipping unnamed EnumDecl: $cursor"
+        return ctx
+    end
 
     enum_sym = symbol_safe(cursor_name)
     enum_type = INT_CONVERSION[clang2julia(cursor)]
@@ -123,7 +126,7 @@ function wrap!(ctx::AbstractContext, cursor::CLEnumDecl)
     enum_pairs = Expr(:block)
     ctx.common_buffer[enum_sym] = ExprUnit(expr)
     for (name, value) in name2value
-        ctx.common_buffer[name] = ctx.common_buffer[enum_sym]  ##???
+        ctx.common_buffer[name] = ctx.common_buffer[enum_sym]
         push!(enum_pairs.args, :($name = $value))
     end
     push!(expr.args, enum_pairs)
@@ -295,9 +298,9 @@ function wrap!(ctx::AbstractContext, cursor::CLTypedefDecl)
     td_type = underlying_type(cursor)
     td_sym = isempty(ctx.force_name) ? Symbol(spelling(cursor)) : ctx.force_name
     buffer = ctx.common_buffer
+
     if kind(td_type) == CXType_Unexposed
-        # TODO: which corner case will trigger this pass?
-        @error "  Skipping Typedef: CXType_Unexposed, $cursor, please report this on Github."
+        @error "  Skipping Typedef: CXType_Unexposed, $cursor, please report please report this to https://github.com/JuliaInterop/Clang.jl/issues."
     end
 
     # skip ObjectveC's block pointers
@@ -307,11 +310,8 @@ function wrap!(ctx::AbstractContext, cursor::CLTypedefDecl)
     end
 
     if kind(td_type) == CXType_FunctionProto
-        # TODO: need to find a test case too
         if !haskey(buffer, td_sym)
-            buffer[td_sym] = ExprUnit(string(
-                "# Skipping Typedef: CXType_FunctionProto ", spelling(cursor)
-            ))
+            buffer[td_sym] = ExprUnit(:(const $td_sym = Cvoid))
         end
         return ctx
     end
@@ -323,141 +323,285 @@ function wrap!(ctx::AbstractContext, cursor::CLTypedefDecl)
     return ctx
 end
 
-"""
-    handle_macro_exprn(tokens::TokenList, pos::Int)
-For handling of #define'd constants, allows basic expressions but bails out quickly.
-"""
-function handle_macro_exprn(tokens::TokenList, pos::Int)
-    function trans(tok)
-        ops = ["+" "-" "*" "~" ">>" "<<" "/" "\\" "%" "|" "||" "^" "&" "&&" "=="]
-        token_kind = kind(tok)
-        (token_kind == CXToken_Literal || token_kind == CXToken_Identifier) && return 0
-        token_kind == CXToken_Punctuation && tok.text ∈ ops && return 1
-        return -1
+## macros
+const LITERAL_LONG = ["L", "l"]
+const LITERAL_ULONG = ["UL", "Ul", "uL", "ul", "LU", "Lu", "lU", "lu"]
+const LITERAL_ULONGLONG = ["ULL", "Ull", "uLL", "ull", "LLU", "LLu", "llU", "llu"]
+const LITERAL_LONGLONG = ["LL", "ll"]
+
+const LITERAL_SUFFIXES = [
+    LITERAL_ULONGLONG..., LITERAL_LONGLONG..., LITERAL_ULONG..., LITERAL_LONG...,
+    "U", "u", "F", "f"
+]
+
+function literal_totype(literal, txt)
+    literal = lowercase(literal)
+
+    # Floats following http://en.cppreference.com/w/cpp/language/floating_literal
+    float64 = occursin(".", txt) && occursin("l", literal)  # long double
+    float32 = occursin("f", literal)
+
+    if float64 || float32
+        float64 && return "Float64"
+        float32 && return "Float32"
     end
 
-    # normalize literal with a size suffix
-    function literally(tok)
-        # note: put multi-character first, or it will break out too soon for those!
-        literalsuffixes = ["ULL", "Ull", "uLL", "ull", "LLU", "LLu", "llU", "llu",
-                           "LL", "ll", "UL", "Ul", "uL", "ul", "LU", "Lu", "lU", "lu",
-                           "U", "u", "L", "l", "F", "f"]
-
-        function literal_totype(literal, txt)
-            literal = lowercase(literal)
-
-            # Floats following http://en.cppreference.com/w/cpp/language/floating_literal
-            float64 = occursin(".", txt) && occursin("l", literal)
-            float32 = occursin("f", literal)
-
-            if float64 || float32
-                float64 && return "Float64"
-                float32 && return "Float32"
-            end
-
-            # Integers following http://en.cppreference.com/w/cpp/language/integer_literal
-            unsigned = occursin("u", literal)
-            nbits = count(x -> x == 'l', literal) == 2 ? 64 : 32
-            return "$(unsigned ? "U" : "")Int$nbits"
-        end
-
-        token_kind = kind(tok)
-        txt = strip(tok.text)
-        if token_kind == CXToken_Identifier || token_kind == CXToken_Punctuation
-            # pass
-        elseif token_kind == CXToken_Literal
-            for sfx in literalsuffixes
-                if endswith(txt, sfx)
-                    type = literal_totype(sfx, txt)
-                    txt = txt[1:(end - length(sfx))]
-                    txt = "$(type)($txt)"
-                    break
-                end
-            end
-        end
-        return txt
+    # Integers following http://en.cppreference.com/w/cpp/language/integer_literal
+    unsigned = occursin("u", literal)
+    if unsigned && (endswith(literal, "llu") || endswith(literal, "ull"))
+        return "Culonglong"
+    elseif !unsigned && endswith(literal, "ll")
+        return "Clonglong"
+    elseif occursin("ul", literal) || occursin("lu", literal)
+        return "Culong"
+    elseif !unsigned && endswith(literal, "l")
+        return "Clong"
+    else
+        return unsigned ? "Cuint" : "Cint"
     end
-
-    # check whether identifiers and literals alternate
-    # with punctuation
-    exprn = ""
-    pos > length(tokens) && return exprn, pos
-
-    prev = 1 >> trans(tokens[pos])
-    for lpos in pos:length(tokens)
-        pos = lpos
-        tok = tokens[lpos]
-        state = trans(tok)
-        if xor(state, prev) == 1
-            prev = state
-        else
-            break
-        end
-        exprn = exprn * literally(tok)
-    end
-    return exprn, pos
 end
 
-# TODO: This really returns many more symbols than we want,
-# Functionally, it shouldn't matter, but eventually, we
-# might want something more sophisticated.
-# (Check: Does this functionality already exist elsewhere?)
-get_symbols(s) = Any[]
-get_symbols(s::Symbol) = Any[s]
-get_symbols(e::Expr) = vcat(get_symbols(e.head), get_symbols(e.args))
-get_symbols(xs::Array) = reduce(vcat, [get_symbols(x) for x in xs])
+normalize_literal(tok) = strip(tok.text)
+
+function normalize_literal(tok::Literal)
+    txt = strip(tok.text)
+    for sfx in LITERAL_SUFFIXES
+        if endswith(txt, sfx)
+            type = literal_totype(sfx, txt)
+            txt = txt[1:(end - length(sfx))]
+            return "$(type)($txt)"
+        end
+    end
+    # Char to Cchar
+    if match(r"^'.*'$", txt) !== nothing
+        return "Cchar($txt)"
+    end
+    return txt
+end
+
+function literally(tok)
+    m = match(r"^0[0-9]*\d$", tok.text)
+    if m !== nothing && m.match !== "0"
+        literals = "0o"*normalize_literal(tok)
+    else
+        literals = normalize_literal(tok)
+    end
+    if occursin('\$', literals)
+        return "($(replace(literals, "\$"=>"\\\$")))"
+    else
+        return "($literals)"
+    end
+end
+
+is_macro_pure_definition(toks) = toks.size == 1 && toks[1].kind == CXToken_Identifier
+
+function is_macro_constants(toks)
+    if toks.size == 2 &&
+        toks[1].kind == CXToken_Identifier &&
+        toks[2].kind == CXToken_Literal
+        # `#define CONSTANT_LITERALS_1 0`
+        return true
+    elseif toks.size == 4 &&
+        toks[1].kind == CXToken_Identifier &&
+        toks[2].kind == CXToken_Punctuation &&
+        toks[3].kind == CXToken_Literal &&
+        toks[4].kind == CXToken_Punctuation
+        # `#define CONSTANT_LITERALS_BRACKET ( 0x10u )`
+        return true
+    else
+        return false
+    end
+end
+
+function is_macro_naive_alias(toks)
+    if toks.size == 2 &&
+        toks[1].kind == CXToken_Identifier &&
+        toks[2].kind == CXToken_Identifier
+        # `#define CONSTANT_ALIAS CONSTANT_LITERALS_1`
+        return true
+    else
+        return false
+    end
+end
+
+const C_KEYWORDS_DATATYPE = [
+    "char", "double", "float", "int", "long", "short", "signed", "unsigned", "void",
+    "_Bool", "_Complex", "_Noreturn"
+    ]
+const C_KEYWORDS_CVR = ["const", "volatile", "restrict"]
+const C_KEYWORDS = [
+    C_KEYWORDS_DATATYPE..., "auto", "break", "case",  "continue", "default", "do",
+    "else", "enum", "extern", "for", "goto", "if", "inline", "register",
+    "return", "sizeof", "static", "struct", "switch", "typedef", "union",
+    "while", "_Alignas", "_Alignof", "_Atomic", "_Decimal128", "_Decimal32",
+    "_Decimal64", "_Generic", "_Imaginary", "_Static_assert", "_Thread_local"
+    ]
+
+const C_DATATYPE_TO_JULIA_DATATYPE = Dict(
+    "char"                      => :Cchar,
+    "double"                    => :Float64,
+    "float"                     => :Float32,
+    "int"                       => :Cint,
+    "long"                      => :Clong,
+    "short"                     => :Cshort,
+    "void"                      => :Cvoid,
+    "_Bool"                     => :Cuchar,
+    "_Complex float"            => :ComplexF32,
+    "_Complex double"           => :ComplexF64,
+    "_Noreturn"                 => :(Union{}),
+    "signed char"               => :Int8,
+    "signed int"                => :Cint,
+    "signed long"               => :Clong,
+    "signed short"              => :Cshort,
+    "unsigned char"             => :Cuchar,
+    "unsigned int"              => :Cuint,
+    "unsigned long"             => :Culong,
+    "unsigned short"            => :Cushort,
+    "long long"                 => :Clonglong,
+    "long long int"             => :Clonglong,
+    "signed long long int"      => :Clonglong,
+    "unsigned long long"        => :Culonglong,
+    "unsigned long long int"    => :Culonglong
+)
+
+function is_macro_keyword_alias(toks)
+    if toks.size ≥ 2 && toks[1].kind == CXToken_Identifier
+        toks_kind = [tok.kind for tok in collect(toks)[2:end]]
+        return all(x -> x == CXToken_Keyword, toks_kind)
+    else
+        return false
+    end
+end
+
+function is_macro_has_compiler_reserved_keyword(toks)
+    for tok in toks
+        startswith(tok.text, "__") && return true
+    end
+    return false
+end
+
+function add_spaces_for_macros(lhs, rhs)
+    if startswith(rhs, "(")  # handle function call
+        if endswith(lhs, "?") || endswith(lhs, ":") # handle trinary operator
+            return lhs * " " * rhs
+        else
+            return lhs * rhs
+        end
+    else
+        return lhs * " " * rhs
+    end
+end
+
+function skip_macro!(buffer, tokens)
+    str = join([tok.text for tok in tokens], " ")
+    buffer[Symbol(str)] = ExprUnit("# Skipping MacroDefinition: " * str)
+    return buffer
+end
 
 """
     wrap!(ctx::AbstractContext, cursor::CLMacroDefinition)
 Subroutine for handling macro declarations.
 """
 function wrap!(ctx::AbstractContext, cursor::CLMacroDefinition)
+    # skip built-in macros
+    isbuiltin(cursor) && return ctx
+
     tokens = tokenize(cursor)
-    # Skip any empty definitions
-    tokens.size < 2 && return ctx
-    startswith(name(cursor), "_") && return ctx
-
     buffer = ctx.common_buffer
-    pos = 1
-    exprn = ""
-    if tokens[2].text == "("
-        exprn, pos = handle_macro_exprn(tokens, 3)
-        if pos != lastindex(tokens) || tokens[pos].text != ")" || exprn == ""
-            mdef_str = join([c.text for c in tokens], " ")
-            buffer[Symbol(mdef_str)] = ExprUnit(string(
-                "# Skipping MacroDefinition: ", replace(mdef_str, "\n" => "\n#")
-            ))
-            return ctx
+
+    if is_macro_has_compiler_reserved_keyword(tokens)
+        skip_macro!(buffer, tokens)
+        return ctx
+    end
+
+    if isfunctionlike(cursor)
+        toks = collect(tokens)
+        lhs_sym = symbol_safe(tokens[1].text)
+        i = findfirst(x->x.text == ")", toks)
+        sig_ex = Meta.parse(mapreduce(x->x.text, *, toks[1:i]))
+        sig_ex.args[1] = lhs_sym
+        if i == tokens.size
+            ex = Expr(:(=), sig_ex, nothing)
+            buffer[lhs_sym] = ExprUnit(ex)
+        else
+            body_toks = toks[1+i:end]
+            txts = [tok.kind == CXToken_Literal ? literally(tok) : tok.text for tok in body_toks]
+            str = reduce(add_spaces_for_macros, txts)
+            try
+                ex = Expr(:(=), sig_ex, Meta.parse(str))
+                buffer[lhs_sym] = ExprUnit(ex)
+            catch err
+                skip_macro!(buffer, tokens)
+            end
         end
-        exprn = "(" * exprn * ")"
+        return ctx
+    end
+
+    if is_macro_pure_definition(tokens)
+        sym = symbol_safe(tokens[1].text)
+        ex = Expr(:const, Expr(:(=), sym, :nothing))
+        buffer[sym] = ExprUnit(ex)
+        return ctx
+    end
+
+    if is_macro_constants(tokens)
+        literal_tok = tokens.size == 2 ? tokens[2] : tokens[3]
+        literals = literally(literal_tok)
+        sym = symbol_safe(tokens[1].text)
+        literal_sym = Meta.parse(literals)
+        ex = Expr(:const, Expr(:(=), sym, literal_sym))
+        buffer[sym] = ExprUnit(ex)
+        return ctx
+    end
+
+    if is_macro_naive_alias(tokens)
+        lhs, rhs = tokens
+        lhs_sym = symbol_safe(lhs.text)
+        rhs_sym = symbol_safe(rhs.text)
+        ex = Expr(:const, Expr(:(=), lhs_sym, rhs_sym))
+        buffer[lhs_sym] = ExprUnit(ex)
+        return ctx
+    end
+
+    if is_macro_keyword_alias(tokens)
+        lhs_sym = symbol_safe(tokens[1].text)
+        keywords = [tok.text for tok in collect(tokens)[2:end] if tok.text ∉ C_KEYWORDS_CVR]
+        str = join(keywords, " ")
+        if all(x->x ∈ C_KEYWORDS_DATATYPE, keywords) && haskey(C_DATATYPE_TO_JULIA_DATATYPE, str)
+            rhs_sym = C_DATATYPE_TO_JULIA_DATATYPE[str]
+            ex = Expr(:const, Expr(:(=), lhs_sym, rhs_sym))
+            buffer[lhs_sym] = ExprUnit(ex)
+        else
+            skip_macro!(buffer, tokens)
+        end
+        return ctx
+    end
+
+    # for all the other cases, we just blindly use Julia's Meta.parse to parse the C code.
+    is_aggresively_parse = get(ctx.options, "aggresively_parse_macros", true)
+    if tokens.size > 1 && tokens[1].kind == CXToken_Identifier && is_aggresively_parse
+        sym = symbol_safe(tokens[1].text)
+        try
+            txts = [tok.kind == CXToken_Literal ? literally(tok) : tok.text for tok in collect(tokens)[2:end]]
+            str = reduce(add_spaces_for_macros, txts)
+            ex = Expr(:const, Expr(:(=), sym, Meta.parse(str)))
+            buffer[sym] = ExprUnit(ex)
+        catch err
+            skip_macro!(buffer, tokens)
+        end
     else
-        exprn, pos = handle_macro_exprn(tokens, 2)
-        if pos != lastindex(tokens)
-            mdef_str = join([c.text for c in tokens], " ")
-            buffer[Symbol(mdef_str)] = ExprUnit(string(
-                "# Skipping MacroDefinition: ", replace(mdef_str, "\n" => "#\n")
-            ))
-            return ctx
-        end
+        skip_macro!(buffer, tokens)
     end
+    return ctx
+end
 
-    # Occasionally, skipped definitions slip through
-    (exprn == "" || exprn == "()") && return buffer
+function wrap!(ctx::AbstractContext, cursor::CLMacroInstantiation)
+    @debug "Skipping without wrapping $(cursor)"
+    return ctx
+end
 
-    use_sym = symbol_safe(tokens[1].text)
-
-    try
-        target = Meta.parse(exprn)
-        e = Expr(:const, Expr(:(=), use_sym, target))
-        deps = get_symbols(target)
-        buffer[use_sym] = ExprUnit(e, deps)
-    catch err
-        # this assumes all parsing failures are due to string-parsing
-        ## TODO: find a elegant way to solve this
-        e = :(const $use_sym = $(exprn[2:(end - 1)]))
-        buffer[use_sym] = ExprUnit(e, [])
-    end
-
+function wrap!(ctx::AbstractContext, cursor::CLLastPreprocessing)
+    @debug "Skipping without wrapping $(cursor)"
     return ctx
 end
 
@@ -471,13 +615,7 @@ function wrap!(ctx::AbstractContext, cursor::CLTypeRef)
 end
 
 function wrap!(ctx::AbstractContext, cursor::CLCursor)
-    @warn "Skipping without wrapping $(cursor)"
-    return ctx
-end
-
-function wrap!(
-    ctx::AbstractContext, cursor::Union{CLLastPreprocessing,CLMacroInstantiation}
-)
-    @debug "Skipping without wrapping $(cursor)"
+    @error "Skipping without wrapping $(cursor), please report this to https://github.com/JuliaInterop/Clang.jl/issues."
+    dumpobj(cursor)
     return ctx
 end

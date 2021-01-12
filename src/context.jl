@@ -5,7 +5,7 @@ mutable struct DefaultContext <: AbstractContext
     trans_units::Vector{TranslationUnit}
     options::Dict{String,Bool}
     libname::String
-    force_name::String
+    force_name::String  # a tmp cursor name
     common_buffer::OrderedDict{Symbol,ExprUnit}
     api_buffer::Vector
     cursor_stack::Vector{CLCursor}

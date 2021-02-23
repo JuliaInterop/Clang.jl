@@ -61,7 +61,8 @@ function create_context(headers::Vector, args::Vector, options::Dict)
     general_options = get(options, "general", Dict())
     if get(general_options, "auto_detect_system_headers", true)
         sys_headers = map(x->"-I"*x, find_std_headers())
-        args = vcat(sys_headers, args)
+        clang_incs = ["-I"*CLANG_INCLUDE]
+        args = vcat(sys_headers, clang_incs, args)
     end
     parse_headers!(ctx, headers, args)
 

@@ -29,7 +29,7 @@ prologue_file_path = "./gen/prologue.jl"
 # this is often used for applying custom patches.
 epilogue_file_path = ""
 
-# automatically detect system std headers for macOS users.
+# automatically detect system std headers especially for macOS users.
 auto_detect_system_headers = true
 
 # Julia's `@enum` do not allow duplicated values, so by default, C enums are translated to 

@@ -57,10 +57,13 @@ export pretty_print
 include("audit.jl")
 export report_default_tag_types
 
+include("macro.jl")
+
 include("passes.jl")
 export AbstractPass
 export Audit
 export Codegen
+export CodegenMacro
 export CodegenPostprocessing
 export CodegenPreprocessing
 export CollectTopLevelNode

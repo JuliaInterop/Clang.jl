@@ -163,3 +163,16 @@ function pretty_print(io, node::ExprNode{<:OpaqueTags}, options::Dict)
 end
 
 pretty_print(io, node::ExprNode{UnknownDefaults}, options::Dict) = nothing
+
+## EXPERIMENTAL
+function pretty_print(io, node::ExprNode{<:AbstractMacroNodeType}, options::Dict)
+    for expr in node.exprs
+        if Meta.isexpr(expr, :block)
+            println(io, string(expr.args[1]))
+        else
+            println(io, expr)
+        end
+    end
+    println(io)
+    return nothing
+end

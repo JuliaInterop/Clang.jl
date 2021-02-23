@@ -79,6 +79,7 @@ function create_context(headers::Vector, args::Vector, options::Dict)
     end
     push!(ctx.passes, Audit())
     push!(ctx.passes, Codegen())
+    push!(ctx.passes, CodegenMacro())
     push!(ctx.passes, CodegenPostprocessing())
 
     # support old behavior

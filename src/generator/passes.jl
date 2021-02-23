@@ -589,8 +589,13 @@ function (x::CommonPrinter)(dag::ExprDAG, options::Dict)
     show_info && @info "[CommonPrinter]: print code to $(x.file)"
     open(x.file, "w") do io
         for node in dag.nodes
-            node.type isa AbstractFunctionNodeType && continue
+            node.type isa AbstractMacroNodeType && continue
             pretty_print(io, node, general_options)
+        end
+        # print macros in the bottom of the file
+        for node in dag.nodes
+            node.type isa AbstractMacroNodeType || continue
+            pretty_print(io, node, options)
         end
     end
     return dag
@@ -614,7 +619,13 @@ function (x::GeneralPrinter)(dag::ExprDAG, options::Dict)
     show_info && @info "[GeneralPrinter]: print code to $(x.file)"
     open(x.file, "a") do io
         for node in dag.nodes
+            node.type isa AbstractMacroNodeType && continue
             pretty_print(io, node, general_options)
+        end
+        # print macros in the bottom of the file
+        for node in dag.nodes
+            node.type isa AbstractMacroNodeType || continue
+            pretty_print(io, node, options)
         end
     end
     return dag
@@ -714,3 +725,31 @@ end"""
 end
 
 ## EXPERIMENTAL
+"""
+    CodegenMacro <: AbstractPass
+[`Codegen`](@ref) pass for macros.
+"""
+mutable struct CodegenMacro <: AbstractPass
+    show_info::Bool
+end
+CodegenMacro(; info=false) = CodegenMacro(info)
+
+function (x::CodegenMacro)(dag::ExprDAG, options::Dict)
+    general_options = get(options, "general", Dict())
+    log_options = get(general_options, "log", Dict())
+    show_info = get(log_options, "CodegenMacro_log", x.show_info)
+    codegen_options = get(options, "codegen", Dict())
+    macro_options = get(codegen_options, "macro", Dict())
+    macro_mode = get(macro_options, "macro_mode", "basic")
+
+    macro_mode == "none" && return dag
+
+    for node in dag.nodes
+        node.type isa AbstractMacroNodeType || continue
+        !isempty(node.exprs) && empty!(node.exprs)
+        macro_emit!(dag, node, macro_options)
+        show_info && @info "[CodegenMacro]: emit Julia expression for $(node.id)"
+    end
+
+    return dag
+end

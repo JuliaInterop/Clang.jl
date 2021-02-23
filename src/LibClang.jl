@@ -2704,6 +2704,38 @@ function clang_Type_visitFields(T, visitor, client_data)
     ccall((:clang_Type_visitFields, libclang), Cuint, (CXType, CXFieldVisitor, CXClientData), T, visitor, client_data)
 end
 
+const LLVM_CLANG_C_BUILDSYSTEM_H = nothing
+
+const LLVM_CLANG_C_CXCOMPILATIONDATABASE_H = nothing
+
+const LLVM_CLANG_C_CXERRORCODE_H = nothing
+
+const LLVM_CLANG_C_CXSTRING_H = nothing
+
+const LLVM_CLANG_C_DOCUMENTATION_H = nothing
+
+const LLVM_CLANG_C_INDEX_H = nothing
+
+const CINDEX_VERSION_MAJOR = 0
+
+const CINDEX_VERSION_MINOR = 59
+
+CINDEX_VERSION_ENCODE(major, minor) = major * 10000 + minor * 1
+
+# Skipping MacroDefinition: CINDEX_VERSION CINDEX_VERSION_ENCODE ( CINDEX_VERSION_MAJOR , CINDEX_VERSION_MINOR )
+
+CINDEX_VERSION_STRINGIZE_(major, minor) = nothing
+
+CINDEX_VERSION_STRINGIZE(major, minor) = CINDEX_VERSION_STRINGIZE_(major, minor)
+
+# Skipping MacroDefinition: CINDEX_VERSION_STRING CINDEX_VERSION_STRINGIZE ( CINDEX_VERSION_MAJOR , CINDEX_VERSION_MINOR )
+
+const LLVM_CLANG_C_PLATFORM_H = nothing
+
+const CINDEX_LINKAGE = nothing
+
+# Skipping MacroDefinition: CINDEX_DEPRECATED __attribute__ ( ( deprecated ) )
+
 # exports
 const PREFIXES = ["CX", "clang_"]
 foreach(names(@__MODULE__; all=true)) do s

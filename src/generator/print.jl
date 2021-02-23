@@ -172,7 +172,7 @@ function pretty_print(io, node::ExprNode{<:AbstractMacroNodeType}, options::Dict
         else
             println(io, expr)
         end
+        println(io)
     end
-    println(io)
     return nothing
 end

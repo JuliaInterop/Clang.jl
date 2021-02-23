@@ -75,6 +75,9 @@ macro_mode = "basic"
 # "# Skipping MacroDefinition: ..."
 add_comment_for_skipped_macro = true
 
+# ignore any macros that is suffixed with "_H"
+ignore_header_guards = true
+
 [general.log]
 # CollectTopLevelNode_log = false
 # LinkTypedefToAnonymousTagType_log = false

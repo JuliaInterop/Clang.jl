@@ -1741,7 +1741,7 @@ end
     CXChildVisit_Recurse = 2
 end
 
-# C code: 
+# C code:
 # typedef enum CXChildVisitResult ( * CXCursorVisitor ) ( CXCursor cursor , CXCursor parent , CXClientData client_data )
 const CXCursorVisitor = Ptr{Cvoid}
 
@@ -2285,7 +2285,7 @@ function clang_toggleCrashRecovery(isEnabled)
     ccall((:clang_toggleCrashRecovery, libclang), Cvoid, (Cuint,), isEnabled)
 end
 
-# C code: 
+# C code:
 # typedef void ( * CXInclusionVisitor ) ( CXFile included_file , CXSourceLocation * inclusion_stack , unsigned include_len , CXClientData client_data )
 const CXInclusionVisitor = Ptr{Cvoid}
 
@@ -2696,25 +2696,13 @@ function clang_indexLoc_getCXSourceLocation(loc)
     ccall((:clang_indexLoc_getCXSourceLocation, libclang), CXSourceLocation, (CXIdxLoc,), loc)
 end
 
-# C code: 
+# C code:
 # typedef enum CXVisitorResult ( * CXFieldVisitor ) ( CXCursor C , CXClientData client_data )
 const CXFieldVisitor = Ptr{Cvoid}
 
 function clang_Type_visitFields(T, visitor, client_data)
     ccall((:clang_Type_visitFields, libclang), Cuint, (CXType, CXFieldVisitor, CXClientData), T, visitor, client_data)
 end
-
-const LLVM_CLANG_C_BUILDSYSTEM_H = nothing
-
-const LLVM_CLANG_C_CXCOMPILATIONDATABASE_H = nothing
-
-const LLVM_CLANG_C_CXERRORCODE_H = nothing
-
-const LLVM_CLANG_C_CXSTRING_H = nothing
-
-const LLVM_CLANG_C_DOCUMENTATION_H = nothing
-
-const LLVM_CLANG_C_INDEX_H = nothing
 
 const CINDEX_VERSION_MAJOR = 0
 
@@ -2729,8 +2717,6 @@ CINDEX_VERSION_STRINGIZE_(major, minor) = nothing
 CINDEX_VERSION_STRINGIZE(major, minor) = CINDEX_VERSION_STRINGIZE_(major, minor)
 
 # Skipping MacroDefinition: CINDEX_VERSION_STRING CINDEX_VERSION_STRINGIZE ( CINDEX_VERSION_MAJOR , CINDEX_VERSION_MINOR )
-
-const LLVM_CLANG_C_PLATFORM_H = nothing
 
 const CINDEX_LINKAGE = nothing
 

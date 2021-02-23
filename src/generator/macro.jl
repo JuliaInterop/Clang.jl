@@ -176,7 +176,7 @@ function macro_emit! end
 macro_emit!(dag::ExprDAG, node::ExprNode, options::Dict) = dag
 
 function macro_emit!(dag::ExprDAG, node::ExprNode{MacroFunctionLike}, options::Dict)
-    print_comment = get(options, "add_comment_for_skipped_macro", "basic")
+    print_comment = get(options, "add_comment_for_skipped_macro", true)
 
     cursor = node.cursor
     tokens = tokenize(cursor)
@@ -205,7 +205,9 @@ end
 
 function macro_emit!(dag::ExprDAG, node::ExprNode{MacroDefault}, options::Dict)
     mode = get(options, "macro_mode", "basic")
-    print_comment = get(options, "add_comment_for_skipped_macro", "basic")
+    print_comment = get(options, "add_comment_for_skipped_macro", true)
+    ignore_header_guards = get(options, "ignore_header_guards", true)
+    ignore_header_guards && endswith(string(node.id), "_H") && return dag
 
     cursor = node.cursor
     tokens = tokenize(cursor)
@@ -234,7 +236,7 @@ function macro_emit!(dag::ExprDAG, node::ExprNode{MacroDefault}, options::Dict)
     end
 
     if is_macro_keyword_alias(tokens)
-        lhs_sym = symbol_safe(tokens[1].text)
+        lhs_sym = make_symbol_safe(tokens[1].text)
         keywords = [tok.text for tok in collect(tokens)[2:end] if tok.text ∉ C_KEYWORDS_CVR]
         str = join(keywords, " ")
         if all(x->x ∈ C_KEYWORDS_DATATYPE, keywords) && haskey(C_DATATYPE_TO_JULIA_DATATYPE, str)

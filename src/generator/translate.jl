@@ -32,7 +32,7 @@ function translate(jlty::JuliaUnknown, options=Dict())
 end
 translate(jlty::JuliaCvoid, options=Dict()) = :Cvoid
 function translate(jlty::JuliaCbool, options=Dict())
-    return get(options, "use_julia_bool", false) ? :Bool : :UInt8
+    return get(options, "use_julia_bool", true) ? :Bool : :UInt8
 end
 translate(jlty::JuliaCuchar, options=Dict()) = :Cuchar
 translate(jlty::JuliaCshort, options=Dict()) = :Cshort

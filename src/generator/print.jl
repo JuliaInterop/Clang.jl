@@ -145,6 +145,7 @@ function pretty_print(io, node::ExprNode{<:RecordLayouts}, options::Dict)
         println(io, expr)
         println(io)
     end
+    return nothing
 end
 
 pretty_print(io, node::ExprNode{<:ForwardDecls}, options::Dict) = nothing
@@ -152,7 +153,11 @@ pretty_print(io, node::ExprNode{<:ForwardDecls}, options::Dict) = nothing
 function pretty_print(io, node::ExprNode{<:OpaqueTags}, options::Dict)
     @assert length(node.exprs) == 1
     expr = node.exprs[1]
-    if Meta.isexpr(expr, :struct)
+
+    codegen_ops = get(options, "codegen", Dict())
+    opaque_as_mutable = get(codegen_ops, "opaque_as_mutable_struct", true)
+
+    if opaque_as_mutable && Meta.isexpr(expr, :struct)
         struct_name = expr.args[2]
         println(io, "mutable struct $struct_name end")
     else

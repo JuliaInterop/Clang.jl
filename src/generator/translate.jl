@@ -118,8 +118,10 @@ end
 
 function translate(jlty::JuliaCenum, options=Dict())
     tags = get(options, "DAG_tags", Dict())
-    tags_extra = get(options, "DAG_tags_extra", Dict())
-    if haskey(tags, jlty.sym) || haskey(tags_extra, jlty.sym)
+    # currently, we don't distinguish extra tags and ids, this may be improved in the future.
+    # tags_extra = get(options, "DAG_tags_extra", Dict())
+    ids_extra = get(options, "DAG_tags_extra", Dict())
+    if haskey(tags, jlty.sym) || haskey(ids_extra, jlty.sym)
         return make_symbol_safe(jlty.sym)
     else
         # it could a local opaque tag-type
@@ -129,11 +131,13 @@ end
 
 function translate(jlty::JuliaCrecord, options=Dict())
     tags = get(options, "DAG_tags", Dict())
-    tags_extra = get(options, "DAG_tags_extra", Dict())
-    if haskey(tags, jlty.sym) || haskey(tags_extra, jlty.sym)
+    # currently, we don't distinguish extra tags and ids, this may be improved in the future.
+    # tags_extra = get(options, "DAG_tags_extra", Dict())
+    ids_extra = get(options, "DAG_ids_extra", Dict())
+    if haskey(tags, jlty.sym) || haskey(ids_extra, jlty.sym)
         return make_symbol_safe(jlty.sym)
     else
-        # it could a local opaque tag-type
+        # it could be a local opaque tag-type
         return translate(JuliaCvoid(), options)
     end
 end

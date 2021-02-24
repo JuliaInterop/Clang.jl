@@ -51,6 +51,48 @@ function find_std_headers()
 end
 
 """
+    find_dependent_headers(headers::Vector{T}, args::Vector) where {T<:AbstractString}
+Return a vector of headers to which those missing dependent headers are added.
+"""
+function find_dependent_headers(headers::Vector{T}, args::Vector) where {T<:AbstractString}
+    flags = CXTranslationUnit_DetailedPreprocessingRecord
+    flags |= CXTranslationUnit_SkipFunctionBodies
+    all_headers = copy(headers)
+    dependent_headers = T[]
+    new_headers = T[]
+    idx = Index(false)
+    while true
+        empty!(new_headers)
+        for header in all_headers
+            tu = parse_header(idx, header, args, flags)
+            GC.@preserve tu begin
+                tu_cursor = getTranslationUnitCursor(tu)
+                header_name = spelling(tu_cursor)
+                header_dir = dirname(header_name)
+                for cursor in children(tu_cursor)
+                    is_inclusion_directive(cursor) || continue
+                    file = getIncludedFile(cursor)
+                    file_name = get_filename(file)
+                    (isempty(file_name) || !isfile(file_name)) && continue
+                    dir = dirname(file_name)
+                    file_name ∈ all_headers && continue
+                    if startswith(header_dir, dir) || startswith(dir, header_dir)
+                        file_name ∉ new_headers && push!(new_headers, file_name)
+                    end
+                end
+            end
+        end
+        isempty(new_headers) && break
+        foreach(new_headers) do h
+            @info "found dependent header: $h"
+        end
+        append!(dependent_headers, new_headers)
+        append!(all_headers, new_headers)
+    end
+    return dependent_headers
+end
+
+"""
     create_context(headers::Vector, args::Vector, options::Dict)
 Create a context from a vector of paths of headers, a vector of compiler flags and
 a option dict.
@@ -60,13 +102,16 @@ function create_context(headers::Vector, args::Vector, options::Dict)
 
     general_options = get(options, "general", Dict())
     if get(general_options, "auto_detect_system_headers", true)
-        sys_headers = map(x->"-I"*x, find_std_headers())
+        sys_headers = "-I" .* find_std_headers()
         clang_incs = ["-I"*CLANG_INCLUDE]
         args = vcat(sys_headers, clang_incs, args)
     end
+
+    dependent_headers = find_dependent_headers(headers, args)
+
     parse_headers!(ctx, headers, args)
 
-    push!(ctx.passes, CollectTopLevelNode(ctx.trans_units))
+    push!(ctx.passes, CollectTopLevelNode(ctx.trans_units, dependent_headers))
     push!(ctx.passes, LinkTypedefToAnonymousTagType())
     push!(ctx.passes, IndexDefinition())
     push!(ctx.passes, ResolveDependency())
@@ -99,6 +144,8 @@ function create_context(headers::Vector, args::Vector, options::Dict)
 
     return ctx
 end
+
+create_context(header::AbstractString, args, ops) = create_context([header], args, ops)
 
 @enum BuildStage begin
     BUILDSTAGE_ALL

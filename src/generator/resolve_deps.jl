@@ -24,7 +24,7 @@ function resolve_dependency!(dag::ExprDAG, node::ExprNode{FunctionProto})
             push!(node.adj, dag.tags[leaf_ty.sym])
         elseif !hasref && haskey(dag.ids, leaf_ty.sym)
             push!(node.adj, dag.ids[leaf_ty.sym])
-        elseif !hasref && haskey(dag.ids_extra, leaf_ty.sym)
+        elseif haskey(dag.ids_extra, leaf_ty.sym)
             # extra identifiers are printed at the top of the file, so there is no need to
             # add them as dependencies.
             # pass
@@ -57,7 +57,7 @@ function resolve_dependency!(dag::ExprDAG, node::ExprNode{FunctionNoProto})
         push!(node.adj, dag.tags[leaf_ty.sym])
     elseif !hasref && haskey(dag.ids, leaf_ty.sym)
         push!(node.adj, dag.ids[leaf_ty.sym])
-    elseif !hasref && haskey(dag.ids_extra, leaf_ty.sym)
+    elseif haskey(dag.ids_extra, leaf_ty.sym)
         # pass
     else
         tycu = getTypeDeclaration(ty)
@@ -132,7 +132,7 @@ function resolve_dependency!(dag::ExprDAG, node::ExprNode{<:AbstractStructNodeTy
             push!(node.adj, dag.tags[leaf_ty.sym])
         elseif !hasref && haskey(dag.ids, leaf_ty.sym)
             push!(node.adj, dag.ids[leaf_ty.sym])
-        elseif !hasref && haskey(dag.ids_extra, leaf_ty.sym)
+        elseif haskey(dag.ids_extra, leaf_ty.sym)
             # pass
         elseif occursin("anonymous", spelling(ty))
             # it could be a nested anonymous tag-type.

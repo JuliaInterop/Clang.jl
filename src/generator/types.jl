@@ -177,6 +177,9 @@ is_anonymous(::ExprNode{<:Union{StructAnonymous,UnionAnonymous,EnumAnonymous}}) 
 is_function(::ExprNode) = false
 is_function(::ExprNode{<:AbstractFunctionNodeType}) = true
 
+is_variadic_function(::ExprNode) = false
+is_variadic_function(::ExprNode{FunctionVariadic}) = true
+
 is_typedef(::ExprNode) = false
 is_typedef(::ExprNode{<:AbstractTypedefNodeType}) = true
 

@@ -76,32 +76,6 @@ getTypeDeclaration(t::CXType) = clang_getTypeDeclaration(t)
 getTypeDeclaration(t::CLType)::CLCursor = clang_getTypeDeclaration(t)
 
 """
-    spelling(t::Union{CXType,CLType}) -> String
-Pretty-print the underlying type using the rules of the language of the translation unit
-from which it came. If the type is invalid, an empty string is returned.
-Wrapper for libclang's `clang_getTypeSpelling`.
-"""
-function spelling(t::Union{CXType,CLType})
-    cxstr = clang_getTypeSpelling(t)
-    ptr = clang_getCString(cxstr)
-    s = unsafe_string(ptr)
-    clang_disposeString(cxstr)
-    return s
-end
-
-"""
-    spelling(kind::CXTypeKind) -> String
-Return the spelling of a given CXTypeKind.
-"""
-function spelling(kind::CXTypeKind)
-    cxstr = clang_getTypeKindSpelling(kind)
-    ptr = clang_getCString(cxstr)
-    s = unsafe_string(ptr)
-    clang_disposeString(cxstr)
-    return s
-end
-
-"""
     getFunctionTypeCallingConv(t::Union{CXType,CLFunctionNoProto,CLFunctionProto}) -> CXCallingConv
 Return the calling convention associated with a function type.
 Wrapper for libclang's `clang_getFunctionTypeCallingConv`.
@@ -211,6 +185,14 @@ a [`CXTypeLayoutError`](@ref) to see what the error is.
 getOffsetOf(t::CXType, s)::Int = clang_Type_getOffsetOf(t, s)
 getOffsetOf(t::CLType, s::AbstractString) = getOffsetOf(t.type, s)
 
+"""
+    isInvalid(t::CXType) -> Bool
+    isInvalid(t::CLType) -> Bool
+Return true if the type is a valid type.
+"""
+isInvalid(t::CXType) = kind(t) != CXType_Invalid
+isInvalid(t::CLType) = isInvalid(t.type)
+
 ## TODO:
 # clang_Type_isTransparentTagTypedef (ObjectiveC)
 # clang_Type_getClassType (C++)
@@ -229,12 +211,30 @@ kind(t::CXType) = t.kind
 kind(t::CLType) = kind(t.type)
 
 """
-    isInvalid(t::CXType) -> Bool
-    isInvalid(t::CLType) -> Bool
-Return true if the type is a valid type.
+    spelling(t::Union{CXType,CLType}) -> String
+Pretty-print the underlying type using the rules of the language of the translation unit
+from which it came. If the type is invalid, an empty string is returned.
+Wrapper for libclang's `clang_getTypeSpelling`.
 """
-isInvalid(t::CXType) = kind(t) != CXType_Invalid
-isInvalid(t::CLType) = isInvalid(t.type)
+function spelling(t::Union{CXType,CLType})
+    cxstr = clang_getTypeSpelling(t)
+    ptr = clang_getCString(cxstr)
+    s = unsafe_string(ptr)
+    clang_disposeString(cxstr)
+    return s
+end
+
+"""
+    spelling(kind::CXTypeKind) -> String
+Return the spelling of a given CXTypeKind.
+"""
+function spelling(kind::CXTypeKind)
+    cxstr = clang_getTypeKindSpelling(kind)
+    ptr = clang_getCString(cxstr)
+    s = unsafe_string(ptr)
+    clang_disposeString(cxstr)
+    return s
+end
 
 # visitor
 function ct_field_visitor(cursor::CXCursor, list)::CXVisitorResult

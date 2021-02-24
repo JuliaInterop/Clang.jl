@@ -18,11 +18,12 @@ See also [`collect_top_level_nodes!`](@ref).
 """
 mutable struct CollectTopLevelNode <: AbstractPass
     trans_units::Vector{TranslationUnit}
+    dependant_headers::Vector{String}
     compiler_defs_extra::Vector{String}
     show_info::Bool
 end
-CollectTopLevelNode(tus, info) = CollectTopLevelNode(tus, COMPILER_DEFINITIONS_EXTRA, info)
-CollectTopLevelNode(tus; info=false) = CollectTopLevelNode(tus, info)
+CollectTopLevelNode(tus, dhs, info) = CollectTopLevelNode(tus, dhs, COMPILER_DEFINITIONS_EXTRA, info)
+CollectTopLevelNode(tus, dhs=String[]; info=false) = CollectTopLevelNode(tus, dhs, info)
 
 function (x::CollectTopLevelNode)(dag::ExprDAG, options::Dict)
     general_options = get(options, "general", Dict())
@@ -38,8 +39,10 @@ function (x::CollectTopLevelNode)(dag::ExprDAG, options::Dict)
         header_name = spelling(tu_cursor)
         @info "[CollectTopLevelNode]: processing header: $header_name"
         for cursor in children(tu_cursor)
-            filename, _, _ = get_file_line_column(cursor)
-            is_local_only && header_name != filename && continue
+            file_name = get_filename(cursor)
+            if is_local_only && header_name != file_name
+                file_name ∉ x.dependant_headers && continue
+            end
 
             str = spelling(cursor)
             if skip_defs && (startswith(str, "__") || (str ∈ x.compiler_defs_extra))

@@ -145,3 +145,7 @@ collect_top_level_nodes!(dag::ExprDAG, cursor::CLVarDecl) = dag
 # skip `#include <...>`
 collect_top_level_nodes!(dag::ExprDAG, cursor::CLInclusionDirective) = dag
 collect_top_level_nodes!(dag::ExprDAG, cursor::CLLastPreprocessing) = dag  # FIXME: fix cltype.jl
+
+# skip unexposed decl
+# collect_top_level_nodes!(dag::ExprDAG, cursor::CLUnexposedDecl) = dag
+# collect_top_level_nodes!(dag::ExprDAG, cursor::CLFirstDecl) = dag  # FIXME: fix cltype.jl

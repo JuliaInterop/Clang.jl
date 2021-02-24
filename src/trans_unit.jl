@@ -72,15 +72,23 @@ getTranslationUnitCursor(tu::CXTranslationUnit) = clang_getTranslationUnitCursor
 getTranslationUnitCursor(tu::TranslationUnit)::CLCursor = clang_getTranslationUnitCursor(tu)
 
 ## TODO:
-# clang_parseTranslationUnit2
+# clang_createTranslationUnit
 # clang_createTranslationUnit2
+# clang_defaultEditingTranslationUnitOptions
+# clang_parseTranslationUnit2
 # clang_parseTranslationUnit2FullArgv
+# clang_defaultSaveOptions
 # clang_saveTranslationUnit
 # clang_suspendTranslationUnit
-# clang_defaultSaveOptions
-# clang_defaultEditingTranslationUnitOptions
 # clang_defaultReparseOptions
 # clang_reparseTranslationUnit
+# clang_getTUResourceUsageName
+# clang_getCXTUResourceUsage
+# clang_disposeCXTUResourceUsage
+# clang_getTranslationUnitTargetInfo
+# clang_TargetInfo_dispose
+# clang_TargetInfo_getTriple
+# clang_TargetInfo_getPointerWidth
 
 # helper
 """

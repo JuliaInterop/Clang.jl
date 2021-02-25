@@ -87,6 +87,7 @@ struct StructForwardDecl <: AbstractStructNodeType end
 struct StructOpaqueDecl <: AbstractStructNodeType end
 struct StructDefinition <: AbstractStructNodeType end
 struct StructMutualRef <: AbstractStructNodeType end
+struct StructDuplicated <: AbstractStructNodeType end
 struct StructDefault <: AbstractStructNodeType end
 
 """
@@ -105,6 +106,7 @@ struct UnionAnonymous <: AbstractUnionNodeType end
 struct UnionForwardDecl <: AbstractUnionNodeType end
 struct UnionOpaqueDecl <: AbstractUnionNodeType end  # hmm... I guess this is rarely used.
 struct UnionDefinition <: AbstractUnionNodeType end
+struct UnionDuplicated <: AbstractUnionNodeType end
 struct UnionDefault <: AbstractUnionNodeType end
 
 """
@@ -123,6 +125,7 @@ struct EnumAnonymous <: AbstractEnumNodeType end
 struct EnumForwardDecl <: AbstractEnumNodeType end
 struct EnumOpaqueDecl <: AbstractEnumNodeType end  # is there a real-world use case?
 struct EnumDefinition <: AbstractEnumNodeType end
+struct EnumDuplicated <: AbstractEnumNodeType end
 struct EnumDefault <: AbstractEnumNodeType end
 
 """
@@ -221,6 +224,11 @@ is_dup(::ExprNode{MacroDuplicated}) = true
 dup_type(::AbstractFunctionNodeType) = FunctionDuplicated()
 dup_type(::AbstractTypedefNodeType) = TypedefDuplicated()
 dup_type(::AbstractMacroNodeType) = MacroDuplicated()
+
+# tag-types are possiblely duplicated because we are doing CTU analysis
+dup_type(::AbstractStructNodeType) = StructDuplicated()
+dup_type(::AbstractUnionNodeType) = UnionDuplicated()
+dup_type(::AbstractEnumNodeType) = EnumDuplicated()
 
 default_type(::AbstractTypedefNodeType) = TypedefDefault()
 default_type(::AbstractMacroNodeType) = MacroDefault()

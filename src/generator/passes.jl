@@ -85,6 +85,8 @@ function (x::IndexDefinition)(dag::ExprDAG, options::Dict)
                 n = dag.nodes[dag.tags[node.id]]
                 @assert is_same(n.cursor, node.cursor) "duplicated definitions should be exactly the same!"
                 show_info && @info "[IndexDefinition]: found an indexed tag $(node.id) at nodes[$i], skip..."
+                ty = dup_type(node.type)
+                dag.nodes[i] = ExprNode(node.id, ty, node.cursor, node.exprs, node.adj)
             else
                 show_info && @info "[IndexDefinition]: indexing tag $(node.id) at nodes[$i]"
                 dag.tags[node.id] = i
@@ -154,7 +156,7 @@ function (x::LinkTypedefToAnonymousTagType)(dag::ExprDAG, options::Dict)
     end
     # loop through all anonymous tag-types and apply node editing
     for (k, v) in x.cache
-        isempty(v) && break  # skip non-typedef anonymous tag-types e.g. enum
+        isempty(v) && continue  # skip non-typedef anonymous tag-types e.g. enum
         anonymous = dag.nodes[k]
         for i in v
             node = dag.nodes[i]

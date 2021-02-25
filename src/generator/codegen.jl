@@ -143,7 +143,9 @@ function emit!(dag::ExprDAG, node::ExprNode{<:AbstractStructNodeType}, options::
     struct_sym = make_symbol_safe(node.id)
     block = Expr(:block)
     expr = Expr(:struct, false, struct_sym, block)
-    for field_cursor in fields(getCursorType(node.cursor))
+    field_cursors = fields(getCursorType(node.cursor))  # a bug of libclang?
+    field_cursors = isempty(field_cursors) ? children(node.cursor) : field_cursors
+    for field_cursor in field_cursors
         field_sym = make_symbol_safe(name(field_cursor))
         field_ty = getCursorType(field_cursor)
         push!(block.args, Expr(:(::), field_sym, translate(tojulia(field_ty), options)))
@@ -168,7 +170,9 @@ function emit!(dag::ExprDAG, node::ExprNode{StructMutualRef}, options::Dict; arg
     struct_sym = make_symbol_safe(node.id)
     block = Expr(:block)
     expr = Expr(:struct, false, struct_sym, block)
-    for field_cursor in fields(getCursorType(node.cursor))
+    field_cursors = fields(getCursorType(node.cursor))  # a bug of libclang?
+    field_cursors = isempty(field_cursors) ? children(node.cursor) : field_cursors
+    for field_cursor in field_cursors
         field_sym = make_symbol_safe(name(field_cursor))
         field_ty = getCursorType(field_cursor)
         jlty = tojulia(field_ty)

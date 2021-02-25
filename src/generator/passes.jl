@@ -81,9 +81,14 @@ function (x::IndexDefinition)(dag::ExprDAG, options::Dict)
         !isempty(node.adj) && empty!(node.adj)
 
         if is_tag_def(node)
-            @assert !haskey(dag.tags, node.id)
-            show_info && @info "[IndexDefinition]: indexing tag $(node.id) at nodes[$i]"
-            dag.tags[node.id] = i
+            if haskey(dag.tags, node.id)
+                n = dag.nodes[dag.tags[node.id]]
+                @assert is_same(n.cursor, node.cursor) "duplicated definitions should be exactly the same!"
+                show_info && @info "[IndexDefinition]: found an indexed tag $(node.id) at nodes[$i], skip..."
+            else
+                show_info && @info "[IndexDefinition]: indexing tag $(node.id) at nodes[$i]"
+                dag.tags[node.id] = i
+            end
         end
 
         if is_identifier(node)

@@ -23,10 +23,13 @@ using ..Clang:
     getOffsetOf,
     getPointeeType,
     getSizeOf,
+    getTranslationUnit,
     getTranslationUnitCursor,
     getTypedefDeclUnderlyingType,
     getTypeDeclaration,
     hasAttrs
+
+include("utils.jl")
 
 include("jltypes.jl")
 export AbstractJuliaType, AbstractJuliaSIT, AbstractJuliaSDT

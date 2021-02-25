@@ -175,7 +175,7 @@ function emit!(dag::ExprDAG, node::ExprNode{StructMutualRef}, options::Dict; arg
         leaf_ty = get_jl_leaf_type(jlty)
         translated = translate(jlty, options)
 
-        if !is_jl_basic(leaf_ty)
+        if jlty != leaf_ty && !is_jl_basic(leaf_ty)
             # this assumes tag-types and identifiers that have the same name are the same
             # thing, which is validated in the audit pass.
             field_idx = get(dag.tags, leaf_ty.sym, typemax(Int))

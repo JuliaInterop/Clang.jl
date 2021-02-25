@@ -54,6 +54,10 @@ function sanity_check(dag::ExprDAG, options::Dict)
         tn = dag.nodes[tv]
         idn = dag.nodes[idv]
         @assert !is_tagtype(idn)
+
+        # in case the audit pass is executed after the `Skip` marking
+        is_hardskip(idn) && continue
+
         if is_typedef(idn)
             ty = getCanonicalType(getTypedefDeclUnderlyingType(idn.cursor))
             if !is_same(getTypeDeclaration(ty), dag.nodes[tv].cursor)
@@ -72,7 +76,7 @@ function sanity_check(dag::ExprDAG, options::Dict)
 
     # check whether all duplicated identifiers are actually the same thing (is this even legal in C?)
     for node in dag.nodes
-        is_dup(node) || continue
+        is_dup_identifier(node) || continue
         for (idk, idv) in dag.ids
             idn = dag.nodes[idv]
             ty1 = getCanonicalType(getTypedefDeclUnderlyingType(node.cursor))

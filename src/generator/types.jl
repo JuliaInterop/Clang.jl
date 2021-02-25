@@ -139,6 +139,7 @@ const ForwardDecls = Union{StructForwardDecl,UnionForwardDecl,EnumForwardDecl}
 const OpaqueTags = Union{StructOpaqueDecl,UnionOpaqueDecl,EnumOpaqueDecl}
 const UnknownDefaults = Union{FunctionDefault,StructDefault,UnionDefault,EnumDefault}
 const RecordLayouts = Union{<:AbstractUnionNodeType,<:StructLayout}
+const DuplicatedTags = Union{EnumDuplicated,UnionDuplicated,StructDuplicated}
 
 """
     ExprNode{T<:AbstractExprNodeType,S<:CLCursor}
@@ -216,10 +217,15 @@ is_identifier(::ExprNode{<:AbstractMacroNodeType}) = true
 is_identifier(::ExprNode{<:AbstractTypedefNodeType}) = true
 is_identifier(::ExprNode{<:AbstractFunctionNodeType}) = true
 
-is_dup(::ExprNode) = false
-is_dup(::ExprNode{FunctionDuplicated}) = true
-is_dup(::ExprNode{TypedefDuplicated}) = true
-is_dup(::ExprNode{MacroDuplicated}) = true
+is_dup_identifier(::ExprNode) = false
+is_dup_identifier(::ExprNode{FunctionDuplicated}) = true
+is_dup_identifier(::ExprNode{TypedefDuplicated}) = true
+is_dup_identifier(::ExprNode{MacroDuplicated}) = true
+
+is_dup_tagtype(::ExprNode) = false
+is_dup_tagtype(::ExprNode{StructDuplicated}) = true
+is_dup_tagtype(::ExprNode{UnionDuplicated}) = true
+is_dup_tagtype(::ExprNode{EnumDuplicated}) = true
 
 dup_type(::AbstractFunctionNodeType) = FunctionDuplicated()
 dup_type(::AbstractTypedefNodeType) = TypedefDuplicated()

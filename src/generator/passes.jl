@@ -84,7 +84,7 @@ function (x::IndexDefinition)(dag::ExprDAG, options::Dict)
             if haskey(dag.tags, node.id)
                 n = dag.nodes[dag.tags[node.id]]
                 @assert is_same(n.cursor, node.cursor) "duplicated definitions should be exactly the same!"
-                show_info && @info "[IndexDefinition]: found an indexed tag $(node.id) at nodes[$i], skip..."
+                show_info && @info "[IndexDefinition]: marked an indexed tag $(node.id) at nodes[$i]"
                 ty = dup_type(node.type)
                 dag.nodes[i] = ExprNode(node.id, ty, node.cursor, node.exprs, node.adj)
             else
@@ -347,6 +347,40 @@ function (x::TopologicalSort)(dag::ExprDAG, options::Dict)
 end
 
 """
+    CatchDuplicatedAnonymousTags <: AbstractPass
+Most duplicated tags are marked as StructDuplicated/UnionDuplicated/EnumDuplicated except
+those anonymous tag-types. That's why this pass is necessary.
+"""
+mutable struct CatchDuplicatedAnonymousTags <: AbstractPass
+    show_info::Bool
+end
+CatchDuplicatedAnonymousTags(; info=false) = CatchDuplicatedAnonymousTags(info)
+
+function (x::CatchDuplicatedAnonymousTags)(dag::ExprDAG, options::Dict)
+    general_options = get(options, "general", Dict())
+    log_options = get(general_options, "log", Dict())
+    show_info = get(log_options, "CatchDuplicatedAnonymousTags_log", x.show_info)
+
+    for (i, node) in enumerate(dag.nodes)
+        !haskey(dag.tags, node.id) && continue
+        is_dup_tagtype(node) && continue
+        # `is_anonymous` cannot be used here because the node type may have been changed.
+        !startswith(string(node.id), "##Ctag") && continue
+        for (id2, idx2) in dag.tags
+            node2 = dag.nodes[idx2]
+            node == node2 && continue
+            is_dup_tagtype(node2) && continue
+            !startswith(string(node.id), "##Ctag") && continue
+            !is_same(node.cursor, node2.cursor) && continue
+            show_info &&
+                @info "[CatchDuplicatedAnonymousTags]: found duplicated anonymous tag-type $(node2.id) at dag.nodes[$idx2]."
+            ty = dup_type(node2.type)
+            dag.nodes[idx2] = ExprNode(node2.id, ty, node2.cursor, node2.exprs, node2.adj)
+        end
+    end
+end
+
+"""
     DeAnonymize <: AbstractPass
 In this pass, naive anonymous tag-types are de-anonymized and the correspoding typedefs
 are marked [`Skip`](@ref).
@@ -386,6 +420,9 @@ function (x::DeAnonymize)(dag::ExprDAG, options::Dict)
         @assert length(node.adj) == 1
         dep_idx = node.adj[1]
         dep_node = dag.nodes[dep_idx]
+
+        # skip earlier if the dependent node is a duplicated anonymous tag-type
+        is_dup_tagtype(dep_node) && continue
 
         # loop through the `adj`-list of all nodes in the DAG to find whether this
         # typedef node is the only node that refers to the anonymous tag-type node.
@@ -428,8 +465,9 @@ function (x::CodegenPreprocessing)(dag::ExprDAG, options::Dict)
     empty!(x.skip_nodes)
     for (i, node) in enumerate(dag.nodes)
         if skip_check(dag, node)
-            push!(x.skip_nodes, i)
-            dag.nodes[i] = ExprNode(node.id, Skip(), node.cursor, node.exprs, node.adj)
+            skip_mode = is_dup_tagtype(node) ? SoftSkip() : Skip()
+            skip_mode == Skip() && push!(x.skip_nodes, i)
+            dag.nodes[i] = ExprNode(node.id, skip_mode, node.cursor, node.exprs, node.adj)
             show_info &&
                 @info "[CodegenPreprocessing]: skip a $(node.type) node named $(node.id)"
         end

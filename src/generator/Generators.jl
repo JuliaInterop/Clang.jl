@@ -68,6 +68,7 @@ include("macro.jl")
 include("passes.jl")
 export AbstractPass
 export Audit
+export CatchDuplicatedAnonymousTags
 export Codegen
 export CodegenMacro
 export CodegenPostprocessing

@@ -14,10 +14,13 @@ skip_check(dag::ExprDAG, node::ExprNode{StructOpaqueDecl}) = false
 skip_check(dag::ExprDAG, node::ExprNode{UnionOpaqueDecl}) = false
 skip_check(dag::ExprDAG, node::ExprNode{EnumOpaqueDecl}) = false
 
-# duplicated identifiers should be skipped
+# duplicated nodes should be skipped
 skip_check(dag::ExprDAG, node::ExprNode{FunctionDuplicated}) = true
 skip_check(dag::ExprDAG, node::ExprNode{TypedefDuplicated}) = true
 skip_check(dag::ExprDAG, node::ExprNode{MacroDuplicated}) = true
+skip_check(dag::ExprDAG, node::ExprNode{StructDuplicated}) = true
+skip_check(dag::ExprDAG, node::ExprNode{UnionDuplicated}) = true
+skip_check(dag::ExprDAG, node::ExprNode{EnumDuplicated}) = true
 
 function skip_check(dag::ExprDAG, node::ExprNode{FunctionProto})
     cursor = node.cursor

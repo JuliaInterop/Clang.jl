@@ -61,6 +61,7 @@ function find_dependent_headers(headers::Vector{T}, args::Vector, general_ops::D
     all_headers = copy(headers)
     dependent_headers = T[]
     new_headers = T[]
+    blocked_headers = T[]
     idx = Index(false)
     while true
         empty!(new_headers)
@@ -80,8 +81,8 @@ function find_dependent_headers(headers::Vector{T}, args::Vector, general_ops::D
                     file_name ∈ all_headers && continue
                     if startswith(header_dir, dir) || startswith(dir, header_dir)
                         file_name ∈ new_headers && continue
-                        if any(x->endswith(file_name, x), blacklist)
-                            @info "skipped a dependent file: $file_name because it's in the file blacklist."
+                        if any(x->!isempty(x) && endswith(file_name, x), blacklist)
+                            file_name ∉ blocked_headers && push!(blocked_headers, file_name)
                             continue
                         end
                         push!(new_headers, file_name)
@@ -96,6 +97,11 @@ function find_dependent_headers(headers::Vector{T}, args::Vector, general_ops::D
         append!(dependent_headers, new_headers)
         append!(all_headers, new_headers)
     end
+
+    for file in blocked_headers
+        @info "skipped a dependent file: $file because it's in the blacklist."
+    end
+
     return dependent_headers
 end
 

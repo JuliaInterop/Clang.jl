@@ -32,6 +32,9 @@ epilogue_file_path = ""
 # automatically detect system std headers especially for macOS users.
 auto_detect_system_headers = true
 
+# header blacklist
+header_blacklist = []
+
 # Julia's `@enum` do not allow duplicated values, so by default, C enums are translated to 
 # CEnum.jl's `@cenum`. 
 # if this entry is true, those duplicated enum constants are commented. 

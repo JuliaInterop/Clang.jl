@@ -33,7 +33,9 @@ export AbstractJuliaType, AbstractJuliaSIT, AbstractJuliaSDT
 export tojulia
 
 include("definitions.jl")
+export get_definition
 export add_definition
+export @add_def
 
 include("types.jl")
 export AbstractExprNodeType
@@ -90,5 +92,10 @@ export get_identifier_node, get_tagtype_node
 
 load_options(path::AbstractString) = TOML.parse(read(path, String))
 export load_options
+
+
+function __init__()
+   reset_definition()
+end
 
 end # module

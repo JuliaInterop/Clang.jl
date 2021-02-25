@@ -1,5 +1,5 @@
 # TODO: https://github.com/JuliaLang/julia/issues/29420
-const EXTRA_DEFINITIONS = Dict(
+const DEFAULT_EXTRA_DEFINITIONS = Dict{Symbol,AbstractJuliaType}(
     :ssize_t => JuliaCssize_t(),
     :size_t => JuliaCsize_t(),
     :ptrdiff_t => JuliaCptrdiff_t(),
@@ -18,4 +18,27 @@ const EXTRA_DEFINITIONS = Dict(
     :FILE => JuliaCFILE(),
 )
 
+const EXTRA_DEFINITIONS = Dict{Symbol,AbstractJuliaType}()
+
 add_definition(x::Dict{Symbol,<:AbstractJuliaType}) = merge!(EXTRA_DEFINITIONS, x)
+add_definition(x::Pair{Symbol,<:AbstractJuliaType}) = push!(EXTRA_DEFINITIONS, x)
+
+get_definition() = EXTRA_DEFINITIONS
+
+function reset_definition()
+    empty!(EXTRA_DEFINITIONS)
+    merge!(EXTRA_DEFINITIONS, DEFAULT_EXTRA_DEFINITIONS)
+end
+
+macro add_def(c_symbol::Symbol, type::Symbol=:AbstractJuliaSIT, typename::Symbol=c_symbol, translated::Symbol=c_symbol)
+    arg1 = Expr(:(::), typename)
+    arg2 = Expr(:kw, :options, :(Dict()))
+    sig = Expr(:call, Expr(:., :Generators, QuoteNode(:translate)), arg1, arg2)
+    func = Expr(:(=), sig, Expr(:block, QuoteNode(:($translated))))
+    ret = quote
+        struct $typename <: $type end
+        add_definition($(QuoteNode(c_symbol)) => $(esc(typename))())
+        $(esc(func))
+    end
+    return ret
+end

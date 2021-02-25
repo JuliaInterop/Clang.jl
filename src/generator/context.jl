@@ -51,10 +51,11 @@ function find_std_headers()
 end
 
 """
-    find_dependent_headers(headers::Vector{T}, args::Vector) where {T<:AbstractString}
+    find_dependent_headers(headers::Vector{T}, args::Vector, general_ops::Dict) where {T<:AbstractString}
 Return a vector of headers to which those missing dependent headers are added.
 """
-function find_dependent_headers(headers::Vector{T}, args::Vector) where {T<:AbstractString}
+function find_dependent_headers(headers::Vector{T}, args::Vector, general_ops::Dict) where {T<:AbstractString}
+    blacklist = get(general_ops, "header_blacklist", [])
     flags = CXTranslationUnit_DetailedPreprocessingRecord
     flags |= CXTranslationUnit_SkipFunctionBodies
     all_headers = copy(headers)
@@ -74,10 +75,16 @@ function find_dependent_headers(headers::Vector{T}, args::Vector) where {T<:Abst
                     file = getIncludedFile(cursor)
                     file_name = get_filename(file)
                     (isempty(file_name) || !isfile(file_name)) && continue
+
                     dir = dirname(file_name)
                     file_name ∈ all_headers && continue
                     if startswith(header_dir, dir) || startswith(dir, header_dir)
-                        file_name ∉ new_headers && push!(new_headers, file_name)
+                        file_name ∈ new_headers && continue
+                        if any(x->endswith(file_name, x), blacklist)
+                            @info "skipped a dependent file: $file_name because it's in the file blacklist."
+                            continue
+                        end
+                        push!(new_headers, file_name)
                     end
                 end
             end
@@ -107,7 +114,7 @@ function create_context(headers::Vector, args::Vector, options::Dict)
         args = vcat(sys_headers, clang_incs, args)
     end
 
-    dependent_headers = find_dependent_headers(headers, args)
+    dependent_headers = find_dependent_headers(headers, args, general_options)
 
     parse_headers!(ctx, headers, args)
 

@@ -564,7 +564,7 @@ function (x::FunctionPrinter)(dag::ExprDAG, options::Dict)
     log_options = get(general_options, "log", Dict())
     show_info = get(log_options, "FunctionPrinter_log", x.show_info)
 
-    show_info && @info "[FunctionPrinter]: print code to $(x.file)"
+    show_info && @info "[FunctionPrinter]: print to $(x.file)"
     open(x.file, "w") do io
         for node in dag.nodes
             node.type isa AbstractFunctionNodeType || continue
@@ -589,7 +589,7 @@ function (x::CommonPrinter)(dag::ExprDAG, options::Dict)
     log_options = get(general_options, "log", Dict())
     show_info = get(log_options, "CommonPrinter_log", x.show_info)
 
-    show_info && @info "[CommonPrinter]: print code to $(x.file)"
+    show_info && @info "[CommonPrinter]: print to $(x.file)"
     open(x.file, "w") do io
         for node in dag.nodes
             node.type isa AbstractMacroNodeType && continue
@@ -619,7 +619,7 @@ function (x::GeneralPrinter)(dag::ExprDAG, options::Dict)
     log_options = get(general_options, "log", Dict())
     show_info = get(log_options, "GeneralPrinter_log", x.show_info)
 
-    show_info && @info "[GeneralPrinter]: print code to $(x.file)"
+    show_info && @info "[GeneralPrinter]: print to $(x.file)"
     open(x.file, "a") do io
         for node in dag.nodes
             node.type isa AbstractMacroNodeType && continue
@@ -653,7 +653,7 @@ function (x::ProloguePrinter)(dag::ExprDAG, options::Dict)
     prologue_file_path = get(general_options, "prologue_file_path", "")
     use_native_enum = get(general_options, "use_julia_native_enum_type", false)
 
-    show_info && @info "[ProloguePrinter]: print code to $(x.file)"
+    show_info && @info "[ProloguePrinter]: print to $(x.file)"
     open(x.file, "w") do io
         # print "module name"
         if !isempty(module_name)
@@ -698,7 +698,7 @@ function (x::EpiloguePrinter)(dag::ExprDAG, options::Dict)
     epilogue_file_path = get(general_options, "epilogue_file_path", "")
     export_prefixes = get(general_options, "export_symbol_prefixes", "")
 
-    show_info && @info "[EpiloguePrinter]: print code to $(x.file)"
+    show_info && @info "[EpiloguePrinter]: print to $(x.file)"
     open(x.file, "a") do io
         # print epilogue patches
         if !isempty(epilogue_file_path)

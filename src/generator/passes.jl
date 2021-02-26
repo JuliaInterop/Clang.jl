@@ -84,7 +84,7 @@ function (x::IndexDefinition)(dag::ExprDAG, options::Dict)
             if haskey(dag.tags, node.id)
                 n = dag.nodes[dag.tags[node.id]]
                 @assert is_same(n.cursor, node.cursor) "duplicated definitions should be exactly the same!"
-                show_info && @info "[IndexDefinition]: found an indexed tag $(node.id) at nodes[$i], skip..."
+                show_info && @info "[IndexDefinition]: marked an indexed tag $(node.id) at nodes[$i]"
                 ty = dup_type(node.type)
                 dag.nodes[i] = ExprNode(node.id, ty, node.cursor, node.exprs, node.adj)
             else
@@ -361,15 +361,16 @@ function (x::CatchDuplicatedAnonymousTags)(dag::ExprDAG, options::Dict)
     log_options = get(general_options, "log", Dict())
     show_info = get(log_options, "CatchDuplicatedAnonymousTags_log", x.show_info)
 
-    for (id, idx) in dag.tags
-        node = dag.nodes[idx]
+    for (i, node) in enumerate(dag.nodes)
+        !haskey(dag.tags, node.id) && continue
         is_dup_tagtype(node) && continue
-        !is_anonymous(node) && continue
+        # `is_anonymous` cannot be used here because the node type may have been changed.
+        !startswith(string(node.id), "##Ctag") && continue
         for (id2, idx2) in dag.tags
             node2 = dag.nodes[idx2]
             node == node2 && continue
             is_dup_tagtype(node2) && continue
-            !is_anonymous(node2) && continue
+            !startswith(string(node.id), "##Ctag") && continue
             !is_same(node.cursor, node2.cursor) && continue
             show_info &&
                 @info "[CatchDuplicatedAnonymousTags]: found duplicated anonymous tag-type $(node2.id) at dag.nodes[$idx2]."

@@ -43,7 +43,7 @@ struct post {
 
 void post(post m);
 ```
-* two identifiers with same name are actually different things. (is this even legal in C?)
+* two identifiers with same name are actually different things.
 
 It is intended to treat these as "bug"s of the upstream C code.
 """

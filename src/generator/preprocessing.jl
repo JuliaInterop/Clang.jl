@@ -130,7 +130,7 @@ end
 function attribute_check(dag::ExprDAG, node::ExprNode{<:AbstractEnumNodeType})
     cursor = node.cursor
     hasAttrs(cursor) && return true
-    # TODO: impl
+    # TODO: check impl
     return false
 end
 

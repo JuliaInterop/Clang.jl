@@ -228,6 +228,10 @@ is_dup_tagtype(::ExprNode{StructDuplicated}) = true
 is_dup_tagtype(::ExprNode{UnionDuplicated}) = true
 is_dup_tagtype(::ExprNode{EnumDuplicated}) = true
 
+is_record(::ExprNode) = false
+is_record(::ExprNode{<:AbstractStructNodeType}) = true
+is_record(::ExprNode{<:AbstractUnionNodeType}) = true
+
 dup_type(::AbstractFunctionNodeType) = FunctionDuplicated()
 dup_type(::AbstractTypedefNodeType) = TypedefDuplicated()
 dup_type(::AbstractMacroNodeType) = MacroDuplicated()

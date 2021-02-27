@@ -173,6 +173,8 @@ Run all passes.
 """
 function build!(ctx::Context, stage=BUILDSTAGE_ALL)
     for pass in ctx.passes
+        pass isa LinkTypedefToAnonymousTagType && @info "Building the DAG..."
+        pass isa Codegen && @info "Emit Julia expressions..."
         if stage == BUILDSTAGE_NO_PRINTING
             pass isa AbstractPrinter && continue
         elseif stage == BUILDSTAGE_PRINTING_ONLY

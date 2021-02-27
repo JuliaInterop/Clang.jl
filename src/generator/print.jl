@@ -42,6 +42,14 @@ function pretty_print(io, node::ExprNode{TypedefElaborated}, options::Dict)
     return nothing
 end
 
+function pretty_print(io, node::ExprNode{TypedefMutualRef}, options::Dict)
+    for expr in node.exprs
+        println(io, expr)
+        println(io)
+    end
+    return nothing
+end
+
 function pretty_print(io, node::ExprNode{TypedefFunction}, options::Dict)
     @assert length(node.exprs) == 1
 

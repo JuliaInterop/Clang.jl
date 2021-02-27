@@ -1,6 +1,6 @@
 """
     audit_library_name(dag::ExprDAG, options::Dict)
-Check if the library name is valid.
+Check whether the library name is valid.
 """
 function audit_library_name(dag::ExprDAG, options::Dict)
     general_options = get(options, "general", Dict())

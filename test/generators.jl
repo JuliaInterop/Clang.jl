@@ -14,12 +14,8 @@ include("rewriter.jl")
     # add compiler flags
     args = ["-I$INCLUDE_DIR"]
 
-    # add extra definition and corresponding translate method
-    struct JuliaCtime_t <: AbstractJuliaSIT end
-
-    add_definition(Dict(:time_t => JuliaCtime_t()))
-
-    Generators.translate(::JuliaCtime_t, options=Dict()) = :Int
+    # add extra definition
+    @add_def time_t AbstractJuliaSIT JuliaCtime_t Ctime_t
 
     # create context
     ctx = create_context(headers, args, options)

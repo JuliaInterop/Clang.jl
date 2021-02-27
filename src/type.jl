@@ -286,6 +286,29 @@ function has_elaborated_reference(ty::CXType)
 end
 has_elaborated_reference(ty::CLType) = has_elaborated_reference(ty.type)
 
+"""
+    get_elaborated_cursor(ty::CLType) -> CLCursor
+    get_elaborated_cursor(ty::CXType) -> CXCursor
+Return the cursor of the elaborated type that is referenced by the input type.
+The input type can be a pointer/array.
+This function returns [`clang_getNullCursor`](@ref) if the input type is not refer to an
+elaborated type.
+"""
+function get_elaborated_cursor(ty::CXType)
+    if kind(ty) == CXType_Pointer
+        ptreety = getPointeeType(ty)
+        return get_elaborated_cursor(ptreety)
+    elseif kind(ty) == CXType_ConstantArray || kind(ty) == CXType_IncompleteArray
+        elty = getElementType(ty)
+        return get_elaborated_cursor(elty)
+    elseif is_elaborated(ty)
+        return getTypeDeclaration(ty)
+    else
+        return getNullCursor()
+    end
+end
+get_elaborated_cursor(ty::CLType)::CLCursor = get_elaborated_cursor(ty.type)
+
 function is_function(ty::CXType)
     canonical_ty = kind(ty) == CXType_Typedef ? getCanonicalType(ty) : ty
     k = kind(canonical_ty)

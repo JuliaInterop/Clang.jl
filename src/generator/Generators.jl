@@ -73,10 +73,12 @@ export Codegen
 export CodegenMacro
 export CodegenPostprocessing
 export CodegenPreprocessing
+export CollectNestedRecord
 export CollectTopLevelNode
 export CommonPrinter
 export DeAnonymize
 export EpiloguePrinter
+export FindOpaques
 export FunctionPrinter
 export GeneralPrinter
 export IndexDefinition

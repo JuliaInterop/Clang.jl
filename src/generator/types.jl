@@ -59,6 +59,7 @@ abstract type AbstractTypedefNodeType <: AbstractExprNodeType end
 struct TypedefElaborated <: AbstractTypedefNodeType end
 struct TypedefFunction <: AbstractTypedefNodeType end
 struct TypedefDuplicated <: AbstractTypedefNodeType end
+struct TypedefMutualRef <: AbstractTypedefNodeType end
 struct TypedefDefault <: AbstractTypedefNodeType end
 # a typedef type which directly or indirectly refers to an anonymous tagtype
 struct TypedefToAnonymous <: AbstractTypedefNodeType

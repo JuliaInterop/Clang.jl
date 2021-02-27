@@ -113,6 +113,31 @@ function emit!(dag::ExprDAG, node::ExprNode{TypedefElaborated}, options::Dict; a
     return dag
 end
 
+function replace_pointee!(expr, s::Symbol)
+    if Meta.isexpr(expr, :curly)
+        if expr.args[2] isa Expr
+            replace_pointee!(expr.args[2], s)
+        elseif expr.args[2] isa Symbol
+            expr.args[2] = s
+        end
+    end
+    return nothing
+end
+
+function emit!(dag::ExprDAG, node::ExprNode{TypedefMutualRef}, options::Dict; args...)
+    if haskey(dag.tags, node.id) || haskey(dag.ids_extra, node.id)
+        # generate nothing for duplicated typedef nodes
+        # pass
+    else
+        ty = getTypedefDeclUnderlyingType(node.cursor)
+        typedefee = translate(tojulia(ty), options)
+        replace_pointee!(typedefee, :Cvoid)
+        typedef_sym = make_symbol_safe(node.id)
+        push!(node.exprs, :(const $typedef_sym = $typedefee))
+    end
+    return dag
+end
+
 function emit!(dag::ExprDAG, node::ExprNode{TypedefFunction}, options::Dict; args...)
     ty = getTypedefDeclUnderlyingType(node.cursor)
     typedefee = translate(tojulia(ty), options)
@@ -152,17 +177,6 @@ function emit!(dag::ExprDAG, node::ExprNode{<:AbstractStructNodeType}, options::
     end
     push!(node.exprs, expr)
     return dag
-end
-
-function replace_pointee!(expr, s::Symbol)
-    if Meta.isexpr(expr, :curly)
-        if expr.args[2] isa Expr
-            replace_pointee!(expr.args[2], s)
-        elseif expr.args[2] isa Symbol
-            expr.args[2] = s
-        end
-    end
-    return nothing
 end
 
 function emit!(dag::ExprDAG, node::ExprNode{StructMutualRef}, options::Dict; args...)
@@ -298,7 +312,7 @@ function emit!(dag::ExprDAG, node::ExprNode{<:AbstractEnumNodeType}, options::Di
 end
 
 
-##################### ForwardDecl OpaqueDecl DefaultDecl #####################
+################## ForwardDecl OpaqueDecl DefaultDecl DuplicatedTags ##################
 
 # skip non-opaque forward decls
 emit!(dag::ExprDAG, node::ExprNode{<:ForwardDecls}, options::Dict; args...) = dag
@@ -317,3 +331,6 @@ function emit!(dag::ExprDAG, node::ExprNode{<:UnknownDefaults}, options::Dict; a
     @error "missing implementation for $(node), please file an issue to Clang.jl."
     return dag
 end
+
+# skip duplicated nodes
+emit!(dag::ExprDAG, node::ExprNode{<:DuplicatedTags}, options::Dict; args...) = dag

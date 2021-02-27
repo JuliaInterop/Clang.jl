@@ -288,12 +288,19 @@ function (x::RemoveCircularReference)(dag::ExprDAG, options::Dict)
                         show_info &&
                             @info "[RemoveCircularReference]: removed $(child.id)'s dependency $(parent.id)"
                     end
+                elseif is_typedef_elaborated(child)
+                    empty!(child.adj)
+                    id = child.id
+                    ty = TypedefMutualRef()
+                    dag.nodes[nc] = ExprNode(id, ty, child.cursor, child.exprs, child.adj)
+                    show_info &&
+                        @info "[RemoveCircularReference]: removed $(child.id)'s dependency $(parent.id)"
                 end
                 # exit earlier
                 (i + 1) == first(cycle) && break
             end
 
-            # when never a cycle is found, we reset all of the marks and restart again
+            # whenever a cycle is found, we reset all of the marks and restart again
             # FIXME: optimize this
             break
         end

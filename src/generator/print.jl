@@ -10,7 +10,7 @@ function pretty_print(io, node::ExprNode, options::Dict)
     # warn if the node has been edited in the codegen pass.
     # this usually happens when certain new node type is support in the codegen,
     # but the corresponding `pretty_print` method is missing.
-    !isempty(node.exprs) && @warn "skip a node that has non-empty expressions. is the `pretty_print` method defined?"
+    !isempty(node.exprs) && @warn "skip a node that has non-empty expressions. is the corresponding `pretty_print` method defined?"
     return nothing
 end
 

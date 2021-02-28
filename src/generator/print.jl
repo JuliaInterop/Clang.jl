@@ -175,7 +175,8 @@ function pretty_print(io, node::ExprNode{<:OpaqueTags}, options::Dict)
     return nothing
 end
 
-pretty_print(io, node::ExprNode{UnknownDefaults}, options::Dict) = nothing
+pretty_print(io, node::ExprNode{<:UnknownDefaults}, options::Dict) = nothing
+pretty_print(io, node::ExprNode{<:DuplicatedTags}, options::Dict) = nothing
 
 ## EXPERIMENTAL
 function pretty_print(io, node::ExprNode{<:AbstractMacroNodeType}, options::Dict)

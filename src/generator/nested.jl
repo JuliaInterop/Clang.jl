@@ -38,5 +38,5 @@ function collect_nested_record!(dag::ExprDAG, node::ExprNode, new_tags)
         end
     end
 
-    return
+    return dag
 end

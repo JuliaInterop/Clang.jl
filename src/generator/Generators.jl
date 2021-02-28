@@ -48,6 +48,7 @@ export ExprNode, ExprDAG
 export get_nodes, get_exprs
 
 include("top_level.jl")
+include("nested.jl")
 include("resolve_deps.jl")
 include("preprocessing.jl")
 

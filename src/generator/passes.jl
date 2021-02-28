@@ -128,45 +128,7 @@ function (x::CollectNestedRecord)(dag::ExprDAG, options::Dict)
         node = dag.nodes[i]
         !is_record(node) && continue
         is_dup_tagtype(node) && continue
-        # fall back to use `children` if `fields` returns empty.
-        field_cursors = [] # fields(getCursorType(node.cursor))
-        field_cursors = isempty(field_cursors) ? children(node.cursor) : field_cursors
-        for field_cursor in field_cursors
-            field_ty = getCursorType(field_cursor)
-            has_elaborated_reference(field_ty) || continue
-            field_jlty = tojulia(field_ty)
-            leaf_jlty = get_jl_leaf_type(field_jlty)
-            leaf_jlty isa JuliaCrecord || continue  # nested enums are not legal in C
-            # isempty(string(jlty.sym)) && @assert occursin("anonymous", spelling(named_ty))
-            n_cursor = get_elaborated_cursor(field_ty)
-            if isempty(string(leaf_jlty.sym))
-                @assert isCursorDefinition(n_cursor)
-                n_id = gensym("Ctag")
-                ty = n_cursor isa CLStructDecl ? StructAnonymous() : UnionAnonymous()
-                n_node = ExprNode(n_id, ty, n_cursor, Expr[], Int[])
-                push!(dag.nodes, n_node)
-                current_idx += 1
-                new_tags[n_id] = current_idx
-            elseif !haskey(dag.tags, leaf_jlty.sym)
-                n_id = leaf_jlty.sym
-                if isCursorDefinition(n_cursor)
-                    ty = n_cursor isa CLStructDecl ? StructDefinition() : UnionDefinition()
-                    n_node = ExprNode(n_id, ty, n_cursor, Expr[], Int[])
-                    push!(dag.nodes, n_node)
-                    current_idx += 1
-                    new_tags[n_id] = current_idx
-                else
-                    # it must be an opaque
-                    ty = n_cursor isa CLStructDecl ? StructOpaqueDecl() : UnionOpaqueDecl()
-                    n_node = ExprNode(n_id, ty, n_cursor, Expr[], Int[])
-                    if !haskey(new_tags, n_id)
-                        push!(dag.nodes, n_node)
-                        current_idx += 1
-                        new_tags[n_id] = current_idx
-                    end
-                end
-            end
-        end
+        collect_nested_record!(dag, node, new_tags)
     end
 
     merge!(dag.tags, new_tags)

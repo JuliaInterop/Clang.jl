@@ -313,17 +313,15 @@ function (x::RemoveCircularReference)(dag::ExprDAG, options::Dict)
             detect_cycle!(dag.nodes, marks, cycle, i)
             isempty(cycle) && continue
 
-            # remove cycle reference caused by mutually referenced structs
-            is_ptr_ref = false
-            origin_idx = first(cycle)
-            origin_node = dag.nodes[origin_idx]
+            # firstly remove cycle reference caused by mutually referenced structs
+            typedef_only = true
             for i in 1:(length(cycle) - 1)
                 np, nc = cycle[i], cycle[i + 1]
                 parent, child = dag.nodes[np], dag.nodes[nc]
                 if child.type isa AbstractStructNodeType
                     # only pointer references can be safely removed
-                    is_ptr_ref = !is_non_pointer_ref(child, parent)
-                    if is_ptr_ref
+                    if !is_non_pointer_ref(child, parent)
+                        typedef_only = false
                         idx = findfirst(x -> x == np, child.adj)
                         deleteat!(child.adj, idx)
                         id = child.id
@@ -332,16 +330,28 @@ function (x::RemoveCircularReference)(dag::ExprDAG, options::Dict)
                         show_info &&
                             @info "[RemoveCircularReference]: removed $(child.id)'s dependency $(parent.id)"
                     end
-                elseif is_typedef_elaborated(child)
-                    empty!(child.adj)
-                    id = child.id
-                    ty = TypedefMutualRef()
-                    dag.nodes[nc] = ExprNode(id, ty, child.cursor, child.exprs, child.adj)
-                    show_info &&
-                        @info "[RemoveCircularReference]: removed $(child.id)'s dependency $(parent.id)"
                 end
                 # exit earlier
                 (i + 1) == first(cycle) && break
+            end
+
+            # there are cases where the circular reference can only be de-referenced at a
+            # typedef, so we for-loop another round for that.
+            if typedef_only
+                for i in 1:(length(cycle) - 1)
+                    np, nc = cycle[i], cycle[i + 1]
+                    parent, child = dag.nodes[np], dag.nodes[nc]
+                    if is_typedef_elaborated(child)
+                        empty!(child.adj)
+                        id = child.id
+                        ty = TypedefMutualRef()
+                        dag.nodes[nc] = ExprNode(id, ty, child.cursor, child.exprs, child.adj)
+                        show_info &&
+                            @info "[RemoveCircularReference]: removed $(child.id)'s dependency $(parent.id)"
+                    end
+                    # exit earlier
+                    (i + 1) == first(cycle) && break
+                end
             end
 
             # whenever a cycle is found, we reset all of the marks and restart again

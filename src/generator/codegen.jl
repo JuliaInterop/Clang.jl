@@ -163,22 +163,30 @@ end
 
 ############################### Struct ###############################
 
+function _emit_getproperty_ptr!(body, root_cursor, cursor, options)
+    field_cursors = fields(getCursorType(cursor))
+    field_cursors = isempty(field_cursors) ? children(cursor) : field_cursors
+    for field_cursor in field_cursors
+        n = name(field_cursor)
+        if isempty(n)
+            _emit_getproperty_ptr!(body, root_cursor, field_cursor, options)
+            continue
+        end
+        fsym = make_symbol_safe(n)
+        fty = getCursorType(field_cursor)
+        ty = translate(tojulia(fty), options)
+        offset = getOffsetOf(getCursorType(root_cursor), n)
+        ex = :(f === $(QuoteNode(fsym)) && return Ptr{$ty}(x + $offset))
+        push!(body.args, ex)
+    end
+end
+
 # Base.getproperty(x::Ptr, f::Symbol) -> Ptr
 function emit_getproperty_ptr!(dag, node, options)
     sym = make_symbol_safe(node.id)
     signature = Expr(:call, :(Base.getproperty), :(x::Ptr{$sym}), :(f::Symbol))
     body = Expr(:block)
-    field_cursors = fields(getCursorType(node.cursor))
-    field_cursors = isempty(field_cursors) ? children(node.cursor) : field_cursors
-    for field_cursor in field_cursors
-        n = name(field_cursor)
-        fsym = make_symbol_safe(n)
-        fty = getCursorType(field_cursor)
-        ty = translate(tojulia(fty), options)
-        offset = getOffsetOf(getCursorType(node.cursor), n)
-        ex = :(f === $(QuoteNode(fsym)) && return Ptr{$ty}(x + $offset))
-        push!(body.args, ex)
-    end
+    _emit_getproperty_ptr!(body, node.cursor, node.cursor, options)
     push!(body.args, :(return getfield(x, f)))
     getproperty_expr = Expr(:function, signature, body)
     push!(node.exprs, getproperty_expr)

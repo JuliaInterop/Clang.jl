@@ -161,7 +161,6 @@ function emit!(dag::ExprDAG, node::ExprNode{TypedefToAnonymous}, options::Dict; 
     return dag
 end
 
-
 ############################### Struct ###############################
 
 # Base.getproperty(x::Ptr, f::Symbol) -> Ptr
@@ -186,6 +185,29 @@ function emit_getproperty_ptr!(dag, node, options)
     return dag
 end
 
+function emit_getproperty!(dag, node, options)
+    sym = make_symbol_safe(node.id)
+    signature = Expr(:call, :(Base.getproperty), :(x::$sym), :(f::Symbol))
+    ref_expr = :(r = Ref{$sym}(x))
+    conv_expr = :(ptr = Base.unsafe_convert($sym, r))
+    load_expr = :(GC.@preserve r unsafe_load(getproperty(ptr, f)))
+    load_expr.args[2] = nothing
+    body = Expr(:block, ref_expr, conv_expr, load_expr)
+    getproperty_expr = Expr(:function, signature, body)
+    push!(node.exprs, getproperty_expr)
+    return dag
+end
+
+function emit_setproperty!(dag, node, options)
+    sym = make_symbol_safe(node.id)
+    signature = Expr(:call, :(Base.setproperty!), :(x::Ptr{$sym}), :(f::Symbol), :v)
+    store_expr = :(unsafe_store!(getproperty(x, f), v))
+    body = Expr(:block, store_expr)
+    setproperty_expr = Expr(:function, signature, body)
+    push!(node.exprs, setproperty_expr)
+    return dag
+end
+
 function emit!(dag::ExprDAG, node::ExprNode{<:AbstractStructNodeType}, options::Dict; args...)
     struct_sym = make_symbol_safe(node.id)
     block = Expr(:block)
@@ -199,7 +221,11 @@ function emit!(dag::ExprDAG, node::ExprNode{<:AbstractStructNodeType}, options::
     end
     push!(node.exprs, expr)
 
-    startswith(string(node.id), "##Ctag") && emit_getproperty_ptr!(dag, node, options)
+    if startswith(string(node.id), "##Ctag")
+        emit_getproperty_ptr!(dag, node, options)
+        emit_getproperty!(dag, node, options)
+        emit_setproperty!(dag, node, options)
+    end
 
     return dag
 end
@@ -255,8 +281,12 @@ function emit!(dag::ExprDAG, node::ExprNode{<:RecordLayouts}, options::Dict; arg
     n = getSizeOf(getCursorType(node.cursor))
     expr = Expr(:struct, false, sym, Expr(:block, :(data::NTuple{$n,UInt8})))
     push!(node.exprs, expr)
+
     # emit Base.getproperty(x::Ptr, f::Symbol)
     emit_getproperty_ptr!(dag, node, options)
+    emit_getproperty!(dag, node, options)
+    emit_setproperty!(dag, node, options)
+
     return dag
 end
 

@@ -123,7 +123,6 @@ function (x::CollectNestedRecord)(dag::ExprDAG, options::Dict)
     show_info = get(log_options, "CollectNestedRecord_log", x.show_info)
 
     new_tags = Dict{Symbol,Int}()
-    current_idx = length(dag.tags)
     for (id, i) in dag.tags
         node = dag.nodes[i]
         !is_record(node) && continue
@@ -341,14 +340,16 @@ function (x::RemoveCircularReference)(dag::ExprDAG, options::Dict)
                 for i in 1:(length(cycle) - 1)
                     np, nc = cycle[i], cycle[i + 1]
                     parent, child = dag.nodes[np], dag.nodes[nc]
-                    if is_typedef_elaborated(child)
-                        empty!(child.adj)
-                        id = child.id
-                        ty = TypedefMutualRef()
-                        dag.nodes[nc] = ExprNode(id, ty, child.cursor, child.exprs, child.adj)
-                        show_info &&
-                            @info "[RemoveCircularReference]: removed $(child.id)'s dependency $(parent.id)"
-                    end
+                    is_typedef_elaborated(child) || continue
+                    jlty = tojulia(getTypedefDeclUnderlyingType(child.cursor))
+                    # make sure the underlying type is a pointer
+                    is_jl_pointer(jlty) || continue
+                    empty!(child.adj)
+                    id = child.id
+                    ty = TypedefMutualRef()
+                    dag.nodes[nc] = ExprNode(id, ty, child.cursor, child.exprs, child.adj)
+                    show_info &&
+                        @info "[RemoveCircularReference]: removed $(child.id)'s dependency $(parent.id)"
                     # exit earlier
                     (i + 1) == first(cycle) && break
                 end
@@ -613,6 +614,7 @@ end
 
 """
     CodegenPostprocessing <: AbstractPass
+This pass is reserved for future use.
 """
 mutable struct CodegenPostprocessing <: AbstractPass
     show_info::Bool
@@ -620,7 +622,7 @@ end
 CodegenPostprocessing(; info=false) = CodegenPostprocessing(info)
 
 function (x::CodegenPostprocessing)(dag::ExprDAG, options::Dict)
-    # TODO: add impl
+    # TODO: find a use case
 end
 
 const DEFAULT_AUDIT_FUNCTIONS = [

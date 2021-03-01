@@ -142,7 +142,7 @@ function create_context(headers::Vector, args::Vector, options::Dict)
     push!(ctx.passes, Audit())
     push!(ctx.passes, Codegen())
     push!(ctx.passes, CodegenMacro())
-    push!(ctx.passes, CodegenPostprocessing())
+    # push!(ctx.passes, CodegenPostprocessing())
 
     # support old behavior
     api_file = get(general_options, "output_api_file_path", "")

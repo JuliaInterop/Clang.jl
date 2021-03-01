@@ -141,6 +141,7 @@ const OpaqueTags = Union{StructOpaqueDecl,UnionOpaqueDecl,EnumOpaqueDecl}
 const UnknownDefaults = Union{FunctionDefault,StructDefault,UnionDefault,EnumDefault}
 const RecordLayouts = Union{<:AbstractUnionNodeType,<:StructLayout}
 const DuplicatedTags = Union{EnumDuplicated,UnionDuplicated,StructDuplicated}
+const NestedRecords = Union{UnionAnonymous,UnionDefinition,StructAnonymous,StructDefinition}
 
 """
     ExprNode{T<:AbstractExprNodeType,S<:CLCursor}

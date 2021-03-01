@@ -597,6 +597,16 @@ function (x::Codegen)(dag::ExprDAG, options::Dict)
     codegen_options["DAG_tags"] = dag.tags
     codegen_options["DAG_ids"] = dag.ids
     codegen_options["DAG_ids_extra"] = dag.ids_extra
+    # collect and map nested anonymous tags
+    nested_tags = Dict{Symbol,CLCursor}()
+    for (id, i) in dag.tags
+        node = dag.nodes[i]
+        startswith(string(node.id), "##Ctag") || continue
+        if node.type isa NestedRecords
+            nested_tags[id] = node.cursor
+        end
+    end
+    codegen_options["nested_tags"] = nested_tags
 
     for (i, node) in enumerate(dag.nodes)
         !isempty(node.exprs) && empty!(node.exprs)
@@ -608,6 +618,7 @@ function (x::Codegen)(dag::ExprDAG, options::Dict)
     delete!(codegen_options, "DAG_tags")
     delete!(codegen_options, "DAG_ids")
     delete!(codegen_options, "DAG_ids_extra")
+    delete!(codegen_options, "nested_tags")
 
     return dag
 end

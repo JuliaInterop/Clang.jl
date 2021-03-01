@@ -164,11 +164,33 @@ end
 
 ############################### Struct ###############################
 
+# Base.getproperty(x::Ptr, f::Symbol) -> Ptr
+function emit_getproperty_ptr!(dag, node, options)
+    sym = make_symbol_safe(node.id)
+    signature = Expr(:call, :(Base.getproperty), :(x::Ptr{$sym}), :(f::Symbol))
+    body = Expr(:block)
+    field_cursors = fields(getCursorType(node.cursor))
+    field_cursors = isempty(field_cursors) ? children(node.cursor) : field_cursors
+    for field_cursor in field_cursors
+        n = name(field_cursor)
+        fsym = make_symbol_safe(n)
+        fty = getCursorType(field_cursor)
+        ty = translate(tojulia(fty), options)
+        offset = getOffsetOf(getCursorType(node.cursor), n)
+        ex = :(f === $(QuoteNode(fsym)) && return Ptr{$ty}(x + $offset))
+        push!(body.args, ex)
+    end
+    push!(body.args, :(return getfield(x, f)))
+    getproperty_expr = Expr(:function, signature, body)
+    push!(node.exprs, getproperty_expr)
+    return dag
+end
+
 function emit!(dag::ExprDAG, node::ExprNode{<:AbstractStructNodeType}, options::Dict; args...)
     struct_sym = make_symbol_safe(node.id)
     block = Expr(:block)
     expr = Expr(:struct, false, struct_sym, block)
-    field_cursors = fields(getCursorType(node.cursor))  # a bug of libclang?
+    field_cursors = fields(getCursorType(node.cursor))
     field_cursors = isempty(field_cursors) ? children(node.cursor) : field_cursors
     for field_cursor in field_cursors
         field_sym = make_symbol_safe(name(field_cursor))
@@ -176,6 +198,9 @@ function emit!(dag::ExprDAG, node::ExprNode{<:AbstractStructNodeType}, options::
         push!(block.args, Expr(:(::), field_sym, translate(tojulia(field_ty), options)))
     end
     push!(node.exprs, expr)
+
+    startswith(string(node.id), "##Ctag") && emit_getproperty_ptr!(dag, node, options)
+
     return dag
 end
 
@@ -184,7 +209,7 @@ function emit!(dag::ExprDAG, node::ExprNode{StructMutualRef}, options::Dict; arg
     struct_sym = make_symbol_safe(node.id)
     block = Expr(:block)
     expr = Expr(:struct, false, struct_sym, block)
-    field_cursors = fields(getCursorType(node.cursor))  # a bug of libclang?
+    field_cursors = fields(getCursorType(node.cursor))
     field_cursors = isempty(field_cursors) ? children(node.cursor) : field_cursors
     for field_cursor in field_cursors
         field_sym = make_symbol_safe(name(field_cursor))
@@ -224,38 +249,14 @@ function emit!(dag::ExprDAG, node::ExprNode{StructMutualRef}, options::Dict; arg
     return dag
 end
 
-function get_getter_expr(field_cursor::CLCursor, prefix::String)
-    n = name(field_cursor)
-    if isempty(n)
-
-    else
-
-    end
-    field_sym = make_symbol_safe(n)
-end
-
 # codegen for memory-pool-like structures
 function emit!(dag::ExprDAG, node::ExprNode{<:RecordLayouts}, options::Dict; args...)
     sym = make_symbol_safe(node.id)
     n = getSizeOf(getCursorType(node.cursor))
     expr = Expr(:struct, false, sym, Expr(:block, :(data::NTuple{$n,UInt8})))
     push!(node.exprs, expr)
-
-    # Base.getproperty
-    signature = Expr(:call, :(Base.getproperty), :(x::Ptr{$sym}), :(f::Symbol))
-    body = Expr(:block)
-    for fcursor in fields(getCursorType(node.cursor))
-        n = name(fcursor)
-        fsym = make_symbol_safe(n)
-        fty = getCursorType(fcursor)
-        offset = getOffsetOf(getCursorType(node.cursor), n)
-        ex = :(f === $fsym && return unsafe_load(Ptr{$fsym}(pointer_from_objref(x) + $offset)))
-        push!(body.args, ex)
-    end
-    getter_expr = Expr(:function, signature, body)
-
-    push!(node.exprs, getter_expr)
-
+    # emit Base.getproperty(x::Ptr, f::Symbol)
+    emit_getproperty_ptr!(dag, node, options)
     return dag
 end
 

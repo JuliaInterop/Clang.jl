@@ -19,11 +19,12 @@ struct JuliaCincompletearray <: AbstractJuliaType
     ref::CLIncompleteArray
 end
 
-struct JuliaCrecord <: AbstractJuliaType
+struct JuliaCrecord{T<:CLCursor} <: AbstractJuliaType
     sym::Symbol
+    cursor::T
 end
 JuliaCrecord() = JuliaCrecord(Symbol())
-JuliaCrecord(x::AbstractString) = JuliaCrecord(Symbol(x))
+JuliaCrecord(x::AbstractString) = JuliaCrecord(Symbol(x), getNullCursor())
 
 struct JuliaCenum <: AbstractJuliaType
     sym::Symbol
@@ -151,7 +152,10 @@ tojulia(x::CLInvalid) = JuliaUnknown(x)
 tojulia(x::CLFunctionProto) = JuliaCfunction(spelling(getTypeDeclaration(x)))
 tojulia(x::CLFunctionNoProto) = JuliaCfunction(spelling(getTypeDeclaration(x)))
 tojulia(x::CLEnum) = JuliaCenum(spelling(getTypeDeclaration(x)))
-tojulia(x::CLRecord) = JuliaCrecord(spelling(getTypeDeclaration(x)))
+function tojulia(x::CLRecord)
+    c = getTypeDeclaration(x)
+    JuliaCrecord(Symbol(spelling(c)), c)
+end
 tojulia(x::CLTypedef) = JuliaCtypedef(spelling(getTypeDeclaration(x)))
 tojulia(x::CLUnexposed) = JuliaUnknown(x)
 tojulia(x::CLConstantArray) = JuliaCconstarray(x)

@@ -682,10 +682,12 @@ function (x::FunctionPrinter)(dag::ExprDAG, options::Dict)
     general_options = get(options, "general", Dict())
     log_options = get(general_options, "log", Dict())
     show_info = get(log_options, "FunctionPrinter_log", x.show_info)
+    blacklist = get(general_options, "printer_blacklist", [])
 
     show_info && @info "[FunctionPrinter]: print to $(x.file)"
     open(x.file, "w") do io
         for node in dag.nodes
+            string(node.id) ∈ blacklist && continue
             node.type isa AbstractFunctionNodeType || continue
             pretty_print(io, node, general_options)
         end
@@ -707,15 +709,18 @@ function (x::CommonPrinter)(dag::ExprDAG, options::Dict)
     general_options = get(options, "general", Dict())
     log_options = get(general_options, "log", Dict())
     show_info = get(log_options, "CommonPrinter_log", x.show_info)
+    blacklist = get(general_options, "printer_blacklist", [])
 
     show_info && @info "[CommonPrinter]: print to $(x.file)"
     open(x.file, "w") do io
         for node in dag.nodes
+            string(node.id) ∈ blacklist && continue
             node.type isa AbstractMacroNodeType && continue
             pretty_print(io, node, general_options)
         end
         # print macros in the bottom of the file
         for node in dag.nodes
+            string(node.id) ∈ blacklist && continue
             node.type isa AbstractMacroNodeType || continue
             pretty_print(io, node, options)
         end
@@ -737,15 +742,18 @@ function (x::GeneralPrinter)(dag::ExprDAG, options::Dict)
     general_options = get(options, "general", Dict())
     log_options = get(general_options, "log", Dict())
     show_info = get(log_options, "GeneralPrinter_log", x.show_info)
+    blacklist = get(general_options, "printer_blacklist", [])
 
     show_info && @info "[GeneralPrinter]: print to $(x.file)"
     open(x.file, "a") do io
         for node in dag.nodes
+            string(node.id) ∈ blacklist && continue
             node.type isa AbstractMacroNodeType && continue
             pretty_print(io, node, general_options)
         end
         # print macros in the bottom of the file
         for node in dag.nodes
+            string(node.id) ∈ blacklist && continue
             node.type isa AbstractMacroNodeType || continue
             pretty_print(io, node, options)
         end

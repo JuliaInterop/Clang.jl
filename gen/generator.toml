@@ -35,6 +35,10 @@ auto_detect_system_headers = true
 # header blacklist
 header_blacklist = []
 
+# node with an id in the `printer_blacklist` will be ignored in the printing passes. 
+# this is very useful for custom editing. 
+printer_blacklist = []
+
 # Julia's `@enum` do not allow duplicated values, so by default, C enums are translated to 
 # CEnum.jl's `@cenum`. 
 # if this entry is true, those duplicated enum constants are commented. 

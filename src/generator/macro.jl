@@ -177,6 +177,8 @@ macro_emit!(dag::ExprDAG, node::ExprNode, options::Dict) = dag
 
 function macro_emit!(dag::ExprDAG, node::ExprNode{MacroFunctionLike}, options::Dict)
     print_comment = get(options, "add_comment_for_skipped_macro", true)
+    mode = get(options, "macro_mode", "basic")
+    mode != "aggressive" && return dag
 
     cursor = node.cursor
     tokens = tokenize(cursor)
@@ -249,7 +251,7 @@ function macro_emit!(dag::ExprDAG, node::ExprNode{MacroDefault}, options::Dict)
     end
 
     # for all the other cases, we just blindly use Julia's Meta.parse to parse the C code.
-    if tokens.size > 1 && tokens[1].kind == CXToken_Identifier && mode == "aggresive"
+    if tokens.size > 1 && tokens[1].kind == CXToken_Identifier && mode == "aggressive"
         sym = make_symbol_safe(tokens[1].text)
         try
             txts = [tok.kind == CXToken_Literal ? literally(tok) : tok.text for tok in collect(tokens)[2:end]]

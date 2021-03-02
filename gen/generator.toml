@@ -71,7 +71,7 @@ opaque_as_mutable_struct = true
 [codegen.macro]
 # it highly recommended to set this entry to "basic".
 # if you'd like to skip all of the macros, please set this entry to "disable".
-# if you'd like to aggresively translate macros to Julia, please set this entry to "aggresive".
+# if you'd like to aggressive translate macros to Julia, please set this entry to "aggressive".
 macro_mode = "basic"
 
 # if this entry is true, the generator prints the following message as comments.

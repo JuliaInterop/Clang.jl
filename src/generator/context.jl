@@ -106,11 +106,11 @@ function find_dependent_headers(headers::Vector{T}, args::Vector, general_ops::D
 end
 
 """
-    create_context(headers::Vector, args::Vector, options::Dict)
+    create_context(headers::Vector, args::Vector=String[], options::Dict=Dict())
 Create a context from a vector of paths of headers, a vector of compiler flags and
 a option dict.
 """
-function create_context(headers::Vector, args::Vector, options::Dict)
+function create_context(headers::Vector, args::Vector=String[], options::Dict=Dict())
     ctx = Context(options)
 
     general_options = get(options, "general", Dict())
@@ -149,11 +149,16 @@ function create_context(headers::Vector, args::Vector, options::Dict)
     common_file = get(general_options, "output_common_file_path", "")
 
     output_file_path = get(general_options, "output_file_path", "")
-    @assert !isempty(output_file_path) "output file path is empty, please set `output_file_path` in the toml file."
     if isempty(api_file) && isempty(common_file)
-        push!(ctx.passes, ProloguePrinter(output_file_path))
-        push!(ctx.passes, GeneralPrinter(output_file_path))
-        push!(ctx.passes, EpiloguePrinter(output_file_path))
+        if !isempty(output_file_path)
+            push!(ctx.passes, ProloguePrinter(output_file_path))
+            push!(ctx.passes, GeneralPrinter(output_file_path))
+            push!(ctx.passes, EpiloguePrinter(output_file_path))
+        else
+            # print to stdout if there is no `output_file_path`
+            # this is handy when playing in REPL
+            push!(ctx.passes, StdPrinter())
+        end
     else
         # TODO: impl
     end
@@ -161,7 +166,7 @@ function create_context(headers::Vector, args::Vector, options::Dict)
     return ctx
 end
 
-create_context(header::AbstractString, args, ops) = create_context([header], args, ops)
+create_context(header::AbstractString, args=String[], ops=Dict()) = create_context([header], args, ops)
 
 @enum BuildStage begin
     BUILDSTAGE_ALL

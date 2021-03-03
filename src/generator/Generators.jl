@@ -87,6 +87,7 @@ export LinkTypedefToAnonymousTagType
 export ProloguePrinter
 export RemoveCircularReference
 export ResolveDependency
+export StdPrinter
 export TopologicalSort
 
 include("context.jl")

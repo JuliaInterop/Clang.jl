@@ -762,6 +762,36 @@ function (x::GeneralPrinter)(dag::ExprDAG, options::Dict)
 end
 
 """
+   StdPrinter <: AbstractPrinter
+In this pass, structs/unions/enums are dumped to stdout.
+"""
+mutable struct StdPrinter <: AbstractPrinter
+    show_info::Bool
+end
+StdPrinter(; info=true) = StdPrinter(info)
+
+function (x::StdPrinter)(dag::ExprDAG, options::Dict)
+    general_options = get(options, "general", Dict())
+    log_options = get(general_options, "log", Dict())
+    show_info = get(log_options, "StdPrinter_log", x.show_info)
+    blacklist = get(general_options, "printer_blacklist", [])
+
+    for node in dag.nodes
+        string(node.id) ∈ blacklist && continue
+        node.type isa AbstractMacroNodeType && continue
+        pretty_print(stdout, node, general_options)
+    end
+    # print macros
+    for node in dag.nodes
+        string(node.id) ∈ blacklist && continue
+        node.type isa AbstractMacroNodeType || continue
+        pretty_print(stdout, node, options)
+    end
+
+    return dag
+end
+
+"""
     ProloguePrinter <: AbstractPrinter
 In this pass, prologues are dumped to file.
 """

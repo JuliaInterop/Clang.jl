@@ -222,10 +222,10 @@ getEnumDeclIntegerType(c::CXCursor) = clang_getEnumDeclIntegerType(c)
 getEnumDeclIntegerType(c::CLEnumDecl)::CLType = clang_getEnumDeclIntegerType(c)
 
 """
-    value(c::CLCursor) -> Int
+    value(c::CLCursor) -> Integer
 Return the integer value of an enum constant declaration.
 """
-function value(c::CLEnumConstantDecl)::Int
+function value(c::CLEnumConstantDecl)::Integer
     typeKind = kind(getCursorType(c))
     if typeKind == CXType_Int || typeKind == CXType_Long || typeKind == CXType_LongLong
         return clang_getEnumConstantDeclValue(c)

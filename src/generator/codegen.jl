@@ -82,7 +82,7 @@ function emit!(dag::ExprDAG, node::ExprNode{FunctionNoProto}, options::Dict; arg
     library_expr = Meta.parse(library_name)
 
     func_name = Symbol(spelling(cursor))
-    ret_type = translate(tojulia(getCursorResultType(cursor)))
+    ret_type = translate(tojulia(getCursorResultType(cursor)), options)
 
     signature = Expr(:call, func_name)
     body = :(ccall(($(QuoteNode(func_name)), $library_expr), $ret_type, $(Expr(:tuple))))

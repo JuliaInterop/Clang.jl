@@ -15,6 +15,11 @@ function audit_library_name(dag::ExprDAG, options::Dict)
         general_options["library_name"] = "libxxx"
         @warn "default libname: \":libxxx\" is being used, did you forget to set `library_name` in the toml file?"
     end
+    if haskey(options, "general")
+        merge!(options["general"], general_options)
+    else
+        options["general"] = general_options
+    end
     return nothing
 end
 

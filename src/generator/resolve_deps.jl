@@ -136,12 +136,8 @@ function resolve_dependency!(dag::ExprDAG, node::ExprNode{<:AbstractStructNodeTy
             # pass
         elseif occursin("anonymous", spelling(ty))
             # it could be a nested anonymous tag-type.
-            # those nested anonymous tag-types should be generated in the codegen pass.
             # pass
         else
-            # FIXME:
-            # * handle nested opaque pointers by default, we just error out for now, so
-            # users needs to `@add_def` the missing symbol.
             file, line, col = get_file_line_column(cursor)
             error("There is no definition for $(cursor)'s field: $c at $file:$line:$col")
         end

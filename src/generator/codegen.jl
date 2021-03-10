@@ -197,7 +197,7 @@ function emit_getproperty!(dag, node, options)
     sym = make_symbol_safe(node.id)
     signature = Expr(:call, :(Base.getproperty), :(x::$sym), :(f::Symbol))
     ref_expr = :(r = Ref{$sym}(x))
-    conv_expr = :(ptr = Base.unsafe_convert($sym, r))
+    conv_expr = :(ptr = Base.unsafe_convert(Ptr{$sym}, r))
     load_expr = :(GC.@preserve r unsafe_load(getproperty(ptr, f)))
     load_expr.args[2] = nothing
     body = Expr(:block, ref_expr, conv_expr, load_expr)
@@ -290,7 +290,7 @@ function emit!(dag::ExprDAG, node::ExprNode{<:RecordLayouts}, options::Dict; arg
     expr = Expr(:struct, false, sym, Expr(:block, :(data::NTuple{$n,UInt8})))
     push!(node.exprs, expr)
 
-    # emit Base.getproperty(x::Ptr, f::Symbol)
+    # emit Base.getproperty(x::Ptr, f::Symbol) etc.
     emit_getproperty_ptr!(dag, node, options)
     emit_getproperty!(dag, node, options)
     emit_setproperty!(dag, node, options)
@@ -298,6 +298,7 @@ function emit!(dag::ExprDAG, node::ExprNode{<:RecordLayouts}, options::Dict; arg
     return dag
 end
 
+############################### Enum ###############################
 const ENUM_SYMBOL2TYPE = Dict(
     :Cchar => Cchar,
     :Cuchar => Cuchar,
@@ -323,8 +324,6 @@ const ENUM_SYMBOL2TYPE = Dict(
     :Int16 => Int16,
     :Int8 => Int8,
 )
-
-############################### Enum ###############################
 
 function emit!(dag::ExprDAG, node::ExprNode{<:AbstractEnumNodeType}, options::Dict; args...)
     cursor = node.cursor

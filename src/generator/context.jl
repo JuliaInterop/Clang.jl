@@ -80,6 +80,7 @@ function find_dependent_headers(headers::Vector{T}, args::Vector, general_ops::D
                     dir = dirname(file_name)
                     file_name ∈ all_headers && continue
                     if startswith(header_dir, dir) || startswith(dir, header_dir)
+                        isempty(header_dir) && continue
                         file_name ∈ new_headers && continue
                         if any(x->!isempty(x) && endswith(file_name, x), blacklist)
                             file_name ∉ blocked_headers && push!(blocked_headers, file_name)

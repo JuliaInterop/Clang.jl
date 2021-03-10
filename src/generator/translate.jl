@@ -118,7 +118,7 @@ end
 
 function translate(jlty::JuliaCenum, options=Dict())
     tags = get(options, "DAG_tags", Dict())
-    # currently, we don't distinguish extra tags and ids, this may be improved in the future.
+    # for now, we don't distinguish extra tags and ids, this may be improved in the future.
     # tags_extra = get(options, "DAG_tags_extra", Dict())
     ids_extra = get(options, "DAG_tags_extra", Dict())
     if haskey(tags, jlty.sym) || haskey(ids_extra, jlty.sym)
@@ -131,7 +131,7 @@ end
 
 function translate(jlty::JuliaCrecord, options=Dict())
     tags = get(options, "DAG_tags", Dict())
-    # currently, we don't distinguish extra tags and ids, this may be improved in the future.
+    # for now, we don't distinguish extra tags and ids, this may be improved in the future.
     # tags_extra = get(options, "DAG_tags_extra", Dict())
     ids_extra = get(options, "DAG_ids_extra", Dict())
     nested_tags = get(options, "nested_tags", Dict())

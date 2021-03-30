@@ -37,7 +37,17 @@ header_blacklist = []
 
 # node with an id in the `printer_blacklist` will be ignored in the printing passes. 
 # this is very useful for custom editing. 
-printer_blacklist = []
+printer_blacklist = [
+    "CINDEX_EXPORTS",
+    "CINDEX_VERSION",
+    "CINDEX_VERSION_STRING",
+    "CINDEX_LINKAGE",
+    "CINDEX_DEPRECATED",
+    "LLVM_CLANG_C_STRICT_PROTOTYPES_BEGIN",
+    "LLVM_CLANG_C_STRICT_PROTOTYPES_END",
+    "LLVM_CLANG_C_EXTERN_C_BEGIN",
+    "LLVM_CLANG_C_EXTERN_C_END"
+]
 
 # Julia's `@enum` do not allow duplicated values, so by default, C enums are translated to 
 # CEnum.jl's `@cenum`. 

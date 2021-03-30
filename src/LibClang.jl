@@ -263,28 +263,31 @@ end
     CXCursor_CXXReinterpretCastExpr = 126
     CXCursor_CXXConstCastExpr = 127
     CXCursor_CXXFunctionalCastExpr = 128
-    CXCursor_CXXTypeidExpr = 129
-    CXCursor_CXXBoolLiteralExpr = 130
-    CXCursor_CXXNullPtrLiteralExpr = 131
-    CXCursor_CXXThisExpr = 132
-    CXCursor_CXXThrowExpr = 133
-    CXCursor_CXXNewExpr = 134
-    CXCursor_CXXDeleteExpr = 135
-    CXCursor_UnaryExpr = 136
-    CXCursor_ObjCStringLiteral = 137
-    CXCursor_ObjCEncodeExpr = 138
-    CXCursor_ObjCSelectorExpr = 139
-    CXCursor_ObjCProtocolExpr = 140
-    CXCursor_ObjCBridgedCastExpr = 141
-    CXCursor_PackExpansionExpr = 142
-    CXCursor_SizeOfPackExpr = 143
-    CXCursor_LambdaExpr = 144
-    CXCursor_ObjCBoolLiteralExpr = 145
-    CXCursor_ObjCSelfExpr = 146
-    CXCursor_OMPArraySectionExpr = 147
-    CXCursor_ObjCAvailabilityCheckExpr = 148
-    CXCursor_FixedPointLiteral = 149
-    CXCursor_LastExpr = 149
+    CXCursor_CXXAddrspaceCastExpr = 129
+    CXCursor_CXXTypeidExpr = 130
+    CXCursor_CXXBoolLiteralExpr = 131
+    CXCursor_CXXNullPtrLiteralExpr = 132
+    CXCursor_CXXThisExpr = 133
+    CXCursor_CXXThrowExpr = 134
+    CXCursor_CXXNewExpr = 135
+    CXCursor_CXXDeleteExpr = 136
+    CXCursor_UnaryExpr = 137
+    CXCursor_ObjCStringLiteral = 138
+    CXCursor_ObjCEncodeExpr = 139
+    CXCursor_ObjCSelectorExpr = 140
+    CXCursor_ObjCProtocolExpr = 141
+    CXCursor_ObjCBridgedCastExpr = 142
+    CXCursor_PackExpansionExpr = 143
+    CXCursor_SizeOfPackExpr = 144
+    CXCursor_LambdaExpr = 145
+    CXCursor_ObjCBoolLiteralExpr = 146
+    CXCursor_ObjCSelfExpr = 147
+    CXCursor_OMPArraySectionExpr = 148
+    CXCursor_ObjCAvailabilityCheckExpr = 149
+    CXCursor_FixedPointLiteral = 150
+    CXCursor_OMPArrayShapingExpr = 151
+    CXCursor_OMPIteratorExpr = 152
+    CXCursor_LastExpr = 152
     CXCursor_FirstStmt = 200
     CXCursor_UnexposedStmt = 200
     CXCursor_LabelStmt = 201
@@ -368,7 +371,14 @@ end
     CXCursor_OMPTargetTeamsDistributeParallelForSimdDirective = 278
     CXCursor_OMPTargetTeamsDistributeSimdDirective = 279
     CXCursor_BuiltinBitCastExpr = 280
-    CXCursor_LastStmt = 280
+    CXCursor_OMPMasterTaskLoopDirective = 281
+    CXCursor_OMPParallelMasterTaskLoopDirective = 282
+    CXCursor_OMPMasterTaskLoopSimdDirective = 283
+    CXCursor_OMPParallelMasterTaskLoopSimdDirective = 284
+    CXCursor_OMPParallelMasterDirective = 285
+    CXCursor_OMPDepobjDirective = 286
+    CXCursor_OMPScanDirective = 287
+    CXCursor_LastStmt = 287
     CXCursor_TranslationUnit = 300
     CXCursor_FirstAttr = 400
     CXCursor_UnexposedAttr = 400
@@ -461,6 +471,7 @@ end
     CXCommentInlineCommandRenderKind_Bold = 1
     CXCommentInlineCommandRenderKind_Monospaced = 2
     CXCommentInlineCommandRenderKind_Emphasized = 3
+    CXCommentInlineCommandRenderKind_Anchor = 4
 end
 
 @cenum CXCommentParamPassDirection::UInt32 begin
@@ -599,6 +610,14 @@ end
 
 function clang_FullComment_getAsXML(Comment)
     ccall((:clang_FullComment_getAsXML, libclang), CXString, (CXComment,), Comment)
+end
+
+function clang_install_aborting_llvm_fatal_error_handler()
+    ccall((:clang_install_aborting_llvm_fatal_error_handler, libclang), Cvoid, ())
+end
+
+function clang_uninstall_llvm_fatal_error_handler()
+    ccall((:clang_uninstall_llvm_fatal_error_handler, libclang), Cvoid, ())
 end
 
 const CXIndex = Ptr{Cvoid}
@@ -951,6 +970,7 @@ end
     CXTranslationUnit_IncludeAttributedTypes = 4096
     CXTranslationUnit_VisitImplicitAttributes = 8192
     CXTranslationUnit_IgnoreNonErrorsFromIncludedFiles = 16384
+    CXTranslationUnit_RetainExcludedConditionalBlocks = 32768
 end
 
 function clang_defaultEditingTranslationUnitOptions()
@@ -1297,8 +1317,9 @@ end
     CXType_UShortAccum = 36
     CXType_UAccum = 37
     CXType_ULongAccum = 38
+    CXType_BFloat16 = 39
     CXType_FirstBuiltin = 2
-    CXType_LastBuiltin = 38
+    CXType_LastBuiltin = 39
     CXType_Complex = 100
     CXType_Pointer = 101
     CXType_BlockPointer = 102
@@ -1376,6 +1397,7 @@ end
     CXType_OCLIntelSubgroupAVCImeSingleRefStreamin = 174
     CXType_OCLIntelSubgroupAVCImeDualRefStreamin = 175
     CXType_ExtVector = 176
+    CXType_Atomic = 177
 end
 
 @cenum CXCallingConv::UInt32 begin
@@ -1653,6 +1675,10 @@ end
 
 function clang_Type_getModifiedType(T)
     ccall((:clang_Type_getModifiedType, libclang), CXType, (CXType,), T)
+end
+
+function clang_Type_getValueType(CT)
+    ccall((:clang_Type_getValueType, libclang), CXType, (CXType,), CT)
 end
 
 function clang_Cursor_getOffsetOfField(C)
@@ -2706,21 +2732,7 @@ end
 
 const CINDEX_VERSION_MAJOR = 0
 
-const CINDEX_VERSION_MINOR = 59
-
-CINDEX_VERSION_ENCODE(major, minor) = major * 10000 + minor * 1
-
-# Skipping MacroDefinition: CINDEX_VERSION CINDEX_VERSION_ENCODE ( CINDEX_VERSION_MAJOR , CINDEX_VERSION_MINOR )
-
-CINDEX_VERSION_STRINGIZE_(major, minor) = nothing
-
-CINDEX_VERSION_STRINGIZE(major, minor) = CINDEX_VERSION_STRINGIZE_(major, minor)
-
-# Skipping MacroDefinition: CINDEX_VERSION_STRING CINDEX_VERSION_STRINGIZE ( CINDEX_VERSION_MAJOR , CINDEX_VERSION_MINOR )
-
-const CINDEX_LINKAGE = nothing
-
-# Skipping MacroDefinition: CINDEX_DEPRECATED __attribute__ ( ( deprecated ) )
+const CINDEX_VERSION_MINOR = 60
 
 # exports
 const PREFIXES = ["CX", "clang_"]

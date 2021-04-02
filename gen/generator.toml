@@ -62,8 +62,30 @@ is_local_header_only = true
 # by default, we skip all of those compiler declarations.
 skip_compiler_definition = true
 
-# run `DeAnonymize` pass if this option is set to true.
+# if this option is set to true, C code with a style of
+# ```c
+# typedef struct {
+#     int x;
+# } my_struct;
+# ```
+# will be generated as:
+# ```julia
+# struct my_struct
+#     x::Cint
+# end
+# ```
+# instead of
+# ```julia
+# struct var"##Ctag#NUM"
+#     x::Cint
+# end
+# const my_struct = var"##Ctag#NUM"
+# ```
 smart_de_anonymize = true
+
+# if this option is set to true, those structs that are not used as a field type in any other
+# structs will be generated as mutable struct.
+auto_mutability = true
 
 [codegen]
 # map C's bool to Julia's Bool instead of `Cuchar` a.k.a `UInt8`.
@@ -111,3 +133,4 @@ ignore_header_guards = true
 # GeneralPrinter_log = true
 # ProloguePrinter_log = true
 # EpiloguePrinter_log = true
+# TweakMutability_log = false

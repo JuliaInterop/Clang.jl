@@ -56,12 +56,23 @@ Supertype for typedef-decl nodes.
 """
 abstract type AbstractTypedefNodeType <: AbstractExprNodeType end
 
+"""
+    TypedefElaborated <: AbstractTypedefNodeType
+A typedef type which directly or indirectly(through pointer/array) refers to an elaborated type.
+"""
 struct TypedefElaborated <: AbstractTypedefNodeType end
+"""
+    TypedefFunction <: AbstractTypedefNodeType
+A typedef type which directly or indirectly(through pointer/array) refers to a function.
+"""
 struct TypedefFunction <: AbstractTypedefNodeType end
 struct TypedefDuplicated <: AbstractTypedefNodeType end
 struct TypedefMutualRef <: AbstractTypedefNodeType end
 struct TypedefDefault <: AbstractTypedefNodeType end
-# a typedef type which directly or indirectly refers to an anonymous tagtype
+"""
+    TypedefToAnonymous <: AbstractTypedefNodeType
+A typedef type which directly or indirectly(through pointer/array) refers to an anonymous tagtype
+"""
 struct TypedefToAnonymous <: AbstractTypedefNodeType
     sym::Symbol
 end

@@ -144,6 +144,9 @@ function create_context(headers::Vector, args::Vector=String[], options::Dict=Di
     push!(ctx.passes, Codegen())
     push!(ctx.passes, CodegenMacro())
     # push!(ctx.passes, CodegenPostprocessing())
+    if get(general_options, "auto_mutability", true)
+        push!(ctx.passes, TweakMutability())
+    end
 
     # support old behavior
     api_file = get(general_options, "output_api_file_path", "")

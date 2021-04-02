@@ -636,6 +636,65 @@ function (x::CodegenPostprocessing)(dag::ExprDAG, options::Dict)
     # TODO: find a use case
 end
 
+"""
+    TweakMutability <: AbstractPass
+In this pass, the mutability of those structs that are not used as a field type in any
+other structs will be reset to `true`.
+"""
+mutable struct TweakMutability <: AbstractPass
+    idxs::Vector{Int}
+    show_info::Bool
+end
+TweakMutability(; info=false) = TweakMutability(Int[], info)
+
+function find_and_append_deps!(idxs, nodes, i)
+    node = nodes[i]
+    if node.type isa AbstractStructNodeType
+        push!(idxs, i)
+    elseif node.type isa AbstractTypedefNodeType
+        if isempty(node.adj)
+            return nothing
+        else
+            for j in node.adj
+                find_and_append_deps!(idxs, nodes, j)
+            end
+        end
+    end
+    return nothing
+end
+
+function (x::TweakMutability)(dag::ExprDAG, options::Dict)
+    general_options = get(options, "general", Dict())
+    log_options = get(general_options, "log", Dict())
+    show_info = get(log_options, "TweakMutability_log", x.show_info)
+
+    # collect referenced node ids
+    empty!(x.idxs)
+    for node in dag.nodes
+        t = node.type
+        t isa StructAnonymous || t isa StructDefinition || t isa StructMutualRef || continue
+        for i in node.adj
+            find_and_append_deps!(x.idxs, dag.nodes, i)
+        end
+    end
+    unique!(x.idxs)
+
+    for (i, node) in enumerate(dag.nodes)
+        t = node.type
+        t isa StructAnonymous || t isa StructDefinition || t isa StructMutualRef || continue
+        i ∈ x.idxs && continue
+        for expr in node.exprs
+            if Meta.isexpr(expr, :struct) && expr.args[1] == false
+                expr.args[1] = true
+                show_info &&
+                    @info "[TweakMutability]: reset the mutability of $(node.id) to mutable"
+            end
+        end
+    end
+
+    return dag
+end
+
 const DEFAULT_AUDIT_FUNCTIONS = [
     audit_library_name,
     sanity_check,

@@ -88,6 +88,7 @@ export ProloguePrinter
 export RemoveCircularReference
 export ResolveDependency
 export StdPrinter
+export TweakMutability
 export TopologicalSort
 
 include("context.jl")

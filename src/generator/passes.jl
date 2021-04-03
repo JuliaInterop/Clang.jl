@@ -638,8 +638,25 @@ end
 
 """
     TweakMutability <: AbstractPass
-In this pass, the mutability of those structs that are not used as a field type in any
-other structs will be reset to `true`.
+In this pass, the mutability of those structs which are not necessary to be immutable
+will be reset to `true` according to the following rules:
+
+if this type is not used as a field type in any other types
+    if this type is in the whitelist
+        then reset
+
+    if this type is in the blacklist
+        then skip
+
+    if this type is used as the argument type in some function protos
+        if all of the argument type are non-pointer-type
+            then reset
+        elseif the argument type is pointer-type
+            if all other argument types in this function are not integer type (to pass a vector to the C function, both pointer and size are needed)
+                then reset
+
+    if this type is not used as the argument type in any functions (but there is an implicit usage)
+        then reset
 """
 mutable struct TweakMutability <: AbstractPass
     idxs::Vector{Int}
@@ -647,26 +664,12 @@ mutable struct TweakMutability <: AbstractPass
 end
 TweakMutability(; info=false) = TweakMutability(Int[], info)
 
-function find_and_append_deps!(idxs, nodes, i)
-    node = nodes[i]
-    if node.type isa AbstractStructNodeType
-        push!(idxs, i)
-    elseif node.type isa AbstractTypedefNodeType
-        if isempty(node.adj)
-            return nothing
-        else
-            for j in node.adj
-                find_and_append_deps!(idxs, nodes, j)
-            end
-        end
-    end
-    return nothing
-end
-
 function (x::TweakMutability)(dag::ExprDAG, options::Dict)
     general_options = get(options, "general", Dict())
     log_options = get(general_options, "log", Dict())
     show_info = get(log_options, "TweakMutability_log", x.show_info)
+    blacklist = get(general_options, "auto_mutability_blacklist", [])
+    whitelist = get(general_options, "auto_mutability_whitelist", [])
 
     # collect referenced node ids
     empty!(x.idxs)
@@ -683,12 +686,26 @@ function (x::TweakMutability)(dag::ExprDAG, options::Dict)
         t = node.type
         t isa StructAnonymous || t isa StructDefinition || t isa StructMutualRef || continue
         i ∈ x.idxs && continue
-        for expr in node.exprs
-            if Meta.isexpr(expr, :struct) && expr.args[1] == false
-                expr.args[1] = true
-                show_info &&
-                    @info "[TweakMutability]: reset the mutability of $(node.id) to mutable"
-            end
+        isempty(node.exprs) && continue
+
+        exprs = filter(x->Meta.isexpr(x, :struct), node.exprs)
+        @assert length(exprs) == 1
+        expr = first(exprs)
+        type_name = string(expr.args[2])
+
+        apply_reset = false
+        if type_name ∈ whitelist
+            apply_reset = true
+        elseif type_name ∈ blacklist
+            apply_reset = false
+        else
+            apply_reset = should_tweak(dag.nodes, i)
+        end
+
+        if apply_reset
+            expr.args[1] = true
+            show_info &&
+                @info "[TweakMutability]: reset the mutability of $type_name to mutable"
         end
     end
 

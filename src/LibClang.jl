@@ -628,7 +628,7 @@ const CXTargetInfo = Ptr{CXTargetInfoImpl}
 
 const CXClientData = Ptr{Cvoid}
 
-mutable struct CXUnsavedFile
+struct CXUnsavedFile
     Filename::Cstring
     Contents::Cstring
     Length::Culong
@@ -1183,7 +1183,7 @@ function clang_getCursorAvailability(cursor)
     ccall((:clang_getCursorAvailability, libclang), CXAvailabilityKind, (CXCursor,), cursor)
 end
 
-mutable struct CXPlatformAvailability
+struct CXPlatformAvailability
     Platform::CXString
     Introduced::CXVersion
     Deprecated::CXVersion

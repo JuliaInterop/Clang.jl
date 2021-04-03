@@ -66,6 +66,8 @@ export report_default_tag_types
 
 include("macro.jl")
 
+include("mutability.jl")
+
 include("passes.jl")
 export AbstractPass
 export Audit

@@ -144,7 +144,7 @@ function create_context(headers::Vector, args::Vector=String[], options::Dict=Di
     push!(ctx.passes, Codegen())
     push!(ctx.passes, CodegenMacro())
     # push!(ctx.passes, CodegenPostprocessing())
-    if get(general_options, "auto_mutability", true)
+    if get(general_options, "auto_mutability", false)
         push!(ctx.passes, TweakMutability())
     end
 

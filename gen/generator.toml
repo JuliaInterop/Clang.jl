@@ -83,9 +83,21 @@ skip_compiler_definition = true
 # ```
 smart_de_anonymize = true
 
-# if this option is set to true, those structs that are not used as a field type in any other
-# structs will be generated as mutable struct.
+# if this option is set to true, those structs that are not necessary to be an 
+# immutable struct will be changed to be a mutable struct. 
+# this option is default to false, do read the paragraph below before using this feature.
 auto_mutability = true
+
+# if you feel like certain structs should not be generated as mutable struct, please add them in the following list. 
+# for example, if a C function accepts a vector of some type as its argument:
+#     void foo(mutable_type *list, int n);
+# when calling this function via `ccall`, passing a `Vector{mutable_type}(undef, n)` to the first
+# argument will trigger a crash, one needs to use `Ref{NTuple{n,mutable_type}}()` instead.
+# this is not convenient and that's where the `auto_mutability_blacklist` comes in.
+auto_mutability_blacklist = []
+
+# opposite to `auto_mutability_blacklist` and has a higher priority
+auto_mutability_whitelist = []
 
 [codegen]
 # map C's bool to Julia's Bool instead of `Cuchar` a.k.a `UInt8`.

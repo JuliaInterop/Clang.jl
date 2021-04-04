@@ -175,7 +175,7 @@ function _emit_getproperty_ptr!(body, root_cursor, cursor, options)
         fsym = make_symbol_safe(n)
         fty = getCursorType(field_cursor)
         ty = translate(tojulia(fty), options)
-        offset = getOffsetOf(getCursorType(root_cursor), n)
+        offset = getOffsetOf(getCursorType(root_cursor), n) ÷ 8
         ex = :(f === $(QuoteNode(fsym)) && return Ptr{$ty}(x + $offset))
         push!(body.args, ex)
     end

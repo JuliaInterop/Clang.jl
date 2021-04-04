@@ -235,6 +235,14 @@ function emit!(dag::ExprDAG, node::ExprNode{<:AbstractStructNodeType}, options::
         emit_setproperty!(dag, node, options)
     end
 
+    if haskey(options, "field_access_method_list")
+        if string(node.id) in options["field_access_method_list"]
+            emit_getproperty_ptr!(dag, node, options)
+            emit_getproperty!(dag, node, options)
+            emit_setproperty!(dag, node, options)
+        end
+    end
+
     return dag
 end
 
@@ -279,6 +287,14 @@ function emit!(dag::ExprDAG, node::ExprNode{StructMutualRef}, options::Dict; arg
     end
 
     push!(node.exprs, expr)
+
+    if haskey(options, "field_access_method_list")
+        if string(node.id) in options["field_access_method_list"]
+            emit_getproperty_ptr!(dag, node, options)
+            emit_getproperty!(dag, node, options)
+            emit_setproperty!(dag, node, options)
+        end
+    end
 
     return dag
 end

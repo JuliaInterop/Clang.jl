@@ -91,7 +91,7 @@ function pretty_print(io, node::ExprNode{<:AbstractStructNodeType}, options::Dic
 end
 
 function pretty_print(io, node::ExprNode{StructMutualRef}, options::Dict)
-    @assert length(node.exprs) == 1
+    @assert !isempty(node.exprs)
     expr = node.exprs[1]
 
     @assert Meta.isexpr(expr, :struct)
@@ -110,6 +110,11 @@ function pretty_print(io, node::ExprNode{StructMutualRef}, options::Dict)
     end
     println(io, "end")
     println(io)
+
+    for expr in node.exprs[2:end]
+        println(io, expr)
+        println(io)
+    end
 
     return nothing
 end

@@ -116,6 +116,9 @@ opaque_func_arg_as_PtrCvoid = false
 # if true, opaque types are translated to `mutable struct` instead of `Cvoid`.
 opaque_as_mutable_struct = true
 
+# generate getproperty/setproperty! methods for the types in the following list
+field_access_method_list = []
+
 [codegen.macro]
 # it highly recommended to set this entry to "basic".
 # if you'd like to skip all of the macros, please set this entry to "disable".

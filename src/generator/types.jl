@@ -281,3 +281,6 @@ nested_anonymous_type(::UnionLayout{A,N}) where {A,N} = UnionLayout{A,true}()
 
 bitfield_type(::AbstractStructNodeType) = StructLayout{false,false,true}()
 bitfield_type(::StructLayout{A,N,B}) where {A,N,B} = StructLayout{A,N,true}()
+
+is_bitfield_type(::AbstractExprNodeType) = false
+is_bitfield_type(::StructLayout{A,N,B}) where {A,N,B} = B

@@ -17,6 +17,7 @@ using ..Clang:
     getCursorResultType,
     getElementType,
     getEnumDeclIntegerType,
+    getFieldDeclBitWidth,
     getIncludedFile,
     getNamedType,
     getNumElements,

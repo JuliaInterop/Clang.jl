@@ -175,8 +175,15 @@ function _emit_getproperty_ptr!(body, root_cursor, cursor, options)
         fsym = make_symbol_safe(n)
         fty = getCursorType(field_cursor)
         ty = translate(tojulia(fty), options)
-        offset = getOffsetOf(getCursorType(root_cursor), n) ÷ 8
-        ex = :(f === $(QuoteNode(fsym)) && return Ptr{$ty}(x + $offset))
+        offset = getOffsetOf(getCursorType(root_cursor), n)
+        d, r = divrem(offset, 8)
+        if r == 0
+            ex = :(f === $(QuoteNode(fsym)) && return Ptr{$ty}(x + $d))
+        else
+            # this is a bitfield
+            w = getFieldDeclBitWidth(field_cursor)
+            ex = :(f === $(QuoteNode(fsym)) && return (Ptr{$ty}(x + $d), $r, $w))
+        end
         push!(body.args, ex)
     end
 end
@@ -193,16 +200,53 @@ function emit_getproperty_ptr!(dag, node, options)
     return dag
 end
 
+function rm_line_num_node!(ex::Expr)
+    filter!(ex.args) do arg
+        arg isa Expr && rm_line_num_node!(arg)
+        arg !isa LineNumberNode
+    end
+    return ex
+end
+
 function emit_getproperty!(dag, node, options)
     sym = make_symbol_safe(node.id)
-    signature = Expr(:call, :(Base.getproperty), :(x::$sym), :(f::Symbol))
+
     ref_expr = :(r = Ref{$sym}(x))
     conv_expr = :(ptr = Base.unsafe_convert(Ptr{$sym}, r))
-    load_expr = :(GC.@preserve r unsafe_load(getproperty(ptr, f)))
+    fptr_expr = :(fptr = getproperty(ptr, f))
+
+    load_expr = :(GC.@preserve r unsafe_load(fptr))
     load_expr.args[2] = nothing
-    body = Expr(:block, ref_expr, conv_expr, load_expr)
+
+    load_base_expr = :(GC.@preserve r unsafe_load(baseptr))
+    load_base_expr.args[2] = nothing
+
+    if is_bitfield_type(node.type)
+        ex = quote
+            if fptr isa Ptr
+                return $load_expr
+            else
+                baseptr, offset, width = fptr
+                ty = eltype(baseptr)
+                i8 = $load_base_expr
+                bitstr = bitstring(i8)
+                sig = bitstr[end-offset-(width-1):end-offset]
+                zexted = lpad(sig, 8*sizeof(ty), '0')
+                return parse(ty, zexted; base=2)
+            end
+        end
+    else
+        ex = load_expr
+    end
+
+    rm_line_num_node!(ex)
+
+    signature = Expr(:call, :(Base.getproperty), :(x::$sym), :(f::Symbol))
+    body = Expr(:block, ref_expr, conv_expr, fptr_expr, ex)
     getproperty_expr = Expr(:function, signature, body)
+
     push!(node.exprs, getproperty_expr)
+
     return dag
 end
 

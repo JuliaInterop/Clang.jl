@@ -37,7 +37,9 @@ function resolve_dependency!(dag::ExprDAG, node::ExprNode{FunctionProto})
         else
             tycu = getTypeDeclaration(ty)
             file, line, col = get_file_line_column(cursor)
-            error("There is no definition for $(cursor)'s parameter: $(tycu) at $file:$line:$col")
+            cspell = spelling(cursor)
+            tspell = spelling(tycu)
+            error("There is no definition for $cspell's parameter: $tspell at $file:$line:$col")
         end
     end
     return dag
@@ -62,7 +64,9 @@ function resolve_dependency!(dag::ExprDAG, node::ExprNode{FunctionNoProto})
     else
         tycu = getTypeDeclaration(ty)
         file, line, col = get_file_line_column(cursor)
-        error("There is no definition for $(cursor)'s return type: $(tycu) at $file:$line:$col")
+        cspell = spelling(cursor)
+        tspell = spelling(tycu)
+        error("There is no definition for $cspell's return type: $tspell at $file:$line:$col")
     end
     return dag
 end
@@ -80,7 +84,9 @@ function resolve_dependency!(dag::ExprDAG, node::ExprNode{TypedefElaborated})
     else
         tycu = getTypeDeclaration(ty)
         file, line, col = get_file_line_column(cursor)
-        error("There is no definition for $(cursor)'s underlying type: $(tycu) at $file:$line:$col")
+        cspell = spelling(cursor)
+        tspell = spelling(tycu)
+        error("There is no definition for $cspell's underlying type: $tspell at $file:$line:$col")
     end
     return dag
 end
@@ -103,7 +109,9 @@ function resolve_dependency!(dag::ExprDAG, node::ExprNode{TypedefDefault})
     else
         tycu = getTypeDeclaration(ty)
         file, line, col = get_file_line_column(cursor)
-        error("There is no definition for $(cursor)'s underlying type: $(spelling(tycu)) at $file:$line:$col")
+        cspell = spelling(cursor)
+        tspell = spelling(tycu)
+        error("There is no definition for $cspell's underlying type: $tspell at $file:$line:$col")
     end
     return dag
 end
@@ -139,7 +147,9 @@ function resolve_dependency!(dag::ExprDAG, node::ExprNode{<:AbstractStructNodeTy
             # pass
         else
             file, line, col = get_file_line_column(cursor)
-            error("There is no definition for $(cursor)'s field: $c at $file:$line:$col")
+            cspell = spelling(cursor)
+            fspell = spelling(c)
+            error("There is no definition for $cspell's field: $fspell at $file:$line:$col")
         end
     end
     return dag

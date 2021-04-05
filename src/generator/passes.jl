@@ -29,6 +29,7 @@ function (x::CollectTopLevelNode)(dag::ExprDAG, options::Dict)
     general_options = get(options, "general", Dict())
     is_local_only = get(general_options, "is_local_header_only", true)
     skip_defs = get(general_options, "skip_compiler_definition", true)
+    whitelist = get(general_options, "definition_whitelist", [])
 
     log_options = get(general_options, "log", Dict())
     show_info = get(log_options, "CollectTopLevelNode_log", x.show_info)
@@ -39,15 +40,20 @@ function (x::CollectTopLevelNode)(dag::ExprDAG, options::Dict)
         header_name = spelling(tu_cursor)
         @info "[CollectTopLevelNode]: processing header: $header_name"
         for cursor in children(tu_cursor)
+            str = spelling(cursor)
+
             file_name = get_filename(cursor)
             if is_local_only && header_name != file_name
-                file_name ∉ x.dependant_headers && continue
+                if str ∉ whitelist
+                    file_name ∉ x.dependant_headers && continue
+                end
             end
 
-            str = spelling(cursor)
             if skip_defs && (startswith(str, "__") || (str ∈ x.compiler_defs_extra))
-                show_info && @info "[CollectTopLevelNode]: skip $str"
-                continue
+                if str ∉ whitelist
+                    show_info && @info "[CollectTopLevelNode]: skip $str"
+                    continue
+                end
             end
 
             collect_top_level_nodes!(dag, cursor)

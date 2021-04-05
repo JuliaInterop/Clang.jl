@@ -5,7 +5,7 @@
 library_name = "libclang"
 
 # the new generator is able to print everthing into one single file instead of a pair of two files.
-output_file_path = "./src/LibClang.jl"
+output_file_path = "../src/LibClang.jl"
 
 # if this entry is not empty, the generator will print the code below to the `output_file_path`.
 # module module_name
@@ -23,7 +23,7 @@ export_symbol_prefixes = ["CX", "clang_"]
 
 # the code in the following file will be copy-pasted to `output_file_path` before the generated code.
 # this is often used for applying custom patches, e.g. adding missing definitions.
-prologue_file_path = "./gen/prologue.jl"
+prologue_file_path = "./prologue.jl"
 
 # the code in the following file will be copy-pasted to `output_file_path` after the generated code.
 # this is often used for applying custom patches.
@@ -59,8 +59,11 @@ use_julia_native_enum_type = false
 # if you'd like to disable this behavior, please set this option to false.
 is_local_header_only = true
 
-# by default, we skip all of those compiler declarations.
+# by default, we skip all of those compiler definitions.
 skip_compiler_definition = true
+
+# definitions in the following list will never be skipped
+definition_whitelist = []
 
 # if this option is set to true, C code with a style of
 # ```c
@@ -120,16 +123,16 @@ opaque_as_mutable_struct = true
 field_access_method_list = []
 
 [codegen.macro]
-# it highly recommended to set this entry to "basic".
+# it‘s highly recommended to set this entry to "basic".
 # if you'd like to skip all of the macros, please set this entry to "disable".
 # if you'd like to aggressive translate macros to Julia, please set this entry to "aggressive".
 macro_mode = "basic"
 
-# if this entry is true, the generator prints the following message as comments.
+# if true, the generator prints the following message as comments.
 # "# Skipping MacroDefinition: ..."
 add_comment_for_skipped_macro = true
 
-# ignore any macros that is suffixed with "_H"
+# if true, ignore any macros that is suffixed with "_H"
 ignore_header_guards = true
 
 [general.log]

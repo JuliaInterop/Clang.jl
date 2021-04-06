@@ -203,7 +203,7 @@ end
 function rm_line_num_node!(ex::Expr)
     filter!(ex.args) do arg
         arg isa Expr && rm_line_num_node!(arg)
-        arg !isa LineNumberNode
+        !isa(arg, LineNumberNode)
     end
     return ex
 end

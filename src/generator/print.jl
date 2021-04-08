@@ -56,8 +56,7 @@ function pretty_print(io, node::ExprNode{TypedefFunction}, options::Dict)
     # print C code
     toks = tokenize(node.cursor)
     c_str = reduce((lhs, rhs) -> lhs * " " * rhs, [tok.text for tok in toks])
-    println(io, "# C code:")
-    println(io, "# " * c_str)
+    println(io, "# " * replace(c_str, "\n" => "\n#"))
 
     # print expr
     println(io, node.exprs[1])

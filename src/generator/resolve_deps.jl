@@ -38,8 +38,9 @@ function resolve_dependency!(dag::ExprDAG, node::ExprNode{FunctionProto})
             tycu = getTypeDeclaration(ty)
             file, line, col = get_file_line_column(cursor)
             cspell = spelling(cursor)
+            aspell = spelling(tycu)
             tspell = spelling(tycu)
-            error("There is no definition for $cspell's parameter: $tspell at $file:$line:$col")
+            error("There is no definition for $cspell's parameter: $aspell's type: [`$tspell`] at $file:$line:$col")
         end
     end
     return dag
@@ -66,7 +67,7 @@ function resolve_dependency!(dag::ExprDAG, node::ExprNode{FunctionNoProto})
         file, line, col = get_file_line_column(cursor)
         cspell = spelling(cursor)
         tspell = spelling(tycu)
-        error("There is no definition for $cspell's return type: $tspell at $file:$line:$col")
+        error("There is no definition for $cspell's return type: [`$tspell`] at $file:$line:$col")
     end
     return dag
 end
@@ -86,7 +87,7 @@ function resolve_dependency!(dag::ExprDAG, node::ExprNode{TypedefElaborated})
         file, line, col = get_file_line_column(cursor)
         cspell = spelling(cursor)
         tspell = spelling(tycu)
-        error("There is no definition for $cspell's underlying type: $tspell at $file:$line:$col")
+        error("There is no definition for $cspell's underlying type: [`$tspell`] at $file:$line:$col")
     end
     return dag
 end
@@ -111,7 +112,7 @@ function resolve_dependency!(dag::ExprDAG, node::ExprNode{TypedefDefault})
         file, line, col = get_file_line_column(cursor)
         cspell = spelling(cursor)
         tspell = spelling(tycu)
-        error("There is no definition for $cspell's underlying type: $tspell at $file:$line:$col")
+        error("There is no definition for $cspell's underlying type: [`$tspell`] at $file:$line:$col")
     end
     return dag
 end
@@ -149,7 +150,8 @@ function resolve_dependency!(dag::ExprDAG, node::ExprNode{<:AbstractStructNodeTy
             file, line, col = get_file_line_column(cursor)
             cspell = spelling(cursor)
             fspell = spelling(c)
-            error("There is no definition for $cspell's field: $fspell at $file:$line:$col")
+            tspell = spelling(getCursorType(c))
+            error("There is no definition for $cspell's field: $fspell's type: [`$tspell`] at $file:$line:$col")
         end
     end
     return dag

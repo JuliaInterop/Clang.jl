@@ -16,6 +16,14 @@ const DEFAULT_EXTRA_DEFINITIONS = Dict{Symbol,AbstractJuliaType}(
     :wchar_t => JuliaCwchar_t(),
     :va_list => JuliaUnsupported(),
     :FILE => JuliaCFILE(),
+    :__uint64_t => JuliaCuint64_t(),
+    :__uint32_t => JuliaCuint32_t(),
+    :__uint16_t => JuliaCuint16_t(),
+    :__uint8_t => JuliaCuint8_t(),
+    :__int64_t => JuliaCint64_t(),
+    :__int32_t => JuliaCint32_t(),
+    :__int16_t => JuliaCint16_t(),
+    :__int8_t => JuliaCint8_t(),
 )
 
 const EXTRA_DEFINITIONS = Dict{Symbol,AbstractJuliaType}()

@@ -889,6 +889,7 @@ function (x::ProloguePrinter)(dag::ExprDAG, options::Dict)
     show_info = get(log_options, "ProloguePrinter_log", x.show_info)
     module_name = get(general_options, "module_name", "")
     jll_pkg_name = get(general_options, "jll_pkg_name", "")
+    jll_pkg_extra = get(general_options, "jll_pkg_extra", [])
     prologue_file_path = get(general_options, "prologue_file_path", "")
     use_native_enum = get(general_options, "use_julia_native_enum_type", false)
 
@@ -905,6 +906,15 @@ function (x::ProloguePrinter)(dag::ExprDAG, options::Dict)
             println(io, "export $jll_pkg_name")
             println(io)
         end
+        # print extra _jll pkgs
+        if !isempty(jll_pkg_extra)
+            for jll in jll_pkg_extra
+                println(io, "using $jll")
+                println(io, "export $jll")
+                println(io)
+            end
+        end
+
         # print "using CEnum"
         if !use_native_enum
             println(io, "using CEnum")

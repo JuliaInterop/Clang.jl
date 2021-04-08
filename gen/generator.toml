@@ -18,6 +18,9 @@ module_name = "LibClang"
 # export jll_pkg_name
 jll_pkg_name = "Clang_jll"
 
+# for packages that have extra JLL package dependencies
+jll_pkg_extra = []
+
 # identifiers that starts with the string listed in this entry will be exported.
 export_symbol_prefixes = ["CX", "clang_"]
 

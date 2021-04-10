@@ -18,7 +18,7 @@ args = ["-I$INCLUDE_DIR"]
 end
 
 # add extra definition
-# @add_def time_t AbstractJuliaSIT JuliaCtime_t Ctime_t
+@add_def time_t AbstractJuliaSIT JuliaCtime_t Ctime_t
 
 # create context
 ctx = create_context(headers, args, options)

@@ -103,7 +103,7 @@ function find_dependent_headers(headers::Vector{T}, args::Vector, general_ops::D
         @info "skipped a dependent file: $file because it's in the blacklist."
     end
 
-    return dependent_headers
+    return normpath.(dependent_headers)
 end
 
 """

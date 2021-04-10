@@ -42,7 +42,7 @@ function (x::CollectTopLevelNode)(dag::ExprDAG, options::Dict)
         for cursor in children(tu_cursor)
             str = spelling(cursor)
 
-            file_name = get_filename(cursor)
+            file_name = get_filename(cursor) |> normpath
             if is_local_only && header_name != file_name
                 if str ∉ whitelist
                     file_name ∉ x.dependant_headers && continue

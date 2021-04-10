@@ -12,7 +12,12 @@ options = load_options(joinpath(@__DIR__, "generator.toml"))
 # add compiler flags
 args = ["-I$INCLUDE_DIR"]
 
-# # add extra definition
+@static if Sys.iswindows()
+    include("windows.jl")
+    push!(args, "--sysroot=$mingw_sys", "-I$mingw_inc")
+end
+
+# add extra definition
 # @add_def time_t AbstractJuliaSIT JuliaCtime_t Ctime_t
 
 # create context

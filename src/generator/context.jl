@@ -74,7 +74,7 @@ function find_dependent_headers(headers::Vector{T}, args::Vector, general_ops::D
                 for cursor in children(tu_cursor)
                     is_inclusion_directive(cursor) || continue
                     file = getIncludedFile(cursor)
-                    file_name = get_filename(file)
+                    file_name = get_filename(file) |> normpath
                     (isempty(file_name) || !isfile(file_name)) && continue
 
                     dir = dirname(file_name)

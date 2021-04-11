@@ -341,7 +341,7 @@ function (x::RemoveCircularReference)(dag::ExprDAG, options::Dict)
             end
 
             # there are cases where the circular reference can only be de-referenced at a
-            # typedef, so we for-loop another round for that.
+            # typedef, so we do the for-loop another round for that.
             if typedef_only
                 for i in 1:(length(cycle) - 1)
                     np, nc = cycle[i], cycle[i + 1]

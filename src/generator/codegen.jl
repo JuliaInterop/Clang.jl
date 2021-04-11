@@ -130,8 +130,30 @@ function emit!(dag::ExprDAG, node::ExprNode{TypedefMutualRef}, options::Dict; ar
         # pass
     else
         ty = getTypedefDeclUnderlyingType(node.cursor)
-        typedefee = translate(tojulia(ty), options)
-        replace_pointee!(typedefee, :Cvoid)
+        jlty = tojulia(ty)
+        leaf_ty = get_jl_leaf_type(jlty)
+
+        # first, we generate a fake struct
+        real_sym = leaf_ty.sym
+        fake_sym = Symbol("__JL_$real_sym")
+        push!(node.exprs, Expr(:struct, true, fake_sym, Expr(:block)))
+        # then, generate overloading methods to emulates the behavior
+        # `Base.unsafe_load`
+        signature = Expr(:call, :(Base.unsafe_load), :(x::Ptr{$fake_sym}))
+        body = Expr(:block, :(unsafe_load(Ptr{$real_sym}(x))))
+        push!(node.exprs, Expr(:function, signature, body))
+        # `Base.getproperty`
+        signature = Expr(:call, :(Base.getproperty), :(x::Ptr{$fake_sym}), :(f::Symbol))
+        body = Expr(:block, :(getproperty(Ptr{$real_sym}(x), f)))
+        push!(node.exprs, Expr(:function, signature, body))
+        # `Base.setproperty!`
+        signature = Expr(:call, :(Base.setproperty!), :(x::Ptr{$fake_sym}), :(f::Symbol), :v)
+        body = Expr(:block, :(setproperty!(Ptr{$real_sym}(x), f, v)))
+        push!(node.exprs, Expr(:function, signature, body))
+
+        # generate typedef
+        typedefee = translate(jlty, options)
+        replace_pointee!(typedefee, fake_sym)
         typedef_sym = make_symbol_safe(node.id)
         push!(node.exprs, :(const $typedef_sym = $typedefee))
     end
@@ -282,7 +304,7 @@ function emit!(dag::ExprDAG, node::ExprNode{<:AbstractStructNodeType}, options::
     if haskey(options, "field_access_method_list")
         if string(node.id) in options["field_access_method_list"]
             emit_getproperty_ptr!(dag, node, options)
-            emit_getproperty!(dag, node, options)
+            # emit_getproperty!(dag, node, options)
             emit_setproperty!(dag, node, options)
         end
     end
@@ -295,6 +317,7 @@ function emit!(dag::ExprDAG, node::ExprNode{StructMutualRef}, options::Dict; arg
     struct_sym = make_symbol_safe(node.id)
     block = Expr(:block)
     expr = Expr(:struct, false, struct_sym, block)
+    mutual_ref_field_cursors = CLCursor[]
     field_cursors = fields(getCursorType(node.cursor))
     field_cursors = isempty(field_cursors) ? children(node.cursor) : field_cursors
     for field_cursor in field_cursors
@@ -324,6 +347,7 @@ function emit!(dag::ExprDAG, node::ExprNode{StructMutualRef}, options::Dict; arg
                 comment = Expr(:(::), field_sym, deepcopy(translated))
                 push!(block.args, Expr(:block, comment))
                 replace_pointee!(translated, :Cvoid)
+                push!(mutual_ref_field_cursors, field_cursor)
             end
         end
 
@@ -332,10 +356,28 @@ function emit!(dag::ExprDAG, node::ExprNode{StructMutualRef}, options::Dict; arg
 
     push!(node.exprs, expr)
 
+    # make corrections by overloading `Base.getproperty` for those `Ptr{Cvoid}` fields
+    if !isempty(mutual_ref_field_cursors)
+        getter = Expr(:call, :(Base.getproperty), :(x::$struct_sym), :(f::Symbol))
+        body = Expr(:block)
+        for mrfield_cursor in mutual_ref_field_cursors
+            n = name(mrfield_cursor)
+            @assert !isempty(n)
+            fsym = make_symbol_safe(n)
+            fty = getCursorType(mrfield_cursor)
+            ty = translate(tojulia(fty), options)
+            ex = :(f === $(QuoteNode(fsym)) && return $ty(getfield(x, f)))
+            push!(body.args, ex)
+        end
+        push!(body.args, :(return getfield(x, f)))
+        getproperty_expr = Expr(:function, getter, body)
+        push!(node.exprs, getproperty_expr)
+    end
+
     if haskey(options, "field_access_method_list")
         if string(node.id) in options["field_access_method_list"]
             emit_getproperty_ptr!(dag, node, options)
-            emit_getproperty!(dag, node, options)
+            # emit_getproperty!(dag, node, options)
             emit_setproperty!(dag, node, options)
         end
     end

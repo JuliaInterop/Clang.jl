@@ -35,6 +35,9 @@ epilogue_file_path = ""
 # automatically detect system std headers especially for macOS users.
 auto_detect_system_headers = true
 
+# add "-I$clang_include_dir" to arguments
+use_clang_headers = true
+
 # header blacklist
 header_blacklist = []
 

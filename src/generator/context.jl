@@ -117,8 +117,12 @@ function create_context(headers::Vector, args::Vector=String[], options::Dict=Di
     general_options = get(options, "general", Dict())
     if get(general_options, "auto_detect_system_headers", true)
         sys_headers = "-I" .* find_std_headers()
+        args = vcat(sys_headers, args)
+    end
+
+    if get(general_options, "use_clang_headers", true)
         clang_incs = ["-I"*CLANG_INCLUDE]
-        args = vcat(sys_headers, clang_incs, args)
+        args = vcat(clang_incs, args)
     end
 
     dependent_headers = find_dependent_headers(headers, args, general_options)

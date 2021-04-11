@@ -56,7 +56,7 @@ function (x::CollectTopLevelNode)(dag::ExprDAG, options::Dict)
                 end
             end
 
-            collect_top_level_nodes!(dag, cursor)
+            collect_top_level_nodes!(dag, cursor, general_options)
         end
     end
     return dag
@@ -127,13 +127,14 @@ function (x::CollectNestedRecord)(dag::ExprDAG, options::Dict)
     general_options = get(options, "general", Dict())
     log_options = get(general_options, "log", Dict())
     show_info = get(log_options, "CollectNestedRecord_log", x.show_info)
+    use_deterministic_sym = get(general_options, "use_deterministic_symbol", false)
 
     new_tags = Dict{Symbol,Int}()
     for (id, i) in dag.tags
         node = dag.nodes[i]
         !is_record(node) && continue
         is_dup_tagtype(node) && continue
-        collect_nested_record!(dag, node, new_tags)
+        collect_nested_record!(dag, node, new_tags, use_deterministic_sym)
     end
 
     merge!(dag.tags, new_tags)
@@ -433,12 +434,13 @@ function (x::CatchDuplicatedAnonymousTags)(dag::ExprDAG, options::Dict)
         !haskey(dag.tags, node.id) && continue
         is_dup_tagtype(node) && continue
         # `is_anonymous` cannot be used here because the node type may have been changed.
-        !startswith(string(node.id), "##Ctag") && continue
+        sid = string(node.id)
+        !(startswith(sid, "##Ctag") || startswith(sid, "__JL_Ctag")) && continue
         for (id2, idx2) in dag.tags
             node2 = dag.nodes[idx2]
             node == node2 && continue
             is_dup_tagtype(node2) && continue
-            !startswith(string(node.id), "##Ctag") && continue
+            !(startswith(sid, "##Ctag") || startswith(sid, "__JL_Ctag")) && continue
             !is_same(node.cursor, node2.cursor) && continue
             show_info &&
                 @info "[CatchDuplicatedAnonymousTags]: found duplicated anonymous tag-type $(node2.id) at dag.nodes[$idx2]."
@@ -607,7 +609,8 @@ function (x::Codegen)(dag::ExprDAG, options::Dict)
     nested_tags = Dict{Symbol,CLCursor}()
     for (id, i) in dag.tags
         node = dag.nodes[i]
-        startswith(string(node.id), "##Ctag") || continue
+        startswith(string(node.id), "##Ctag") ||
+        startswith(string(node.id), "__JL_Ctag") || continue
         if node.type isa NestedRecords
             nested_tags[id] = node.cursor
         end

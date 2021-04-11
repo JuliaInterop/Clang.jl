@@ -4,14 +4,14 @@ To build an expression DAG, we need to collect all of the symbols in advance.
 """
 function collect_top_level_nodes! end
 
-function collect_top_level_nodes!(dag::ExprDAG, cursor::CLCursor)
+function collect_top_level_nodes!(dag::ExprDAG, cursor::CLCursor, options)
     dumpobj(cursor)
     file, line, col = get_file_line_column(cursor)
     error("No support for code at $file:$line:$col, please file an issue to Clang.jl.")
     return dag
 end
 
-function collect_top_level_nodes!(dag::ExprDAG, cursor::CLFunctionDecl)
+function collect_top_level_nodes!(dag::ExprDAG, cursor::CLFunctionDecl, options)
     func_type = getCursorType(cursor)
 
     if kind(func_type) == CXType_FunctionNoProto
@@ -31,7 +31,7 @@ function collect_top_level_nodes!(dag::ExprDAG, cursor::CLFunctionDecl)
     return dag
 end
 
-function collect_top_level_nodes!(dag::ExprDAG, cursor::CLTypedefDecl)
+function collect_top_level_nodes!(dag::ExprDAG, cursor::CLTypedefDecl, options)
     lhs_type = getTypedefDeclUnderlyingType(cursor)
 
     if has_elaborated_reference(lhs_type)
@@ -49,7 +49,7 @@ function collect_top_level_nodes!(dag::ExprDAG, cursor::CLTypedefDecl)
     return dag
 end
 
-function collect_top_level_nodes!(dag::ExprDAG, cursor::CLMacroDefinition)
+function collect_top_level_nodes!(dag::ExprDAG, cursor::CLMacroDefinition, options)
     if isMacroBuiltin(cursor)
         ty = MacroBuiltIn()
     elseif isMacroFunctionLike(cursor)
@@ -65,13 +65,15 @@ function collect_top_level_nodes!(dag::ExprDAG, cursor::CLMacroDefinition)
     return dag
 end
 
-function collect_top_level_nodes!(dag::ExprDAG, cursor::CLStructDecl)
+function collect_top_level_nodes!(dag::ExprDAG, cursor::CLStructDecl, options)
+    use_deterministic_sym = get(options, "use_deterministic_symbol", false)
+
     str = spelling(cursor)
 
     if isempty(str)
         @assert isCursorDefinition(cursor)
         ty = StructAnonymous()
-        id = gensym("Ctag")
+        id = use_deterministic_sym ? gensym_deterministic("Ctag") : gensym("Ctag")
     elseif is_forward_declaration(cursor)
         ty = StructForwardDecl()
         id = Symbol(str)
@@ -88,13 +90,15 @@ function collect_top_level_nodes!(dag::ExprDAG, cursor::CLStructDecl)
     return dag
 end
 
-function collect_top_level_nodes!(dag::ExprDAG, cursor::CLUnionDecl)
+function collect_top_level_nodes!(dag::ExprDAG, cursor::CLUnionDecl, options)
+    use_deterministic_sym = get(options, "use_deterministic_symbol", false)
+
     str = spelling(cursor)
 
     if isempty(str)
         @assert isCursorDefinition(cursor)
         ty = UnionAnonymous()
-        id = gensym("Ctag")
+        id = use_deterministic_sym ? gensym_deterministic("Ctag") : gensym("Ctag")
     elseif is_forward_declaration(cursor)
         ty = UnionForwardDecl()
         id = Symbol(str)
@@ -111,13 +115,15 @@ function collect_top_level_nodes!(dag::ExprDAG, cursor::CLUnionDecl)
     return dag
 end
 
-function collect_top_level_nodes!(dag::ExprDAG, cursor::CLEnumDecl)
+function collect_top_level_nodes!(dag::ExprDAG, cursor::CLEnumDecl, options)
+    use_deterministic_sym = get(options, "use_deterministic_symbol", false)
+
     str = spelling(cursor)
 
     if isempty(str)
         @assert isCursorDefinition(cursor)
         ty = EnumAnonymous()
-        id = gensym("Ctag")
+        id = use_deterministic_sym ? gensym_deterministic("Ctag") : gensym("Ctag")
     elseif is_forward_declaration(cursor)
         ty = EnumForwardDecl()
         id = Symbol(str)
@@ -135,16 +141,16 @@ function collect_top_level_nodes!(dag::ExprDAG, cursor::CLEnumDecl)
 end
 
 # skip macro expansion since the expanded info is already embedded in the AST
-collect_top_level_nodes!(dag::ExprDAG, cursor::CLMacroInstantiation) = dag
-collect_top_level_nodes!(dag::ExprDAG, cursor::CLMacroExpansion) = dag
+collect_top_level_nodes!(dag::ExprDAG, cursor::CLMacroInstantiation, options) = dag
+collect_top_level_nodes!(dag::ExprDAG, cursor::CLMacroExpansion, options) = dag
 
 # skip variable definition for now
 # isn't it insane to define a variable in an interface header file? what's the use case?
-collect_top_level_nodes!(dag::ExprDAG, cursor::CLVarDecl) = dag
+collect_top_level_nodes!(dag::ExprDAG, cursor::CLVarDecl, options) = dag
 
 # skip `#include <...>`
-collect_top_level_nodes!(dag::ExprDAG, cursor::CLInclusionDirective) = dag
-collect_top_level_nodes!(dag::ExprDAG, cursor::CLLastPreprocessing) = dag  # FIXME: fix cltype.jl
+collect_top_level_nodes!(dag::ExprDAG, cursor::CLInclusionDirective, options) = dag
+collect_top_level_nodes!(dag::ExprDAG, cursor::CLLastPreprocessing, options) = dag  # FIXME: fix cltype.jl
 
 # skip unexposed decl
 # collect_top_level_nodes!(dag::ExprDAG, cursor::CLUnexposedDecl) = dag

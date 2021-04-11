@@ -17,3 +17,16 @@ function is_same(cursor1, cursor2)
     # FIXME: in other cases, the code might be just compatible with each other, where we
     # need to compare the tokens.
 end
+
+# global counter for generating deterministic symbols
+const __JL_COUNTER = Threads.Atomic{Int}(0)
+
+reset_counter() = Threads.atomic_sub!(__JL_COUNTER,  __JL_COUNTER[])
+add_counter() = Threads.atomic_add!(__JL_COUNTER, 1)
+get_counter() = __JL_COUNTER[]
+
+function gensym_deterministic(x::AbstractString)
+    add_counter()
+    str = "__JL_" * x * "_" * string(get_counter())
+    return Symbol(str)
+end

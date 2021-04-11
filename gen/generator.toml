@@ -108,6 +108,9 @@ auto_mutability_blacklist = []
 # opposite to `auto_mutability_blacklist` and has a higher priority
 auto_mutability_whitelist = []
 
+# use deterministic symbol instead of `gensym` 
+use_deterministic_symbol = true
+
 [codegen]
 # map C's bool to Julia's Bool instead of `Cuchar` a.k.a `UInt8`.
 use_julia_bool = true

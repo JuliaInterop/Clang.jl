@@ -1,4 +1,4 @@
-function collect_nested_record!(dag::ExprDAG, node::ExprNode, new_tags)
+function collect_nested_record!(dag::ExprDAG, node::ExprNode, new_tags, isdeterministic)
     # fall back to use `children` if `fields` returns empty.
     field_cursors = fields(getCursorType(node.cursor))
     field_cursors = isempty(field_cursors) ? children(node.cursor) : field_cursors
@@ -12,12 +12,12 @@ function collect_nested_record!(dag::ExprDAG, node::ExprNode, new_tags)
         n_cursor = get_elaborated_cursor(field_ty)
         if isempty(string(leaf_jlty.sym))
             @assert isCursorDefinition(n_cursor)
-            n_id = gensym("Ctag")
+            n_id = isdeterministic ? gensym_deterministic("Ctag") : gensym("Ctag")
             ty = n_cursor isa CLStructDecl ? StructAnonymous() : UnionAnonymous()
             n_node = ExprNode(n_id, ty, n_cursor, Expr[], Int[])
             push!(dag.nodes, n_node)
             new_tags[n_id] = lastindex(dag.nodes)
-            collect_nested_record!(dag, n_node, new_tags)
+            collect_nested_record!(dag, n_node, new_tags, isdeterministic)
         elseif !haskey(dag.tags, leaf_jlty.sym)
             n_id = leaf_jlty.sym
             if isCursorDefinition(n_cursor)
@@ -25,7 +25,7 @@ function collect_nested_record!(dag::ExprDAG, node::ExprNode, new_tags)
                 n_node = ExprNode(n_id, ty, n_cursor, Expr[], Int[])
                 push!(dag.nodes, n_node)
                 new_tags[n_id] = lastindex(dag.nodes)
-                collect_nested_record!(dag, n_node, new_tags)
+                collect_nested_record!(dag, n_node, new_tags, isdeterministic)
             else
                 # then it must be an opaque
                 ty = n_cursor isa CLStructDecl ? StructOpaqueDecl() : UnionOpaqueDecl()

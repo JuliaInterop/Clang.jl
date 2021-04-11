@@ -187,6 +187,7 @@ end
 Run all passes.
 """
 function build!(ctx::Context, stage=BUILDSTAGE_ALL)
+    reset_counter()
     for pass in ctx.passes
         pass isa LinkTypedefToAnonymousTagType && @info "Building the DAG..."
         pass isa Codegen && @info "Emit Julia expressions..."

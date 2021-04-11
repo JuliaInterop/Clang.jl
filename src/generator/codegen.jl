@@ -295,7 +295,7 @@ function emit!(dag::ExprDAG, node::ExprNode{<:AbstractStructNodeType}, options::
     end
     push!(node.exprs, expr)
 
-    if startswith(string(node.id), "##Ctag")
+    if startswith(string(node.id), "##Ctag") || startswith(string(node.id), "__JL_Ctag")
         emit_getproperty_ptr!(dag, node, options)
         emit_getproperty!(dag, node, options)
         emit_setproperty!(dag, node, options)

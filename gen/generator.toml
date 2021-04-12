@@ -141,8 +141,9 @@ macro_mode = "basic"
 # "# Skipping MacroDefinition: ..."
 add_comment_for_skipped_macro = true
 
-# if true, ignore any macros that is suffixed with "_H"
+# if true, ignore any macros that is suffixed with "_H" or in the `ignore_header_guards_with_suffixes` list
 ignore_header_guards = true
+ignore_header_guards_with_suffixes = []
 
 [general.log]
 # CollectTopLevelNode_log = false

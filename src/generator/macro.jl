@@ -149,6 +149,36 @@ function is_macro_keyword_alias(toks)
     end
 end
 
+const C_OPERATORS = [
+    "*", "/", "%", "+", "-",
+    "<<", ">>",
+    "<", "<=", ">", ">=", "==", "!=",
+    "&", "|", "^", "&&", "||",
+]
+
+function is_macro_binary_operator(toks)
+    toks[1].kind != CXToken_Identifier && return false
+    if toks.size == 4 &&
+        toks[1].kind == CXToken_Identifier &&
+        (toks[2].kind == CXToken_Literal || toks[2].kind == CXToken_Identifier) &&
+        toks[3].kind == CXToken_Punctuation &&
+        (toks[4].kind == CXToken_Literal || toks[4].kind == CXToken_Identifier) &&
+        toks[3].text in C_OPERATORS
+        return true
+    elseif toks.size == 6 &&
+        toks[1].kind == CXToken_Identifier &&
+        toks[2].kind == CXToken_Punctuation &&
+        (toks[3].kind == CXToken_Literal || toks[3].kind == CXToken_Identifier) &&
+        toks[4].kind == CXToken_Punctuation &&
+        (toks[5].kind == CXToken_Literal || toks[5].kind == CXToken_Identifier) &&
+        toks[6].kind == CXToken_Punctuation &&
+        toks[4].text in C_OPERATORS
+        return true
+    else
+        return false
+    end
+end
+
 function add_spaces_for_macros(lhs, rhs)
     if startswith(rhs, "(")  # handle function call
         if endswith(lhs, "?") || endswith(lhs, ":") # handle trinary operator
@@ -209,7 +239,13 @@ function macro_emit!(dag::ExprDAG, node::ExprNode{MacroDefault}, options::Dict)
     mode = get(options, "macro_mode", "basic")
     print_comment = get(options, "add_comment_for_skipped_macro", true)
     ignore_header_guards = get(options, "ignore_header_guards", true)
-    ignore_header_guards && endswith(string(node.id), "_H") && return dag
+    suffixes = get(options, "ignore_header_guards_with_suffixes", [])
+    push!(suffixes, "_H")
+    if ignore_header_guards
+        for suffix in suffixes
+            endswith(string(node.id), suffix) && return dag
+        end
+    end
 
     cursor = node.cursor
     tokens = tokenize(cursor)
@@ -247,6 +283,29 @@ function macro_emit!(dag::ExprDAG, node::ExprNode{MacroDefault}, options::Dict)
         else
             print_comment && push!(node.exprs, get_comment_expr(tokens))
         end
+        return dag
+    end
+
+    if is_macro_binary_operator(tokens)
+        op_tok = tokens.size == 4 ? tokens[3] : tokens[4]
+        op = op_tok.text == "/" ? Symbol("÷") :
+             op_tok.text == "^" ? Symbol("⊻") : Symbol(op_tok.text)
+        lhs_literal_tok = tokens.size == 4 ? tokens[2] : tokens[3]
+        rhs_literal_tok = tokens.size == 4 ? tokens[4] : tokens[5]
+        if lhs_literal_tok.kind == CXToken_Literal
+            lhs_literals = literally(lhs_literal_tok)
+        else
+            lhs_literals = lhs_literal_tok.text
+        end
+        if rhs_literal_tok.kind == CXToken_Literal
+            rhs_literals = literally(rhs_literal_tok)
+        else
+            rhs_literals = rhs_literal_tok.text
+        end
+        sym = make_symbol_safe(tokens[1].text)
+        lhs_sym = Meta.parse(lhs_literals)
+        rhs_sym = Meta.parse(rhs_literals)
+        push!(node.exprs, Expr(:const, Expr(:(=), sym, Expr(:call, op, lhs_sym, rhs_sym))))
         return dag
     end
 

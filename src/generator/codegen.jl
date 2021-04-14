@@ -9,6 +9,8 @@ emit!(dag::ExprDAG, node::ExprNode, options::Dict; args...) = dag
 ############################### Function ###############################
 
 function emit!(dag::ExprDAG, node::ExprNode{FunctionProto}, options::Dict; args...)
+    conflict_syms = get(options, "function_argument_conflict_symbols", [])
+
     cursor = node.cursor
 
     library_name = options["library_name"]
@@ -37,6 +39,8 @@ function emit!(dag::ExprDAG, node::ExprNode{FunctionProto}, options::Dict; args.
         # handle name collisions
         if haskey(dag.tags, ns) || haskey(dag.ids, ns) || haskey(dag.ids_extra, ns)
             safe_name *= "_"
+        elseif safe_name ∈ conflict_syms
+            safe_name = "_" * safe_name
         end
         arg_names[i] = Symbol(safe_name)
     end

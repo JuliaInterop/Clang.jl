@@ -131,6 +131,10 @@ opaque_as_mutable_struct = true
 # generate getproperty/setproperty! methods for the types in the following list
 field_access_method_list = []
 
+# the generator will prefix the function argument names in the following list with a "_" to 
+# prevent the generated symbols from conflicting with the symbols defined and exported in Base.
+function_argument_conflict_symbols = ["Ptr"]
+
 [codegen.macro]
 # it‘s highly recommended to set this entry to "basic".
 # if you'd like to skip all of the macros, please set this entry to "disable".
@@ -144,6 +148,7 @@ add_comment_for_skipped_macro = true
 # if true, ignore any macros that is suffixed with "_H" or in the `ignore_header_guards_with_suffixes` list
 ignore_header_guards = true
 ignore_header_guards_with_suffixes = []
+
 
 [general.log]
 # CollectTopLevelNode_log = false

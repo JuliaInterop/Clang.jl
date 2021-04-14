@@ -89,6 +89,20 @@ function is_macro_constants(toks)
     end
 end
 
+function is_macro_constants_with_conv(toks)
+    if toks.size == 5 &&
+        toks[1].kind == CXToken_Identifier &&
+        toks[2].kind == CXToken_Identifier &&
+        toks[3].kind == CXToken_Punctuation &&
+        toks[4].kind == CXToken_Literal &&
+        toks[5].kind == CXToken_Punctuation
+        # `#define CONSTANT_LITERALS_CONV CLONG ( 1 )`
+        return true
+    else
+        return false
+    end
+end
+
 function is_macro_naive_alias(toks)
     if toks.size == 2 &&
         toks[1].kind == CXToken_Identifier &&
@@ -181,6 +195,39 @@ function is_macro_binary_operator(toks)
     end
 end
 
+function is_macro_naive_arithmetic(toks)
+    toks[1].kind != CXToken_Identifier && return false
+    toks.size < 4 && return false
+
+    # only allows `Identifier`, `Literal`, `Punctuation`(C_OPERATORS and brackets)
+    is_naive = all(toks) do tok
+        if tok.kind == CXToken_Punctuation
+            return tok.text ∈ C_OPERATORS || tok.text == "(" || tok.text == ")"
+        elseif tok.kind == CXToken_Identifier
+            return !startswith(tok.text, "__")  # ignore compiler defs
+        else
+            return true
+        end
+    end
+
+    # if there is no binary operator, skip
+    all(x->x.text ∉ C_OPERATORS, toks) && return false
+
+    # try to parse the expression
+    if is_naive
+        try
+            txts = [tok.kind == CXToken_Literal ? literally(tok) : tok.text for tok in collect(toks)[2:end]]
+            str = reduce(add_spaces_for_macros, txts)
+            Meta.parse(str)
+            return true
+        catch err
+            # pass
+        end
+    end
+
+    return false
+end
+
 function add_spaces_for_macros(lhs, rhs)
     if startswith(rhs, "(")  # handle function call
         if endswith(lhs, "?") || endswith(lhs, ":") # handle trinary operator
@@ -253,9 +300,11 @@ function macro_emit!(dag::ExprDAG, node::ExprNode{MacroDefault}, options::Dict)
     cursor = node.cursor
     tokens = tokenize(cursor)
 
-    if !ignore_pure_def && is_macro_pure_definition(tokens)
-        sym = make_symbol_safe(tokens[1].text)
-        push!(node.exprs, Expr(:const, Expr(:(=), sym, :nothing)))
+    if is_macro_pure_definition(tokens)
+        if !ignore_pure_def
+            sym = make_symbol_safe(tokens[1].text)
+            push!(node.exprs, Expr(:const, Expr(:(=), sym, :nothing)))
+        end
         return dag
     end
 
@@ -265,6 +314,16 @@ function macro_emit!(dag::ExprDAG, node::ExprNode{MacroDefault}, options::Dict)
         sym = make_symbol_safe(tokens[1].text)
         literal_sym = Meta.parse(literals)
         push!(node.exprs, Expr(:const, Expr(:(=), sym, literal_sym)))
+        return dag
+    end
+
+    if is_macro_constants_with_conv(tokens)
+        literal_tok = tokens[4]
+        literals = literally(literal_tok)
+        sym = make_symbol_safe(tokens[1].text)
+        csym = make_symbol_safe(tokens[2].text)
+        literal_sym = Meta.parse(literals)
+        push!(node.exprs, Expr(:const, Expr(:(=), sym, Expr(:call, csym, literal_sym))))
         return dag
     end
 
@@ -309,6 +368,24 @@ function macro_emit!(dag::ExprDAG, node::ExprNode{MacroDefault}, options::Dict)
         lhs_sym = Meta.parse(lhs_literals)
         rhs_sym = Meta.parse(rhs_literals)
         push!(node.exprs, Expr(:const, Expr(:(=), sym, Expr(:call, op, lhs_sym, rhs_sym))))
+        return dag
+    end
+
+    if is_macro_naive_arithmetic(tokens)
+        sym = make_symbol_safe(tokens[1].text)
+        txts = Vector{String}(undef, length(tokens)-1)
+        for (i, tok) in enumerate(collect(tokens)[2:end])
+            if tok.kind == CXToken_Literal
+                txts[i] = literally(tok)
+            elseif tok.kind == CXToken_Punctuation && tok.text ∈ C_OPERATORS
+                txts[i] = tok.text == "/" ? "÷" :
+                          tok.text == "^" ? "⊻" : tok.text
+            else
+                txts[i] = tok.text
+            end
+        end
+        str = reduce(add_spaces_for_macros, txts)
+        push!(node.exprs, Expr(:const, Expr(:(=), sym, Meta.parse(str))))
         return dag
     end
 

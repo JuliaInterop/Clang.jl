@@ -164,6 +164,7 @@ function is_macro_binary_operator(toks)
         toks[3].kind == CXToken_Punctuation &&
         (toks[4].kind == CXToken_Literal || toks[4].kind == CXToken_Identifier) &&
         toks[3].text in C_OPERATORS
+        # `#define SINGLE_BINARY_OP A | B`
         return true
     elseif toks.size == 6 &&
         toks[1].kind == CXToken_Identifier &&
@@ -173,6 +174,7 @@ function is_macro_binary_operator(toks)
         (toks[5].kind == CXToken_Literal || toks[5].kind == CXToken_Identifier) &&
         toks[6].kind == CXToken_Punctuation &&
         toks[4].text in C_OPERATORS
+        # `#define SINGLE_BINARY_OP (A | B)`
         return true
     else
         return false
@@ -240,17 +242,18 @@ function macro_emit!(dag::ExprDAG, node::ExprNode{MacroDefault}, options::Dict)
     print_comment = get(options, "add_comment_for_skipped_macro", true)
     ignore_header_guards = get(options, "ignore_header_guards", true)
     suffixes = get(options, "ignore_header_guards_with_suffixes", [])
-    push!(suffixes, "_H")
     if ignore_header_guards
+        endswith(string(node.id), "_H") && return dag
         for suffix in suffixes
             endswith(string(node.id), suffix) && return dag
         end
     end
+    ignore_pure_def = get(options, "ignore_pure_definition", true)
 
     cursor = node.cursor
     tokens = tokenize(cursor)
 
-    if is_macro_pure_definition(tokens)
+    if !ignore_pure_def && is_macro_pure_definition(tokens)
         sym = make_symbol_safe(tokens[1].text)
         push!(node.exprs, Expr(:const, Expr(:(=), sym, :nothing)))
         return dag

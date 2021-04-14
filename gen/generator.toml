@@ -133,7 +133,7 @@ field_access_method_list = []
 
 # the generator will prefix the function argument names in the following list with a "_" to 
 # prevent the generated symbols from conflicting with the symbols defined and exported in Base.
-function_argument_conflict_symbols = ["Ptr"]
+function_argument_conflict_symbols = []
 
 [codegen.macro]
 # it‘s highly recommended to set this entry to "basic".
@@ -149,6 +149,8 @@ add_comment_for_skipped_macro = true
 ignore_header_guards = true
 ignore_header_guards_with_suffixes = []
 
+# if true, ignore those C pure definition macros
+ignore_pure_definition = true
 
 [general.log]
 # CollectTopLevelNode_log = false

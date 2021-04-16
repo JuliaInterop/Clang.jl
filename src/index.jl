@@ -3,7 +3,7 @@
 Provide a shared context for creating translation units.
 
 # Arguments
-- `exclude_decls_from_PCH`: whether to allow enumeration of "local" declarations.
+- `exclude_decls_from_PCH`: whether we only want to see "local" declarations (that did not come from a previous precompiled header). If false, we want to see all declarations.
 - `display_diagnostics`: whether to display diagnostics.
 """
 mutable struct Index
@@ -23,7 +23,7 @@ mutable struct Index
         return obj
     end
 end
-Index(diagnostic::Bool) = Index(false, diagnostic)
+Index(diagnostic::Bool) = Index(false, diagnostic)  #TODO: set `exclude_decls_from_PCH` on after adding PCH support
 Index() = Index(true)
 
 Base.unsafe_convert(::Type{CXIndex}, x::Index) = x.ptr

@@ -1,0 +1,6 @@
+[general]
+library_name = "libclang"
+output_file_path = "./LibClang.jl"
+module_name = "LibClang"
+jll_pkg_name = "Clang_jll"
+export_symbol_prefixes = ["CX", "clang_"]

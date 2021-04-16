@@ -1,0 +1,171 @@
+[general]
+# it could also be an expression as long as `Meta.parse` can parse this string successfully.
+# basically, it should be the `expression` in the following code:
+# ccall((function_name, expression), returntype, (argtype1, ...), argvalue1, ...)
+library_name = "libclang"
+
+# the new generator is able to print everthing into one single file instead of a pair of two files.
+output_file_path = "../src/LibClang.jl"
+
+# if this entry is not empty, the generator will print the code below to the `output_file_path`.
+# module module_name
+# 
+# end # module
+module_name = "LibClang"
+
+# if this entry is not empty, the generator will print the code below to the `output_file_path`.
+# using jll_pkg_name
+# export jll_pkg_name
+jll_pkg_name = "Clang_jll"
+
+# for packages that have extra JLL package dependencies
+jll_pkg_extra = []
+
+# identifiers that starts with the string listed in this entry will be exported.
+export_symbol_prefixes = ["CX", "clang_"]
+
+# the code in the following file will be copy-pasted to `output_file_path` before the generated code.
+# this is often used for applying custom patches, e.g. adding missing definitions.
+prologue_file_path = "./prologue.jl"
+
+# the code in the following file will be copy-pasted to `output_file_path` after the generated code.
+# this is often used for applying custom patches.
+epilogue_file_path = ""
+
+# automatically detect system std headers especially for macOS users.
+auto_detect_system_headers = true
+
+# add "-I$clang_include_dir" to arguments
+use_clang_headers = true
+
+# header blacklist
+header_blacklist = []
+
+# node with an id in the `printer_blacklist` will be ignored in the printing passes. 
+# this is very useful for custom editing. 
+printer_blacklist = [
+    "CINDEX_EXPORTS",
+    "CINDEX_VERSION",
+    "CINDEX_VERSION_STRING",
+    "CINDEX_LINKAGE",
+    "CINDEX_DEPRECATED",
+    "LLVM_CLANG_C_STRICT_PROTOTYPES_BEGIN",
+    "LLVM_CLANG_C_STRICT_PROTOTYPES_END",
+    "LLVM_CLANG_C_EXTERN_C_BEGIN",
+    "LLVM_CLANG_C_EXTERN_C_END"
+]
+
+# Julia's `@enum` do not allow duplicated values, so by default, C enums are translated to 
+# CEnum.jl's `@cenum`. 
+# if this entry is true, those duplicated enum constants are commented. 
+use_julia_native_enum_type = false
+
+# by default, only those declarations in the local header file are processed. 
+# for example, those declarations in the standard C library will be ignored. 
+# if you'd like to disable this behavior, please set this option to false.
+is_local_header_only = true
+
+# by default, we skip all of those compiler definitions.
+skip_compiler_definition = true
+
+# definitions in the following list will never be skipped
+definition_whitelist = []
+
+# if this option is set to true, C code with a style of
+# ```c
+# typedef struct {
+#     int x;
+# } my_struct;
+# ```
+# will be generated as:
+# ```julia
+# struct my_struct
+#     x::Cint
+# end
+# ```
+# instead of
+# ```julia
+# struct var"##Ctag#NUM"
+#     x::Cint
+# end
+# const my_struct = var"##Ctag#NUM"
+# ```
+smart_de_anonymize = true
+
+# if this option is set to true, those structs that are not necessary to be an 
+# immutable struct will be changed to be a mutable struct. 
+# this option is default to false, do read the paragraph below before using this feature.
+auto_mutability = true
+
+# if you feel like certain structs should not be generated as mutable struct, please add them in the following list. 
+# for example, if a C function accepts a vector of some type as its argument:
+#     void foo(mutable_type *list, int n);
+# when calling this function via `ccall`, passing a `Vector{mutable_type}(undef, n)` to the first
+# argument will trigger a crash, one needs to use `Ref{NTuple{n,mutable_type}}()` instead.
+# this is not convenient and that's where the `auto_mutability_blacklist` comes in.
+auto_mutability_blacklist = []
+
+# opposite to `auto_mutability_blacklist` and has a higher priority
+auto_mutability_whitelist = []
+
+# use deterministic symbol instead of `gensym` 
+use_deterministic_symbol = true
+
+[codegen]
+# map C's bool to Julia's Bool instead of `Cuchar` a.k.a `UInt8`.
+use_julia_bool = true
+
+# set this to true if the C routine always expects a NUL-terminated string.
+# TODO: support filtering
+always_NUL_terminated_string = true
+
+# generate strictly typed function
+is_function_strictly_typed = false
+
+# if true, opaque pointers in function arguments will be translated to `Ptr{Cvoid}`.
+opaque_func_arg_as_PtrCvoid = false
+
+# if true, opaque types are translated to `mutable struct` instead of `Cvoid`.
+opaque_as_mutable_struct = true
+
+# generate getproperty/setproperty! methods for the types in the following list
+field_access_method_list = []
+
+# the generator will prefix the function argument names in the following list with a "_" to 
+# prevent the generated symbols from conflicting with the symbols defined and exported in Base.
+function_argument_conflict_symbols = []
+
+[codegen.macro]
+# it‘s highly recommended to set this entry to "basic".
+# if you'd like to skip all of the macros, please set this entry to "disable".
+# if you'd like to aggressive translate macros to Julia, please set this entry to "aggressive".
+macro_mode = "basic"
+
+# if true, the generator prints the following message as comments.
+# "# Skipping MacroDefinition: ..."
+add_comment_for_skipped_macro = true
+
+# if true, ignore any macros that is suffixed with "_H" or in the `ignore_header_guards_with_suffixes` list
+ignore_header_guards = true
+ignore_header_guards_with_suffixes = []
+
+# if true, ignore those C pure definition macros
+ignore_pure_definition = true
+
+[general.log]
+# CollectTopLevelNode_log = false
+# LinkTypedefToAnonymousTagType_log = false
+# IndexDefinition_log = false
+# ResolveDependency_log = false
+# RemoveCircularReference_log = false
+# TopologicalSort_log = false
+# CodegenPreprocessing_log = false
+# DeAnonymize_log = false
+# Audit_log = true
+# Codegen_log = false
+# CodegenMacro_log = false
+# CodegenPostprocessing_log = false
+# GeneralPrinter_log = true
+# ProloguePrinter_log = true
+# EpiloguePrinter_log = true
+# TweakMutability_log = false

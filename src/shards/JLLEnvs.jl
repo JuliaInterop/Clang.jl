@@ -1,0 +1,142 @@
+module JLLEnvs
+
+using Pkg.Artifacts
+using Downloads
+
+const JLL_ENV_SHARDS_URL = "https://raw.githubusercontent.com/JuliaPackaging/BinaryBuilderBase.jl/master/Artifacts.toml"
+const JLL_ENV_SHARDS = Dict{String,Any}()
+
+function __init__()
+    merge!(JLL_ENV_SHARDS, Artifacts.load_artifacts_toml(Downloads.download(JLL_ENV_SHARDS_URL)))
+end
+
+const JLL_ENV_HOST_TRIPLE = "x86_64-linux-musl"
+const JLL_ENV_GCC_SHARD_NAME = "GCCBootstrap"
+const JLL_ENV_SYSTEM_SHARD_NAME = "PlatformSupport"
+
+const JLL_ENV_GCC_VERSIONS = VersionNumber[
+    v"4.8.5",
+    v"5.2.0",
+    v"6.1.0",
+    v"7.1.0",
+    v"8.1.0",
+    v"9.1.0",
+    v"10.2.0",
+]
+
+const JLL_ENV_TRIPLES = String[
+    "aarch64-linux-gnu",           # Tier 1
+    "aarch64-linux-musl",
+    "armv7l-linux-gnueabihf",
+    "armv7l-linux-musleabihf",
+    "i686-linux-gnu",              # Tier 1
+    "i686-linux-musl",
+    "i686-w64-mingw32",            # Tier 2
+    "powerpc64le-linux-gnu",
+    "x86_64-apple-darwin14",       # Tier 1
+    "x86_64-linux-gnu",            # Tier 1
+    "x86_64-linux-musl",
+    "x86_64-unknown-freebsd11.1",  # Tier 1
+    "x86_64-w64-mingw32",          # Tier 1
+]
+
+const JLL_ENV_CLANG_TARGETS_MAPPING = Dict(
+    "aarch64-linux-gnu"=>"aarch64-unknown-linux-gnu",
+    "aarch64-linux-musl"=>"aarch64-unknown-linux-musl",
+    "armv7l-linux-gnueabihf"=>"armv7l-unknown-linux-gnueabihf",
+    "armv7l-linux-musleabihf"=>"armv7l-unknown-linux-musleabihf",
+    "i686-linux-gnu"=>"i686-unknown-linux-gnu",
+    "i686-linux-musl"=>"i686-unknown-linux-musl",
+    "i686-w64-mingw32"=>"i686-w64-windows-gnu",
+    "powerpc64le-linux-gnu"=>"powerpc64le-unknown-linux-gnu",
+    "x86_64-apple-darwin14"=>"x86_64-apple-darwin14",
+    "x86_64-linux-gnu"=>"x86_64-unknown-linux-gnu",
+    "x86_64-linux-musl"=>"x86_64-unknown-linux-musl",
+    "x86_64-unknown-freebsd11.1"=>"x86_64-unknown-freebsd11.1",
+    "x86_64-w64-mingw32"=>"x86_64-w64-windows-gnu",
+)
+
+triple2target(triple::String) = get(JLL_ENV_CLANG_TARGETS_MAPPING, triple, "unknown")
+
+function get_gcc_shard_key(triple::String, version::VersionNumber=v"4.8.5")
+    @assert version ∈ JLL_ENV_GCC_VERSIONS "Wrong JLL gcc version: $version. Please choose a version listed in `JLL_ENV_GCC_VERSIONS`."
+    @assert triple ∈ JLL_ENV_TRIPLES "Wrong JLL target triple: $triple. Please choose a triple listed in `JLL_ENV_TRIPLES`."
+    return "$JLL_ENV_GCC_SHARD_NAME-$triple.v$version.$JLL_ENV_HOST_TRIPLE.unpacked"
+end
+
+function get_system_shard_key(triple::String)
+    @assert triple ∈ JLL_ENV_TRIPLES "Wrong JLL target triple: $triple. Please choose a triple listed in `JLL_ENV_TRIPLES`."
+    platform_keys = filter(collect(keys(JLL_ENV_SHARDS))) do key
+        startswith(key, "$JLL_ENV_SYSTEM_SHARD_NAME-$triple") &&
+        endswith(key, "$JLL_ENV_HOST_TRIPLE.unpacked")
+    end
+    return platform_keys[]
+end
+
+function get_environment_info(triple::String, version::VersionNumber=v"4.8.5")
+    @assert triple ∈ JLL_ENV_TRIPLES "Wrong JLL target triple: $triple. Please choose a triple listed in `JLL_ENV_TRIPLES`."
+    gcc = JLL_ENV_SHARDS[get_gcc_shard_key(triple, version)][]
+    sys = JLL_ENV_SHARDS[get_system_shard_key(triple)][]
+    gcc_download = gcc["download"][]
+    sys_download = sys["download"][]
+    info = [
+        (id=gcc["git-tree-sha1"], url=gcc_download["url"], chk=gcc_download["sha256"]),
+        (id=sys["git-tree-sha1"], url=sys_download["url"], chk=sys_download["sha256"]),
+    ]
+    return info
+end
+
+function get_system_dirs(triple::String, version::VersionNumber=v"4.8.5")
+    info = get_environment_info(triple, version)
+    gcc_info = info[1]
+    sys_info = info[2]
+
+    # download shards
+    Artifacts.download_artifact(Base.SHA1(gcc_info.id), gcc_info.url, gcc_info.chk)
+    # Artifacts.download_artifact(Base.SHA1(sys_info.id), sys_info.url, sys_info.chk)
+
+    # -isystem paths
+    gcc_triple_path = Artifacts.artifact_path(Base.SHA1(gcc_info.id))
+    # sys_triple_path = Artifacts.artifact_path(Base.SHA1(sys_info.id))
+    isys = String[]
+    if triple == "x86_64-apple-darwin14"
+        # compiler
+        push!(isys, joinpath(gcc_triple_path, "lib", "gcc", triple, string(version), "include"))
+        push!(isys, joinpath(gcc_triple_path, "lib", "gcc", triple, string(version), "include-fixed"))
+        push!(isys, joinpath(gcc_triple_path, triple, "include"))
+        # sys-root
+        push!(isys, joinpath(gcc_triple_path, triple, "sys-root", "usr", "include"))
+        push!(isys, joinpath(gcc_triple_path, triple, "sys-root", "System", "Library", "Frameworks"))
+    elseif triple == "x86_64-w64-mingw32" || triple == "i686-w64-mingw32"
+        # compiler
+        push!(isys, joinpath(gcc_triple_path, "lib", "gcc", triple, string(version), "include"))
+        push!(isys, joinpath(gcc_triple_path, "lib", "gcc", triple, string(version), "include-fixed"))
+        push!(isys, joinpath(gcc_triple_path, triple, "include"))
+        # sys-root
+        push!(isys, joinpath(gcc_triple_path, triple, "sys-root", "include"))
+    elseif triple == "i686-linux-gnu" || triple == "x86_64-linux-gnu" ||
+            triple == "aarch64-linux-gnu" || triple == "armv7l-linux-gnueabihf" ||
+            triple == "powerpc64le-linux-gnu" || triple == "x86_64-unknown-freebsd11.1"
+        # compiler
+        push!(isys, joinpath(gcc_triple_path, "lib", "gcc", triple, string(version), "include"))
+        push!(isys, joinpath(gcc_triple_path, "lib", "gcc", triple, string(version), "include-fixed"))
+        push!(isys, joinpath(gcc_triple_path, triple, "include"))
+        # sys-root
+        push!(isys, joinpath(gcc_triple_path, triple, "sys-root", "usr", "include"))
+    elseif triple == "i686-linux-musl" || triple == "x86_64-linux-musl" ||
+            triple == "aarch64-linux-musl" || triple == "armv7l-linux-musleabihf"
+        # compiler
+        push!(isys, joinpath(gcc_triple_path, "lib", "gcc", triple, string(version), "include"))
+        push!(isys, joinpath(gcc_triple_path, triple, "include"))
+        # sys-root
+        push!(isys, joinpath(gcc_triple_path, triple, "sys-root", "usr", "include"))
+    else
+        error("Platform $triple is not supported.")
+    end
+
+    @assert all(isdir, isys) "failed to setup environment due to missing dirs, please file an issue at https://github.com/JuliaInterop/Clang.jl/issues."
+
+    return normpath.(isys)
+end
+
+end # module

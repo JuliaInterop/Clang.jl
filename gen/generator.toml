@@ -32,15 +32,6 @@ prologue_file_path = "./prologue.jl"
 # this is often used for applying custom patches.
 epilogue_file_path = ""
 
-# automatically detect system std headers especially for macOS users.
-auto_detect_system_headers = true
-
-# add "-I$clang_include_dir" to arguments
-use_clang_headers = true
-
-# header blacklist
-header_blacklist = []
-
 # node with an id in the `printer_blacklist` will be ignored in the printing passes. 
 # this is very useful for custom editing. 
 printer_blacklist = [
@@ -60,16 +51,13 @@ printer_blacklist = [
 # if this entry is true, those duplicated enum constants are commented. 
 use_julia_native_enum_type = false
 
+# use deterministic symbol instead of `gensym`-generated `var"##XXX"`
+use_deterministic_symbol = true
+
 # by default, only those declarations in the local header file are processed. 
 # for example, those declarations in the standard C library will be ignored. 
 # if you'd like to disable this behavior, please set this option to false.
 is_local_header_only = true
-
-# by default, we skip all of those compiler definitions.
-skip_compiler_definition = true
-
-# definitions in the following list will never be skipped
-definition_whitelist = []
 
 # if this option is set to true, C code with a style of
 # ```c
@@ -93,23 +81,21 @@ definition_whitelist = []
 smart_de_anonymize = true
 
 # if this option is set to true, those structs that are not necessary to be an 
-# immutable struct will be changed to be a mutable struct. 
+# immutable struct will be generated as a mutable struct. 
 # this option is default to false, do read the paragraph below before using this feature.
 auto_mutability = true
 
 # if you feel like certain structs should not be generated as mutable struct, please add them in the following list. 
-# for example, if a C function accepts a vector of some type as its argument:
+# for example, if a C function accepts a `Vector` of some type as its argument like:
 #     void foo(mutable_type *list, int n);
 # when calling this function via `ccall`, passing a `Vector{mutable_type}(undef, n)` to the first
-# argument will trigger a crash, one needs to use `Ref{NTuple{n,mutable_type}}()` instead.
+# argument will trigger a crash, the reason is mutable structs are not stored inline within a `Vector`,
+# one should use `Ref{NTuple{n,mutable_type}}()` instead.
 # this is not convenient and that's where the `auto_mutability_blacklist` comes in.
 auto_mutability_blacklist = []
 
 # opposite to `auto_mutability_blacklist` and has a higher priority
 auto_mutability_whitelist = []
-
-# use deterministic symbol instead of `gensym` 
-use_deterministic_symbol = true
 
 [codegen]
 # map C's bool to Julia's Bool instead of `Cuchar` a.k.a `UInt8`.

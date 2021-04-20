@@ -23,13 +23,12 @@ mutable struct CollectTopLevelNode <: AbstractPass
     show_info::Bool
 end
 CollectTopLevelNode(tus, dhs, info) = CollectTopLevelNode(tus, dhs, COMPILER_DEFINITIONS_EXTRA, info)
-CollectTopLevelNode(tus, dhs=String[]; info=false) = CollectTopLevelNode(tus, dhs, info)
+CollectTopLevelNode(tus, dhs; info=false) = CollectTopLevelNode(tus, dhs, info)
 
 function (x::CollectTopLevelNode)(dag::ExprDAG, options::Dict)
     general_options = get(options, "general", Dict())
     is_local_only = get(general_options, "is_local_header_only", true)
-    skip_defs = get(general_options, "skip_compiler_definition", true)
-    whitelist = get(general_options, "definition_whitelist", [])
+    skip_defs = get(general_options, "skip_compiler_definition", false)
 
     log_options = get(general_options, "log", Dict())
     show_info = get(log_options, "CollectTopLevelNode_log", x.show_info)
@@ -44,16 +43,12 @@ function (x::CollectTopLevelNode)(dag::ExprDAG, options::Dict)
 
             file_name = get_filename(cursor) |> normpath
             if is_local_only && header_name != file_name
-                if str ∉ whitelist
-                    file_name ∉ x.dependant_headers && continue
-                end
+                file_name ∉ x.dependant_headers && continue
             end
 
             if skip_defs && (startswith(str, "__") || (str ∈ x.compiler_defs_extra))
-                if str ∉ whitelist
-                    show_info && @info "[CollectTopLevelNode]: skip $str"
-                    continue
-                end
+                show_info && @info "[CollectTopLevelNode]: skip $str"
+                continue
             end
 
             collect_top_level_nodes!(dag, cursor, general_options)
@@ -997,7 +992,7 @@ function (x::CodegenMacro)(dag::ExprDAG, options::Dict)
     macro_options = get(codegen_options, "macro", Dict())
     macro_mode = get(macro_options, "macro_mode", "basic")
 
-    macro_mode == "none" && return dag
+    (macro_mode == "none" || macro_mode == "disable") && return dag
 
     for node in dag.nodes
         node.type isa AbstractMacroNodeType || continue

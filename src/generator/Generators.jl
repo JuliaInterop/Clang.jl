@@ -30,6 +30,9 @@ using ..Clang:
     getTypeDeclaration,
     hasAttrs
 
+using ..JLLEnvs
+using ..JLLEnvs: get_system_dirs, triple2target
+
 include("utils.jl")
 
 include("jltypes.jl")
@@ -99,7 +102,7 @@ export AbstractContext, Context
 export parse_header!, parse_headers!
 export create_context
 export build!, BUILDSTAGE_ALL, BUILDSTAGE_NO_PRINTING, BUILDSTAGE_PRINTING_ONLY
-export find_std_headers, find_dependent_headers
+export get_triple, get_default_args, detect_headers, find_dependent_headers
 export get_identifier_node, get_tagtype_node
 
 load_options(path::AbstractString) = TOML.parse(read(path, String))

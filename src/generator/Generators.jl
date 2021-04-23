@@ -52,6 +52,7 @@ export ExprNode, ExprDAG
 export get_nodes, get_exprs
 
 include("top_level.jl")
+include("system_deps.jl")
 include("nested.jl")
 include("resolve_deps.jl")
 include("preprocessing.jl")
@@ -80,6 +81,7 @@ export Codegen
 export CodegenMacro
 export CodegenPostprocessing
 export CodegenPreprocessing
+export CollectDependantSystemNode
 export CollectNestedRecord
 export CollectTopLevelNode
 export CommonPrinter

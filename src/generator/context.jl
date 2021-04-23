@@ -40,8 +40,7 @@ function find_dependent_headers(headers::Vector{T}, args::Vector, system_dirs) w
             try
                 parse_header(idx, header, args, flags)
             catch err
-                @info "failed to parse $header, skip..."
-                retheow(err)
+                @warn "failed to parse $header, skip..."
                 continue
             end
             tu = parse_header(idx, header, args, flags)
@@ -79,13 +78,17 @@ a option dict.
 function create_context(headers::Vector, args::Vector=String[], options::Dict=Dict())
     ctx = Context(; options)
 
+    push!(args, "-nostdinc")
+
     system_dirs = map(x->x[9:end], filter(x->startswith(x, "-isystem"), args))
-    dependant_headers = find_dependent_headers(headers, args, system_dirs)
+    dependent_headers = find_dependent_headers(headers, args, system_dirs)
 
     parse_headers!(ctx, headers, args)
 
-    push!(ctx.passes, CollectTopLevelNode(ctx.trans_units, dependant_headers, system_dirs))
+    push!(ctx.passes, CollectTopLevelNode(ctx.trans_units, dependent_headers, system_dirs))
     push!(ctx.passes, LinkTypedefToAnonymousTagType())
+    push!(ctx.passes, IndexDefinition())
+    push!(ctx.passes, CollectDependantSystemNode())
     push!(ctx.passes, IndexDefinition())
     push!(ctx.passes, CollectNestedRecord())
     push!(ctx.passes, FindOpaques())

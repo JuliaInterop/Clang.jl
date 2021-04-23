@@ -67,7 +67,7 @@ end
 function get_system_shard_key(triple::String)
     @assert triple ∈ JLL_ENV_TRIPLES "Wrong JLL target triple: $triple. Please choose a triple listed in `JLL_ENV_TRIPLES`."
     platform_keys = filter(collect(keys(JLL_ENV_SHARDS))) do key
-        startswith(key, "$JLL_ENV_SYSTEM_SHARD_NAME-$triple") &&
+        startswith(key, "$JLL_ENV_SYSTEM_SHARD_NAME-$triple.") &&
         endswith(key, "$JLL_ENV_HOST_TRIPLE.unpacked")
     end
     return platform_keys[]
@@ -115,8 +115,8 @@ function get_system_dirs(triple::String, version::VersionNumber=v"4.8.5")
         # sys-root
         push!(isys, joinpath(gcc_triple_path, triple, "sys-root", "include"))
     elseif triple == "i686-linux-gnu" || triple == "x86_64-linux-gnu" ||
-            triple == "aarch64-linux-gnu" || triple == "armv7l-linux-gnueabihf" ||
-            triple == "powerpc64le-linux-gnu" || triple == "x86_64-unknown-freebsd11.1"
+            triple == "aarch64-linux-gnu" || triple == "powerpc64le-linux-gnu" ||
+            triple == "x86_64-unknown-freebsd11.1"
         # compiler
         push!(isys, joinpath(gcc_triple_path, "lib", "gcc", triple, string(version), "include"))
         push!(isys, joinpath(gcc_triple_path, "lib", "gcc", triple, string(version), "include-fixed"))
@@ -124,12 +124,26 @@ function get_system_dirs(triple::String, version::VersionNumber=v"4.8.5")
         # sys-root
         push!(isys, joinpath(gcc_triple_path, triple, "sys-root", "usr", "include"))
     elseif triple == "i686-linux-musl" || triple == "x86_64-linux-musl" ||
-            triple == "aarch64-linux-musl" || triple == "armv7l-linux-musleabihf"
+            triple == "aarch64-linux-musl"
         # compiler
         push!(isys, joinpath(gcc_triple_path, "lib", "gcc", triple, string(version), "include"))
         push!(isys, joinpath(gcc_triple_path, triple, "include"))
         # sys-root
         push!(isys, joinpath(gcc_triple_path, triple, "sys-root", "usr", "include"))
+    elseif triple == "armv7l-linux-gnueabihf"
+        # compiler
+        push!(isys, joinpath(gcc_triple_path, "lib", "gcc", "arm-linux-gnueabihf", string(version), "include"))
+        push!(isys, joinpath(gcc_triple_path, "lib", "gcc", "arm-linux-gnueabihf", string(version), "include-fixed"))
+        push!(isys, joinpath(gcc_triple_path, "arm-linux-gnueabihf", "include"))
+        # sys-root
+        push!(isys, joinpath(gcc_triple_path, "arm-linux-gnueabihf", "sys-root", "usr", "include"))
+    elseif triple == "armv7l-linux-musleabihf"
+        # compiler
+        push!(isys, joinpath(gcc_triple_path, "lib", "gcc", "arm-linux-musleabihf", string(version), "include"))
+        push!(isys, joinpath(gcc_triple_path, "lib", "gcc", "arm-linux-musleabihf", string(version), "include-fixed"))
+        push!(isys, joinpath(gcc_triple_path, "arm-linux-musleabihf", "include"))
+        # sys-root
+        push!(isys, joinpath(gcc_triple_path, "arm-linux-musleabihf", "sys-root", "usr", "include"))
     else
         error("Platform $triple is not supported.")
     end

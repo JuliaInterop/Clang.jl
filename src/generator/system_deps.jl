@@ -1,12 +1,12 @@
 """
-    collect_dependant_system_nodes!(dag::ExprDAG, node::ExprNode, system_nodes)
-Collect dependant nodes in the system headers.
+    collect_dependent_system_nodes!(dag::ExprDAG, node::ExprNode, system_nodes)
+Collect dependent nodes in the system headers.
 """
-function collect_dependant_system_nodes! end
+function collect_dependent_system_nodes! end
 
-collect_dependant_system_nodes!(dag::ExprDAG, node::ExprNode, system_nodes) = dag
+collect_dependent_system_nodes!(dag::ExprDAG, node::ExprNode, system_nodes) = dag
 
-function collect_dependant_system_nodes!(dag::ExprDAG, node::ExprNode{FunctionProto}, system_nodes)
+function collect_dependent_system_nodes!(dag::ExprDAG, node::ExprNode{FunctionProto}, system_nodes)
     cursor = node.cursor
     args = get_function_args(cursor)
     types = CLType[getArgType(getCursorType(cursor), i - 1) for i in 1:length(args)]
@@ -26,99 +26,79 @@ function collect_dependant_system_nodes!(dag::ExprDAG, node::ExprNode{FunctionPr
             (hasref && is_jl_pointer(jlty))
             # pass
         else
-            tycu = getTypeDeclaration(ty)
-            file, line, col = get_file_line_column(cursor)
-            cspell = spelling(cursor)
-            aspell = spelling(tycu)
-            tspell = spelling(tycu)
-            error("There is no definition for $cspell's parameter: $aspell's type: [`$tspell`] at $file:$line:$col")
+            # FIXME: this assumes duplicated symbols in the system headers are the same.
+            idx = findfirst(x->x.id == leaf_ty.sym, dag.sys)
+            idx != nothing && push!(system_nodes, dag.sys[idx])
         end
     end
-    return dag
+    return system_nodes
 end
 
-function resolve_dependency!(dag::ExprDAG, node::ExprNode{FunctionNoProto})
+function collect_dependent_system_nodes!(dag::ExprDAG, node::ExprNode{FunctionNoProto}, system_nodes)
     cursor = node.cursor
     @assert isempty(get_function_args(cursor))
     ty = getCursorResultType(cursor)
     jlty = tojulia(ty)
     leaf_ty = get_jl_leaf_type(jlty)
 
-    is_jl_basic(leaf_ty) && return dag
+    is_jl_basic(leaf_ty) && return system_nodes
 
     hasref = has_elaborated_reference(ty)
-    if hasref && haskey(dag.tags, leaf_ty.sym)
-        push!(node.adj, dag.tags[leaf_ty.sym])
-    elseif !hasref && haskey(dag.ids, leaf_ty.sym)
-        push!(node.adj, dag.ids[leaf_ty.sym])
-    elseif haskey(dag.ids_extra, leaf_ty.sym)
+    if (hasref && haskey(dag.tags, leaf_ty.sym)) ||
+        (!hasref && haskey(dag.ids, leaf_ty.sym)) ||
+        haskey(dag.ids_extra, leaf_ty.sym)
         # pass
     else
-        tycu = getTypeDeclaration(ty)
-        file, line, col = get_file_line_column(cursor)
-        cspell = spelling(cursor)
-        tspell = spelling(tycu)
-        error("There is no definition for $cspell's return type: [`$tspell`] at $file:$line:$col")
+        # FIXME: this assumes duplicated symbols in the system headers are the same.
+        idx = findfirst(x->x.id == leaf_ty.sym, dag.sys)
+        idx != nothing && push!(system_nodes, dag.sys[idx])
     end
-    return dag
+
+    return system_nodes
 end
 
-function resolve_dependency!(dag::ExprDAG, node::ExprNode{TypedefElaborated})
+function collect_dependent_system_nodes!(dag::ExprDAG, node::ExprNode{TypedefElaborated}, system_nodes)
     cursor = node.cursor
     ty = getTypedefDeclUnderlyingType(cursor)
     jlty = tojulia(ty)
     leaf_ty = get_jl_leaf_type(jlty)
 
-    is_jl_basic(leaf_ty) && return dag
+    is_jl_basic(leaf_ty) && return system_nodes
 
     if haskey(dag.tags, leaf_ty.sym)
-        push!(node.adj, dag.tags[leaf_ty.sym])
+        # pass
     else
-        tycu = getTypeDeclaration(ty)
-        file, line, col = get_file_line_column(cursor)
-        cspell = spelling(cursor)
-        tspell = spelling(tycu)
-        error("There is no definition for $cspell's underlying type: [`$tspell`] at $file:$line:$col")
+        # FIXME: this assumes duplicated symbols in the system headers are the same.
+        idx = findfirst(x->x.id == leaf_ty.sym, dag.sys)
+        idx != nothing && push!(system_nodes, dag.sys[idx])
     end
-    return dag
+
+    return system_nodes
 end
 
-function resolve_dependency!(dag::ExprDAG, node::ExprNode{TypedefDefault})
+function collect_dependent_system_nodes!(dag::ExprDAG, node::ExprNode{TypedefDefault}, system_nodes)
     cursor = node.cursor
     ty = getTypedefDeclUnderlyingType(cursor)
     jlty = tojulia(ty)
     leaf_ty = get_jl_leaf_type(jlty)
 
-    is_jl_basic(leaf_ty) && return dag
+    is_jl_basic(leaf_ty) && return system_nodes
 
     # do nothing for unknowns since we just skip them in the downstream passes
-    is_jl_unknown(leaf_ty) && return dag
+    is_jl_unknown(leaf_ty) && return system_nodes
 
-    if haskey(dag.ids, leaf_ty.sym)
-        push!(node.adj, dag.ids[leaf_ty.sym])
-    elseif haskey(dag.ids_extra, leaf_ty.sym)
+    if haskey(dag.ids, leaf_ty.sym) || haskey(dag.ids_extra, leaf_ty.sym)
         # pass
     else
-        tycu = getTypeDeclaration(ty)
-        file, line, col = get_file_line_column(cursor)
-        cspell = spelling(cursor)
-        tspell = spelling(tycu)
-        error("There is no definition for $cspell's underlying type: [`$tspell`] at $file:$line:$col")
+        # FIXME: this assumes duplicated symbols in the system headers are the same.
+        idx = findfirst(x->x.id == leaf_ty.sym, dag.sys)
+        idx != nothing && push!(system_nodes, dag.sys[idx])
     end
-    return dag
+
+    return system_nodes
 end
 
-function resolve_dependency!(dag::ExprDAG, node::ExprNode{TypedefToAnonymous})
-    s = node.type.sym
-    @assert haskey(dag.tags, s)
-    push!(node.adj, dag.tags[s])
-    return dag
-end
-
-# ignore non-opaque forward decls, that's our purpose
-resolve_dependency!(dag::ExprDAG, node::ExprNode{StructForwardDecl}) = dag
-
-function resolve_dependency!(dag::ExprDAG, node::ExprNode{<:AbstractStructNodeType})
+function collect_dependent_system_nodes!(dag::ExprDAG, node::ExprNode{<:AbstractStructNodeType}, system_nodes)
     cursor = node.cursor
     for c in fields(getCursorType(cursor))
         ty = getCursorType(c)
@@ -128,32 +108,16 @@ function resolve_dependency!(dag::ExprDAG, node::ExprNode{<:AbstractStructNodeTy
         is_jl_basic(leaf_ty) && continue
 
         hasref = has_elaborated_reference(ty)
-        if hasref && haskey(dag.tags, leaf_ty.sym)
-            push!(node.adj, dag.tags[leaf_ty.sym])
-        elseif !hasref && haskey(dag.ids, leaf_ty.sym)
-            push!(node.adj, dag.ids[leaf_ty.sym])
-        elseif haskey(dag.ids_extra, leaf_ty.sym)
-            # pass
-        elseif occursin("anonymous", spelling(ty))
-            # it could be a nested anonymous tag-type.
+        if (hasref && haskey(dag.tags, leaf_ty.sym)) ||
+            (!hasref && haskey(dag.ids, leaf_ty.sym)) ||
+            haskey(dag.ids_extra, leaf_ty.sym) ||
+            occursin("anonymous", spelling(ty))
             # pass
         else
-            file, line, col = get_file_line_column(cursor)
-            cspell = spelling(cursor)
-            fspell = spelling(c)
-            tspell = spelling(getCursorType(c))
-            error("There is no definition for $cspell's field: $fspell's type: [`$tspell`] at $file:$line:$col")
+            # FIXME: this assumes duplicated symbols in the system headers are the same.
+            idx = findfirst(x->x.id == leaf_ty.sym, dag.sys)
+            idx != nothing && push!(system_nodes, dag.sys[idx])
         end
     end
     return dag
 end
-
-# enums are just "named integers", no dependency needs to be resolved.
-resolve_dependency!(dag::ExprDAG, node::ExprNode{<:AbstractEnumNodeType}) = dag
-
-# to workaround some nasty field alignment problems, we simply generate Julia structs with
-# a single `data::NTuple` field for union nodes, so no need to add any dependencies here.
-resolve_dependency!(dag::ExprDAG, node::ExprNode{<:AbstractUnionNodeType}) = dag
-
-# for now, do nothing for macros, just assume they are written in a correct order
-resolve_dependency!(dag::ExprDAG, node::ExprNode{<:AbstractMacroNodeType}) = dag

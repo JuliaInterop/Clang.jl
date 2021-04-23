@@ -13,7 +13,7 @@ See also [`collect_top_level_nodes!`](@ref).
 """
 mutable struct CollectTopLevelNode <: AbstractPass
     trans_units::Vector{TranslationUnit}
-    dependant_headers::Vector{String}
+    dependent_headers::Vector{String}
     system_dirs::Vector{String}
     show_info::Bool
 end
@@ -33,7 +33,7 @@ function (x::CollectTopLevelNode)(dag::ExprDAG, options::Dict)
         @info "[CollectTopLevelNode]: processing header: $header_name"
         for cursor in children(tu_cursor)
             file_name = get_filename(cursor) |> normpath
-            if is_local_only && header_name != file_name && file_name ∉ x.dependant_headers
+            if is_local_only && header_name != file_name && file_name ∉ x.dependent_headers
                 if any(sysdir->startswith(file_name, sysdir), x.system_dirs)
                     collect_top_level_nodes!(dag.sys, cursor, general_options)
                 end
@@ -48,19 +48,52 @@ end
 
 """
     CollectDependantSystemNode <: AbstractPass
-In this pass, those dependant tags/identifiers are to the `dag.nodes`.
+In this pass, those dependent tags/identifiers are to the `dag.nodes`.
 
 See also [`collect_system_nodes!`](@ref).
 """
 mutable struct CollectDependantSystemNode <: AbstractPass
+    dependents::Vector{ExprNode}
     show_info::Bool
 end
-CollectDependantSystemNode(; info=true) = CollectDependantSystemNode(info)
+CollectDependantSystemNode(; info=true) = CollectDependantSystemNode(ExprNode[], info)
 
 function (x::CollectDependantSystemNode)(dag::ExprDAG, options::Dict)
     general_options = get(options, "general", Dict())
     log_options = get(general_options, "log", Dict())
     show_info = get(log_options, "CollectDependantSystemNode_log", x.show_info)
+
+    empty!(x.dependents)
+    for node in dag.nodes
+        collect_dependent_system_nodes!(dag, node, x.dependents)
+    end
+    isempty(x.dependents) && return dag
+
+    unique!(x.dependents)
+    show_info && @warn "[CollectDependantSystemNode]: found symbols in the system headers: $([n.id for n in x.dependents])"
+
+    for dn in x.dependents
+        pushfirst!(dag.nodes, dn)
+    end
+
+    deps = copy(x.dependents)
+    while !isempty(x.dependents)
+        empty!(x.dependents)
+        for node in deps
+            collect_dependent_system_nodes!(dag, node, x.dependents)
+        end
+
+        # break earlier
+        isempty(x.dependents) && break
+
+        unique!(x.dependents)
+        show_info && @warn "[CollectDependantSystemNode]: found symbols in the system headers: $([n.id for n in x.dependents])"
+        for dn in x.dependents
+            pushfirst!(dag.nodes, dn)
+        end
+
+        deps = copy(x.dependents)
+    end
 
     return dag
 end

@@ -4,14 +4,14 @@ To build an expression DAG, we need to collect all of the symbols in advance.
 """
 function collect_top_level_nodes! end
 
-function collect_top_level_nodes!(dag::ExprDAG, cursor::CLCursor, options)
+function collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLCursor, options)
     dumpobj(cursor)
     file, line, col = get_file_line_column(cursor)
     error("No support for code at $file:$line:$col, please file an issue to Clang.jl.")
-    return dag
+    return nodes
 end
 
-function collect_top_level_nodes!(dag::ExprDAG, cursor::CLFunctionDecl, options)
+function collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLFunctionDecl, options)
     func_type = getCursorType(cursor)
 
     if kind(func_type) == CXType_FunctionNoProto
@@ -26,12 +26,12 @@ function collect_top_level_nodes!(dag::ExprDAG, cursor::CLFunctionDecl, options)
 
     id = Symbol(spelling(cursor))
 
-    push!(dag.nodes, ExprNode(id, ty, cursor, Expr[], Int[]))
+    push!(nodes, ExprNode(id, ty, cursor, Expr[], Int[]))
 
-    return dag
+    return nodes
 end
 
-function collect_top_level_nodes!(dag::ExprDAG, cursor::CLTypedefDecl, options)
+function collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLTypedefDecl, options)
     lhs_type = getTypedefDeclUnderlyingType(cursor)
 
     if has_elaborated_reference(lhs_type)
@@ -44,12 +44,12 @@ function collect_top_level_nodes!(dag::ExprDAG, cursor::CLTypedefDecl, options)
 
     id = Symbol(spelling(cursor))
 
-    push!(dag.nodes, ExprNode(id, ty, cursor, Expr[], Int[]))
+    push!(nodes, ExprNode(id, ty, cursor, Expr[], Int[]))
 
-    return dag
+    return nodes
 end
 
-function collect_top_level_nodes!(dag::ExprDAG, cursor::CLMacroDefinition, options)
+function collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLMacroDefinition, options)
     if isMacroBuiltin(cursor)
         ty = MacroBuiltIn()
     elseif isMacroFunctionLike(cursor)
@@ -60,12 +60,12 @@ function collect_top_level_nodes!(dag::ExprDAG, cursor::CLMacroDefinition, optio
 
     id = Symbol(spelling(cursor))
 
-    push!(dag.nodes, ExprNode(id, ty, cursor, Expr[], Int[]))
+    push!(nodes, ExprNode(id, ty, cursor, Expr[], Int[]))
 
-    return dag
+    return nodes
 end
 
-function collect_top_level_nodes!(dag::ExprDAG, cursor::CLStructDecl, options)
+function collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLStructDecl, options)
     use_deterministic_sym = get(options, "use_deterministic_symbol", false)
 
     str = spelling(cursor)
@@ -85,12 +85,12 @@ function collect_top_level_nodes!(dag::ExprDAG, cursor::CLStructDecl, options)
         id = Symbol(str)
     end
 
-    push!(dag.nodes, ExprNode(id, ty, cursor, Expr[], Int[]))
+    push!(nodes, ExprNode(id, ty, cursor, Expr[], Int[]))
 
-    return dag
+    return nodes
 end
 
-function collect_top_level_nodes!(dag::ExprDAG, cursor::CLUnionDecl, options)
+function collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLUnionDecl, options)
     use_deterministic_sym = get(options, "use_deterministic_symbol", false)
 
     str = spelling(cursor)
@@ -110,12 +110,12 @@ function collect_top_level_nodes!(dag::ExprDAG, cursor::CLUnionDecl, options)
         id = Symbol(str)
     end
 
-    push!(dag.nodes, ExprNode(id, ty, cursor, Expr[], Int[]))
+    push!(nodes, ExprNode(id, ty, cursor, Expr[], Int[]))
 
-    return dag
+    return nodes
 end
 
-function collect_top_level_nodes!(dag::ExprDAG, cursor::CLEnumDecl, options)
+function collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLEnumDecl, options)
     use_deterministic_sym = get(options, "use_deterministic_symbol", false)
 
     str = spelling(cursor)
@@ -135,23 +135,23 @@ function collect_top_level_nodes!(dag::ExprDAG, cursor::CLEnumDecl, options)
         id = Symbol(str)
     end
 
-    push!(dag.nodes, ExprNode(id, ty, cursor, Expr[], Int[]))
+    push!(nodes, ExprNode(id, ty, cursor, Expr[], Int[]))
 
-    return dag
+    return nodes
 end
 
 # skip macro expansion since the expanded info is already embedded in the AST
-collect_top_level_nodes!(dag::ExprDAG, cursor::CLMacroInstantiation, options) = dag
-collect_top_level_nodes!(dag::ExprDAG, cursor::CLMacroExpansion, options) = dag
+collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLMacroInstantiation, options) = nodes
+collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLMacroExpansion, options) = nodes
 
 # skip variable definition for now
 # isn't it insane to define a variable in an interface header file? what's the use case?
-collect_top_level_nodes!(dag::ExprDAG, cursor::CLVarDecl, options) = dag
+collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLVarDecl, options) = nodes
 
 # skip `#include <...>`
-collect_top_level_nodes!(dag::ExprDAG, cursor::CLInclusionDirective, options) = dag
-collect_top_level_nodes!(dag::ExprDAG, cursor::CLLastPreprocessing, options) = dag  # FIXME: fix cltype.jl
+collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLInclusionDirective, options) = nodes
+collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLLastPreprocessing, options) = nodes  # FIXME: fix cltype.jl
 
 # skip unexposed decl
-# collect_top_level_nodes!(dag::ExprDAG, cursor::CLUnexposedDecl) = dag
-# collect_top_level_nodes!(dag::ExprDAG, cursor::CLFirstDecl) = dag  # FIXME: fix cltype.jl
+# collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLUnexposedDecl) = nodes
+# collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLFirstDecl) = nodes  # FIXME: fix cltype.jl

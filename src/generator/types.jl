@@ -170,13 +170,13 @@ end
     ExprDAG
 An expression DAG.
 """
-struct ExprDAG
-    nodes::Vector{ExprNode}
-    tags::Dict{Symbol,Int}
-    ids::Dict{Symbol,Int}
-    ids_extra::Dict{Symbol,AbstractJuliaType}
+Base.@kwdef struct ExprDAG
+    nodes::Vector{ExprNode} = ExprNode[]
+    sys::Vector{ExprNode} = ExprNode[]
+    tags::Dict{Symbol,Int} = Dict{Symbol,Int}()
+    ids::Dict{Symbol,Int} = Dict{Symbol,Int}()
+    ids_extra::Dict{Symbol,AbstractJuliaType} = EXTRA_DEFINITIONS
 end
-ExprDAG(nodes; ids_extra=EXTRA_DEFINITIONS) = ExprDAG(nodes, Dict(), Dict(), ids_extra)
 
 get_nodes(x::ExprDAG) = x.nodes
 get_exprs(x::ExprNode) = x.exprs

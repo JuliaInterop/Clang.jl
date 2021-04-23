@@ -1,14 +1,11 @@
 abstract type AbstractContext end
 
-mutable struct Context <: AbstractContext
-    index::Index
-    trans_units::Vector{TranslationUnit}
-    passes::Vector{AbstractPass}
-    dag::ExprDAG
-    options::Dict
-end
-function Context(options; index=Index(true), tus=[], passes=[], dag=ExprDAG(ExprNode[]))
-    return Context(index, tus, passes, dag, options)
+Base.@kwdef mutable struct Context <: AbstractContext
+    index::Index = Index(true)
+    trans_units::Vector{TranslationUnit} = TranslationUnit[]
+    passes::Vector{AbstractPass} = AbstractPass[]
+    dag::ExprDAG = ExprDAG()
+    options::Dict = Dict()
 end
 
 function parse_header!(ctx::AbstractContext, header::AbstractString, args)
@@ -80,14 +77,14 @@ Create a context from a vector of paths of headers, a vector of compiler flags a
 a option dict.
 """
 function create_context(headers::Vector, args::Vector=String[], options::Dict=Dict())
-    ctx = Context(options)
+    ctx = Context(; options)
 
     system_dirs = map(x->x[9:end], filter(x->startswith(x, "-isystem"), args))
     dependant_headers = find_dependent_headers(headers, args, system_dirs)
 
     parse_headers!(ctx, headers, args)
 
-    push!(ctx.passes, CollectTopLevelNode(ctx.trans_units, dependant_headers))
+    push!(ctx.passes, CollectTopLevelNode(ctx.trans_units, dependant_headers, system_dirs))
     push!(ctx.passes, LinkTypedefToAnonymousTagType())
     push!(ctx.passes, IndexDefinition())
     push!(ctx.passes, CollectNestedRecord())

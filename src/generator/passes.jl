@@ -4,11 +4,6 @@ Supertype for all passes.
 """
 abstract type AbstractPass end
 
-const COMPILER_DEFINITIONS_EXTRA = [
-    "OBJC_NEW_PROPERTIES",  # https://reviews.llvm.org/D72970
-    "_LP64",  # this is a compiler flag and is always defined along with "__LP64__"
-]
-
 """
     CollectTopLevelNode <: AbstractPass
 In this pass, all tags and identifiers in all translation units are collected for
@@ -19,41 +14,54 @@ See also [`collect_top_level_nodes!`](@ref).
 mutable struct CollectTopLevelNode <: AbstractPass
     trans_units::Vector{TranslationUnit}
     dependant_headers::Vector{String}
-    compiler_defs_extra::Vector{String}
+    system_dirs::Vector{String}
     show_info::Bool
 end
-CollectTopLevelNode(tus, dhs, info) = CollectTopLevelNode(tus, dhs, COMPILER_DEFINITIONS_EXTRA, info)
-CollectTopLevelNode(tus, dhs; info=false) = CollectTopLevelNode(tus, dhs, info)
+CollectTopLevelNode(tus, dhs, sys; info=false) = CollectTopLevelNode(tus, dhs, sys, info)
 
 function (x::CollectTopLevelNode)(dag::ExprDAG, options::Dict)
     general_options = get(options, "general", Dict())
-    is_local_only = get(general_options, "is_local_header_only", true)
-    skip_defs = get(general_options, "skip_compiler_definition", false)
-
     log_options = get(general_options, "log", Dict())
+    is_local_only = get(general_options, "is_local_header_only", true)
     show_info = get(log_options, "CollectTopLevelNode_log", x.show_info)
 
     empty!(dag.nodes)
+    empty!(dag.sys)
     for tu in x.trans_units
         tu_cursor = getTranslationUnitCursor(tu)
-        header_name = spelling(tu_cursor)
+        header_name = spelling(tu_cursor) |> normpath
         @info "[CollectTopLevelNode]: processing header: $header_name"
         for cursor in children(tu_cursor)
-            str = spelling(cursor)
-
             file_name = get_filename(cursor) |> normpath
-            if is_local_only && header_name != file_name
-                file_name ∉ x.dependant_headers && continue
-            end
-
-            if skip_defs && (startswith(str, "__") || (str ∈ x.compiler_defs_extra))
-                show_info && @info "[CollectTopLevelNode]: skip $str"
+            if is_local_only && header_name != file_name && file_name ∉ x.dependant_headers
+                if any(sysdir->startswith(file_name, sysdir), x.system_dirs)
+                    collect_top_level_nodes!(dag.sys, cursor, general_options)
+                end
                 continue
             end
-
-            collect_top_level_nodes!(dag, cursor, general_options)
+            collect_top_level_nodes!(dag.nodes, cursor, general_options)
         end
     end
+
+    return dag
+end
+
+"""
+    CollectDependantSystemNode <: AbstractPass
+In this pass, those dependant tags/identifiers are to the `dag.nodes`.
+
+See also [`collect_system_nodes!`](@ref).
+"""
+mutable struct CollectDependantSystemNode <: AbstractPass
+    show_info::Bool
+end
+CollectDependantSystemNode(; info=true) = CollectDependantSystemNode(info)
+
+function (x::CollectDependantSystemNode)(dag::ExprDAG, options::Dict)
+    general_options = get(options, "general", Dict())
+    log_options = get(general_options, "log", Dict())
+    show_info = get(log_options, "CollectDependantSystemNode_log", x.show_info)
+
     return dag
 end
 

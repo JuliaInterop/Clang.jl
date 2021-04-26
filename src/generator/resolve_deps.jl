@@ -28,6 +28,9 @@ function resolve_dependency!(dag::ExprDAG, node::ExprNode{FunctionProto})
             # extra identifiers are printed at the top of the file, so there is no need to
             # add them as dependencies.
             # pass
+        elseif !hasref && haskey(dag.tags, leaf_ty.sym)
+            # FIXME: in some cases, this system-header symbol is in dag.tags
+            push!(node.adj, dag.tags[leaf_ty.sym])
         elseif hasref && is_jl_pointer(jlty)
             # if opaque pointers are being used as function argument like
             #   void func(struct foo *x);
@@ -38,9 +41,8 @@ function resolve_dependency!(dag::ExprDAG, node::ExprNode{FunctionProto})
             tycu = getTypeDeclaration(ty)
             file, line, col = get_file_line_column(cursor)
             cspell = spelling(cursor)
-            aspell = spelling(tycu)
-            tspell = spelling(tycu)
-            error("There is no definition for $cspell's parameter: $aspell's type: [`$tspell`] at $file:$line:$col")
+            tspell = spelling(ty)
+            error("There is no definition for $cspell's parameter type: [`$tspell`] at $file:$line:$col")
         end
     end
     return dag
@@ -62,11 +64,14 @@ function resolve_dependency!(dag::ExprDAG, node::ExprNode{FunctionNoProto})
         push!(node.adj, dag.ids[leaf_ty.sym])
     elseif haskey(dag.ids_extra, leaf_ty.sym)
         # pass
+    elseif !hasref && haskey(dag.tags, leaf_ty.sym)
+        # FIXME: in some cases, this system-header symbol is in dag.tags
+        push!(node.adj, dag.tags[leaf_ty.sym])
     else
         tycu = getTypeDeclaration(ty)
         file, line, col = get_file_line_column(cursor)
         cspell = spelling(cursor)
-        tspell = spelling(tycu)
+        tspell = spelling(ty)
         error("There is no definition for $cspell's return type: [`$tspell`] at $file:$line:$col")
     end
     return dag

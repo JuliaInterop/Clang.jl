@@ -153,5 +153,5 @@ collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLInclusionDirective, 
 collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLLastPreprocessing, options) = nodes  # FIXME: fix cltype.jl
 
 # skip unexposed decl
-# collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLUnexposedDecl) = nodes
-# collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLFirstDecl) = nodes  # FIXME: fix cltype.jl
+collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLUnexposedDecl, options) = nodes
+collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLFirstDecl, options) = nodes  # FIXME: fix cltype.jl

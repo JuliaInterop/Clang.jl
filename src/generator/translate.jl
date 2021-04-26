@@ -21,14 +21,13 @@ Same as [`make_name_safe`](@ref), but return a Symbol.
 """
 make_symbol_safe(x) = Symbol(make_name_safe(x))
 
-
 """
     translate(jlty::AbstractJuliaType, options=Dict())
 Translate [`AbstractJuliaType`](@ref)s to Julia expressions.
 """
 translate(jlty::AbstractJuliaType, options=Dict()) = jlty
 function translate(jlty::JuliaUnknown, options=Dict())
-    return error("hit a JuliaUnknown($(dumpobj(jlty.x))) in codegen pass...")
+    return error("hit a JuliaUnknown($(dumpobj(jlty.x))) when translating the type...")
 end
 translate(jlty::JuliaCvoid, options=Dict()) = :Cvoid
 function translate(jlty::JuliaCbool, options=Dict())

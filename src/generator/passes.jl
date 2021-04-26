@@ -635,6 +635,7 @@ function (x::Codegen)(dag::ExprDAG, options::Dict)
     # forward general options
     if haskey(general_options, "library_name")
         codegen_options["library_name"] = general_options["library_name"]
+        codegen_options["library_names"] = general_options["library_names"]
     end
 
     # store definitions which would be used during codegen
@@ -851,7 +852,7 @@ end
 
 """
     GeneralPrinter <: AbstractPrinter
-In this pass, structs/unions/enums are dumped to file.
+In this pass, all symbols are dumped to file.
 """
 mutable struct GeneralPrinter <: AbstractPrinter
     file::AbstractString
@@ -884,7 +885,7 @@ end
 
 """
    StdPrinter <: AbstractPrinter
-In this pass, structs/unions/enums are dumped to stdout.
+In this pass, all symbols are dumped to stdout.
 """
 mutable struct StdPrinter <: AbstractPrinter
     show_info::Bool

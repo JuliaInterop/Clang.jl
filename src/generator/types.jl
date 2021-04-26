@@ -116,7 +116,7 @@ abstract type AbstractUnionNodeType <: AbstractTagType end
 
 struct UnionAnonymous <: AbstractUnionNodeType end
 struct UnionForwardDecl <: AbstractUnionNodeType end
-struct UnionOpaqueDecl <: AbstractUnionNodeType end  # hmm... I guess this is rarely used.
+struct UnionOpaqueDecl <: AbstractUnionNodeType end
 struct UnionDefinition <: AbstractUnionNodeType end
 struct UnionDuplicated <: AbstractUnionNodeType end
 struct UnionDefault <: AbstractUnionNodeType end
@@ -135,7 +135,7 @@ abstract type AbstractEnumNodeType <: AbstractTagType end
 
 struct EnumAnonymous <: AbstractEnumNodeType end
 struct EnumForwardDecl <: AbstractEnumNodeType end
-struct EnumOpaqueDecl <: AbstractEnumNodeType end  # is there a real-world use case?
+struct EnumOpaqueDecl <: AbstractEnumNodeType end
 struct EnumDefinition <: AbstractEnumNodeType end
 struct EnumDuplicated <: AbstractEnumNodeType end
 struct EnumDefault <: AbstractEnumNodeType end

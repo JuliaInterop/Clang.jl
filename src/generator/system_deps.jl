@@ -65,9 +65,7 @@ function collect_dependent_system_nodes!(dag::ExprDAG, node::ExprNode{TypedefEla
 
     is_jl_basic(leaf_ty) && return system_nodes
 
-    if haskey(dag.tags, leaf_ty.sym)
-        # pass
-    else
+    if !haskey(dag.tags, leaf_ty.sym)
         # FIXME: this assumes duplicated symbols in the system headers are the same.
         idx = findfirst(x->x.id == leaf_ty.sym, dag.sys)
         idx != nothing && push!(system_nodes, dag.sys[idx])
@@ -87,9 +85,7 @@ function collect_dependent_system_nodes!(dag::ExprDAG, node::ExprNode{TypedefDef
     # do nothing for unknowns since we just skip them in the downstream passes
     is_jl_unknown(leaf_ty) && return system_nodes
 
-    if haskey(dag.ids, leaf_ty.sym) || haskey(dag.ids_extra, leaf_ty.sym)
-        # pass
-    else
+    if !(haskey(dag.ids, leaf_ty.sym) || haskey(dag.ids_extra, leaf_ty.sym))
         # FIXME: this assumes duplicated symbols in the system headers are the same.
         idx = findfirst(x->x.id == leaf_ty.sym, dag.sys)
         idx != nothing && push!(system_nodes, dag.sys[idx])

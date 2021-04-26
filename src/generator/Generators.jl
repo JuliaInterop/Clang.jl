@@ -107,9 +107,8 @@ export build!, BUILDSTAGE_ALL, BUILDSTAGE_NO_PRINTING, BUILDSTAGE_PRINTING_ONLY
 export get_triple, get_default_args, detect_headers, find_dependent_headers
 export get_identifier_node, get_tagtype_node
 
-load_options(path::AbstractString) = TOML.parse(read(path, String))
+include("option.jl")
 export load_options
-
 
 function __init__()
    reset_definition()

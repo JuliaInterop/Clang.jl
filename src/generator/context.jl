@@ -8,6 +8,8 @@ Base.@kwdef mutable struct Context <: AbstractContext
     options::Dict = Dict()
 end
 
+Base.show(io::IO, x::Context) = print(io, "Context(...)")
+
 function parse_header!(ctx::AbstractContext, header::AbstractString, args)
     flags = CXTranslationUnit_DetailedPreprocessingRecord
     flags |= CXTranslationUnit_SkipFunctionBodies
@@ -86,9 +88,9 @@ function create_context(headers::Vector, args::Vector=String[], options::Dict=Di
     parse_headers!(ctx, headers, args)
 
     push!(ctx.passes, CollectTopLevelNode(ctx.trans_units, dependent_headers, system_dirs))
-    push!(ctx.passes, LinkTypedefToAnonymousTagType())
     push!(ctx.passes, IndexDefinition())
     push!(ctx.passes, CollectDependantSystemNode())
+    push!(ctx.passes, LinkTypedefToAnonymousTagType())
     push!(ctx.passes, IndexDefinition())
     push!(ctx.passes, CollectNestedRecord())
     push!(ctx.passes, FindOpaques())
@@ -229,6 +231,7 @@ function detect_headers(include_dir, args, options::Dict=Dict())
         for file in files
             header = joinpath(root, file)
             try
+                # FIXME: C++ could also be successful parsed, but that's not what we want
                 parse_header(idx, header, args, flags)
             catch err
                 @info "failed to parse $header, skip..."

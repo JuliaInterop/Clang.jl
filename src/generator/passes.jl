@@ -635,6 +635,8 @@ function (x::Codegen)(dag::ExprDAG, options::Dict)
     # forward general options
     if haskey(general_options, "library_name")
         codegen_options["library_name"] = general_options["library_name"]
+    end
+    if haskey(general_options, "library_names")
         codegen_options["library_names"] = general_options["library_names"]
     end
 

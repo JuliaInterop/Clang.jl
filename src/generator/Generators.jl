@@ -30,6 +30,9 @@ using ..Clang:
     getTypeDeclaration,
     hasAttrs
 
+using ..JLLEnvs
+using ..JLLEnvs: get_system_dirs, triple2target
+
 include("utils.jl")
 
 include("jltypes.jl")
@@ -49,6 +52,7 @@ export ExprNode, ExprDAG
 export get_nodes, get_exprs
 
 include("top_level.jl")
+include("system_deps.jl")
 include("nested.jl")
 include("resolve_deps.jl")
 include("preprocessing.jl")
@@ -77,6 +81,7 @@ export Codegen
 export CodegenMacro
 export CodegenPostprocessing
 export CodegenPreprocessing
+export CollectDependantSystemNode
 export CollectNestedRecord
 export CollectTopLevelNode
 export CommonPrinter
@@ -99,12 +104,11 @@ export AbstractContext, Context
 export parse_header!, parse_headers!
 export create_context
 export build!, BUILDSTAGE_ALL, BUILDSTAGE_NO_PRINTING, BUILDSTAGE_PRINTING_ONLY
-export find_std_headers, find_dependent_headers
+export get_triple, get_default_args, detect_headers, find_dependent_headers
 export get_identifier_node, get_tagtype_node
 
-load_options(path::AbstractString) = TOML.parse(read(path, String))
+include("option.jl")
 export load_options
-
 
 function __init__()
    reset_definition()

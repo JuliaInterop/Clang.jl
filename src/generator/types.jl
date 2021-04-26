@@ -116,7 +116,7 @@ abstract type AbstractUnionNodeType <: AbstractTagType end
 
 struct UnionAnonymous <: AbstractUnionNodeType end
 struct UnionForwardDecl <: AbstractUnionNodeType end
-struct UnionOpaqueDecl <: AbstractUnionNodeType end  # hmm... I guess this is rarely used.
+struct UnionOpaqueDecl <: AbstractUnionNodeType end
 struct UnionDefinition <: AbstractUnionNodeType end
 struct UnionDuplicated <: AbstractUnionNodeType end
 struct UnionDefault <: AbstractUnionNodeType end
@@ -135,7 +135,7 @@ abstract type AbstractEnumNodeType <: AbstractTagType end
 
 struct EnumAnonymous <: AbstractEnumNodeType end
 struct EnumForwardDecl <: AbstractEnumNodeType end
-struct EnumOpaqueDecl <: AbstractEnumNodeType end  # is there a real-world use case?
+struct EnumOpaqueDecl <: AbstractEnumNodeType end
 struct EnumDefinition <: AbstractEnumNodeType end
 struct EnumDuplicated <: AbstractEnumNodeType end
 struct EnumDefault <: AbstractEnumNodeType end
@@ -170,13 +170,13 @@ end
     ExprDAG
 An expression DAG.
 """
-struct ExprDAG
-    nodes::Vector{ExprNode}
-    tags::Dict{Symbol,Int}
-    ids::Dict{Symbol,Int}
-    ids_extra::Dict{Symbol,AbstractJuliaType}
+Base.@kwdef struct ExprDAG
+    nodes::Vector{ExprNode} = ExprNode[]
+    sys::Vector{ExprNode} = ExprNode[]
+    tags::Dict{Symbol,Int} = Dict{Symbol,Int}()
+    ids::Dict{Symbol,Int} = Dict{Symbol,Int}()
+    ids_extra::Dict{Symbol,AbstractJuliaType} = EXTRA_DEFINITIONS
 end
-ExprDAG(nodes; ids_extra=EXTRA_DEFINITIONS) = ExprDAG(nodes, Dict(), Dict(), ids_extra)
 
 get_nodes(x::ExprDAG) = x.nodes
 get_exprs(x::ExprNode) = x.exprs

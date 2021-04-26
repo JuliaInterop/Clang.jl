@@ -6,16 +6,13 @@ cd(@__DIR__)
 const INCLUDE_DIR = joinpath(Clang_jll.artifact_dir, "include") |> normpath
 const CLANG_C_DIR = joinpath(INCLUDE_DIR, "clang-c")
 
-headers = [joinpath(CLANG_C_DIR, header) for header in readdir(CLANG_C_DIR) if endswith(header, ".h")]
 options = load_options(joinpath(@__DIR__, "generator.toml"))
 
 # add compiler flags
-args = ["-I$INCLUDE_DIR"]
+args = get_default_args()
+push!(args, "-I$INCLUDE_DIR")
 
-@static if Sys.iswindows()
-    include("windows.jl")
-    push!(args, "--sysroot=$mingw_sys", "-I$mingw_inc")
-end
+headers = detect_headers(CLANG_C_DIR, args)
 
 # add extra definition
 @add_def time_t AbstractJuliaSIT JuliaCtime_t Ctime_t

@@ -8,6 +8,36 @@ using CEnum
 const Ctime_t = Int
 
 
+@cenum CXErrorCode::UInt32 begin
+    CXError_Success = 0
+    CXError_Failure = 1
+    CXError_Crashed = 2
+    CXError_InvalidArguments = 3
+    CXError_ASTReadError = 4
+end
+
+mutable struct CXString
+    data::Ptr{Cvoid}
+    private_flags::Cuint
+end
+
+mutable struct CXStringSet
+    Strings::Ptr{CXString}
+    Count::Cuint
+end
+
+function clang_getCString(string)
+    ccall((:clang_getCString, libclang), Cstring, (CXString,), string)
+end
+
+function clang_disposeString(string)
+    ccall((:clang_disposeString, libclang), Cvoid, (CXString,), string)
+end
+
+function clang_disposeStringSet(set)
+    ccall((:clang_disposeStringSet, libclang), Cvoid, (Ptr{CXStringSet},), set)
+end
+
 function clang_getBuildSessionTimestamp()
     ccall((:clang_getBuildSessionTimestamp, libclang), Culonglong, ())
 end
@@ -18,14 +48,6 @@ const CXVirtualFileOverlay = Ptr{CXVirtualFileOverlayImpl}
 
 function clang_VirtualFileOverlay_create(options)
     ccall((:clang_VirtualFileOverlay_create, libclang), CXVirtualFileOverlay, (Cuint,), options)
-end
-
-@cenum CXErrorCode::UInt32 begin
-    CXError_Success = 0
-    CXError_Failure = 1
-    CXError_Crashed = 2
-    CXError_InvalidArguments = 3
-    CXError_ASTReadError = 4
 end
 
 function clang_VirtualFileOverlay_addFileMapping(arg1, virtualPath, realPath)
@@ -72,559 +94,15 @@ function clang_ModuleMapDescriptor_dispose(arg1)
     ccall((:clang_ModuleMapDescriptor_dispose, libclang), Cvoid, (CXModuleMapDescriptor,), arg1)
 end
 
-const CXCompilationDatabase = Ptr{Cvoid}
-
-const CXCompileCommands = Ptr{Cvoid}
-
-const CXCompileCommand = Ptr{Cvoid}
-
-@cenum CXCompilationDatabase_Error::UInt32 begin
-    CXCompilationDatabase_NoError = 0
-    CXCompilationDatabase_CanNotLoadDatabase = 1
-end
-
-function clang_CompilationDatabase_fromDirectory(BuildDir, ErrorCode)
-    ccall((:clang_CompilationDatabase_fromDirectory, libclang), CXCompilationDatabase, (Cstring, Ptr{CXCompilationDatabase_Error}), BuildDir, ErrorCode)
-end
-
-function clang_CompilationDatabase_dispose(arg1)
-    ccall((:clang_CompilationDatabase_dispose, libclang), Cvoid, (CXCompilationDatabase,), arg1)
-end
-
-function clang_CompilationDatabase_getCompileCommands(arg1, CompleteFileName)
-    ccall((:clang_CompilationDatabase_getCompileCommands, libclang), CXCompileCommands, (CXCompilationDatabase, Cstring), arg1, CompleteFileName)
-end
-
-function clang_CompilationDatabase_getAllCompileCommands(arg1)
-    ccall((:clang_CompilationDatabase_getAllCompileCommands, libclang), CXCompileCommands, (CXCompilationDatabase,), arg1)
-end
-
-function clang_CompileCommands_dispose(arg1)
-    ccall((:clang_CompileCommands_dispose, libclang), Cvoid, (CXCompileCommands,), arg1)
-end
-
-function clang_CompileCommands_getSize(arg1)
-    ccall((:clang_CompileCommands_getSize, libclang), Cuint, (CXCompileCommands,), arg1)
-end
-
-function clang_CompileCommands_getCommand(arg1, I)
-    ccall((:clang_CompileCommands_getCommand, libclang), CXCompileCommand, (CXCompileCommands, Cuint), arg1, I)
-end
-
-mutable struct CXString
-    data::Ptr{Cvoid}
-    private_flags::Cuint
-end
-
-function clang_CompileCommand_getDirectory(arg1)
-    ccall((:clang_CompileCommand_getDirectory, libclang), CXString, (CXCompileCommand,), arg1)
-end
-
-function clang_CompileCommand_getFilename(arg1)
-    ccall((:clang_CompileCommand_getFilename, libclang), CXString, (CXCompileCommand,), arg1)
-end
-
-function clang_CompileCommand_getNumArgs(arg1)
-    ccall((:clang_CompileCommand_getNumArgs, libclang), Cuint, (CXCompileCommand,), arg1)
-end
-
-function clang_CompileCommand_getArg(arg1, I)
-    ccall((:clang_CompileCommand_getArg, libclang), CXString, (CXCompileCommand, Cuint), arg1, I)
-end
-
-function clang_CompileCommand_getNumMappedSources(arg1)
-    ccall((:clang_CompileCommand_getNumMappedSources, libclang), Cuint, (CXCompileCommand,), arg1)
-end
-
-function clang_CompileCommand_getMappedSourcePath(arg1, I)
-    @warn "`clang_CompileCommand_getMappedSourcePath` Left here for backward compatibility.\nNo mapped sources exists in the C++ backend anymore.\nThis function just return Null `CXString`.\nSee:\n- [Remove unused CompilationDatabase::MappedSources](https://reviews.llvm.org/D32351)\n"
-    ccall((:clang_CompileCommand_getMappedSourcePath, libclang), CXString, (CXCompileCommand, Cuint), arg1, I)
-end
-
-function clang_CompileCommand_getMappedSourceContent(arg1, I)
-    @warn "`clang_CompileCommand_getMappedSourceContent` Left here for backward compatibility.\nNo mapped sources exists in the C++ backend anymore.\nThis function just return Null `CXString`.\nSee:\n- [Remove unused CompilationDatabase::MappedSources](https://reviews.llvm.org/D32351)\n"
-    ccall((:clang_CompileCommand_getMappedSourceContent, libclang), CXString, (CXCompileCommand, Cuint), arg1, I)
-end
-
-mutable struct CXStringSet
-    Strings::Ptr{CXString}
-    Count::Cuint
-end
-
-function clang_getCString(string)
-    ccall((:clang_getCString, libclang), Cstring, (CXString,), string)
-end
-
-function clang_disposeString(string)
-    ccall((:clang_disposeString, libclang), Cvoid, (CXString,), string)
-end
-
-function clang_disposeStringSet(set)
-    ccall((:clang_disposeStringSet, libclang), Cvoid, (Ptr{CXStringSet},), set)
-end
-
-mutable struct CXTranslationUnitImpl end
-
-const CXTranslationUnit = Ptr{CXTranslationUnitImpl}
-
-mutable struct CXComment
-    ASTNode::Ptr{Cvoid}
-    TranslationUnit::CXTranslationUnit
-end
-
-@cenum CXCursorKind::UInt32 begin
-    CXCursor_UnexposedDecl = 1
-    CXCursor_StructDecl = 2
-    CXCursor_UnionDecl = 3
-    CXCursor_ClassDecl = 4
-    CXCursor_EnumDecl = 5
-    CXCursor_FieldDecl = 6
-    CXCursor_EnumConstantDecl = 7
-    CXCursor_FunctionDecl = 8
-    CXCursor_VarDecl = 9
-    CXCursor_ParmDecl = 10
-    CXCursor_ObjCInterfaceDecl = 11
-    CXCursor_ObjCCategoryDecl = 12
-    CXCursor_ObjCProtocolDecl = 13
-    CXCursor_ObjCPropertyDecl = 14
-    CXCursor_ObjCIvarDecl = 15
-    CXCursor_ObjCInstanceMethodDecl = 16
-    CXCursor_ObjCClassMethodDecl = 17
-    CXCursor_ObjCImplementationDecl = 18
-    CXCursor_ObjCCategoryImplDecl = 19
-    CXCursor_TypedefDecl = 20
-    CXCursor_CXXMethod = 21
-    CXCursor_Namespace = 22
-    CXCursor_LinkageSpec = 23
-    CXCursor_Constructor = 24
-    CXCursor_Destructor = 25
-    CXCursor_ConversionFunction = 26
-    CXCursor_TemplateTypeParameter = 27
-    CXCursor_NonTypeTemplateParameter = 28
-    CXCursor_TemplateTemplateParameter = 29
-    CXCursor_FunctionTemplate = 30
-    CXCursor_ClassTemplate = 31
-    CXCursor_ClassTemplatePartialSpecialization = 32
-    CXCursor_NamespaceAlias = 33
-    CXCursor_UsingDirective = 34
-    CXCursor_UsingDeclaration = 35
-    CXCursor_TypeAliasDecl = 36
-    CXCursor_ObjCSynthesizeDecl = 37
-    CXCursor_ObjCDynamicDecl = 38
-    CXCursor_CXXAccessSpecifier = 39
-    CXCursor_FirstDecl = 1
-    CXCursor_LastDecl = 39
-    CXCursor_FirstRef = 40
-    CXCursor_ObjCSuperClassRef = 40
-    CXCursor_ObjCProtocolRef = 41
-    CXCursor_ObjCClassRef = 42
-    CXCursor_TypeRef = 43
-    CXCursor_CXXBaseSpecifier = 44
-    CXCursor_TemplateRef = 45
-    CXCursor_NamespaceRef = 46
-    CXCursor_MemberRef = 47
-    CXCursor_LabelRef = 48
-    CXCursor_OverloadedDeclRef = 49
-    CXCursor_VariableRef = 50
-    CXCursor_LastRef = 50
-    CXCursor_FirstInvalid = 70
-    CXCursor_InvalidFile = 70
-    CXCursor_NoDeclFound = 71
-    CXCursor_NotImplemented = 72
-    CXCursor_InvalidCode = 73
-    CXCursor_LastInvalid = 73
-    CXCursor_FirstExpr = 100
-    CXCursor_UnexposedExpr = 100
-    CXCursor_DeclRefExpr = 101
-    CXCursor_MemberRefExpr = 102
-    CXCursor_CallExpr = 103
-    CXCursor_ObjCMessageExpr = 104
-    CXCursor_BlockExpr = 105
-    CXCursor_IntegerLiteral = 106
-    CXCursor_FloatingLiteral = 107
-    CXCursor_ImaginaryLiteral = 108
-    CXCursor_StringLiteral = 109
-    CXCursor_CharacterLiteral = 110
-    CXCursor_ParenExpr = 111
-    CXCursor_UnaryOperator = 112
-    CXCursor_ArraySubscriptExpr = 113
-    CXCursor_BinaryOperator = 114
-    CXCursor_CompoundAssignOperator = 115
-    CXCursor_ConditionalOperator = 116
-    CXCursor_CStyleCastExpr = 117
-    CXCursor_CompoundLiteralExpr = 118
-    CXCursor_InitListExpr = 119
-    CXCursor_AddrLabelExpr = 120
-    CXCursor_StmtExpr = 121
-    CXCursor_GenericSelectionExpr = 122
-    CXCursor_GNUNullExpr = 123
-    CXCursor_CXXStaticCastExpr = 124
-    CXCursor_CXXDynamicCastExpr = 125
-    CXCursor_CXXReinterpretCastExpr = 126
-    CXCursor_CXXConstCastExpr = 127
-    CXCursor_CXXFunctionalCastExpr = 128
-    CXCursor_CXXAddrspaceCastExpr = 129
-    CXCursor_CXXTypeidExpr = 130
-    CXCursor_CXXBoolLiteralExpr = 131
-    CXCursor_CXXNullPtrLiteralExpr = 132
-    CXCursor_CXXThisExpr = 133
-    CXCursor_CXXThrowExpr = 134
-    CXCursor_CXXNewExpr = 135
-    CXCursor_CXXDeleteExpr = 136
-    CXCursor_UnaryExpr = 137
-    CXCursor_ObjCStringLiteral = 138
-    CXCursor_ObjCEncodeExpr = 139
-    CXCursor_ObjCSelectorExpr = 140
-    CXCursor_ObjCProtocolExpr = 141
-    CXCursor_ObjCBridgedCastExpr = 142
-    CXCursor_PackExpansionExpr = 143
-    CXCursor_SizeOfPackExpr = 144
-    CXCursor_LambdaExpr = 145
-    CXCursor_ObjCBoolLiteralExpr = 146
-    CXCursor_ObjCSelfExpr = 147
-    CXCursor_OMPArraySectionExpr = 148
-    CXCursor_ObjCAvailabilityCheckExpr = 149
-    CXCursor_FixedPointLiteral = 150
-    CXCursor_OMPArrayShapingExpr = 151
-    CXCursor_OMPIteratorExpr = 152
-    CXCursor_LastExpr = 152
-    CXCursor_FirstStmt = 200
-    CXCursor_UnexposedStmt = 200
-    CXCursor_LabelStmt = 201
-    CXCursor_CompoundStmt = 202
-    CXCursor_CaseStmt = 203
-    CXCursor_DefaultStmt = 204
-    CXCursor_IfStmt = 205
-    CXCursor_SwitchStmt = 206
-    CXCursor_WhileStmt = 207
-    CXCursor_DoStmt = 208
-    CXCursor_ForStmt = 209
-    CXCursor_GotoStmt = 210
-    CXCursor_IndirectGotoStmt = 211
-    CXCursor_ContinueStmt = 212
-    CXCursor_BreakStmt = 213
-    CXCursor_ReturnStmt = 214
-    CXCursor_GCCAsmStmt = 215
-    CXCursor_AsmStmt = 215
-    CXCursor_ObjCAtTryStmt = 216
-    CXCursor_ObjCAtCatchStmt = 217
-    CXCursor_ObjCAtFinallyStmt = 218
-    CXCursor_ObjCAtThrowStmt = 219
-    CXCursor_ObjCAtSynchronizedStmt = 220
-    CXCursor_ObjCAutoreleasePoolStmt = 221
-    CXCursor_ObjCForCollectionStmt = 222
-    CXCursor_CXXCatchStmt = 223
-    CXCursor_CXXTryStmt = 224
-    CXCursor_CXXForRangeStmt = 225
-    CXCursor_SEHTryStmt = 226
-    CXCursor_SEHExceptStmt = 227
-    CXCursor_SEHFinallyStmt = 228
-    CXCursor_MSAsmStmt = 229
-    CXCursor_NullStmt = 230
-    CXCursor_DeclStmt = 231
-    CXCursor_OMPParallelDirective = 232
-    CXCursor_OMPSimdDirective = 233
-    CXCursor_OMPForDirective = 234
-    CXCursor_OMPSectionsDirective = 235
-    CXCursor_OMPSectionDirective = 236
-    CXCursor_OMPSingleDirective = 237
-    CXCursor_OMPParallelForDirective = 238
-    CXCursor_OMPParallelSectionsDirective = 239
-    CXCursor_OMPTaskDirective = 240
-    CXCursor_OMPMasterDirective = 241
-    CXCursor_OMPCriticalDirective = 242
-    CXCursor_OMPTaskyieldDirective = 243
-    CXCursor_OMPBarrierDirective = 244
-    CXCursor_OMPTaskwaitDirective = 245
-    CXCursor_OMPFlushDirective = 246
-    CXCursor_SEHLeaveStmt = 247
-    CXCursor_OMPOrderedDirective = 248
-    CXCursor_OMPAtomicDirective = 249
-    CXCursor_OMPForSimdDirective = 250
-    CXCursor_OMPParallelForSimdDirective = 251
-    CXCursor_OMPTargetDirective = 252
-    CXCursor_OMPTeamsDirective = 253
-    CXCursor_OMPTaskgroupDirective = 254
-    CXCursor_OMPCancellationPointDirective = 255
-    CXCursor_OMPCancelDirective = 256
-    CXCursor_OMPTargetDataDirective = 257
-    CXCursor_OMPTaskLoopDirective = 258
-    CXCursor_OMPTaskLoopSimdDirective = 259
-    CXCursor_OMPDistributeDirective = 260
-    CXCursor_OMPTargetEnterDataDirective = 261
-    CXCursor_OMPTargetExitDataDirective = 262
-    CXCursor_OMPTargetParallelDirective = 263
-    CXCursor_OMPTargetParallelForDirective = 264
-    CXCursor_OMPTargetUpdateDirective = 265
-    CXCursor_OMPDistributeParallelForDirective = 266
-    CXCursor_OMPDistributeParallelForSimdDirective = 267
-    CXCursor_OMPDistributeSimdDirective = 268
-    CXCursor_OMPTargetParallelForSimdDirective = 269
-    CXCursor_OMPTargetSimdDirective = 270
-    CXCursor_OMPTeamsDistributeDirective = 271
-    CXCursor_OMPTeamsDistributeSimdDirective = 272
-    CXCursor_OMPTeamsDistributeParallelForSimdDirective = 273
-    CXCursor_OMPTeamsDistributeParallelForDirective = 274
-    CXCursor_OMPTargetTeamsDirective = 275
-    CXCursor_OMPTargetTeamsDistributeDirective = 276
-    CXCursor_OMPTargetTeamsDistributeParallelForDirective = 277
-    CXCursor_OMPTargetTeamsDistributeParallelForSimdDirective = 278
-    CXCursor_OMPTargetTeamsDistributeSimdDirective = 279
-    CXCursor_BuiltinBitCastExpr = 280
-    CXCursor_OMPMasterTaskLoopDirective = 281
-    CXCursor_OMPParallelMasterTaskLoopDirective = 282
-    CXCursor_OMPMasterTaskLoopSimdDirective = 283
-    CXCursor_OMPParallelMasterTaskLoopSimdDirective = 284
-    CXCursor_OMPParallelMasterDirective = 285
-    CXCursor_OMPDepobjDirective = 286
-    CXCursor_OMPScanDirective = 287
-    CXCursor_LastStmt = 287
-    CXCursor_TranslationUnit = 300
-    CXCursor_FirstAttr = 400
-    CXCursor_UnexposedAttr = 400
-    CXCursor_IBActionAttr = 401
-    CXCursor_IBOutletAttr = 402
-    CXCursor_IBOutletCollectionAttr = 403
-    CXCursor_CXXFinalAttr = 404
-    CXCursor_CXXOverrideAttr = 405
-    CXCursor_AnnotateAttr = 406
-    CXCursor_AsmLabelAttr = 407
-    CXCursor_PackedAttr = 408
-    CXCursor_PureAttr = 409
-    CXCursor_ConstAttr = 410
-    CXCursor_NoDuplicateAttr = 411
-    CXCursor_CUDAConstantAttr = 412
-    CXCursor_CUDADeviceAttr = 413
-    CXCursor_CUDAGlobalAttr = 414
-    CXCursor_CUDAHostAttr = 415
-    CXCursor_CUDASharedAttr = 416
-    CXCursor_VisibilityAttr = 417
-    CXCursor_DLLExport = 418
-    CXCursor_DLLImport = 419
-    CXCursor_NSReturnsRetained = 420
-    CXCursor_NSReturnsNotRetained = 421
-    CXCursor_NSReturnsAutoreleased = 422
-    CXCursor_NSConsumesSelf = 423
-    CXCursor_NSConsumed = 424
-    CXCursor_ObjCException = 425
-    CXCursor_ObjCNSObject = 426
-    CXCursor_ObjCIndependentClass = 427
-    CXCursor_ObjCPreciseLifetime = 428
-    CXCursor_ObjCReturnsInnerPointer = 429
-    CXCursor_ObjCRequiresSuper = 430
-    CXCursor_ObjCRootClass = 431
-    CXCursor_ObjCSubclassingRestricted = 432
-    CXCursor_ObjCExplicitProtocolImpl = 433
-    CXCursor_ObjCDesignatedInitializer = 434
-    CXCursor_ObjCRuntimeVisible = 435
-    CXCursor_ObjCBoxable = 436
-    CXCursor_FlagEnum = 437
-    CXCursor_ConvergentAttr = 438
-    CXCursor_WarnUnusedAttr = 439
-    CXCursor_WarnUnusedResultAttr = 440
-    CXCursor_AlignedAttr = 441
-    CXCursor_LastAttr = 441
-    CXCursor_PreprocessingDirective = 500
-    CXCursor_MacroDefinition = 501
-    CXCursor_MacroExpansion = 502
-    CXCursor_MacroInstantiation = 502
-    CXCursor_InclusionDirective = 503
-    CXCursor_FirstPreprocessing = 500
-    CXCursor_LastPreprocessing = 503
-    CXCursor_ModuleImportDecl = 600
-    CXCursor_TypeAliasTemplateDecl = 601
-    CXCursor_StaticAssert = 602
-    CXCursor_FriendDecl = 603
-    CXCursor_FirstExtraDecl = 600
-    CXCursor_LastExtraDecl = 603
-    CXCursor_OverloadCandidate = 700
-end
-
-mutable struct CXCursor
-    kind::CXCursorKind
-    xdata::Cint
-    data::NTuple{3, Ptr{Cvoid}}
-end
-
-function clang_Cursor_getParsedComment(C)
-    ccall((:clang_Cursor_getParsedComment, libclang), CXComment, (CXCursor,), C)
-end
-
-@cenum CXCommentKind::UInt32 begin
-    CXComment_Null = 0
-    CXComment_Text = 1
-    CXComment_InlineCommand = 2
-    CXComment_HTMLStartTag = 3
-    CXComment_HTMLEndTag = 4
-    CXComment_Paragraph = 5
-    CXComment_BlockCommand = 6
-    CXComment_ParamCommand = 7
-    CXComment_TParamCommand = 8
-    CXComment_VerbatimBlockCommand = 9
-    CXComment_VerbatimBlockLine = 10
-    CXComment_VerbatimLine = 11
-    CXComment_FullComment = 12
-end
-
-@cenum CXCommentInlineCommandRenderKind::UInt32 begin
-    CXCommentInlineCommandRenderKind_Normal = 0
-    CXCommentInlineCommandRenderKind_Bold = 1
-    CXCommentInlineCommandRenderKind_Monospaced = 2
-    CXCommentInlineCommandRenderKind_Emphasized = 3
-    CXCommentInlineCommandRenderKind_Anchor = 4
-end
-
-@cenum CXCommentParamPassDirection::UInt32 begin
-    CXCommentParamPassDirection_In = 0
-    CXCommentParamPassDirection_Out = 1
-    CXCommentParamPassDirection_InOut = 2
-end
-
-function clang_Comment_getKind(Comment)
-    ccall((:clang_Comment_getKind, libclang), CXCommentKind, (CXComment,), Comment)
-end
-
-function clang_Comment_getNumChildren(Comment)
-    ccall((:clang_Comment_getNumChildren, libclang), Cuint, (CXComment,), Comment)
-end
-
-function clang_Comment_getChild(Comment, ChildIdx)
-    ccall((:clang_Comment_getChild, libclang), CXComment, (CXComment, Cuint), Comment, ChildIdx)
-end
-
-function clang_Comment_isWhitespace(Comment)
-    ccall((:clang_Comment_isWhitespace, libclang), Cuint, (CXComment,), Comment)
-end
-
-function clang_InlineContentComment_hasTrailingNewline(Comment)
-    ccall((:clang_InlineContentComment_hasTrailingNewline, libclang), Cuint, (CXComment,), Comment)
-end
-
-function clang_TextComment_getText(Comment)
-    ccall((:clang_TextComment_getText, libclang), CXString, (CXComment,), Comment)
-end
-
-function clang_InlineCommandComment_getCommandName(Comment)
-    ccall((:clang_InlineCommandComment_getCommandName, libclang), CXString, (CXComment,), Comment)
-end
-
-function clang_InlineCommandComment_getRenderKind(Comment)
-    ccall((:clang_InlineCommandComment_getRenderKind, libclang), CXCommentInlineCommandRenderKind, (CXComment,), Comment)
-end
-
-function clang_InlineCommandComment_getNumArgs(Comment)
-    ccall((:clang_InlineCommandComment_getNumArgs, libclang), Cuint, (CXComment,), Comment)
-end
-
-function clang_InlineCommandComment_getArgText(Comment, ArgIdx)
-    ccall((:clang_InlineCommandComment_getArgText, libclang), CXString, (CXComment, Cuint), Comment, ArgIdx)
-end
-
-function clang_HTMLTagComment_getTagName(Comment)
-    ccall((:clang_HTMLTagComment_getTagName, libclang), CXString, (CXComment,), Comment)
-end
-
-function clang_HTMLStartTagComment_isSelfClosing(Comment)
-    ccall((:clang_HTMLStartTagComment_isSelfClosing, libclang), Cuint, (CXComment,), Comment)
-end
-
-function clang_HTMLStartTag_getNumAttrs(Comment)
-    ccall((:clang_HTMLStartTag_getNumAttrs, libclang), Cuint, (CXComment,), Comment)
-end
-
-function clang_HTMLStartTag_getAttrName(Comment, AttrIdx)
-    ccall((:clang_HTMLStartTag_getAttrName, libclang), CXString, (CXComment, Cuint), Comment, AttrIdx)
-end
-
-function clang_HTMLStartTag_getAttrValue(Comment, AttrIdx)
-    ccall((:clang_HTMLStartTag_getAttrValue, libclang), CXString, (CXComment, Cuint), Comment, AttrIdx)
-end
-
-function clang_BlockCommandComment_getCommandName(Comment)
-    ccall((:clang_BlockCommandComment_getCommandName, libclang), CXString, (CXComment,), Comment)
-end
-
-function clang_BlockCommandComment_getNumArgs(Comment)
-    ccall((:clang_BlockCommandComment_getNumArgs, libclang), Cuint, (CXComment,), Comment)
-end
-
-function clang_BlockCommandComment_getArgText(Comment, ArgIdx)
-    ccall((:clang_BlockCommandComment_getArgText, libclang), CXString, (CXComment, Cuint), Comment, ArgIdx)
-end
-
-function clang_BlockCommandComment_getParagraph(Comment)
-    ccall((:clang_BlockCommandComment_getParagraph, libclang), CXComment, (CXComment,), Comment)
-end
-
-function clang_ParamCommandComment_getParamName(Comment)
-    ccall((:clang_ParamCommandComment_getParamName, libclang), CXString, (CXComment,), Comment)
-end
-
-function clang_ParamCommandComment_isParamIndexValid(Comment)
-    ccall((:clang_ParamCommandComment_isParamIndexValid, libclang), Cuint, (CXComment,), Comment)
-end
-
-function clang_ParamCommandComment_getParamIndex(Comment)
-    ccall((:clang_ParamCommandComment_getParamIndex, libclang), Cuint, (CXComment,), Comment)
-end
-
-function clang_ParamCommandComment_isDirectionExplicit(Comment)
-    ccall((:clang_ParamCommandComment_isDirectionExplicit, libclang), Cuint, (CXComment,), Comment)
-end
-
-function clang_ParamCommandComment_getDirection(Comment)
-    ccall((:clang_ParamCommandComment_getDirection, libclang), CXCommentParamPassDirection, (CXComment,), Comment)
-end
-
-function clang_TParamCommandComment_getParamName(Comment)
-    ccall((:clang_TParamCommandComment_getParamName, libclang), CXString, (CXComment,), Comment)
-end
-
-function clang_TParamCommandComment_isParamPositionValid(Comment)
-    ccall((:clang_TParamCommandComment_isParamPositionValid, libclang), Cuint, (CXComment,), Comment)
-end
-
-function clang_TParamCommandComment_getDepth(Comment)
-    ccall((:clang_TParamCommandComment_getDepth, libclang), Cuint, (CXComment,), Comment)
-end
-
-function clang_TParamCommandComment_getIndex(Comment, Depth)
-    ccall((:clang_TParamCommandComment_getIndex, libclang), Cuint, (CXComment, Cuint), Comment, Depth)
-end
-
-function clang_VerbatimBlockLineComment_getText(Comment)
-    ccall((:clang_VerbatimBlockLineComment_getText, libclang), CXString, (CXComment,), Comment)
-end
-
-function clang_VerbatimLineComment_getText(Comment)
-    ccall((:clang_VerbatimLineComment_getText, libclang), CXString, (CXComment,), Comment)
-end
-
-function clang_HTMLTagComment_getAsString(Comment)
-    ccall((:clang_HTMLTagComment_getAsString, libclang), CXString, (CXComment,), Comment)
-end
-
-function clang_FullComment_getAsHTML(Comment)
-    ccall((:clang_FullComment_getAsHTML, libclang), CXString, (CXComment,), Comment)
-end
-
-function clang_FullComment_getAsXML(Comment)
-    ccall((:clang_FullComment_getAsXML, libclang), CXString, (CXComment,), Comment)
-end
-
-function clang_install_aborting_llvm_fatal_error_handler()
-    ccall((:clang_install_aborting_llvm_fatal_error_handler, libclang), Cvoid, ())
-end
-
-function clang_uninstall_llvm_fatal_error_handler()
-    ccall((:clang_uninstall_llvm_fatal_error_handler, libclang), Cvoid, ())
-end
-
 const CXIndex = Ptr{Cvoid}
 
 mutable struct CXTargetInfoImpl end
 
 const CXTargetInfo = Ptr{CXTargetInfoImpl}
+
+mutable struct CXTranslationUnitImpl end
+
+const CXTranslationUnit = Ptr{CXTranslationUnitImpl}
 
 const CXClientData = Ptr{Cvoid}
 
@@ -1086,6 +564,280 @@ end
 
 function clang_TargetInfo_getPointerWidth(Info)
     ccall((:clang_TargetInfo_getPointerWidth, libclang), Cint, (CXTargetInfo,), Info)
+end
+
+@cenum CXCursorKind::UInt32 begin
+    CXCursor_UnexposedDecl = 1
+    CXCursor_StructDecl = 2
+    CXCursor_UnionDecl = 3
+    CXCursor_ClassDecl = 4
+    CXCursor_EnumDecl = 5
+    CXCursor_FieldDecl = 6
+    CXCursor_EnumConstantDecl = 7
+    CXCursor_FunctionDecl = 8
+    CXCursor_VarDecl = 9
+    CXCursor_ParmDecl = 10
+    CXCursor_ObjCInterfaceDecl = 11
+    CXCursor_ObjCCategoryDecl = 12
+    CXCursor_ObjCProtocolDecl = 13
+    CXCursor_ObjCPropertyDecl = 14
+    CXCursor_ObjCIvarDecl = 15
+    CXCursor_ObjCInstanceMethodDecl = 16
+    CXCursor_ObjCClassMethodDecl = 17
+    CXCursor_ObjCImplementationDecl = 18
+    CXCursor_ObjCCategoryImplDecl = 19
+    CXCursor_TypedefDecl = 20
+    CXCursor_CXXMethod = 21
+    CXCursor_Namespace = 22
+    CXCursor_LinkageSpec = 23
+    CXCursor_Constructor = 24
+    CXCursor_Destructor = 25
+    CXCursor_ConversionFunction = 26
+    CXCursor_TemplateTypeParameter = 27
+    CXCursor_NonTypeTemplateParameter = 28
+    CXCursor_TemplateTemplateParameter = 29
+    CXCursor_FunctionTemplate = 30
+    CXCursor_ClassTemplate = 31
+    CXCursor_ClassTemplatePartialSpecialization = 32
+    CXCursor_NamespaceAlias = 33
+    CXCursor_UsingDirective = 34
+    CXCursor_UsingDeclaration = 35
+    CXCursor_TypeAliasDecl = 36
+    CXCursor_ObjCSynthesizeDecl = 37
+    CXCursor_ObjCDynamicDecl = 38
+    CXCursor_CXXAccessSpecifier = 39
+    CXCursor_FirstDecl = 1
+    CXCursor_LastDecl = 39
+    CXCursor_FirstRef = 40
+    CXCursor_ObjCSuperClassRef = 40
+    CXCursor_ObjCProtocolRef = 41
+    CXCursor_ObjCClassRef = 42
+    CXCursor_TypeRef = 43
+    CXCursor_CXXBaseSpecifier = 44
+    CXCursor_TemplateRef = 45
+    CXCursor_NamespaceRef = 46
+    CXCursor_MemberRef = 47
+    CXCursor_LabelRef = 48
+    CXCursor_OverloadedDeclRef = 49
+    CXCursor_VariableRef = 50
+    CXCursor_LastRef = 50
+    CXCursor_FirstInvalid = 70
+    CXCursor_InvalidFile = 70
+    CXCursor_NoDeclFound = 71
+    CXCursor_NotImplemented = 72
+    CXCursor_InvalidCode = 73
+    CXCursor_LastInvalid = 73
+    CXCursor_FirstExpr = 100
+    CXCursor_UnexposedExpr = 100
+    CXCursor_DeclRefExpr = 101
+    CXCursor_MemberRefExpr = 102
+    CXCursor_CallExpr = 103
+    CXCursor_ObjCMessageExpr = 104
+    CXCursor_BlockExpr = 105
+    CXCursor_IntegerLiteral = 106
+    CXCursor_FloatingLiteral = 107
+    CXCursor_ImaginaryLiteral = 108
+    CXCursor_StringLiteral = 109
+    CXCursor_CharacterLiteral = 110
+    CXCursor_ParenExpr = 111
+    CXCursor_UnaryOperator = 112
+    CXCursor_ArraySubscriptExpr = 113
+    CXCursor_BinaryOperator = 114
+    CXCursor_CompoundAssignOperator = 115
+    CXCursor_ConditionalOperator = 116
+    CXCursor_CStyleCastExpr = 117
+    CXCursor_CompoundLiteralExpr = 118
+    CXCursor_InitListExpr = 119
+    CXCursor_AddrLabelExpr = 120
+    CXCursor_StmtExpr = 121
+    CXCursor_GenericSelectionExpr = 122
+    CXCursor_GNUNullExpr = 123
+    CXCursor_CXXStaticCastExpr = 124
+    CXCursor_CXXDynamicCastExpr = 125
+    CXCursor_CXXReinterpretCastExpr = 126
+    CXCursor_CXXConstCastExpr = 127
+    CXCursor_CXXFunctionalCastExpr = 128
+    CXCursor_CXXAddrspaceCastExpr = 129
+    CXCursor_CXXTypeidExpr = 130
+    CXCursor_CXXBoolLiteralExpr = 131
+    CXCursor_CXXNullPtrLiteralExpr = 132
+    CXCursor_CXXThisExpr = 133
+    CXCursor_CXXThrowExpr = 134
+    CXCursor_CXXNewExpr = 135
+    CXCursor_CXXDeleteExpr = 136
+    CXCursor_UnaryExpr = 137
+    CXCursor_ObjCStringLiteral = 138
+    CXCursor_ObjCEncodeExpr = 139
+    CXCursor_ObjCSelectorExpr = 140
+    CXCursor_ObjCProtocolExpr = 141
+    CXCursor_ObjCBridgedCastExpr = 142
+    CXCursor_PackExpansionExpr = 143
+    CXCursor_SizeOfPackExpr = 144
+    CXCursor_LambdaExpr = 145
+    CXCursor_ObjCBoolLiteralExpr = 146
+    CXCursor_ObjCSelfExpr = 147
+    CXCursor_OMPArraySectionExpr = 148
+    CXCursor_ObjCAvailabilityCheckExpr = 149
+    CXCursor_FixedPointLiteral = 150
+    CXCursor_OMPArrayShapingExpr = 151
+    CXCursor_OMPIteratorExpr = 152
+    CXCursor_LastExpr = 152
+    CXCursor_FirstStmt = 200
+    CXCursor_UnexposedStmt = 200
+    CXCursor_LabelStmt = 201
+    CXCursor_CompoundStmt = 202
+    CXCursor_CaseStmt = 203
+    CXCursor_DefaultStmt = 204
+    CXCursor_IfStmt = 205
+    CXCursor_SwitchStmt = 206
+    CXCursor_WhileStmt = 207
+    CXCursor_DoStmt = 208
+    CXCursor_ForStmt = 209
+    CXCursor_GotoStmt = 210
+    CXCursor_IndirectGotoStmt = 211
+    CXCursor_ContinueStmt = 212
+    CXCursor_BreakStmt = 213
+    CXCursor_ReturnStmt = 214
+    CXCursor_GCCAsmStmt = 215
+    CXCursor_AsmStmt = 215
+    CXCursor_ObjCAtTryStmt = 216
+    CXCursor_ObjCAtCatchStmt = 217
+    CXCursor_ObjCAtFinallyStmt = 218
+    CXCursor_ObjCAtThrowStmt = 219
+    CXCursor_ObjCAtSynchronizedStmt = 220
+    CXCursor_ObjCAutoreleasePoolStmt = 221
+    CXCursor_ObjCForCollectionStmt = 222
+    CXCursor_CXXCatchStmt = 223
+    CXCursor_CXXTryStmt = 224
+    CXCursor_CXXForRangeStmt = 225
+    CXCursor_SEHTryStmt = 226
+    CXCursor_SEHExceptStmt = 227
+    CXCursor_SEHFinallyStmt = 228
+    CXCursor_MSAsmStmt = 229
+    CXCursor_NullStmt = 230
+    CXCursor_DeclStmt = 231
+    CXCursor_OMPParallelDirective = 232
+    CXCursor_OMPSimdDirective = 233
+    CXCursor_OMPForDirective = 234
+    CXCursor_OMPSectionsDirective = 235
+    CXCursor_OMPSectionDirective = 236
+    CXCursor_OMPSingleDirective = 237
+    CXCursor_OMPParallelForDirective = 238
+    CXCursor_OMPParallelSectionsDirective = 239
+    CXCursor_OMPTaskDirective = 240
+    CXCursor_OMPMasterDirective = 241
+    CXCursor_OMPCriticalDirective = 242
+    CXCursor_OMPTaskyieldDirective = 243
+    CXCursor_OMPBarrierDirective = 244
+    CXCursor_OMPTaskwaitDirective = 245
+    CXCursor_OMPFlushDirective = 246
+    CXCursor_SEHLeaveStmt = 247
+    CXCursor_OMPOrderedDirective = 248
+    CXCursor_OMPAtomicDirective = 249
+    CXCursor_OMPForSimdDirective = 250
+    CXCursor_OMPParallelForSimdDirective = 251
+    CXCursor_OMPTargetDirective = 252
+    CXCursor_OMPTeamsDirective = 253
+    CXCursor_OMPTaskgroupDirective = 254
+    CXCursor_OMPCancellationPointDirective = 255
+    CXCursor_OMPCancelDirective = 256
+    CXCursor_OMPTargetDataDirective = 257
+    CXCursor_OMPTaskLoopDirective = 258
+    CXCursor_OMPTaskLoopSimdDirective = 259
+    CXCursor_OMPDistributeDirective = 260
+    CXCursor_OMPTargetEnterDataDirective = 261
+    CXCursor_OMPTargetExitDataDirective = 262
+    CXCursor_OMPTargetParallelDirective = 263
+    CXCursor_OMPTargetParallelForDirective = 264
+    CXCursor_OMPTargetUpdateDirective = 265
+    CXCursor_OMPDistributeParallelForDirective = 266
+    CXCursor_OMPDistributeParallelForSimdDirective = 267
+    CXCursor_OMPDistributeSimdDirective = 268
+    CXCursor_OMPTargetParallelForSimdDirective = 269
+    CXCursor_OMPTargetSimdDirective = 270
+    CXCursor_OMPTeamsDistributeDirective = 271
+    CXCursor_OMPTeamsDistributeSimdDirective = 272
+    CXCursor_OMPTeamsDistributeParallelForSimdDirective = 273
+    CXCursor_OMPTeamsDistributeParallelForDirective = 274
+    CXCursor_OMPTargetTeamsDirective = 275
+    CXCursor_OMPTargetTeamsDistributeDirective = 276
+    CXCursor_OMPTargetTeamsDistributeParallelForDirective = 277
+    CXCursor_OMPTargetTeamsDistributeParallelForSimdDirective = 278
+    CXCursor_OMPTargetTeamsDistributeSimdDirective = 279
+    CXCursor_BuiltinBitCastExpr = 280
+    CXCursor_OMPMasterTaskLoopDirective = 281
+    CXCursor_OMPParallelMasterTaskLoopDirective = 282
+    CXCursor_OMPMasterTaskLoopSimdDirective = 283
+    CXCursor_OMPParallelMasterTaskLoopSimdDirective = 284
+    CXCursor_OMPParallelMasterDirective = 285
+    CXCursor_OMPDepobjDirective = 286
+    CXCursor_OMPScanDirective = 287
+    CXCursor_LastStmt = 287
+    CXCursor_TranslationUnit = 300
+    CXCursor_FirstAttr = 400
+    CXCursor_UnexposedAttr = 400
+    CXCursor_IBActionAttr = 401
+    CXCursor_IBOutletAttr = 402
+    CXCursor_IBOutletCollectionAttr = 403
+    CXCursor_CXXFinalAttr = 404
+    CXCursor_CXXOverrideAttr = 405
+    CXCursor_AnnotateAttr = 406
+    CXCursor_AsmLabelAttr = 407
+    CXCursor_PackedAttr = 408
+    CXCursor_PureAttr = 409
+    CXCursor_ConstAttr = 410
+    CXCursor_NoDuplicateAttr = 411
+    CXCursor_CUDAConstantAttr = 412
+    CXCursor_CUDADeviceAttr = 413
+    CXCursor_CUDAGlobalAttr = 414
+    CXCursor_CUDAHostAttr = 415
+    CXCursor_CUDASharedAttr = 416
+    CXCursor_VisibilityAttr = 417
+    CXCursor_DLLExport = 418
+    CXCursor_DLLImport = 419
+    CXCursor_NSReturnsRetained = 420
+    CXCursor_NSReturnsNotRetained = 421
+    CXCursor_NSReturnsAutoreleased = 422
+    CXCursor_NSConsumesSelf = 423
+    CXCursor_NSConsumed = 424
+    CXCursor_ObjCException = 425
+    CXCursor_ObjCNSObject = 426
+    CXCursor_ObjCIndependentClass = 427
+    CXCursor_ObjCPreciseLifetime = 428
+    CXCursor_ObjCReturnsInnerPointer = 429
+    CXCursor_ObjCRequiresSuper = 430
+    CXCursor_ObjCRootClass = 431
+    CXCursor_ObjCSubclassingRestricted = 432
+    CXCursor_ObjCExplicitProtocolImpl = 433
+    CXCursor_ObjCDesignatedInitializer = 434
+    CXCursor_ObjCRuntimeVisible = 435
+    CXCursor_ObjCBoxable = 436
+    CXCursor_FlagEnum = 437
+    CXCursor_ConvergentAttr = 438
+    CXCursor_WarnUnusedAttr = 439
+    CXCursor_WarnUnusedResultAttr = 440
+    CXCursor_AlignedAttr = 441
+    CXCursor_LastAttr = 441
+    CXCursor_PreprocessingDirective = 500
+    CXCursor_MacroDefinition = 501
+    CXCursor_MacroExpansion = 502
+    CXCursor_MacroInstantiation = 502
+    CXCursor_InclusionDirective = 503
+    CXCursor_FirstPreprocessing = 500
+    CXCursor_LastPreprocessing = 503
+    CXCursor_ModuleImportDecl = 600
+    CXCursor_TypeAliasTemplateDecl = 601
+    CXCursor_StaticAssert = 602
+    CXCursor_FriendDecl = 603
+    CXCursor_FirstExtraDecl = 600
+    CXCursor_LastExtraDecl = 603
+    CXCursor_OverloadCandidate = 700
+end
+
+mutable struct CXCursor
+    kind::CXCursorKind
+    xdata::Cint
+    data::NTuple{3, Ptr{Cvoid}}
 end
 
 function clang_getNullCursor()
@@ -2725,6 +2477,254 @@ const CXFieldVisitor = Ptr{Cvoid}
 
 function clang_Type_visitFields(T, visitor, client_data)
     ccall((:clang_Type_visitFields, libclang), Cuint, (CXType, CXFieldVisitor, CXClientData), T, visitor, client_data)
+end
+
+mutable struct CXComment
+    ASTNode::Ptr{Cvoid}
+    TranslationUnit::CXTranslationUnit
+end
+
+function clang_Cursor_getParsedComment(C)
+    ccall((:clang_Cursor_getParsedComment, libclang), CXComment, (CXCursor,), C)
+end
+
+@cenum CXCommentKind::UInt32 begin
+    CXComment_Null = 0
+    CXComment_Text = 1
+    CXComment_InlineCommand = 2
+    CXComment_HTMLStartTag = 3
+    CXComment_HTMLEndTag = 4
+    CXComment_Paragraph = 5
+    CXComment_BlockCommand = 6
+    CXComment_ParamCommand = 7
+    CXComment_TParamCommand = 8
+    CXComment_VerbatimBlockCommand = 9
+    CXComment_VerbatimBlockLine = 10
+    CXComment_VerbatimLine = 11
+    CXComment_FullComment = 12
+end
+
+@cenum CXCommentInlineCommandRenderKind::UInt32 begin
+    CXCommentInlineCommandRenderKind_Normal = 0
+    CXCommentInlineCommandRenderKind_Bold = 1
+    CXCommentInlineCommandRenderKind_Monospaced = 2
+    CXCommentInlineCommandRenderKind_Emphasized = 3
+    CXCommentInlineCommandRenderKind_Anchor = 4
+end
+
+@cenum CXCommentParamPassDirection::UInt32 begin
+    CXCommentParamPassDirection_In = 0
+    CXCommentParamPassDirection_Out = 1
+    CXCommentParamPassDirection_InOut = 2
+end
+
+function clang_Comment_getKind(Comment)
+    ccall((:clang_Comment_getKind, libclang), CXCommentKind, (CXComment,), Comment)
+end
+
+function clang_Comment_getNumChildren(Comment)
+    ccall((:clang_Comment_getNumChildren, libclang), Cuint, (CXComment,), Comment)
+end
+
+function clang_Comment_getChild(Comment, ChildIdx)
+    ccall((:clang_Comment_getChild, libclang), CXComment, (CXComment, Cuint), Comment, ChildIdx)
+end
+
+function clang_Comment_isWhitespace(Comment)
+    ccall((:clang_Comment_isWhitespace, libclang), Cuint, (CXComment,), Comment)
+end
+
+function clang_InlineContentComment_hasTrailingNewline(Comment)
+    ccall((:clang_InlineContentComment_hasTrailingNewline, libclang), Cuint, (CXComment,), Comment)
+end
+
+function clang_TextComment_getText(Comment)
+    ccall((:clang_TextComment_getText, libclang), CXString, (CXComment,), Comment)
+end
+
+function clang_InlineCommandComment_getCommandName(Comment)
+    ccall((:clang_InlineCommandComment_getCommandName, libclang), CXString, (CXComment,), Comment)
+end
+
+function clang_InlineCommandComment_getRenderKind(Comment)
+    ccall((:clang_InlineCommandComment_getRenderKind, libclang), CXCommentInlineCommandRenderKind, (CXComment,), Comment)
+end
+
+function clang_InlineCommandComment_getNumArgs(Comment)
+    ccall((:clang_InlineCommandComment_getNumArgs, libclang), Cuint, (CXComment,), Comment)
+end
+
+function clang_InlineCommandComment_getArgText(Comment, ArgIdx)
+    ccall((:clang_InlineCommandComment_getArgText, libclang), CXString, (CXComment, Cuint), Comment, ArgIdx)
+end
+
+function clang_HTMLTagComment_getTagName(Comment)
+    ccall((:clang_HTMLTagComment_getTagName, libclang), CXString, (CXComment,), Comment)
+end
+
+function clang_HTMLStartTagComment_isSelfClosing(Comment)
+    ccall((:clang_HTMLStartTagComment_isSelfClosing, libclang), Cuint, (CXComment,), Comment)
+end
+
+function clang_HTMLStartTag_getNumAttrs(Comment)
+    ccall((:clang_HTMLStartTag_getNumAttrs, libclang), Cuint, (CXComment,), Comment)
+end
+
+function clang_HTMLStartTag_getAttrName(Comment, AttrIdx)
+    ccall((:clang_HTMLStartTag_getAttrName, libclang), CXString, (CXComment, Cuint), Comment, AttrIdx)
+end
+
+function clang_HTMLStartTag_getAttrValue(Comment, AttrIdx)
+    ccall((:clang_HTMLStartTag_getAttrValue, libclang), CXString, (CXComment, Cuint), Comment, AttrIdx)
+end
+
+function clang_BlockCommandComment_getCommandName(Comment)
+    ccall((:clang_BlockCommandComment_getCommandName, libclang), CXString, (CXComment,), Comment)
+end
+
+function clang_BlockCommandComment_getNumArgs(Comment)
+    ccall((:clang_BlockCommandComment_getNumArgs, libclang), Cuint, (CXComment,), Comment)
+end
+
+function clang_BlockCommandComment_getArgText(Comment, ArgIdx)
+    ccall((:clang_BlockCommandComment_getArgText, libclang), CXString, (CXComment, Cuint), Comment, ArgIdx)
+end
+
+function clang_BlockCommandComment_getParagraph(Comment)
+    ccall((:clang_BlockCommandComment_getParagraph, libclang), CXComment, (CXComment,), Comment)
+end
+
+function clang_ParamCommandComment_getParamName(Comment)
+    ccall((:clang_ParamCommandComment_getParamName, libclang), CXString, (CXComment,), Comment)
+end
+
+function clang_ParamCommandComment_isParamIndexValid(Comment)
+    ccall((:clang_ParamCommandComment_isParamIndexValid, libclang), Cuint, (CXComment,), Comment)
+end
+
+function clang_ParamCommandComment_getParamIndex(Comment)
+    ccall((:clang_ParamCommandComment_getParamIndex, libclang), Cuint, (CXComment,), Comment)
+end
+
+function clang_ParamCommandComment_isDirectionExplicit(Comment)
+    ccall((:clang_ParamCommandComment_isDirectionExplicit, libclang), Cuint, (CXComment,), Comment)
+end
+
+function clang_ParamCommandComment_getDirection(Comment)
+    ccall((:clang_ParamCommandComment_getDirection, libclang), CXCommentParamPassDirection, (CXComment,), Comment)
+end
+
+function clang_TParamCommandComment_getParamName(Comment)
+    ccall((:clang_TParamCommandComment_getParamName, libclang), CXString, (CXComment,), Comment)
+end
+
+function clang_TParamCommandComment_isParamPositionValid(Comment)
+    ccall((:clang_TParamCommandComment_isParamPositionValid, libclang), Cuint, (CXComment,), Comment)
+end
+
+function clang_TParamCommandComment_getDepth(Comment)
+    ccall((:clang_TParamCommandComment_getDepth, libclang), Cuint, (CXComment,), Comment)
+end
+
+function clang_TParamCommandComment_getIndex(Comment, Depth)
+    ccall((:clang_TParamCommandComment_getIndex, libclang), Cuint, (CXComment, Cuint), Comment, Depth)
+end
+
+function clang_VerbatimBlockLineComment_getText(Comment)
+    ccall((:clang_VerbatimBlockLineComment_getText, libclang), CXString, (CXComment,), Comment)
+end
+
+function clang_VerbatimLineComment_getText(Comment)
+    ccall((:clang_VerbatimLineComment_getText, libclang), CXString, (CXComment,), Comment)
+end
+
+function clang_HTMLTagComment_getAsString(Comment)
+    ccall((:clang_HTMLTagComment_getAsString, libclang), CXString, (CXComment,), Comment)
+end
+
+function clang_FullComment_getAsHTML(Comment)
+    ccall((:clang_FullComment_getAsHTML, libclang), CXString, (CXComment,), Comment)
+end
+
+function clang_FullComment_getAsXML(Comment)
+    ccall((:clang_FullComment_getAsXML, libclang), CXString, (CXComment,), Comment)
+end
+
+const CXCompilationDatabase = Ptr{Cvoid}
+
+const CXCompileCommands = Ptr{Cvoid}
+
+const CXCompileCommand = Ptr{Cvoid}
+
+@cenum CXCompilationDatabase_Error::UInt32 begin
+    CXCompilationDatabase_NoError = 0
+    CXCompilationDatabase_CanNotLoadDatabase = 1
+end
+
+function clang_CompilationDatabase_fromDirectory(BuildDir, ErrorCode)
+    ccall((:clang_CompilationDatabase_fromDirectory, libclang), CXCompilationDatabase, (Cstring, Ptr{CXCompilationDatabase_Error}), BuildDir, ErrorCode)
+end
+
+function clang_CompilationDatabase_dispose(arg1)
+    ccall((:clang_CompilationDatabase_dispose, libclang), Cvoid, (CXCompilationDatabase,), arg1)
+end
+
+function clang_CompilationDatabase_getCompileCommands(arg1, CompleteFileName)
+    ccall((:clang_CompilationDatabase_getCompileCommands, libclang), CXCompileCommands, (CXCompilationDatabase, Cstring), arg1, CompleteFileName)
+end
+
+function clang_CompilationDatabase_getAllCompileCommands(arg1)
+    ccall((:clang_CompilationDatabase_getAllCompileCommands, libclang), CXCompileCommands, (CXCompilationDatabase,), arg1)
+end
+
+function clang_CompileCommands_dispose(arg1)
+    ccall((:clang_CompileCommands_dispose, libclang), Cvoid, (CXCompileCommands,), arg1)
+end
+
+function clang_CompileCommands_getSize(arg1)
+    ccall((:clang_CompileCommands_getSize, libclang), Cuint, (CXCompileCommands,), arg1)
+end
+
+function clang_CompileCommands_getCommand(arg1, I)
+    ccall((:clang_CompileCommands_getCommand, libclang), CXCompileCommand, (CXCompileCommands, Cuint), arg1, I)
+end
+
+function clang_CompileCommand_getDirectory(arg1)
+    ccall((:clang_CompileCommand_getDirectory, libclang), CXString, (CXCompileCommand,), arg1)
+end
+
+function clang_CompileCommand_getFilename(arg1)
+    ccall((:clang_CompileCommand_getFilename, libclang), CXString, (CXCompileCommand,), arg1)
+end
+
+function clang_CompileCommand_getNumArgs(arg1)
+    ccall((:clang_CompileCommand_getNumArgs, libclang), Cuint, (CXCompileCommand,), arg1)
+end
+
+function clang_CompileCommand_getArg(arg1, I)
+    ccall((:clang_CompileCommand_getArg, libclang), CXString, (CXCompileCommand, Cuint), arg1, I)
+end
+
+function clang_CompileCommand_getNumMappedSources(arg1)
+    ccall((:clang_CompileCommand_getNumMappedSources, libclang), Cuint, (CXCompileCommand,), arg1)
+end
+
+function clang_CompileCommand_getMappedSourcePath(arg1, I)
+    @warn "`clang_CompileCommand_getMappedSourcePath` Left here for backward compatibility.\nNo mapped sources exists in the C++ backend anymore.\nThis function just return Null `CXString`.\nSee:\n- [Remove unused CompilationDatabase::MappedSources](https://reviews.llvm.org/D32351)\n"
+    ccall((:clang_CompileCommand_getMappedSourcePath, libclang), CXString, (CXCompileCommand, Cuint), arg1, I)
+end
+
+function clang_CompileCommand_getMappedSourceContent(arg1, I)
+    @warn "`clang_CompileCommand_getMappedSourceContent` Left here for backward compatibility.\nNo mapped sources exists in the C++ backend anymore.\nThis function just return Null `CXString`.\nSee:\n- [Remove unused CompilationDatabase::MappedSources](https://reviews.llvm.org/D32351)\n"
+    ccall((:clang_CompileCommand_getMappedSourceContent, libclang), CXString, (CXCompileCommand, Cuint), arg1, I)
+end
+
+function clang_install_aborting_llvm_fatal_error_handler()
+    ccall((:clang_install_aborting_llvm_fatal_error_handler, libclang), Cvoid, ())
+end
+
+function clang_uninstall_llvm_fatal_error_handler()
+    ccall((:clang_uninstall_llvm_fatal_error_handler, libclang), Cvoid, ())
 end
 
 const CINDEX_VERSION_MAJOR = 0

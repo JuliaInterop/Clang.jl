@@ -4,7 +4,14 @@
 # ccall((function_name, expression), returntype, (argtype1, ...), argvalue1, ...)
 library_name = "libclang"
 
-# the new generator is able to print everthing into one single file instead of a pair of two files.
+# this entry allows you to specify different library names for different headers.
+# in the following example:
+# library_names = {"config.h" = "libclang_config", "libclang_p.*.h" = "libclang_patch"}
+# those functions in the `config.h` will be generated as:
+# ccall((function_name, libclang_config), returntype, (argtype1, ...), argvalue1, ...)
+library_names = {}
+
+# for cross-platform, the directory of those platform-specific files will be `dirname(output_file_path)/wrappers/`
 output_file_path = "../src/LibClang.jl"
 
 # if this entry is not empty, the generator will print the code below to the `output_file_path`.
@@ -32,15 +39,6 @@ prologue_file_path = "./prologue.jl"
 # this is often used for applying custom patches.
 epilogue_file_path = ""
 
-# automatically detect system std headers especially for macOS users.
-auto_detect_system_headers = true
-
-# add "-I$clang_include_dir" to arguments
-use_clang_headers = true
-
-# header blacklist
-header_blacklist = []
-
 # node with an id in the `printer_blacklist` will be ignored in the printing passes. 
 # this is very useful for custom editing. 
 printer_blacklist = [
@@ -57,19 +55,16 @@ printer_blacklist = [
 
 # Julia's `@enum` do not allow duplicated values, so by default, C enums are translated to 
 # CEnum.jl's `@cenum`. 
-# if this entry is true, those duplicated enum constants are commented. 
+# if this entry is true, `@enum` is used and those duplicated enum constants are just commented. 
 use_julia_native_enum_type = false
 
+# use deterministic symbol instead of `gensym`-generated `var"##XXX"`
+use_deterministic_symbol = true
+
 # by default, only those declarations in the local header file are processed. 
-# for example, those declarations in the standard C library will be ignored. 
-# if you'd like to disable this behavior, please set this option to false.
+# those declarations in the system headers will be treated sepcially and will be generated if necessary. 
+# if you'd like to generate all of the symbols in the system headers, please set this option to false.
 is_local_header_only = true
-
-# by default, we skip all of those compiler definitions.
-skip_compiler_definition = true
-
-# definitions in the following list will never be skipped
-definition_whitelist = []
 
 # if this option is set to true, C code with a style of
 # ```c
@@ -92,24 +87,23 @@ definition_whitelist = []
 # ```
 smart_de_anonymize = true
 
+# EXPERIMENTAL
 # if this option is set to true, those structs that are not necessary to be an 
-# immutable struct will be changed to be a mutable struct. 
+# immutable struct will be generated as a mutable struct. 
 # this option is default to false, do read the paragraph below before using this feature.
 auto_mutability = true
 
 # if you feel like certain structs should not be generated as mutable struct, please add them in the following list. 
-# for example, if a C function accepts a vector of some type as its argument:
+# for example, if a C function accepts a `Vector` of some type as its argument like:
 #     void foo(mutable_type *list, int n);
 # when calling this function via `ccall`, passing a `Vector{mutable_type}(undef, n)` to the first
-# argument will trigger a crash, one needs to use `Ref{NTuple{n,mutable_type}}()` instead.
+# argument will trigger a crash, the reason is mutable structs are not stored inline within a `Vector`,
+# one should use `Ref{NTuple{n,mutable_type}}()` instead.
 # this is not convenient and that's where the `auto_mutability_blacklist` comes in.
 auto_mutability_blacklist = []
 
 # opposite to `auto_mutability_blacklist` and has a higher priority
 auto_mutability_whitelist = []
-
-# use deterministic symbol instead of `gensym` 
-use_deterministic_symbol = true
 
 [codegen]
 # map C's bool to Julia's Bool instead of `Cuchar` a.k.a `UInt8`.
@@ -149,23 +143,5 @@ add_comment_for_skipped_macro = true
 ignore_header_guards = true
 ignore_header_guards_with_suffixes = []
 
-# if true, ignore those C pure definition macros
+# if true, ignore those pure definition macros in the C code
 ignore_pure_definition = true
-
-[general.log]
-# CollectTopLevelNode_log = false
-# LinkTypedefToAnonymousTagType_log = false
-# IndexDefinition_log = false
-# ResolveDependency_log = false
-# RemoveCircularReference_log = false
-# TopologicalSort_log = false
-# CodegenPreprocessing_log = false
-# DeAnonymize_log = false
-# Audit_log = true
-# Codegen_log = false
-# CodegenMacro_log = false
-# CodegenPostprocessing_log = false
-# GeneralPrinter_log = true
-# ProloguePrinter_log = true
-# EpiloguePrinter_log = true
-# TweakMutability_log = false

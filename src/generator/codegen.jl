@@ -8,12 +8,23 @@ emit!(dag::ExprDAG, node::ExprNode, options::Dict; args...) = dag
 
 ############################### Function ###############################
 
+function _get_func_name(cursor, options)
+    library_name = options["library_name"]
+    haskey(options, "library_names") || return library_name
+    file_name = get_filename(cursor) |> normpath
+    ks = filter(x->endswith(file_name, Regex(x)), collect(keys(options["library_names"])))
+    if !isempty(ks)
+        library_name = options["library_names"][ks[1]] # FIXME: same file name in different folders?
+    end
+    return library_name
+end
+
 function emit!(dag::ExprDAG, node::ExprNode{FunctionProto}, options::Dict; args...)
     conflict_syms = get(options, "function_argument_conflict_symbols", [])
 
     cursor = node.cursor
 
-    library_name = options["library_name"]
+    library_name = _get_func_name(cursor, options)
     library_expr = Meta.parse(library_name)
 
     func_name = Symbol(spelling(cursor))
@@ -82,7 +93,7 @@ function emit!(dag::ExprDAG, node::ExprNode{FunctionNoProto}, options::Dict; arg
     @warn "No Prototype for $cursor - assuming no arguments"
     @assert isempty(get_function_args(cursor))
 
-    library_name = options["library_name"]
+    library_name = _get_func_name(cursor, options)
     library_expr = Meta.parse(library_name)
 
     func_name = Symbol(spelling(cursor))

@@ -4,11 +4,6 @@ Supertype for all passes.
 """
 abstract type AbstractPass end
 
-const COMPILER_DEFINITIONS_EXTRA = [
-    "OBJC_NEW_PROPERTIES",  # https://reviews.llvm.org/D72970
-    "_LP64",  # this is a compiler flag and is always defined along with "__LP64__"
-]
-
 """
     CollectTopLevelNode <: AbstractPass
 In this pass, all tags and identifiers in all translation units are collected for
@@ -18,47 +13,88 @@ See also [`collect_top_level_nodes!`](@ref).
 """
 mutable struct CollectTopLevelNode <: AbstractPass
     trans_units::Vector{TranslationUnit}
-    dependant_headers::Vector{String}
-    compiler_defs_extra::Vector{String}
+    dependent_headers::Vector{String}
+    system_dirs::Vector{String}
     show_info::Bool
 end
-CollectTopLevelNode(tus, dhs, info) = CollectTopLevelNode(tus, dhs, COMPILER_DEFINITIONS_EXTRA, info)
-CollectTopLevelNode(tus, dhs=String[]; info=false) = CollectTopLevelNode(tus, dhs, info)
+CollectTopLevelNode(tus, dhs, sys; info=false) = CollectTopLevelNode(tus, dhs, sys, info)
 
 function (x::CollectTopLevelNode)(dag::ExprDAG, options::Dict)
     general_options = get(options, "general", Dict())
-    is_local_only = get(general_options, "is_local_header_only", true)
-    skip_defs = get(general_options, "skip_compiler_definition", true)
-    whitelist = get(general_options, "definition_whitelist", [])
-
     log_options = get(general_options, "log", Dict())
+    is_local_only = get(general_options, "is_local_header_only", true)
     show_info = get(log_options, "CollectTopLevelNode_log", x.show_info)
 
     empty!(dag.nodes)
+    empty!(dag.sys)
     for tu in x.trans_units
         tu_cursor = getTranslationUnitCursor(tu)
-        header_name = spelling(tu_cursor)
+        header_name = spelling(tu_cursor) |> normpath
         @info "[CollectTopLevelNode]: processing header: $header_name"
         for cursor in children(tu_cursor)
-            str = spelling(cursor)
-
             file_name = get_filename(cursor) |> normpath
-            if is_local_only && header_name != file_name
-                if str ∉ whitelist
-                    file_name ∉ x.dependant_headers && continue
+            if is_local_only && header_name != file_name && file_name ∉ x.dependent_headers
+                if any(sysdir->startswith(file_name, sysdir), x.system_dirs)
+                    collect_top_level_nodes!(dag.sys, cursor, general_options)
                 end
+                continue
             end
-
-            if skip_defs && (startswith(str, "__") || (str ∈ x.compiler_defs_extra))
-                if str ∉ whitelist
-                    show_info && @info "[CollectTopLevelNode]: skip $str"
-                    continue
-                end
-            end
-
-            collect_top_level_nodes!(dag, cursor, general_options)
+            collect_top_level_nodes!(dag.nodes, cursor, general_options)
         end
     end
+
+    return dag
+end
+
+"""
+    CollectDependantSystemNode <: AbstractPass
+In this pass, those dependent tags/identifiers are to the `dag.nodes`.
+
+See also [`collect_system_nodes!`](@ref).
+"""
+mutable struct CollectDependantSystemNode <: AbstractPass
+    dependents::Vector{ExprNode}
+    show_info::Bool
+end
+CollectDependantSystemNode(; info=true) = CollectDependantSystemNode(ExprNode[], info)
+
+function (x::CollectDependantSystemNode)(dag::ExprDAG, options::Dict)
+    general_options = get(options, "general", Dict())
+    log_options = get(general_options, "log", Dict())
+    show_info = get(log_options, "CollectDependantSystemNode_log", x.show_info)
+
+    empty!(x.dependents)
+    for node in dag.nodes
+        collect_dependent_system_nodes!(dag, node, x.dependents)
+    end
+    isempty(x.dependents) && return dag
+
+    unique!(x.dependents)
+    show_info && @warn "[CollectDependantSystemNode]: found symbols in the system headers: $([n.id for n in x.dependents])"
+
+    for dn in x.dependents
+        pushfirst!(dag.nodes, dn)
+    end
+
+    deps = copy(x.dependents)
+    while !isempty(x.dependents)
+        empty!(x.dependents)
+        for node in deps
+            collect_dependent_system_nodes!(dag, node, x.dependents)
+        end
+
+        # break earlier
+        isempty(x.dependents) && break
+
+        unique!(x.dependents)
+        show_info && @warn "[CollectDependantSystemNode]: found symbols in the system headers: $([n.id for n in x.dependents])"
+        for dn in x.dependents
+            pushfirst!(dag.nodes, dn)
+        end
+
+        deps = copy(x.dependents)
+    end
+
     return dag
 end
 
@@ -599,6 +635,7 @@ function (x::Codegen)(dag::ExprDAG, options::Dict)
     # forward general options
     if haskey(general_options, "library_name")
         codegen_options["library_name"] = general_options["library_name"]
+        codegen_options["library_names"] = general_options["library_names"]
     end
 
     # store definitions which would be used during codegen
@@ -815,7 +852,7 @@ end
 
 """
     GeneralPrinter <: AbstractPrinter
-In this pass, structs/unions/enums are dumped to file.
+In this pass, all symbols are dumped to file.
 """
 mutable struct GeneralPrinter <: AbstractPrinter
     file::AbstractString
@@ -848,7 +885,7 @@ end
 
 """
    StdPrinter <: AbstractPrinter
-In this pass, structs/unions/enums are dumped to stdout.
+In this pass, all symbols are dumped to stdout.
 """
 mutable struct StdPrinter <: AbstractPrinter
     show_info::Bool
@@ -997,7 +1034,7 @@ function (x::CodegenMacro)(dag::ExprDAG, options::Dict)
     macro_options = get(codegen_options, "macro", Dict())
     macro_mode = get(macro_options, "macro_mode", "basic")
 
-    macro_mode == "none" && return dag
+    (macro_mode == "none" || macro_mode == "disable") && return dag
 
     for node in dag.nodes
         node.type isa AbstractMacroNodeType || continue

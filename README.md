@@ -48,10 +48,13 @@ headers = [joinpath(CLANG_C_DIR, header) for header in readdir(CLANG_C_DIR) if e
 options = load_options(joinpath(@__DIR__, "generator.toml"))
 
 # add compiler flags
-args = ["-I$INCLUDE_DIR"]
+args = get_default_args()
+push!(args, "-I$INCLUDE_DIR")
+
+headers = detect_headers(CLANG_C_DIR, args)
 
 # add extra definition
-@add_def time_t
+@add_def time_t AbstractJuliaSIT JuliaCtime_t Ctime_t
 
 # create context
 ctx = create_context(headers, args, options)
@@ -60,5 +63,4 @@ ctx = create_context(headers, args, options)
 build!(ctx)
 ```
 
-More examples can be found here: https://github.com/Gnimuc/GeneratorScripts
 

@@ -46,6 +46,8 @@ function init(; headers::Vector{String}                    = String[],
                 options                                    = InternalOptions(),
                 rewriter                                   = x -> x)
 
+    @warn "You are using the deprecated wrapper generator of Clang.jl which is not easy to use and has bugs. Please consider to update your script or submit a request to Clang.jl if you need help."
+
     # Set up some optional args if they are not explicitly passed.
     index == nothing && (index = Index(clang_diagnostics);)
 

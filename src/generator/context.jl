@@ -189,22 +189,33 @@ function get_tagtype_node(ctx::AbstractContext, s::Symbol)
     end
 end
 
-# FIXME: find a more robust way to do this.
 function get_triple()
-    @static if Sys.isapple()
-        return "x86_64-apple-darwin14"
-    elseif Sys.isbsd()
-        return "x86_64-unknown-freebsd11.1"
-    elseif Sys.iswindows() && Sys.WORD_SIZE == 64
-        return "x86_64-w64-mingw32"
-    elseif Sys.iswindows() && Sys.WORD_SIZE == 32
-        return "i686-w64-mingw32"
-    elseif Sys.islinux() && Sys.WORD_SIZE == 64
-        return "x86_64-linux-gnu"
-    elseif Sys.islinux() && Sys.WORD_SIZE == 32
-        return "i686-linux-gnu"
-    else
+    @static if Sys.islinux() && Sys.ARCH === :aarch64 && !occursin("musl", Base.BUILD_TRIPLET)
         return "aarch64-linux-gnu"
+    elseif Sys.islinux() && Sys.ARCH === :aarch64 && occursin("musl", Base.BUILD_TRIPLET)
+        return "aarch64-linux-musl"
+    elseif Sys.islinux() && startswith(string(Sys.ARCH), "arm") && !occursin("musl", Base.BUILD_TRIPLET)
+        return "armv7l-linux-gnueabihf"
+    elseif Sys.islinux() && startswith(string(Sys.ARCH), "arm") && occursin("musl", Base.BUILD_TRIPLET)
+        return "armv7l-linux-musleabihf"
+    elseif Sys.islinux() && Sys.ARCH === :i686 && !occursin("musl", Base.BUILD_TRIPLET)
+        return "i686-linux-gnu"
+    elseif Sys.islinux() && Sys.ARCH === :i686 && occursin("musl", Base.BUILD_TRIPLET)
+        return "i686-linux-musl"
+    elseif Sys.iswindows() && Sys.ARCH === :i686
+        return "i686-w64-mingw32"
+    elseif Sys.islinux() && Sys.ARCH === :powerpc64le
+        return "powerpc64le-linux-gnu"
+    elseif Sys.isapple() && Sys.ARCH === :x86_64
+        return "x86_64-apple-darwin14"
+    elseif Sys.islinux() && Sys.ARCH === :x86_64 && !occursin("musl", Base.BUILD_TRIPLET)
+        return "x86_64-linux-gnu"
+    elseif Sys.islinux() && Sys.ARCH === :x86_64 && occursin("musl", Base.BUILD_TRIPLET)
+        return "x86_64-linux-musl"
+    elseif Sys.isbsd() && !Sys.isapple()
+        return "x86_64-unknown-freebsd11.1"
+    elseif Sys.iswindows() && Sys.ARCH === :x86_64
+        return "x86_64-w64-mingw32"
     end
 end
 

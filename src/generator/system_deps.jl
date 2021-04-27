@@ -94,6 +94,13 @@ function collect_dependent_system_nodes!(dag::ExprDAG, node::ExprNode{TypedefDef
     return system_nodes
 end
 
+function collect_dependent_system_nodes!(dag::ExprDAG, node::ExprNode{TypedefToAnonymous}, system_nodes)
+    # FIXME: this assumes duplicated symbols in the system headers are the same.
+    idx = findfirst(x->x.id == node.type.sym, dag.sys)
+    idx != nothing && push!(system_nodes, dag.sys[idx])
+    return system_nodes
+end
+
 function collect_dependent_system_nodes!(dag::ExprDAG, node::ExprNode{<:AbstractStructNodeType}, system_nodes)
     cursor = node.cursor
     for c in fields(getCursorType(cursor))

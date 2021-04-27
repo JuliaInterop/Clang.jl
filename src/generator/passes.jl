@@ -214,9 +214,10 @@ passes.
 """
 mutable struct LinkTypedefToAnonymousTagType <: AbstractPass
     cache::Dict{Int,Vector{Int}}
+    is_system::Bool
     show_info::Bool
 end
-LinkTypedefToAnonymousTagType(; info=false) = LinkTypedefToAnonymousTagType(Dict(), info)
+LinkTypedefToAnonymousTagType(;is_system=false, info=false) = LinkTypedefToAnonymousTagType(Dict(), is_system, info)
 
 function (x::LinkTypedefToAnonymousTagType)(dag::ExprDAG, options::Dict)
     general_options = get(options, "general", Dict())
@@ -224,15 +225,16 @@ function (x::LinkTypedefToAnonymousTagType)(dag::ExprDAG, options::Dict)
     show_info = get(log_options, "LinkTypedefToAnonymousTagType_log", x.show_info)
 
     empty!(x.cache)
+    nodes = x.is_system ? dag.sys : dag.nodes
     # loop through all the nodes to cache the indices of all the typedefs that refer to
     # an anonymous tag-type
-    for i in 1:(length(dag.nodes) - 1)
-        cur = dag.nodes[i]
+    for i in 1:(length(nodes) - 1)
+        cur = nodes[i]
         is_anonymous(cur) || continue
         x.cache[i] = Int[]
         # since an anonymous tag-type may have mutiple typedefs, we need another loop
-        for j in (i + 1):length(dag.nodes)
-            n = dag.nodes[j]
+        for j in (i + 1):length(nodes)
+            n = nodes[j]
             is_typedef(n) || break  # keep searching until we hit a non-typedef node
             refback = children(n.cursor)
             if !isempty(refback) && first(refback) == cur.cursor
@@ -243,11 +245,11 @@ function (x::LinkTypedefToAnonymousTagType)(dag::ExprDAG, options::Dict)
     # loop through all anonymous tag-types and apply node editing
     for (k, v) in x.cache
         isempty(v) && continue  # skip non-typedef anonymous tag-types e.g. enum
-        anonymous = dag.nodes[k]
+        anonymous = nodes[k]
         for i in v
-            node = dag.nodes[i]
+            node = nodes[i]
             ty = TypedefToAnonymous(anonymous.id)
-            dag.nodes[i] = ExprNode(node.id, ty, node.cursor, node.exprs, node.adj)
+            nodes[i] = ExprNode(node.id, ty, node.cursor, node.exprs, node.adj)
             show_info &&
                 @info "[LinkTypedefToAnonymousTagType_log]: store $(anonymous.cursor)'s id to typedef node $(node.id)"
         end

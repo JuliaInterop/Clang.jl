@@ -6,13 +6,14 @@ version = "0.14.0"
 [deps]
 CEnum = "fa961155-64e5-5f13-b03f-caf6b980ea82"
 Clang_jll = "0ee61d77-7f21-5576-8119-9fcc46b10100"
+Downloads = "f43a241f-c20a-4ad4-852c-f6b1247861c6"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
-Downloads = "f43a241f-c20a-4ad4-852c-f6b1247861c6"
 
 [compat]
 CEnum = "0.4"
 Clang_jll = "~11.0.1"
+Downloads = "1.4"
 TOML = "1.0"
 julia = "~1.6.0"
 

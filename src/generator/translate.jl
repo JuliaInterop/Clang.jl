@@ -59,8 +59,8 @@ translate(jlty::JuliaRefAny, options=Dict()) = :(Ref{Any})
 translate(jlty::JuliaCuint128, options=Dict()) = :UInt128
 translate(jlty::JuliaCint128, options=Dict()) = :Int128
 translate(jlty::JuliaCschar, options=Dict()) = :Int8
-translate(jlty::JuliaClongdouble, options=Dict()) = :Float64
-translate(jlty::JuliaComplex, options=Dict()) = :ComplexF32  # FIXME
+translate(jlty::JuliaClongdouble, options=Dict()) = :Float64  # FIXME: the actually type depends on compiler
+translate(jlty::JuliaComplex, options=Dict()) = :ComplexF32  # FIXME: correct this
 translate(jlty::JuliaChalf, options=Dict()) = :Float16
 translate(jlty::JuliaCfloat16, options=Dict()) = :Float16
 translate(jlty::JuliaCuint64_t, options=Dict()) = :UInt64

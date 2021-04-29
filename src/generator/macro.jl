@@ -1,118 +1,5 @@
-# FIXME: this file is a mess and needs to be purged.
-
-const LITERAL_LONG = ["L", "l"]
-const LITERAL_ULONG = ["UL", "Ul", "uL", "ul", "LU", "Lu", "lU", "lu"]
-const LITERAL_ULONGLONG = ["ULL", "Ull", "uLL", "ull", "LLU", "LLu", "llU", "llu"]
-const LITERAL_LONGLONG = ["LL", "ll"]
-
-const LITERAL_SUFFIXES = [
-    LITERAL_ULONGLONG..., LITERAL_LONGLONG..., LITERAL_ULONG..., LITERAL_LONG...,
-    "U", "u", "F", "f"
-]
-
-function literal_totype(literal, txt)
-    literal = lowercase(literal)
-
-    # Floats following http://en.cppreference.com/w/cpp/language/floating_literal
-    float64 = occursin(".", txt) && occursin("l", literal)  # long double
-    float32 = occursin("f", literal)
-
-    if float64 || float32
-        float64 && return "Float64"
-        float32 && return "Float32"
-    end
-
-    # Integers following http://en.cppreference.com/w/cpp/language/integer_literal
-    unsigned = occursin("u", literal)
-    if unsigned && (endswith(literal, "llu") || endswith(literal, "ull"))
-        return "Culonglong"
-    elseif !unsigned && endswith(literal, "ll")
-        return "Clonglong"
-    elseif occursin("ul", literal) || occursin("lu", literal)
-        return "Culong"
-    elseif !unsigned && endswith(literal, "l")
-        return "Clong"
-    else
-        return unsigned ? "Cuint" : "Cint"
-    end
-end
-
-normalize_literal(tok) = strip(tok.text)
-
-function normalize_literal(tok::Literal)
-    txt = strip(tok.text)
-    for sfx in LITERAL_SUFFIXES
-        if endswith(txt, sfx)
-            type = literal_totype(sfx, txt)
-            txt = txt[1:(end - length(sfx))]
-            return "$(type)($txt)"
-        end
-    end
-    # Char to Cchar
-    if match(r"^'.*'$", txt) !== nothing
-        return "Cchar($txt)"
-    end
-    return txt
-end
-
-function literally(tok)
-    m = match(r"^0[0-9]*\d$", tok.text)
-    if m !== nothing && m.match !== "0"
-        literals = "0o"*normalize_literal(tok)
-    else
-        literals = normalize_literal(tok)
-    end
-    if occursin('\$', literals)
-        return "($(replace(literals, "\$"=>"\\\$")))"
-    else
-        return "($literals)"
-    end
-end
-
-is_macro_pure_definition(toks) = toks.size == 1 && toks[1].kind == CXToken_Identifier
-
-function is_macro_constants(toks)
-    if toks.size == 2 &&
-        toks[1].kind == CXToken_Identifier &&
-        toks[2].kind == CXToken_Literal
-        # `#define CONSTANT_LITERALS_1 0`
-        return true
-    elseif toks.size == 4 &&
-        toks[1].kind == CXToken_Identifier &&
-        toks[2].kind == CXToken_Punctuation &&
-        toks[3].kind == CXToken_Literal &&
-        toks[4].kind == CXToken_Punctuation
-        # `#define CONSTANT_LITERALS_BRACKET ( 0x10u )`
-        return true
-    else
-        return false
-    end
-end
-
-function is_macro_constants_with_conv(toks)
-    if toks.size == 5 &&
-        toks[1].kind == CXToken_Identifier &&
-        toks[2].kind == CXToken_Identifier &&
-        toks[3].kind == CXToken_Punctuation &&
-        toks[4].kind == CXToken_Literal &&
-        toks[5].kind == CXToken_Punctuation
-        # `#define CONSTANT_LITERALS_CONV CLONG ( 1 )`
-        return true
-    else
-        return false
-    end
-end
-
-function is_macro_naive_alias(toks)
-    if toks.size == 2 &&
-        toks[1].kind == CXToken_Identifier &&
-        toks[2].kind == CXToken_Identifier
-        # `#define CONSTANT_ALIAS CONSTANT_LITERALS_1`
-        return true
-    else
-        return false
-    end
-end
+# as C's expression shares some similarities with Julia's expression, we just do some tweaks
+# on the tokens and then try to parse them using Julia's `Meta.parse`
 
 const C_KEYWORDS_DATATYPE = [
     "char", "double", "float", "int", "long", "short", "signed", "unsigned", "void",
@@ -154,79 +41,124 @@ const C_DATATYPE_TO_JULIA_DATATYPE = Dict(
     "unsigned long long int"    => :Culonglong
 )
 
-function is_macro_keyword_alias(toks)
-    if toks.size ≥ 2 && toks[1].kind == CXToken_Identifier
-        toks_kind = [tok.kind for tok in collect(toks)[2:end]]
-        return all(x -> x == CXToken_Keyword, toks_kind)
-    else
-        return false
-    end
-end
+const LITERAL_LONG = ["L", "l"]
+const LITERAL_ULONG = ["UL", "Ul", "uL", "ul", "LU", "Lu", "lU", "lu"]
+const LITERAL_ULONGLONG = ["ULL", "Ull", "uLL", "ull", "LLU", "LLu", "llU", "llu"]
+const LITERAL_LONGLONG = ["LL", "ll"]
 
-const C_OPERATORS = [
-    "*", "/", "%", "+", "-",
-    "<<", ">>",
-    "<", "<=", ">", ">=", "==", "!=",
-    "&", "|", "^", "&&", "||",
+const LITERAL_SUFFIXES = [
+    LITERAL_ULONGLONG..., LITERAL_LONGLONG..., LITERAL_ULONG..., LITERAL_LONG...,
+    "U", "u", "F", "f"
 ]
 
-function is_macro_binary_operator(toks)
-    toks[1].kind != CXToken_Identifier && return false
-    if toks.size == 4 &&
-        toks[1].kind == CXToken_Identifier &&
-        (toks[2].kind == CXToken_Literal || toks[2].kind == CXToken_Identifier) &&
-        toks[3].kind == CXToken_Punctuation &&
-        (toks[4].kind == CXToken_Literal || toks[4].kind == CXToken_Identifier) &&
-        toks[3].text in C_OPERATORS
-        # `#define SINGLE_BINARY_OP A | B`
-        return true
-    elseif toks.size == 6 &&
-        toks[1].kind == CXToken_Identifier &&
-        toks[2].kind == CXToken_Punctuation &&
-        (toks[3].kind == CXToken_Literal || toks[3].kind == CXToken_Identifier) &&
-        toks[4].kind == CXToken_Punctuation &&
-        (toks[5].kind == CXToken_Literal || toks[5].kind == CXToken_Identifier) &&
-        toks[6].kind == CXToken_Punctuation &&
-        toks[4].text in C_OPERATORS
-        # `#define SINGLE_BINARY_OP (A | B)`
-        return true
+function c_literal_to_julia(txt, sfx)
+    sfx = lowercase(sfx)
+
+    # floats following http://en.cppreference.com/w/cpp/language/floating_literal
+    float64 = occursin(".", txt) && occursin("l", sfx)  # long double
+    float32 = occursin("f", sfx)
+
+    if float64 || float32
+        float64 && return "Float64"
+        float32 && return "Float32"
+    end
+
+    # integers following http://en.cppreference.com/w/cpp/language/integer_literal
+    unsigned = occursin("u", sfx)
+    if unsigned && (endswith(sfx, "llu") || endswith(sfx, "ull"))
+        return "Culonglong"
+    elseif !unsigned && endswith(sfx, "ll")
+        return "Clonglong"
+    elseif occursin("ul", sfx) || occursin("lu", sfx)
+        return "Culong"
+    elseif !unsigned && endswith(sfx, "l")
+        return "Clong"
     else
-        return false
+        return unsigned ? "Cuint" : "Cint"
     end
 end
 
-function is_macro_naive_arithmetic(toks)
-    toks[1].kind != CXToken_Identifier && return false
-    toks.size < 4 && return false
+function normalize_literal_type(text::AbstractString)
+    txt = strip(text)
+    for sfx in LITERAL_SUFFIXES
+        if endswith(txt, sfx)
+            type = c_literal_to_julia(txt, sfx)
+            txt = txt[1:(end - length(sfx))]
+            return "$(type)($txt)"
+        end
+    end
+    # Char to Cchar
+    if match(r"^'.*'$", txt) !== nothing
+        return "Cchar($txt)"
+    end
+    return txt
+end
 
-    # only allows `Identifier`, `Literal`, `Punctuation`(C_OPERATORS and brackets)
-    is_naive = all(toks) do tok
-        if tok.kind == CXToken_Punctuation
-            return tok.text ∈ C_OPERATORS || tok.text == "(" || tok.text == ")"
-        elseif tok.kind == CXToken_Identifier
-            return !startswith(tok.text, "__")  # ignore compiler defs
+function normalize_literal(text)
+    m = match(r"^0[0-9]*\d$", text)
+    if m !== nothing && m.match !== "0"
+        strs = "0o"*normalize_literal_type(text)
+    else
+        strs = normalize_literal_type(text)
+    end
+    if occursin('\$', strs)
+        return "($(replace(strs, "\$"=>"\\\$")))"
+    else
+        return "($strs)"
+    end
+end
+
+normalize_punctuation(text) = text == "/" ? "÷" : text == "^" ? "⊻" : text
+
+is_literal(tok::CLToken) = tok.kind == CXToken_Literal
+is_identifier(tok::CLToken) = tok.kind == CXToken_Identifier
+is_punctuation(tok::CLToken) = tok.kind == CXToken_Punctuation
+is_keyword(tok::CLToken) = tok.kind == CXToken_Keyword
+is_comment(tok::CLToken) = tok.kind == CXToken_Comment
+
+const DUMMY_TOKEN = CXToken((0,0,0,0), C_NULL)
+
+function tweak_exprs(toks::Vector)
+    new_toks = []
+    i = 1
+    while i ≤ length(toks)
+        tok = toks[i]
+        if is_literal(tok)
+            push!(new_toks, Literal(DUMMY_TOKEN, CXToken_Literal, normalize_literal(tok.text)))
+            i += 1
+        elseif is_punctuation(tok)
+            push!(new_toks, Punctuation(DUMMY_TOKEN, CXToken_Punctuation, normalize_punctuation(tok.text)))
+            i += 1
+        elseif is_keyword(tok)
+            j = i
+            while j ≤ length(toks) && is_keyword(toks[j])
+                j += 1
+            end
+            txt = ""
+            for k = i:j-1
+                txt = txt * " " * toks[k].text
+            end
+            txt = strip(txt)
+            if haskey(C_DATATYPE_TO_JULIA_DATATYPE, txt)
+                txt = string(C_DATATYPE_TO_JULIA_DATATYPE[txt])
+                push!(new_toks, Keyword(DUMMY_TOKEN, CXToken_Keyword, txt))
+                i = j
+            else
+                push!(new_toks, tok)
+                i += 1
+            end
         else
-            return true
+            push!(new_toks, tok)
+            i += 1
         end
     end
-
-    # if there is no binary operator, skip
-    all(x->x.text ∉ C_OPERATORS, toks) && return false
-
-    # try to parse the expression
-    if is_naive
-        try
-            txts = [tok.kind == CXToken_Literal ? literally(tok) : tok.text for tok in collect(toks)[2:end]]
-            str = reduce(add_spaces_for_macros, txts)
-            Meta.parse(str)
-            return true
-        catch err
-            # pass
-        end
-    end
-
-    return false
+    return new_toks
 end
+
+# `#define SOMETHING`
+is_macro_definition_only(toks::Vector) = length(toks) == 1 && is_identifier(toks[1])
+is_macro_definition_only(toks::TokenList) = toks.size == 1 && is_identifier(toks[1])
+is_macro_definition_only(cursor::CLCursor) = is_macro_definition_only(tokenize(cursor))
 
 function add_spaces_for_macros(lhs, rhs)
     if startswith(rhs, "(")  # handle function call
@@ -254,33 +186,12 @@ function macro_emit! end
 
 macro_emit!(dag::ExprDAG, node::ExprNode, options::Dict) = dag
 
-function macro_emit!(dag::ExprDAG, node::ExprNode{MacroFunctionLike}, options::Dict)
-    print_comment = get(options, "add_comment_for_skipped_macro", true)
-    mode = get(options, "macro_mode", "basic")
-    mode != "aggressive" && return dag
-
-    cursor = node.cursor
-    tokens = tokenize(cursor)
-
-    toks = collect(tokens)
-    lhs_sym = make_symbol_safe(tokens[1].text)
-
-    i = findfirst(x->x.text == ")", toks)
-    sig_ex = Meta.parse(mapreduce(x->x.text, *, toks[1:i]))
-    sig_ex.args[1] = lhs_sym
-    if i == tokens.size
-        push!(node.exprs, Expr(:(=), sig_ex, nothing))
-    else
-        body_toks = toks[1+i:end]
-        txts = [tok.kind == CXToken_Literal ? literally(tok) : tok.text for tok in body_toks]
-        str = reduce(add_spaces_for_macros, txts)
-        try
-            push!(node.exprs, Expr(:(=), sig_ex, Meta.parse(str)))
-        catch err
-            print_comment && push!(node.exprs, get_comment_expr(tokens))
-        end
+function macro_emit!(dag::ExprDAG, node::ExprNode{MacroDefinitionOnly}, options::Dict)
+    if !get(options, "ignore_pure_definition", true)
+        tokens = tokenize(node.cursor)
+        sym = make_symbol_safe(tokens[1].text)
+        push!(node.exprs, Expr(:const, Expr(:(=), sym, :nothing)))
     end
-
     return dag
 end
 
@@ -295,112 +206,53 @@ function macro_emit!(dag::ExprDAG, node::ExprNode{MacroDefault}, options::Dict)
             endswith(string(node.id), suffix) && return dag
         end
     end
-    ignore_pure_def = get(options, "ignore_pure_definition", true)
+
+    cursor = node.cursor
+    tokens = collect(tokenize(cursor))
+    tokens = tweak_exprs(tokens)
+
+    @assert length(tokens) > 1
+
+    sym = make_symbol_safe(tokens[1].text)
+    txts = Vector{String}(undef, length(tokens)-1)
+    for (i, tok) in enumerate(collect(tokens)[2:end])
+        txts[i] = tok.text
+    end
+    str = reduce(add_spaces_for_macros, txts)
+    try
+        push!(node.exprs, Expr(:const, Expr(:(=), sym, Meta.parse(str))))
+    catch err
+        print_comment && push!(node.exprs, get_comment_expr(tokens))
+    end
+
+    return dag
+end
+
+function macro_emit!(dag::ExprDAG, node::ExprNode{MacroFunctionLike}, options::Dict)
+    print_comment = get(options, "add_comment_for_skipped_macro", true)
+    mode = get(options, "macro_mode", "basic")
+    mode != "aggressive" && return dag
 
     cursor = node.cursor
     tokens = tokenize(cursor)
 
-    if is_macro_pure_definition(tokens)
-        if !ignore_pure_def
-            sym = make_symbol_safe(tokens[1].text)
-            push!(node.exprs, Expr(:const, Expr(:(=), sym, :nothing)))
-        end
-        return dag
-    end
+    toks = collect(tokens)
+    lhs_sym = make_symbol_safe(tokens[1].text)
 
-    if is_macro_constants(tokens)
-        literal_tok = tokens.size == 2 ? tokens[2] : tokens[3]
-        literals = literally(literal_tok)
-        sym = make_symbol_safe(tokens[1].text)
-        literal_sym = Meta.parse(literals)
-        push!(node.exprs, Expr(:const, Expr(:(=), sym, literal_sym)))
-        return dag
-    end
-
-    if is_macro_constants_with_conv(tokens)
-        literal_tok = tokens[4]
-        literals = literally(literal_tok)
-        sym = make_symbol_safe(tokens[1].text)
-        csym = make_symbol_safe(tokens[2].text)
-        literal_sym = Meta.parse(literals)
-        push!(node.exprs, Expr(:const, Expr(:(=), sym, Expr(:call, csym, literal_sym))))
-        return dag
-    end
-
-    if is_macro_naive_alias(tokens)
-        lhs, rhs = tokens
-        lhs_sym = make_symbol_safe(lhs.text)
-        rhs_sym = make_symbol_safe(rhs.text)
-        push!(node.exprs, Expr(:const, Expr(:(=), lhs_sym, rhs_sym)))
-        return dag
-    end
-
-    if is_macro_keyword_alias(tokens)
-        lhs_sym = make_symbol_safe(tokens[1].text)
-        keywords = [tok.text for tok in collect(tokens)[2:end] if tok.text ∉ C_KEYWORDS_CVR]
-        str = join(keywords, " ")
-        if all(x->x ∈ C_KEYWORDS_DATATYPE, keywords) && haskey(C_DATATYPE_TO_JULIA_DATATYPE, str)
-            rhs_sym = C_DATATYPE_TO_JULIA_DATATYPE[str]
-            push!(node.exprs, Expr(:const, Expr(:(=), lhs_sym, rhs_sym)))
-        else
-            print_comment && push!(node.exprs, get_comment_expr(tokens))
-        end
-        return dag
-    end
-
-    if is_macro_binary_operator(tokens)
-        op_tok = tokens.size == 4 ? tokens[3] : tokens[4]
-        op = op_tok.text == "/" ? Symbol("÷") :
-             op_tok.text == "^" ? Symbol("⊻") : Symbol(op_tok.text)
-        lhs_literal_tok = tokens.size == 4 ? tokens[2] : tokens[3]
-        rhs_literal_tok = tokens.size == 4 ? tokens[4] : tokens[5]
-        if lhs_literal_tok.kind == CXToken_Literal
-            lhs_literals = literally(lhs_literal_tok)
-        else
-            lhs_literals = lhs_literal_tok.text
-        end
-        if rhs_literal_tok.kind == CXToken_Literal
-            rhs_literals = literally(rhs_literal_tok)
-        else
-            rhs_literals = rhs_literal_tok.text
-        end
-        sym = make_symbol_safe(tokens[1].text)
-        lhs_sym = Meta.parse(lhs_literals)
-        rhs_sym = Meta.parse(rhs_literals)
-        push!(node.exprs, Expr(:const, Expr(:(=), sym, Expr(:call, op, lhs_sym, rhs_sym))))
-        return dag
-    end
-
-    if is_macro_naive_arithmetic(tokens)
-        sym = make_symbol_safe(tokens[1].text)
-        txts = Vector{String}(undef, length(tokens)-1)
-        for (i, tok) in enumerate(collect(tokens)[2:end])
-            if tok.kind == CXToken_Literal
-                txts[i] = literally(tok)
-            elseif tok.kind == CXToken_Punctuation && tok.text ∈ C_OPERATORS
-                txts[i] = tok.text == "/" ? "÷" :
-                          tok.text == "^" ? "⊻" : tok.text
-            else
-                txts[i] = tok.text
-            end
-        end
+    i = findfirst(x->x.text == ")", toks)
+    sig_ex = Meta.parse(mapreduce(x->x.text, *, toks[1:i]))
+    sig_ex.args[1] = lhs_sym
+    if i == length(tokens)
+        push!(node.exprs, Expr(:(=), sig_ex, nothing))
+    else
+        body_toks = toks[1+i:end]
+        txts = [tok.text for tok in body_toks]
         str = reduce(add_spaces_for_macros, txts)
-        push!(node.exprs, Expr(:const, Expr(:(=), sym, Meta.parse(str))))
-        return dag
-    end
-
-    # for all the other cases, we just blindly use Julia's Meta.parse to parse the C code.
-    if tokens.size > 1 && tokens[1].kind == CXToken_Identifier && mode == "aggressive"
-        sym = make_symbol_safe(tokens[1].text)
         try
-            txts = [tok.kind == CXToken_Literal ? literally(tok) : tok.text for tok in collect(tokens)[2:end]]
-            str = reduce(add_spaces_for_macros, txts)
-            push!(node.exprs, Expr(:const, Expr(:(=), sym, Meta.parse(str))))
+            push!(node.exprs, Expr(:(=), sig_ex, Meta.parse(str)))
         catch err
             print_comment && push!(node.exprs, get_comment_expr(tokens))
         end
-    else
-        print_comment && push!(node.exprs, get_comment_expr(tokens))
     end
 
     return dag

@@ -22,9 +22,9 @@ If you'd like to use the old version, please checkout [this branch](https://gith
 pkg> dev Clang
 ```
 
-## C-bindings generator
+## Binding Generator
 
-Clang.jl provides a module `Clang.Generators` for auto-generating C-bindings for Julia language from C headers.
+Clang.jl provides a module `Clang.Generators` for auto-generating C library bindings for Julia language from C headers.
 
 ### Quick start
 

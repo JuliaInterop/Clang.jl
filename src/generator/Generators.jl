@@ -51,6 +51,7 @@ export AbstractStructNodeType, AbstractUnionNodeType, AbstractEnumNodeType
 export ExprNode, ExprDAG
 export get_nodes, get_exprs
 
+include("macro.jl")
 include("top_level.jl")
 include("system_deps.jl")
 include("nested.jl")
@@ -68,8 +69,6 @@ export pretty_print
 
 include("audit.jl")
 export report_default_tag_types
-
-include("macro.jl")
 
 include("mutability.jl")
 

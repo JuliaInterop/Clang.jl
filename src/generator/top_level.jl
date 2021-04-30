@@ -54,6 +54,8 @@ function collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLMacroDefini
         ty = MacroBuiltIn()
     elseif isMacroFunctionLike(cursor)
         ty = MacroFunctionLike()
+    elseif is_macro_definition_only(cursor)
+        ty = MacroDefinitionOnly()
     else
         ty = MacroDefault()
     end

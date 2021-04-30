@@ -174,7 +174,7 @@ end
 
 function get_comment_expr(tokens)
     code = join([tok.text for tok in tokens], " ")
-    return Expr(:block, "# Skipping MacroDefinition: " * code)
+    return Expr(:block, "# Skipping MacroDefinition: " * replace(code, "\n" => "\n#"))
 end
 
 

@@ -24,7 +24,7 @@ pkg> dev Clang
 
 ## C-bindings generator
 
-Clang.jl provides a module `Clang.Generators` for generating 
+Clang.jl provides a module `Clang.Generators` for auto-generating C-bindings for Julia language from C headers.
 
 ### Quick start
 

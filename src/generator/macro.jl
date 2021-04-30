@@ -208,8 +208,8 @@ function macro_emit!(dag::ExprDAG, node::ExprNode{MacroDefault}, options::Dict)
     end
 
     cursor = node.cursor
-    tokens = collect(tokenize(cursor))
-    tokens = tweak_exprs(tokens)
+    toks = collect(tokenize(cursor))
+    tokens = tweak_exprs(toks)
 
     @assert length(tokens) > 1
 
@@ -222,7 +222,7 @@ function macro_emit!(dag::ExprDAG, node::ExprNode{MacroDefault}, options::Dict)
     try
         push!(node.exprs, Expr(:const, Expr(:(=), sym, Meta.parse(str))))
     catch err
-        print_comment && push!(node.exprs, get_comment_expr(tokens))
+        print_comment && push!(node.exprs, get_comment_expr(toks))
     end
 
     return dag
@@ -234,24 +234,24 @@ function macro_emit!(dag::ExprDAG, node::ExprNode{MacroFunctionLike}, options::D
     mode != "aggressive" && return dag
 
     cursor = node.cursor
-    tokens = tokenize(cursor)
+    toks = collect(tokenize(cursor))
+    tokens = tweak_exprs(toks)
 
-    toks = collect(tokens)
     lhs_sym = make_symbol_safe(tokens[1].text)
 
-    i = findfirst(x->x.text == ")", toks)
-    sig_ex = Meta.parse(mapreduce(x->x.text, *, toks[1:i]))
+    i = findfirst(x->x.text == ")", tokens)
+    sig_ex = Meta.parse(mapreduce(x->x.text, *, tokens[1:i]))
     sig_ex.args[1] = lhs_sym
     if i == length(tokens)
         push!(node.exprs, Expr(:(=), sig_ex, nothing))
     else
-        body_toks = toks[1+i:end]
+        body_toks = tokens[1+i:end]
         txts = [tok.text for tok in body_toks]
         str = reduce(add_spaces_for_macros, txts)
         try
             push!(node.exprs, Expr(:(=), sig_ex, Meta.parse(str)))
         catch err
-            print_comment && push!(node.exprs, get_comment_expr(tokens))
+            print_comment && push!(node.exprs, get_comment_expr(toks))
         end
     end
 

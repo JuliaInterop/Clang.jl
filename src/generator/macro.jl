@@ -265,13 +265,15 @@ end
 function macro_emit!(dag::ExprDAG, node::ExprNode{MacroFunctionLike}, options::Dict)
     print_comment = get(options, "add_comment_for_skipped_macro", true)
     mode = get(options, "macro_mode", "basic")
-    mode != "aggressive" && return dag
+    whitelist = get(options, "functionlike_macro_whitelist", String[])
 
     cursor = node.cursor
     toks = collect(tokenize(cursor))
     tokens = tweak_exprs(toks)
+    id = tokens[1].text
+    mode != "aggressive" && id ∉ whitelist && return dag
 
-    lhs_sym = make_symbol_safe(tokens[1].text)
+    lhs_sym = make_symbol_safe(id)
 
     i = findfirst(x->x.text == ")", tokens)
     sig_ex = Meta.parse(mapreduce(x->x.text, *, tokens[1:i]))

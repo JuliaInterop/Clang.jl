@@ -2731,6 +2731,8 @@ const CINDEX_VERSION_MAJOR = 0
 
 const CINDEX_VERSION_MINOR = 60
 
+CINDEX_VERSION_ENCODE(major, minor) = major * 10000 + minor * 1
+
 # exports
 const PREFIXES = ["CX", "clang_"]
 foreach(names(@__MODULE__; all=true)) do s

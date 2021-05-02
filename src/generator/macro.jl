@@ -6,13 +6,17 @@ const C_KEYWORDS_DATATYPE = [
     "_Bool", "_Complex", "_Noreturn"
     ]
 const C_KEYWORDS_CVR = ["const", "volatile", "restrict"]
-const C_KEYWORDS = [
-    C_KEYWORDS_DATATYPE..., "auto", "break", "case",  "continue", "default", "do",
+const C_KEYWORDS_UNSUPPORTED = [
+    "auto", "break", "case",  "continue", "default", "do",
     "else", "enum", "extern", "for", "goto", "if", "inline", "register",
     "return", "sizeof", "static", "struct", "switch", "typedef", "union",
     "while", "_Alignas", "_Alignof", "_Atomic", "_Decimal128", "_Decimal32",
-    "_Decimal64", "_Generic", "_Imaginary", "_Static_assert", "_Thread_local"
-    ]
+    "_Decimal64", "_Imaginary", "_Static_assert", "_Thread_local"
+]
+const C_KEYWORDS = [
+    C_KEYWORDS_DATATYPE..., C_KEYWORDS_UNSUPPORTED...,
+    "_Generic", "_Decimal128", "_Decimal32", "_Decimal64"
+]
 
 const C_DATATYPE_TO_JULIA_DATATYPE = Dict(
     "char"                      => :Cchar,
@@ -147,6 +151,9 @@ function tweak_exprs(toks::Vector)
                 push!(new_toks, tok)
                 i += 1
             end
+        elseif i != 1 && is_identifier(tok)
+            push!(new_toks, Identifier(DUMMY_TOKEN, CXToken_Identifier, "($(tok.text))"))
+            i += 1
         else
             push!(new_toks, tok)
             i += 1
@@ -159,6 +166,26 @@ end
 is_macro_definition_only(toks::Vector) = length(toks) == 1 && is_identifier(toks[1])
 is_macro_definition_only(toks::TokenList) = toks.size == 1 && is_identifier(toks[1])
 is_macro_definition_only(cursor::CLCursor) = is_macro_definition_only(tokenize(cursor))
+
+# identifier and keyword blacklist
+const MACRO_IDK_BLACKLIST = [
+    C_KEYWORDS_UNSUPPORTED...,
+    "_Pragma",
+    "__attribute__",
+    "noexcept",
+]
+
+"""
+    is_macro_unsupported(cursor::CLCursor) -> Bool
+Return true if the macro should be ignored.
+"""
+function is_macro_unsupported(cursor::CLCursor)
+    for tok in tokenize(cursor)
+        is_identifier(tok) && tok.text ∈ MACRO_IDK_BLACKLIST && return true
+        is_keyword(tok) && tok.text ∈ MACRO_IDK_BLACKLIST && return true
+    end
+    return false
+end
 
 function add_spaces_for_macros(lhs, rhs)
     if startswith(rhs, "(")  # handle function call
@@ -192,6 +219,13 @@ function macro_emit!(dag::ExprDAG, node::ExprNode{MacroDefinitionOnly}, options:
         sym = make_symbol_safe(tokens[1].text)
         push!(node.exprs, Expr(:const, Expr(:(=), sym, :nothing)))
     end
+    return dag
+end
+
+function macro_emit!(dag::ExprDAG, node::ExprNode{MacroUnsupported}, options::Dict)
+    print_comment = get(options, "add_comment_for_skipped_macro", true)
+    toks = collect(tokenize(node.cursor))
+    print_comment && push!(node.exprs, get_comment_expr(toks))
     return dag
 end
 

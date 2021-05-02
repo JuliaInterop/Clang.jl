@@ -83,6 +83,7 @@ Supertype for macro nodes.
 """
 abstract type AbstractMacroNodeType <: AbstractExprNodeType end
 
+struct MacroUnsupported <: AbstractMacroNodeType end
 struct MacroDefinitionOnly <: AbstractMacroNodeType end
 struct MacroFunctionLike <: AbstractMacroNodeType end
 struct MacroBuiltIn <: AbstractMacroNodeType end

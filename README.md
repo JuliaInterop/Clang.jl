@@ -1,6 +1,5 @@
 ## Clang
 
-[![Build Status](https://travis-ci.org/JuliaInterop/Clang.jl.svg?branch=master)](https://travis-ci.org/JuliaInterop/Clang.jl)
 [![Build Status](https://github.com/JuliaInterop/Clang.jl/workflows/CI/badge.svg)](https://github.com/JuliaInterop/Clang.jl/actions)
 ![TagBot](https://github.com/JuliaInterop/Clang.jl/workflows/TagBot/badge.svg)
 [![codecov](https://codecov.io/gh/JuliaInterop/Clang.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/JuliaInterop/Clang.jl)

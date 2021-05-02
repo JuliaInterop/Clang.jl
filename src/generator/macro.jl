@@ -172,7 +172,10 @@ const MACRO_IDK_BLACKLIST = [
     C_KEYWORDS_UNSUPPORTED...,
     "_Pragma",
     "__attribute__",
+    "__typeof__",
     "noexcept",
+    "##",
+    "#",
 ]
 
 """
@@ -183,6 +186,7 @@ function is_macro_unsupported(cursor::CLCursor)
     for tok in tokenize(cursor)
         is_identifier(tok) && tok.text ∈ MACRO_IDK_BLACKLIST && return true
         is_keyword(tok) && tok.text ∈ MACRO_IDK_BLACKLIST && return true
+        is_punctuation(tok) && tok.text ∈ MACRO_IDK_BLACKLIST && return true
     end
     return false
 end
@@ -214,6 +218,14 @@ function macro_emit! end
 macro_emit!(dag::ExprDAG, node::ExprNode, options::Dict) = dag
 
 function macro_emit!(dag::ExprDAG, node::ExprNode{MacroDefinitionOnly}, options::Dict)
+    ignore_header_guards = get(options, "ignore_header_guards", true)
+    suffixes = get(options, "ignore_header_guards_with_suffixes", [])
+    if ignore_header_guards
+        endswith(string(node.id), "_H") && return dag
+        for suffix in suffixes
+            endswith(string(node.id), suffix) && return dag
+        end
+    end
     if !get(options, "ignore_pure_definition", true)
         tokens = tokenize(node.cursor)
         sym = make_symbol_safe(tokens[1].text)

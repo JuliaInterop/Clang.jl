@@ -1,7 +1,10 @@
 module JLLEnvs
 
+using Pkg
 using Pkg.Artifacts
 using Downloads
+
+include("utils.jl")
 
 const JLL_ENV_SHARDS_URL = "https://raw.githubusercontent.com/JuliaPackaging/BinaryBuilderBase.jl/master/Artifacts.toml"
 const JLL_ENV_SHARDS = Dict{String,Any}()
@@ -167,6 +170,36 @@ function get_system_dirs(triple::String, version::VersionNumber=v"4.8.5")
     @assert all(isdir, isys) "failed to setup environment due to missing dirs, please file an issue at https://github.com/JuliaInterop/Clang.jl/issues."
 
     return normpath.(isys)
+end
+
+function get_pkg_artifact_dir(pkg::Module, target::String)
+    afts = first(values(Artifacts.load_artifacts_toml(Artifacts.find_artifacts_toml(Pkg.pathof(pkg)))))
+    target_arch, target_os, target_libc = get_arch_os_libc(target)
+    candidates = Dict[]
+    for info in afts
+        arch = get(info, "arch", "")
+        os = get(info, "os", "")
+        libc = get(info, "libc", "")
+        if arch == target_arch && os == target_os && libc == target_libc
+            push!(candidates, info)
+        end
+    end
+    isempty(candidates) && return ""
+    length(candidates) > 1 && @warn "found more than one candidate artifacts, only use the first one: $(first(candidates))"
+    info = first(candidates)
+    download_info = info["download"][]
+    id, url, chk = info["git-tree-sha1"], download_info["url"], download_info["sha256"]
+    Artifacts.download_artifact(Base.SHA1(id), url, chk)
+    return normpath(Artifacts.artifact_path(Base.SHA1(id)))
+end
+
+function get_pkg_include_dir(pkg::Module, target::String)
+    artifact_dir = get_pkg_artifact_dir(pkg, target)
+    if isempty(artifact_dir)
+        return ""
+    else
+        joinpath(artifact_dir, "include")
+    end
 end
 
 end # module

@@ -148,6 +148,9 @@ function resolve_dependency!(dag::ExprDAG, node::ExprNode{<:AbstractStructNodeTy
             push!(node.adj, dag.ids[leaf_ty.sym])
         elseif haskey(dag.ids_extra, leaf_ty.sym)
             # pass
+        elseif !hasref && haskey(dag.tags, leaf_ty.sym)
+            # FIXME: in some cases, this system-header symbol is in dag.tags
+            push!(node.adj, dag.tags[leaf_ty.sym])
         elseif occursin("anonymous", spelling(ty))
             # it could be a nested anonymous tag-type.
             # pass

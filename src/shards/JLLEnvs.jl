@@ -177,11 +177,17 @@ function get_pkg_artifact_dir(pkg::Module, target::String)
     target_arch, target_os, target_libc = get_arch_os_libc(target)
     candidates = Dict[]
     for info in afts
-        arch = get(info, "arch", "")
-        os = get(info, "os", "")
-        libc = get(info, "libc", "")
-        if arch == target_arch && os == target_os && libc == target_libc
-            push!(candidates, info)
+        if info isa Dict
+            arch = get(info, "arch", "")
+            os = get(info, "os", "")
+            libc = get(info, "libc", "")
+            if arch == target_arch && os == target_os && libc == target_libc
+                push!(candidates, info)
+            end
+        else
+            # this could be an "Any"-platform JLL package
+            push!(candidates, afts)
+            break
         end
     end
     isempty(candidates) && return ""

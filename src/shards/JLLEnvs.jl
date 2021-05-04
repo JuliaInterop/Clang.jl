@@ -22,9 +22,11 @@ const JLL_ENV_GCC_VERSIONS = VersionNumber[
     v"8.1.0",
     v"9.1.0",
     v"10.2.0",
+    v"11.0.0-iains",
 ]
 
 const JLL_ENV_TRIPLES = String[
+    "aarch64-apple-darwin20",
     "aarch64-linux-gnu",           # Tier 1
     "aarch64-linux-musl",
     "armv7l-linux-gnueabihf",

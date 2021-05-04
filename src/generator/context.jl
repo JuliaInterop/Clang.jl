@@ -191,7 +191,7 @@ end
 
 function get_triple()
     is_libc_musl = occursin("musl", Base.BUILD_TRIPLET)
-    @static if Sys.islinux() && Sys.ARCH === :aarch64 && !is_libc_musl
+    if Sys.islinux() && Sys.ARCH === :aarch64 && !is_libc_musl
         return "aarch64-linux-gnu"
     elseif Sys.islinux() && Sys.ARCH === :aarch64 && is_libc_musl
         return "aarch64-linux-musl"

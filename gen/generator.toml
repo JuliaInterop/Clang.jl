@@ -58,6 +58,10 @@ printer_blacklist = [
 # if this entry is true, `@enum` is used and those duplicated enum constants are just commented. 
 use_julia_native_enum_type = false
 
+# use `@cenum` but do not print `using CEnum`.
+# this is useful in the case of using `CEnum` directly in the source tree instead of using `CEnum` as a dependency
+print_using_CEnum = true
+
 # use deterministic symbol instead of `gensym`-generated `var"##XXX"`
 use_deterministic_symbol = true
 

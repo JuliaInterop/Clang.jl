@@ -190,17 +190,18 @@ function get_tagtype_node(ctx::AbstractContext, s::Symbol)
 end
 
 function get_triple()
-    @static if Sys.islinux() && Sys.ARCH === :aarch64 && !occursin("musl", Base.BUILD_TRIPLET)
+    is_libc_musl = occursin("musl", Base.BUILD_TRIPLET)
+    @static if Sys.islinux() && Sys.ARCH === :aarch64 && !is_libc_musl
         return "aarch64-linux-gnu"
-    elseif Sys.islinux() && Sys.ARCH === :aarch64 && occursin("musl", Base.BUILD_TRIPLET)
+    elseif Sys.islinux() && Sys.ARCH === :aarch64 && is_libc_musl
         return "aarch64-linux-musl"
-    elseif Sys.islinux() && startswith(string(Sys.ARCH), "arm") && !occursin("musl", Base.BUILD_TRIPLET)
+    elseif Sys.islinux() && startswith(string(Sys.ARCH), "arm") && !is_libc_musl
         return "armv7l-linux-gnueabihf"
-    elseif Sys.islinux() && startswith(string(Sys.ARCH), "arm") && occursin("musl", Base.BUILD_TRIPLET)
+    elseif Sys.islinux() && startswith(string(Sys.ARCH), "arm") && is_libc_musl
         return "armv7l-linux-musleabihf"
-    elseif Sys.islinux() && Sys.ARCH === :i686 && !occursin("musl", Base.BUILD_TRIPLET)
+    elseif Sys.islinux() && Sys.ARCH === :i686 && !is_libc_musl
         return "i686-linux-gnu"
-    elseif Sys.islinux() && Sys.ARCH === :i686 && occursin("musl", Base.BUILD_TRIPLET)
+    elseif Sys.islinux() && Sys.ARCH === :i686 && is_libc_musl
         return "i686-linux-musl"
     elseif Sys.iswindows() && Sys.ARCH === :i686
         return "i686-w64-mingw32"
@@ -208,9 +209,9 @@ function get_triple()
         return "powerpc64le-linux-gnu"
     elseif Sys.isapple() && Sys.ARCH === :x86_64
         return "x86_64-apple-darwin14"
-    elseif Sys.islinux() && Sys.ARCH === :x86_64 && !occursin("musl", Base.BUILD_TRIPLET)
+    elseif Sys.islinux() && Sys.ARCH === :x86_64 && !is_libc_musl
         return "x86_64-linux-gnu"
-    elseif Sys.islinux() && Sys.ARCH === :x86_64 && occursin("musl", Base.BUILD_TRIPLET)
+    elseif Sys.islinux() && Sys.ARCH === :x86_64 && is_libc_musl
         return "x86_64-linux-musl"
     elseif Sys.isbsd() && !Sys.isapple()
         return "x86_64-unknown-freebsd11.1"

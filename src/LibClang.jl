@@ -2735,11 +2735,9 @@ CINDEX_VERSION_ENCODE(major, minor) = major * 10000 + minor * 1
 
 # exports
 const PREFIXES = ["CX", "clang_"]
-foreach(names(@__MODULE__; all=true)) do s
-    for prefix in PREFIXES
-        if startswith(string(s), prefix)
-            @eval export $s
-        end
+for name in names(@__MODULE__; all=true), prefix in PREFIXES
+    if startswith(string(name), prefix)
+        @eval export $name
     end
 end
 

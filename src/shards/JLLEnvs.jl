@@ -22,9 +22,11 @@ const JLL_ENV_GCC_VERSIONS = VersionNumber[
     v"8.1.0",
     v"9.1.0",
     v"10.2.0",
+    v"11.0.0-iains",
 ]
 
 const JLL_ENV_TRIPLES = String[
+    "aarch64-apple-darwin20",
     "aarch64-linux-gnu",           # Tier 1
     "aarch64-linux-musl",
     "armv7l-linux-gnueabihf",
@@ -41,6 +43,7 @@ const JLL_ENV_TRIPLES = String[
 ]
 
 const JLL_ENV_CLANG_TARGETS_MAPPING = Dict(
+    "aarch64-apple-darwin20"=>"aarch64-apple-darwin20",
     "aarch64-linux-gnu"=>"aarch64-unknown-linux-gnu",
     "aarch64-linux-musl"=>"aarch64-unknown-linux-musl",
     "armv7l-linux-gnueabihf"=>"armv7l-unknown-linux-gnueabihf",
@@ -61,7 +64,12 @@ triple2target(triple::String) = get(JLL_ENV_CLANG_TARGETS_MAPPING, triple, "unkn
 function get_gcc_shard_key(triple::String, version::VersionNumber=v"4.8.5")
     @assert version ∈ JLL_ENV_GCC_VERSIONS "Wrong JLL gcc version: $version. Please choose a version listed in `JLL_ENV_GCC_VERSIONS`."
     @assert triple ∈ JLL_ENV_TRIPLES "Wrong JLL target triple: $triple. Please choose a triple listed in `JLL_ENV_TRIPLES`."
-    return "$JLL_ENV_GCC_SHARD_NAME-$triple.v$version.$JLL_ENV_HOST_TRIPLE.unpacked"
+    # ignore gcc version for Apple Silicon
+    if triple == "aarch64-apple-darwin20"
+        return "$JLL_ENV_GCC_SHARD_NAME-aarch64-apple-darwin20.v11.0.0-iains.$JLL_ENV_HOST_TRIPLE.unpacked"
+    else
+        return "$JLL_ENV_GCC_SHARD_NAME-$triple.v$version.$JLL_ENV_HOST_TRIPLE.unpacked"
+    end
 end
 
 function get_system_shard_key(triple::String)
@@ -103,6 +111,14 @@ function get_system_dirs(triple::String, version::VersionNumber=v"4.8.5")
         # compiler
         push!(isys, joinpath(gcc_triple_path, "lib", "gcc", triple, string(version), "include"))
         push!(isys, joinpath(gcc_triple_path, "lib", "gcc", triple, string(version), "include-fixed"))
+        push!(isys, joinpath(gcc_triple_path, triple, "include"))
+        # sys-root
+        push!(isys, joinpath(gcc_triple_path, triple, "sys-root", "usr", "include"))
+        push!(isys, joinpath(gcc_triple_path, triple, "sys-root", "System", "Library", "Frameworks"))
+    elseif triple == "aarch64-apple-darwin20"
+        # compiler
+        push!(isys, joinpath(gcc_triple_path, "lib", "gcc", triple, "11.0.0", "include"))
+        push!(isys, joinpath(gcc_triple_path, "lib", "gcc", triple, "11.0.0", "include-fixed"))
         push!(isys, joinpath(gcc_triple_path, triple, "include"))
         # sys-root
         push!(isys, joinpath(gcc_triple_path, triple, "sys-root", "usr", "include"))

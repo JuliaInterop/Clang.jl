@@ -63,7 +63,7 @@ function find_dependent_headers(headers::Vector{T}, args::Vector, system_dirs) w
         end
         isempty(new_headers) && break
         foreach(new_headers) do h
-            @info "found dependent header: $h"
+            @info "Found dependent header: $h"
         end
         append!(dependent_headers, new_headers)
         append!(all_headers, new_headers)

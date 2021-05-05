@@ -30,7 +30,7 @@ function (x::CollectTopLevelNode)(dag::ExprDAG, options::Dict)
     for tu in x.trans_units
         tu_cursor = getTranslationUnitCursor(tu)
         header_name = spelling(tu_cursor) |> normpath
-        @info "[CollectTopLevelNode]: processing header: $header_name"
+        @info "Processing header: $header_name"
         for cursor in children(tu_cursor)
             file_name = get_filename(cursor) |> normpath
             if is_local_only && header_name != file_name && file_name ∉ x.dependent_headers

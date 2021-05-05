@@ -120,9 +120,11 @@ is_punctuation(tok::CLToken) = tok.kind == CXToken_Punctuation
 is_keyword(tok::CLToken) = tok.kind == CXToken_Keyword
 is_comment(tok::CLToken) = tok.kind == CXToken_Comment
 
+const C_UNARY_OPS = ["-", "+", "--", "++", #="&", "*",=# "~", "!"]
+
 const DUMMY_TOKEN = CXToken((0,0,0,0), C_NULL)
 
-function tweak_exprs(toks::Vector)
+function tweak_exprs(dag::ExprDAG, toks::Vector)
     new_toks = []
     i = 1
     while i ≤ length(toks)
@@ -131,7 +133,9 @@ function tweak_exprs(toks::Vector)
             push!(new_toks, Literal(DUMMY_TOKEN, CXToken_Literal, normalize_literal(tok.text)))
             i += 1
         elseif is_punctuation(tok)
-            push!(new_toks, Punctuation(DUMMY_TOKEN, CXToken_Punctuation, normalize_punctuation(tok.text)))
+            if !isempty(tok.text)
+                push!(new_toks, Punctuation(DUMMY_TOKEN, CXToken_Punctuation, normalize_punctuation(tok.text)))
+            end
             i += 1
         elseif is_keyword(tok)
             j = i
@@ -152,6 +156,21 @@ function tweak_exprs(toks::Vector)
                 i += 1
             end
         elseif i != 1 && is_identifier(tok)
+            # whether this identifier is a type-cast
+            if i+1 ≤ length(toks) && is_punctuation(toks[i-1]) && is_punctuation(toks[i+1])
+                j = findnext(x->is_punctuation(x) && x.text ∈ C_UNARY_OPS, toks, i)
+                if j != nothing && j+1 ≤ length(toks) && is_literal(toks[j+1])
+                    s = Symbol(tok.text)
+                    if haskey(dag.tags, s) ||
+                        (haskey(dag.ids, s) && dag.nodes[dag.ids[s]].type isa AbstractTypedefNodeType)
+                        # only support tags and typedefs for now
+                        # FIXME: support macros
+                        op = toks[j].text
+                        toks[j] = Punctuation(DUMMY_TOKEN, CXToken_Punctuation, "")
+                        toks[j+1] = Literal(DUMMY_TOKEN, CXToken_Literal, op*toks[j+1].text)
+                    end
+                end
+            end
             push!(new_toks, Identifier(DUMMY_TOKEN, CXToken_Identifier, "($(tok.text))"))
             i += 1
         else
@@ -255,7 +274,7 @@ function macro_emit!(dag::ExprDAG, node::ExprNode{MacroDefault}, options::Dict)
 
     cursor = node.cursor
     toks = collect(tokenize(cursor))
-    tokens = tweak_exprs(toks)
+    tokens = tweak_exprs(dag, toks)
 
     @assert length(tokens) > 1
 
@@ -281,7 +300,7 @@ function macro_emit!(dag::ExprDAG, node::ExprNode{MacroFunctionLike}, options::D
 
     cursor = node.cursor
     toks = collect(tokenize(cursor))
-    tokens = tweak_exprs(toks)
+    tokens = tweak_exprs(dag, toks)
     id = tokens[1].text
     mode != "aggressive" && id ∉ whitelist && return dag
 

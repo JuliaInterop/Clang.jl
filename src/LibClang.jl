@@ -27,19 +27,19 @@ mutable struct CXStringSet
 end
 
 function clang_getCString(string)
-    ccall((:clang_getCString, libclang), Cstring, (CXString,), string)
+    @ccall libclang.clang_getCString(string::CXString)::Cstring
 end
 
 function clang_disposeString(string)
-    ccall((:clang_disposeString, libclang), Cvoid, (CXString,), string)
+    @ccall libclang.clang_disposeString(string::CXString)::Cvoid
 end
 
 function clang_disposeStringSet(set)
-    ccall((:clang_disposeStringSet, libclang), Cvoid, (Ptr{CXStringSet},), set)
+    @ccall libclang.clang_disposeStringSet(set::Ptr{CXStringSet})::Cvoid
 end
 
 function clang_getBuildSessionTimestamp()
-    ccall((:clang_getBuildSessionTimestamp, libclang), Culonglong, ())
+    @ccall libclang.clang_getBuildSessionTimestamp()::Culonglong
 end
 
 mutable struct CXVirtualFileOverlayImpl end
@@ -47,27 +47,27 @@ mutable struct CXVirtualFileOverlayImpl end
 const CXVirtualFileOverlay = Ptr{CXVirtualFileOverlayImpl}
 
 function clang_VirtualFileOverlay_create(options)
-    ccall((:clang_VirtualFileOverlay_create, libclang), CXVirtualFileOverlay, (Cuint,), options)
+    @ccall libclang.clang_VirtualFileOverlay_create(options::Cuint)::CXVirtualFileOverlay
 end
 
 function clang_VirtualFileOverlay_addFileMapping(arg1, virtualPath, realPath)
-    ccall((:clang_VirtualFileOverlay_addFileMapping, libclang), CXErrorCode, (CXVirtualFileOverlay, Cstring, Cstring), arg1, virtualPath, realPath)
+    @ccall libclang.clang_VirtualFileOverlay_addFileMapping(arg1::CXVirtualFileOverlay, virtualPath::Cstring, realPath::Cstring)::CXErrorCode
 end
 
 function clang_VirtualFileOverlay_setCaseSensitivity(arg1, caseSensitive)
-    ccall((:clang_VirtualFileOverlay_setCaseSensitivity, libclang), CXErrorCode, (CXVirtualFileOverlay, Cint), arg1, caseSensitive)
+    @ccall libclang.clang_VirtualFileOverlay_setCaseSensitivity(arg1::CXVirtualFileOverlay, caseSensitive::Cint)::CXErrorCode
 end
 
 function clang_VirtualFileOverlay_writeToBuffer(arg1, options, out_buffer_ptr, out_buffer_size)
-    ccall((:clang_VirtualFileOverlay_writeToBuffer, libclang), CXErrorCode, (CXVirtualFileOverlay, Cuint, Ptr{Cstring}, Ptr{Cuint}), arg1, options, out_buffer_ptr, out_buffer_size)
+    @ccall libclang.clang_VirtualFileOverlay_writeToBuffer(arg1::CXVirtualFileOverlay, options::Cuint, out_buffer_ptr::Ptr{Cstring}, out_buffer_size::Ptr{Cuint})::CXErrorCode
 end
 
 function clang_free(buffer)
-    ccall((:clang_free, libclang), Cvoid, (Ptr{Cvoid},), buffer)
+    @ccall libclang.clang_free(buffer::Ptr{Cvoid})::Cvoid
 end
 
 function clang_VirtualFileOverlay_dispose(arg1)
-    ccall((:clang_VirtualFileOverlay_dispose, libclang), Cvoid, (CXVirtualFileOverlay,), arg1)
+    @ccall libclang.clang_VirtualFileOverlay_dispose(arg1::CXVirtualFileOverlay)::Cvoid
 end
 
 mutable struct CXModuleMapDescriptorImpl end
@@ -75,23 +75,23 @@ mutable struct CXModuleMapDescriptorImpl end
 const CXModuleMapDescriptor = Ptr{CXModuleMapDescriptorImpl}
 
 function clang_ModuleMapDescriptor_create(options)
-    ccall((:clang_ModuleMapDescriptor_create, libclang), CXModuleMapDescriptor, (Cuint,), options)
+    @ccall libclang.clang_ModuleMapDescriptor_create(options::Cuint)::CXModuleMapDescriptor
 end
 
 function clang_ModuleMapDescriptor_setFrameworkModuleName(arg1, name)
-    ccall((:clang_ModuleMapDescriptor_setFrameworkModuleName, libclang), CXErrorCode, (CXModuleMapDescriptor, Cstring), arg1, name)
+    @ccall libclang.clang_ModuleMapDescriptor_setFrameworkModuleName(arg1::CXModuleMapDescriptor, name::Cstring)::CXErrorCode
 end
 
 function clang_ModuleMapDescriptor_setUmbrellaHeader(arg1, name)
-    ccall((:clang_ModuleMapDescriptor_setUmbrellaHeader, libclang), CXErrorCode, (CXModuleMapDescriptor, Cstring), arg1, name)
+    @ccall libclang.clang_ModuleMapDescriptor_setUmbrellaHeader(arg1::CXModuleMapDescriptor, name::Cstring)::CXErrorCode
 end
 
 function clang_ModuleMapDescriptor_writeToBuffer(arg1, options, out_buffer_ptr, out_buffer_size)
-    ccall((:clang_ModuleMapDescriptor_writeToBuffer, libclang), CXErrorCode, (CXModuleMapDescriptor, Cuint, Ptr{Cstring}, Ptr{Cuint}), arg1, options, out_buffer_ptr, out_buffer_size)
+    @ccall libclang.clang_ModuleMapDescriptor_writeToBuffer(arg1::CXModuleMapDescriptor, options::Cuint, out_buffer_ptr::Ptr{Cstring}, out_buffer_size::Ptr{Cuint})::CXErrorCode
 end
 
 function clang_ModuleMapDescriptor_dispose(arg1)
-    ccall((:clang_ModuleMapDescriptor_dispose, libclang), Cvoid, (CXModuleMapDescriptor,), arg1)
+    @ccall libclang.clang_ModuleMapDescriptor_dispose(arg1::CXModuleMapDescriptor)::Cvoid
 end
 
 const CXIndex = Ptr{Cvoid}
@@ -139,11 +139,11 @@ end
 end
 
 function clang_createIndex(excludeDeclarationsFromPCH, displayDiagnostics)
-    ccall((:clang_createIndex, libclang), CXIndex, (Cint, Cint), excludeDeclarationsFromPCH, displayDiagnostics)
+    @ccall libclang.clang_createIndex(excludeDeclarationsFromPCH::Cint, displayDiagnostics::Cint)::CXIndex
 end
 
 function clang_disposeIndex(index)
-    ccall((:clang_disposeIndex, libclang), Cvoid, (CXIndex,), index)
+    @ccall libclang.clang_disposeIndex(index::CXIndex)::Cvoid
 end
 
 @cenum CXGlobalOptFlags::UInt32 begin
@@ -154,25 +154,25 @@ end
 end
 
 function clang_CXIndex_setGlobalOptions(arg1, options)
-    ccall((:clang_CXIndex_setGlobalOptions, libclang), Cvoid, (CXIndex, Cuint), arg1, options)
+    @ccall libclang.clang_CXIndex_setGlobalOptions(arg1::CXIndex, options::Cuint)::Cvoid
 end
 
 function clang_CXIndex_getGlobalOptions(arg1)
-    ccall((:clang_CXIndex_getGlobalOptions, libclang), Cuint, (CXIndex,), arg1)
+    @ccall libclang.clang_CXIndex_getGlobalOptions(arg1::CXIndex)::Cuint
 end
 
 function clang_CXIndex_setInvocationEmissionPathOption(arg1, Path)
-    ccall((:clang_CXIndex_setInvocationEmissionPathOption, libclang), Cvoid, (CXIndex, Cstring), arg1, Path)
+    @ccall libclang.clang_CXIndex_setInvocationEmissionPathOption(arg1::CXIndex, Path::Cstring)::Cvoid
 end
 
 const CXFile = Ptr{Cvoid}
 
 function clang_getFileName(SFile)
-    ccall((:clang_getFileName, libclang), CXString, (CXFile,), SFile)
+    @ccall libclang.clang_getFileName(SFile::CXFile)::CXString
 end
 
 function clang_getFileTime(SFile)
-    ccall((:clang_getFileTime, libclang), Ctime_t, (CXFile,), SFile)
+    @ccall libclang.clang_getFileTime(SFile::CXFile)::Ctime_t
 end
 
 mutable struct CXFileUniqueID
@@ -180,27 +180,27 @@ mutable struct CXFileUniqueID
 end
 
 function clang_getFileUniqueID(file, outID)
-    ccall((:clang_getFileUniqueID, libclang), Cint, (CXFile, Ptr{CXFileUniqueID}), file, outID)
+    @ccall libclang.clang_getFileUniqueID(file::CXFile, outID::Ptr{CXFileUniqueID})::Cint
 end
 
 function clang_isFileMultipleIncludeGuarded(tu, file)
-    ccall((:clang_isFileMultipleIncludeGuarded, libclang), Cuint, (CXTranslationUnit, CXFile), tu, file)
+    @ccall libclang.clang_isFileMultipleIncludeGuarded(tu::CXTranslationUnit, file::CXFile)::Cuint
 end
 
 function clang_getFile(tu, file_name)
-    ccall((:clang_getFile, libclang), CXFile, (CXTranslationUnit, Cstring), tu, file_name)
+    @ccall libclang.clang_getFile(tu::CXTranslationUnit, file_name::Cstring)::CXFile
 end
 
 function clang_getFileContents(tu, file, size)
-    ccall((:clang_getFileContents, libclang), Cstring, (CXTranslationUnit, CXFile, Ptr{Csize_t}), tu, file, size)
+    @ccall libclang.clang_getFileContents(tu::CXTranslationUnit, file::CXFile, size::Ptr{Csize_t})::Cstring
 end
 
 function clang_File_isEqual(file1, file2)
-    ccall((:clang_File_isEqual, libclang), Cint, (CXFile, CXFile), file1, file2)
+    @ccall libclang.clang_File_isEqual(file1::CXFile, file2::CXFile)::Cint
 end
 
 function clang_File_tryGetRealPathName(file)
-    ccall((:clang_File_tryGetRealPathName, libclang), CXString, (CXFile,), file)
+    @ccall libclang.clang_File_tryGetRealPathName(file::CXFile)::CXString
 end
 
 mutable struct CXSourceLocation
@@ -215,71 +215,71 @@ mutable struct CXSourceRange
 end
 
 function clang_getNullLocation()
-    ccall((:clang_getNullLocation, libclang), CXSourceLocation, ())
+    @ccall libclang.clang_getNullLocation()::CXSourceLocation
 end
 
 function clang_equalLocations(loc1, loc2)
-    ccall((:clang_equalLocations, libclang), Cuint, (CXSourceLocation, CXSourceLocation), loc1, loc2)
+    @ccall libclang.clang_equalLocations(loc1::CXSourceLocation, loc2::CXSourceLocation)::Cuint
 end
 
 function clang_getLocation(tu, file, line, column)
-    ccall((:clang_getLocation, libclang), CXSourceLocation, (CXTranslationUnit, CXFile, Cuint, Cuint), tu, file, line, column)
+    @ccall libclang.clang_getLocation(tu::CXTranslationUnit, file::CXFile, line::Cuint, column::Cuint)::CXSourceLocation
 end
 
 function clang_getLocationForOffset(tu, file, offset)
-    ccall((:clang_getLocationForOffset, libclang), CXSourceLocation, (CXTranslationUnit, CXFile, Cuint), tu, file, offset)
+    @ccall libclang.clang_getLocationForOffset(tu::CXTranslationUnit, file::CXFile, offset::Cuint)::CXSourceLocation
 end
 
 function clang_Location_isInSystemHeader(location)
-    ccall((:clang_Location_isInSystemHeader, libclang), Cint, (CXSourceLocation,), location)
+    @ccall libclang.clang_Location_isInSystemHeader(location::CXSourceLocation)::Cint
 end
 
 function clang_Location_isFromMainFile(location)
-    ccall((:clang_Location_isFromMainFile, libclang), Cint, (CXSourceLocation,), location)
+    @ccall libclang.clang_Location_isFromMainFile(location::CXSourceLocation)::Cint
 end
 
 function clang_getNullRange()
-    ccall((:clang_getNullRange, libclang), CXSourceRange, ())
+    @ccall libclang.clang_getNullRange()::CXSourceRange
 end
 
 function clang_getRange(_begin, _end)
-    ccall((:clang_getRange, libclang), CXSourceRange, (CXSourceLocation, CXSourceLocation), _begin, _end)
+    @ccall libclang.clang_getRange(_begin::CXSourceLocation, _end::CXSourceLocation)::CXSourceRange
 end
 
 function clang_equalRanges(range1, range2)
-    ccall((:clang_equalRanges, libclang), Cuint, (CXSourceRange, CXSourceRange), range1, range2)
+    @ccall libclang.clang_equalRanges(range1::CXSourceRange, range2::CXSourceRange)::Cuint
 end
 
 function clang_Range_isNull(range)
-    ccall((:clang_Range_isNull, libclang), Cint, (CXSourceRange,), range)
+    @ccall libclang.clang_Range_isNull(range::CXSourceRange)::Cint
 end
 
 function clang_getExpansionLocation(location, file, line, column, offset)
-    ccall((:clang_getExpansionLocation, libclang), Cvoid, (CXSourceLocation, Ptr{CXFile}, Ptr{Cuint}, Ptr{Cuint}, Ptr{Cuint}), location, file, line, column, offset)
+    @ccall libclang.clang_getExpansionLocation(location::CXSourceLocation, file::Ptr{CXFile}, line::Ptr{Cuint}, column::Ptr{Cuint}, offset::Ptr{Cuint})::Cvoid
 end
 
 function clang_getPresumedLocation(location, filename, line, column)
-    ccall((:clang_getPresumedLocation, libclang), Cvoid, (CXSourceLocation, Ptr{CXString}, Ptr{Cuint}, Ptr{Cuint}), location, filename, line, column)
+    @ccall libclang.clang_getPresumedLocation(location::CXSourceLocation, filename::Ptr{CXString}, line::Ptr{Cuint}, column::Ptr{Cuint})::Cvoid
 end
 
 function clang_getInstantiationLocation(location, file, line, column, offset)
-    ccall((:clang_getInstantiationLocation, libclang), Cvoid, (CXSourceLocation, Ptr{CXFile}, Ptr{Cuint}, Ptr{Cuint}, Ptr{Cuint}), location, file, line, column, offset)
+    @ccall libclang.clang_getInstantiationLocation(location::CXSourceLocation, file::Ptr{CXFile}, line::Ptr{Cuint}, column::Ptr{Cuint}, offset::Ptr{Cuint})::Cvoid
 end
 
 function clang_getSpellingLocation(location, file, line, column, offset)
-    ccall((:clang_getSpellingLocation, libclang), Cvoid, (CXSourceLocation, Ptr{CXFile}, Ptr{Cuint}, Ptr{Cuint}, Ptr{Cuint}), location, file, line, column, offset)
+    @ccall libclang.clang_getSpellingLocation(location::CXSourceLocation, file::Ptr{CXFile}, line::Ptr{Cuint}, column::Ptr{Cuint}, offset::Ptr{Cuint})::Cvoid
 end
 
 function clang_getFileLocation(location, file, line, column, offset)
-    ccall((:clang_getFileLocation, libclang), Cvoid, (CXSourceLocation, Ptr{CXFile}, Ptr{Cuint}, Ptr{Cuint}, Ptr{Cuint}), location, file, line, column, offset)
+    @ccall libclang.clang_getFileLocation(location::CXSourceLocation, file::Ptr{CXFile}, line::Ptr{Cuint}, column::Ptr{Cuint}, offset::Ptr{Cuint})::Cvoid
 end
 
 function clang_getRangeStart(range)
-    ccall((:clang_getRangeStart, libclang), CXSourceLocation, (CXSourceRange,), range)
+    @ccall libclang.clang_getRangeStart(range::CXSourceRange)::CXSourceLocation
 end
 
 function clang_getRangeEnd(range)
-    ccall((:clang_getRangeEnd, libclang), CXSourceLocation, (CXSourceRange,), range)
+    @ccall libclang.clang_getRangeEnd(range::CXSourceRange)::CXSourceLocation
 end
 
 mutable struct CXSourceRangeList
@@ -288,15 +288,15 @@ mutable struct CXSourceRangeList
 end
 
 function clang_getSkippedRanges(tu, file)
-    ccall((:clang_getSkippedRanges, libclang), Ptr{CXSourceRangeList}, (CXTranslationUnit, CXFile), tu, file)
+    @ccall libclang.clang_getSkippedRanges(tu::CXTranslationUnit, file::CXFile)::Ptr{CXSourceRangeList}
 end
 
 function clang_getAllSkippedRanges(tu)
-    ccall((:clang_getAllSkippedRanges, libclang), Ptr{CXSourceRangeList}, (CXTranslationUnit,), tu)
+    @ccall libclang.clang_getAllSkippedRanges(tu::CXTranslationUnit)::Ptr{CXSourceRangeList}
 end
 
 function clang_disposeSourceRangeList(ranges)
-    ccall((:clang_disposeSourceRangeList, libclang), Cvoid, (Ptr{CXSourceRangeList},), ranges)
+    @ccall libclang.clang_disposeSourceRangeList(ranges::Ptr{CXSourceRangeList})::Cvoid
 end
 
 @cenum CXDiagnosticSeverity::UInt32 begin
@@ -312,11 +312,11 @@ const CXDiagnostic = Ptr{Cvoid}
 const CXDiagnosticSet = Ptr{Cvoid}
 
 function clang_getNumDiagnosticsInSet(Diags)
-    ccall((:clang_getNumDiagnosticsInSet, libclang), Cuint, (CXDiagnosticSet,), Diags)
+    @ccall libclang.clang_getNumDiagnosticsInSet(Diags::CXDiagnosticSet)::Cuint
 end
 
 function clang_getDiagnosticInSet(Diags, Index)
-    ccall((:clang_getDiagnosticInSet, libclang), CXDiagnostic, (CXDiagnosticSet, Cuint), Diags, Index)
+    @ccall libclang.clang_getDiagnosticInSet(Diags::CXDiagnosticSet, Index::Cuint)::CXDiagnostic
 end
 
 @cenum CXLoadDiag_Error::UInt32 begin
@@ -327,31 +327,31 @@ end
 end
 
 function clang_loadDiagnostics(file, error, errorString)
-    ccall((:clang_loadDiagnostics, libclang), CXDiagnosticSet, (Cstring, Ptr{CXLoadDiag_Error}, Ptr{CXString}), file, error, errorString)
+    @ccall libclang.clang_loadDiagnostics(file::Cstring, error::Ptr{CXLoadDiag_Error}, errorString::Ptr{CXString})::CXDiagnosticSet
 end
 
 function clang_disposeDiagnosticSet(Diags)
-    ccall((:clang_disposeDiagnosticSet, libclang), Cvoid, (CXDiagnosticSet,), Diags)
+    @ccall libclang.clang_disposeDiagnosticSet(Diags::CXDiagnosticSet)::Cvoid
 end
 
 function clang_getChildDiagnostics(D)
-    ccall((:clang_getChildDiagnostics, libclang), CXDiagnosticSet, (CXDiagnostic,), D)
+    @ccall libclang.clang_getChildDiagnostics(D::CXDiagnostic)::CXDiagnosticSet
 end
 
 function clang_getNumDiagnostics(Unit)
-    ccall((:clang_getNumDiagnostics, libclang), Cuint, (CXTranslationUnit,), Unit)
+    @ccall libclang.clang_getNumDiagnostics(Unit::CXTranslationUnit)::Cuint
 end
 
 function clang_getDiagnostic(Unit, Index)
-    ccall((:clang_getDiagnostic, libclang), CXDiagnostic, (CXTranslationUnit, Cuint), Unit, Index)
+    @ccall libclang.clang_getDiagnostic(Unit::CXTranslationUnit, Index::Cuint)::CXDiagnostic
 end
 
 function clang_getDiagnosticSetFromTU(Unit)
-    ccall((:clang_getDiagnosticSetFromTU, libclang), CXDiagnosticSet, (CXTranslationUnit,), Unit)
+    @ccall libclang.clang_getDiagnosticSetFromTU(Unit::CXTranslationUnit)::CXDiagnosticSet
 end
 
 function clang_disposeDiagnostic(Diagnostic)
-    ccall((:clang_disposeDiagnostic, libclang), Cvoid, (CXDiagnostic,), Diagnostic)
+    @ccall libclang.clang_disposeDiagnostic(Diagnostic::CXDiagnostic)::Cvoid
 end
 
 @cenum CXDiagnosticDisplayOptions::UInt32 begin
@@ -364,71 +364,71 @@ end
 end
 
 function clang_formatDiagnostic(Diagnostic, Options)
-    ccall((:clang_formatDiagnostic, libclang), CXString, (CXDiagnostic, Cuint), Diagnostic, Options)
+    @ccall libclang.clang_formatDiagnostic(Diagnostic::CXDiagnostic, Options::Cuint)::CXString
 end
 
 function clang_defaultDiagnosticDisplayOptions()
-    ccall((:clang_defaultDiagnosticDisplayOptions, libclang), Cuint, ())
+    @ccall libclang.clang_defaultDiagnosticDisplayOptions()::Cuint
 end
 
 function clang_getDiagnosticSeverity(arg1)
-    ccall((:clang_getDiagnosticSeverity, libclang), CXDiagnosticSeverity, (CXDiagnostic,), arg1)
+    @ccall libclang.clang_getDiagnosticSeverity(arg1::CXDiagnostic)::CXDiagnosticSeverity
 end
 
 function clang_getDiagnosticLocation(arg1)
-    ccall((:clang_getDiagnosticLocation, libclang), CXSourceLocation, (CXDiagnostic,), arg1)
+    @ccall libclang.clang_getDiagnosticLocation(arg1::CXDiagnostic)::CXSourceLocation
 end
 
 function clang_getDiagnosticSpelling(arg1)
-    ccall((:clang_getDiagnosticSpelling, libclang), CXString, (CXDiagnostic,), arg1)
+    @ccall libclang.clang_getDiagnosticSpelling(arg1::CXDiagnostic)::CXString
 end
 
 function clang_getDiagnosticOption(Diag, Disable)
-    ccall((:clang_getDiagnosticOption, libclang), CXString, (CXDiagnostic, Ptr{CXString}), Diag, Disable)
+    @ccall libclang.clang_getDiagnosticOption(Diag::CXDiagnostic, Disable::Ptr{CXString})::CXString
 end
 
 function clang_getDiagnosticCategory(arg1)
-    ccall((:clang_getDiagnosticCategory, libclang), Cuint, (CXDiagnostic,), arg1)
+    @ccall libclang.clang_getDiagnosticCategory(arg1::CXDiagnostic)::Cuint
 end
 
 function clang_getDiagnosticCategoryName(Category)
-    ccall((:clang_getDiagnosticCategoryName, libclang), CXString, (Cuint,), Category)
+    @ccall libclang.clang_getDiagnosticCategoryName(Category::Cuint)::CXString
 end
 
 function clang_getDiagnosticCategoryText(arg1)
-    ccall((:clang_getDiagnosticCategoryText, libclang), CXString, (CXDiagnostic,), arg1)
+    @ccall libclang.clang_getDiagnosticCategoryText(arg1::CXDiagnostic)::CXString
 end
 
 function clang_getDiagnosticNumRanges(arg1)
-    ccall((:clang_getDiagnosticNumRanges, libclang), Cuint, (CXDiagnostic,), arg1)
+    @ccall libclang.clang_getDiagnosticNumRanges(arg1::CXDiagnostic)::Cuint
 end
 
 function clang_getDiagnosticRange(Diagnostic, Range)
-    ccall((:clang_getDiagnosticRange, libclang), CXSourceRange, (CXDiagnostic, Cuint), Diagnostic, Range)
+    @ccall libclang.clang_getDiagnosticRange(Diagnostic::CXDiagnostic, Range::Cuint)::CXSourceRange
 end
 
 function clang_getDiagnosticNumFixIts(Diagnostic)
-    ccall((:clang_getDiagnosticNumFixIts, libclang), Cuint, (CXDiagnostic,), Diagnostic)
+    @ccall libclang.clang_getDiagnosticNumFixIts(Diagnostic::CXDiagnostic)::Cuint
 end
 
 function clang_getDiagnosticFixIt(Diagnostic, FixIt, ReplacementRange)
-    ccall((:clang_getDiagnosticFixIt, libclang), CXString, (CXDiagnostic, Cuint, Ptr{CXSourceRange}), Diagnostic, FixIt, ReplacementRange)
+    @ccall libclang.clang_getDiagnosticFixIt(Diagnostic::CXDiagnostic, FixIt::Cuint, ReplacementRange::Ptr{CXSourceRange})::CXString
 end
 
 function clang_getTranslationUnitSpelling(CTUnit)
-    ccall((:clang_getTranslationUnitSpelling, libclang), CXString, (CXTranslationUnit,), CTUnit)
+    @ccall libclang.clang_getTranslationUnitSpelling(CTUnit::CXTranslationUnit)::CXString
 end
 
 function clang_createTranslationUnitFromSourceFile(CIdx, source_filename, num_clang_command_line_args, clang_command_line_args, num_unsaved_files, unsaved_files)
-    ccall((:clang_createTranslationUnitFromSourceFile, libclang), CXTranslationUnit, (CXIndex, Cstring, Cint, Ptr{Cstring}, Cuint, Ptr{CXUnsavedFile}), CIdx, source_filename, num_clang_command_line_args, clang_command_line_args, num_unsaved_files, unsaved_files)
+    @ccall libclang.clang_createTranslationUnitFromSourceFile(CIdx::CXIndex, source_filename::Cstring, num_clang_command_line_args::Cint, clang_command_line_args::Ptr{Cstring}, num_unsaved_files::Cuint, unsaved_files::Ptr{CXUnsavedFile})::CXTranslationUnit
 end
 
 function clang_createTranslationUnit(CIdx, ast_filename)
-    ccall((:clang_createTranslationUnit, libclang), CXTranslationUnit, (CXIndex, Cstring), CIdx, ast_filename)
+    @ccall libclang.clang_createTranslationUnit(CIdx::CXIndex, ast_filename::Cstring)::CXTranslationUnit
 end
 
 function clang_createTranslationUnit2(CIdx, ast_filename, out_TU)
-    ccall((:clang_createTranslationUnit2, libclang), CXErrorCode, (CXIndex, Cstring, Ptr{CXTranslationUnit}), CIdx, ast_filename, out_TU)
+    @ccall libclang.clang_createTranslationUnit2(CIdx::CXIndex, ast_filename::Cstring, out_TU::Ptr{CXTranslationUnit})::CXErrorCode
 end
 
 @cenum CXTranslationUnit_Flags::UInt32 begin
@@ -452,19 +452,19 @@ end
 end
 
 function clang_defaultEditingTranslationUnitOptions()
-    ccall((:clang_defaultEditingTranslationUnitOptions, libclang), Cuint, ())
+    @ccall libclang.clang_defaultEditingTranslationUnitOptions()::Cuint
 end
 
 function clang_parseTranslationUnit(CIdx, source_filename, command_line_args, num_command_line_args, unsaved_files, num_unsaved_files, options)
-    ccall((:clang_parseTranslationUnit, libclang), CXTranslationUnit, (CXIndex, Cstring, Ptr{Cstring}, Cint, Ptr{CXUnsavedFile}, Cuint, Cuint), CIdx, source_filename, command_line_args, num_command_line_args, unsaved_files, num_unsaved_files, options)
+    @ccall libclang.clang_parseTranslationUnit(CIdx::CXIndex, source_filename::Cstring, command_line_args::Ptr{Cstring}, num_command_line_args::Cint, unsaved_files::Ptr{CXUnsavedFile}, num_unsaved_files::Cuint, options::Cuint)::CXTranslationUnit
 end
 
 function clang_parseTranslationUnit2(CIdx, source_filename, command_line_args, num_command_line_args, unsaved_files, num_unsaved_files, options, out_TU)
-    ccall((:clang_parseTranslationUnit2, libclang), CXErrorCode, (CXIndex, Cstring, Ptr{Cstring}, Cint, Ptr{CXUnsavedFile}, Cuint, Cuint, Ptr{CXTranslationUnit}), CIdx, source_filename, command_line_args, num_command_line_args, unsaved_files, num_unsaved_files, options, out_TU)
+    @ccall libclang.clang_parseTranslationUnit2(CIdx::CXIndex, source_filename::Cstring, command_line_args::Ptr{Cstring}, num_command_line_args::Cint, unsaved_files::Ptr{CXUnsavedFile}, num_unsaved_files::Cuint, options::Cuint, out_TU::Ptr{CXTranslationUnit})::CXErrorCode
 end
 
 function clang_parseTranslationUnit2FullArgv(CIdx, source_filename, command_line_args, num_command_line_args, unsaved_files, num_unsaved_files, options, out_TU)
-    ccall((:clang_parseTranslationUnit2FullArgv, libclang), CXErrorCode, (CXIndex, Cstring, Ptr{Cstring}, Cint, Ptr{CXUnsavedFile}, Cuint, Cuint, Ptr{CXTranslationUnit}), CIdx, source_filename, command_line_args, num_command_line_args, unsaved_files, num_unsaved_files, options, out_TU)
+    @ccall libclang.clang_parseTranslationUnit2FullArgv(CIdx::CXIndex, source_filename::Cstring, command_line_args::Ptr{Cstring}, num_command_line_args::Cint, unsaved_files::Ptr{CXUnsavedFile}, num_unsaved_files::Cuint, options::Cuint, out_TU::Ptr{CXTranslationUnit})::CXErrorCode
 end
 
 @cenum CXSaveTranslationUnit_Flags::UInt32 begin
@@ -472,7 +472,7 @@ end
 end
 
 function clang_defaultSaveOptions(TU)
-    ccall((:clang_defaultSaveOptions, libclang), Cuint, (CXTranslationUnit,), TU)
+    @ccall libclang.clang_defaultSaveOptions(TU::CXTranslationUnit)::Cuint
 end
 
 @cenum CXSaveError::UInt32 begin
@@ -483,15 +483,15 @@ end
 end
 
 function clang_saveTranslationUnit(TU, FileName, options)
-    ccall((:clang_saveTranslationUnit, libclang), Cint, (CXTranslationUnit, Cstring, Cuint), TU, FileName, options)
+    @ccall libclang.clang_saveTranslationUnit(TU::CXTranslationUnit, FileName::Cstring, options::Cuint)::Cint
 end
 
 function clang_suspendTranslationUnit(arg1)
-    ccall((:clang_suspendTranslationUnit, libclang), Cuint, (CXTranslationUnit,), arg1)
+    @ccall libclang.clang_suspendTranslationUnit(arg1::CXTranslationUnit)::Cuint
 end
 
 function clang_disposeTranslationUnit(arg1)
-    ccall((:clang_disposeTranslationUnit, libclang), Cvoid, (CXTranslationUnit,), arg1)
+    @ccall libclang.clang_disposeTranslationUnit(arg1::CXTranslationUnit)::Cvoid
 end
 
 @cenum CXReparse_Flags::UInt32 begin
@@ -499,11 +499,11 @@ end
 end
 
 function clang_defaultReparseOptions(TU)
-    ccall((:clang_defaultReparseOptions, libclang), Cuint, (CXTranslationUnit,), TU)
+    @ccall libclang.clang_defaultReparseOptions(TU::CXTranslationUnit)::Cuint
 end
 
 function clang_reparseTranslationUnit(TU, num_unsaved_files, unsaved_files, options)
-    ccall((:clang_reparseTranslationUnit, libclang), Cint, (CXTranslationUnit, Cuint, Ptr{CXUnsavedFile}, Cuint), TU, num_unsaved_files, unsaved_files, options)
+    @ccall libclang.clang_reparseTranslationUnit(TU::CXTranslationUnit, num_unsaved_files::Cuint, unsaved_files::Ptr{CXUnsavedFile}, options::Cuint)::Cint
 end
 
 @cenum CXTUResourceUsageKind::UInt32 begin
@@ -528,7 +528,7 @@ end
 end
 
 function clang_getTUResourceUsageName(kind)
-    ccall((:clang_getTUResourceUsageName, libclang), Cstring, (CXTUResourceUsageKind,), kind)
+    @ccall libclang.clang_getTUResourceUsageName(kind::CXTUResourceUsageKind)::Cstring
 end
 
 struct CXTUResourceUsageEntry
@@ -543,27 +543,27 @@ mutable struct CXTUResourceUsage
 end
 
 function clang_getCXTUResourceUsage(TU)
-    ccall((:clang_getCXTUResourceUsage, libclang), CXTUResourceUsage, (CXTranslationUnit,), TU)
+    @ccall libclang.clang_getCXTUResourceUsage(TU::CXTranslationUnit)::CXTUResourceUsage
 end
 
 function clang_disposeCXTUResourceUsage(usage)
-    ccall((:clang_disposeCXTUResourceUsage, libclang), Cvoid, (CXTUResourceUsage,), usage)
+    @ccall libclang.clang_disposeCXTUResourceUsage(usage::CXTUResourceUsage)::Cvoid
 end
 
 function clang_getTranslationUnitTargetInfo(CTUnit)
-    ccall((:clang_getTranslationUnitTargetInfo, libclang), CXTargetInfo, (CXTranslationUnit,), CTUnit)
+    @ccall libclang.clang_getTranslationUnitTargetInfo(CTUnit::CXTranslationUnit)::CXTargetInfo
 end
 
 function clang_TargetInfo_dispose(Info)
-    ccall((:clang_TargetInfo_dispose, libclang), Cvoid, (CXTargetInfo,), Info)
+    @ccall libclang.clang_TargetInfo_dispose(Info::CXTargetInfo)::Cvoid
 end
 
 function clang_TargetInfo_getTriple(Info)
-    ccall((:clang_TargetInfo_getTriple, libclang), CXString, (CXTargetInfo,), Info)
+    @ccall libclang.clang_TargetInfo_getTriple(Info::CXTargetInfo)::CXString
 end
 
 function clang_TargetInfo_getPointerWidth(Info)
-    ccall((:clang_TargetInfo_getPointerWidth, libclang), Cint, (CXTargetInfo,), Info)
+    @ccall libclang.clang_TargetInfo_getPointerWidth(Info::CXTargetInfo)::Cint
 end
 
 @cenum CXCursorKind::UInt32 begin
@@ -841,71 +841,71 @@ mutable struct CXCursor
 end
 
 function clang_getNullCursor()
-    ccall((:clang_getNullCursor, libclang), CXCursor, ())
+    @ccall libclang.clang_getNullCursor()::CXCursor
 end
 
 function clang_getTranslationUnitCursor(arg1)
-    ccall((:clang_getTranslationUnitCursor, libclang), CXCursor, (CXTranslationUnit,), arg1)
+    @ccall libclang.clang_getTranslationUnitCursor(arg1::CXTranslationUnit)::CXCursor
 end
 
 function clang_equalCursors(arg1, arg2)
-    ccall((:clang_equalCursors, libclang), Cuint, (CXCursor, CXCursor), arg1, arg2)
+    @ccall libclang.clang_equalCursors(arg1::CXCursor, arg2::CXCursor)::Cuint
 end
 
 function clang_Cursor_isNull(cursor)
-    ccall((:clang_Cursor_isNull, libclang), Cint, (CXCursor,), cursor)
+    @ccall libclang.clang_Cursor_isNull(cursor::CXCursor)::Cint
 end
 
 function clang_hashCursor(arg1)
-    ccall((:clang_hashCursor, libclang), Cuint, (CXCursor,), arg1)
+    @ccall libclang.clang_hashCursor(arg1::CXCursor)::Cuint
 end
 
 function clang_getCursorKind(arg1)
-    ccall((:clang_getCursorKind, libclang), CXCursorKind, (CXCursor,), arg1)
+    @ccall libclang.clang_getCursorKind(arg1::CXCursor)::CXCursorKind
 end
 
 function clang_isDeclaration(arg1)
-    ccall((:clang_isDeclaration, libclang), Cuint, (CXCursorKind,), arg1)
+    @ccall libclang.clang_isDeclaration(arg1::CXCursorKind)::Cuint
 end
 
 function clang_isInvalidDeclaration(arg1)
-    ccall((:clang_isInvalidDeclaration, libclang), Cuint, (CXCursor,), arg1)
+    @ccall libclang.clang_isInvalidDeclaration(arg1::CXCursor)::Cuint
 end
 
 function clang_isReference(arg1)
-    ccall((:clang_isReference, libclang), Cuint, (CXCursorKind,), arg1)
+    @ccall libclang.clang_isReference(arg1::CXCursorKind)::Cuint
 end
 
 function clang_isExpression(arg1)
-    ccall((:clang_isExpression, libclang), Cuint, (CXCursorKind,), arg1)
+    @ccall libclang.clang_isExpression(arg1::CXCursorKind)::Cuint
 end
 
 function clang_isStatement(arg1)
-    ccall((:clang_isStatement, libclang), Cuint, (CXCursorKind,), arg1)
+    @ccall libclang.clang_isStatement(arg1::CXCursorKind)::Cuint
 end
 
 function clang_isAttribute(arg1)
-    ccall((:clang_isAttribute, libclang), Cuint, (CXCursorKind,), arg1)
+    @ccall libclang.clang_isAttribute(arg1::CXCursorKind)::Cuint
 end
 
 function clang_Cursor_hasAttrs(C)
-    ccall((:clang_Cursor_hasAttrs, libclang), Cuint, (CXCursor,), C)
+    @ccall libclang.clang_Cursor_hasAttrs(C::CXCursor)::Cuint
 end
 
 function clang_isInvalid(arg1)
-    ccall((:clang_isInvalid, libclang), Cuint, (CXCursorKind,), arg1)
+    @ccall libclang.clang_isInvalid(arg1::CXCursorKind)::Cuint
 end
 
 function clang_isTranslationUnit(arg1)
-    ccall((:clang_isTranslationUnit, libclang), Cuint, (CXCursorKind,), arg1)
+    @ccall libclang.clang_isTranslationUnit(arg1::CXCursorKind)::Cuint
 end
 
 function clang_isPreprocessing(arg1)
-    ccall((:clang_isPreprocessing, libclang), Cuint, (CXCursorKind,), arg1)
+    @ccall libclang.clang_isPreprocessing(arg1::CXCursorKind)::Cuint
 end
 
 function clang_isUnexposed(arg1)
-    ccall((:clang_isUnexposed, libclang), Cuint, (CXCursorKind,), arg1)
+    @ccall libclang.clang_isUnexposed(arg1::CXCursorKind)::Cuint
 end
 
 @cenum CXLinkageKind::UInt32 begin
@@ -917,7 +917,7 @@ end
 end
 
 function clang_getCursorLinkage(cursor)
-    ccall((:clang_getCursorLinkage, libclang), CXLinkageKind, (CXCursor,), cursor)
+    @ccall libclang.clang_getCursorLinkage(cursor::CXCursor)::CXLinkageKind
 end
 
 @cenum CXVisibilityKind::UInt32 begin
@@ -928,11 +928,11 @@ end
 end
 
 function clang_getCursorVisibility(cursor)
-    ccall((:clang_getCursorVisibility, libclang), CXVisibilityKind, (CXCursor,), cursor)
+    @ccall libclang.clang_getCursorVisibility(cursor::CXCursor)::CXVisibilityKind
 end
 
 function clang_getCursorAvailability(cursor)
-    ccall((:clang_getCursorAvailability, libclang), CXAvailabilityKind, (CXCursor,), cursor)
+    @ccall libclang.clang_getCursorAvailability(cursor::CXCursor)::CXAvailabilityKind
 end
 
 struct CXPlatformAvailability
@@ -945,11 +945,11 @@ struct CXPlatformAvailability
 end
 
 function clang_getCursorPlatformAvailability(cursor, always_deprecated, deprecated_message, always_unavailable, unavailable_message, availability, availability_size)
-    ccall((:clang_getCursorPlatformAvailability, libclang), Cint, (CXCursor, Ptr{Cint}, Ptr{CXString}, Ptr{Cint}, Ptr{CXString}, Ptr{CXPlatformAvailability}, Cint), cursor, always_deprecated, deprecated_message, always_unavailable, unavailable_message, availability, availability_size)
+    @ccall libclang.clang_getCursorPlatformAvailability(cursor::CXCursor, always_deprecated::Ptr{Cint}, deprecated_message::Ptr{CXString}, always_unavailable::Ptr{Cint}, unavailable_message::Ptr{CXString}, availability::Ptr{CXPlatformAvailability}, availability_size::Cint)::Cint
 end
 
 function clang_disposeCXPlatformAvailability(availability)
-    ccall((:clang_disposeCXPlatformAvailability, libclang), Cvoid, (Ptr{CXPlatformAvailability},), availability)
+    @ccall libclang.clang_disposeCXPlatformAvailability(availability::Ptr{CXPlatformAvailability})::Cvoid
 end
 
 @cenum CXLanguageKind::UInt32 begin
@@ -960,7 +960,7 @@ end
 end
 
 function clang_getCursorLanguage(cursor)
-    ccall((:clang_getCursorLanguage, libclang), CXLanguageKind, (CXCursor,), cursor)
+    @ccall libclang.clang_getCursorLanguage(cursor::CXCursor)::CXLanguageKind
 end
 
 @cenum CXTLSKind::UInt32 begin
@@ -970,11 +970,11 @@ end
 end
 
 function clang_getCursorTLSKind(cursor)
-    ccall((:clang_getCursorTLSKind, libclang), CXTLSKind, (CXCursor,), cursor)
+    @ccall libclang.clang_getCursorTLSKind(cursor::CXCursor)::CXTLSKind
 end
 
 function clang_Cursor_getTranslationUnit(arg1)
-    ccall((:clang_Cursor_getTranslationUnit, libclang), CXTranslationUnit, (CXCursor,), arg1)
+    @ccall libclang.clang_Cursor_getTranslationUnit(arg1::CXCursor)::CXTranslationUnit
 end
 
 mutable struct CXCursorSetImpl end
@@ -982,51 +982,51 @@ mutable struct CXCursorSetImpl end
 const CXCursorSet = Ptr{CXCursorSetImpl}
 
 function clang_createCXCursorSet()
-    ccall((:clang_createCXCursorSet, libclang), CXCursorSet, ())
+    @ccall libclang.clang_createCXCursorSet()::CXCursorSet
 end
 
 function clang_disposeCXCursorSet(cset)
-    ccall((:clang_disposeCXCursorSet, libclang), Cvoid, (CXCursorSet,), cset)
+    @ccall libclang.clang_disposeCXCursorSet(cset::CXCursorSet)::Cvoid
 end
 
 function clang_CXCursorSet_contains(cset, cursor)
-    ccall((:clang_CXCursorSet_contains, libclang), Cuint, (CXCursorSet, CXCursor), cset, cursor)
+    @ccall libclang.clang_CXCursorSet_contains(cset::CXCursorSet, cursor::CXCursor)::Cuint
 end
 
 function clang_CXCursorSet_insert(cset, cursor)
-    ccall((:clang_CXCursorSet_insert, libclang), Cuint, (CXCursorSet, CXCursor), cset, cursor)
+    @ccall libclang.clang_CXCursorSet_insert(cset::CXCursorSet, cursor::CXCursor)::Cuint
 end
 
 function clang_getCursorSemanticParent(cursor)
-    ccall((:clang_getCursorSemanticParent, libclang), CXCursor, (CXCursor,), cursor)
+    @ccall libclang.clang_getCursorSemanticParent(cursor::CXCursor)::CXCursor
 end
 
 function clang_getCursorLexicalParent(cursor)
-    ccall((:clang_getCursorLexicalParent, libclang), CXCursor, (CXCursor,), cursor)
+    @ccall libclang.clang_getCursorLexicalParent(cursor::CXCursor)::CXCursor
 end
 
 function clang_getOverriddenCursors(cursor, overridden, num_overridden)
-    ccall((:clang_getOverriddenCursors, libclang), Cvoid, (CXCursor, Ptr{Ptr{CXCursor}}, Ptr{Cuint}), cursor, overridden, num_overridden)
+    @ccall libclang.clang_getOverriddenCursors(cursor::CXCursor, overridden::Ptr{Ptr{CXCursor}}, num_overridden::Ptr{Cuint})::Cvoid
 end
 
 function clang_disposeOverriddenCursors(overridden)
-    ccall((:clang_disposeOverriddenCursors, libclang), Cvoid, (Ptr{CXCursor},), overridden)
+    @ccall libclang.clang_disposeOverriddenCursors(overridden::Ptr{CXCursor})::Cvoid
 end
 
 function clang_getIncludedFile(cursor)
-    ccall((:clang_getIncludedFile, libclang), CXFile, (CXCursor,), cursor)
+    @ccall libclang.clang_getIncludedFile(cursor::CXCursor)::CXFile
 end
 
 function clang_getCursor(arg1, arg2)
-    ccall((:clang_getCursor, libclang), CXCursor, (CXTranslationUnit, CXSourceLocation), arg1, arg2)
+    @ccall libclang.clang_getCursor(arg1::CXTranslationUnit, arg2::CXSourceLocation)::CXCursor
 end
 
 function clang_getCursorLocation(arg1)
-    ccall((:clang_getCursorLocation, libclang), CXSourceLocation, (CXCursor,), arg1)
+    @ccall libclang.clang_getCursorLocation(arg1::CXCursor)::CXSourceLocation
 end
 
 function clang_getCursorExtent(arg1)
-    ccall((:clang_getCursorExtent, libclang), CXSourceRange, (CXCursor,), arg1)
+    @ccall libclang.clang_getCursorExtent(arg1::CXCursor)::CXSourceRange
 end
 
 @cenum CXTypeKind::UInt32 begin
@@ -1181,39 +1181,39 @@ mutable struct CXType
 end
 
 function clang_getCursorType(C)
-    ccall((:clang_getCursorType, libclang), CXType, (CXCursor,), C)
+    @ccall libclang.clang_getCursorType(C::CXCursor)::CXType
 end
 
 function clang_getTypeSpelling(CT)
-    ccall((:clang_getTypeSpelling, libclang), CXString, (CXType,), CT)
+    @ccall libclang.clang_getTypeSpelling(CT::CXType)::CXString
 end
 
 function clang_getTypedefDeclUnderlyingType(C)
-    ccall((:clang_getTypedefDeclUnderlyingType, libclang), CXType, (CXCursor,), C)
+    @ccall libclang.clang_getTypedefDeclUnderlyingType(C::CXCursor)::CXType
 end
 
 function clang_getEnumDeclIntegerType(C)
-    ccall((:clang_getEnumDeclIntegerType, libclang), CXType, (CXCursor,), C)
+    @ccall libclang.clang_getEnumDeclIntegerType(C::CXCursor)::CXType
 end
 
 function clang_getEnumConstantDeclValue(C)
-    ccall((:clang_getEnumConstantDeclValue, libclang), Clonglong, (CXCursor,), C)
+    @ccall libclang.clang_getEnumConstantDeclValue(C::CXCursor)::Clonglong
 end
 
 function clang_getEnumConstantDeclUnsignedValue(C)
-    ccall((:clang_getEnumConstantDeclUnsignedValue, libclang), Culonglong, (CXCursor,), C)
+    @ccall libclang.clang_getEnumConstantDeclUnsignedValue(C::CXCursor)::Culonglong
 end
 
 function clang_getFieldDeclBitWidth(C)
-    ccall((:clang_getFieldDeclBitWidth, libclang), Cint, (CXCursor,), C)
+    @ccall libclang.clang_getFieldDeclBitWidth(C::CXCursor)::Cint
 end
 
 function clang_Cursor_getNumArguments(C)
-    ccall((:clang_Cursor_getNumArguments, libclang), Cint, (CXCursor,), C)
+    @ccall libclang.clang_Cursor_getNumArguments(C::CXCursor)::Cint
 end
 
 function clang_Cursor_getArgument(C, i)
-    ccall((:clang_Cursor_getArgument, libclang), CXCursor, (CXCursor, Cuint), C, i)
+    @ccall libclang.clang_Cursor_getArgument(C::CXCursor, i::Cuint)::CXCursor
 end
 
 @cenum CXTemplateArgumentKind::UInt32 begin
@@ -1230,163 +1230,163 @@ end
 end
 
 function clang_Cursor_getNumTemplateArguments(C)
-    ccall((:clang_Cursor_getNumTemplateArguments, libclang), Cint, (CXCursor,), C)
+    @ccall libclang.clang_Cursor_getNumTemplateArguments(C::CXCursor)::Cint
 end
 
 function clang_Cursor_getTemplateArgumentKind(C, I)
-    ccall((:clang_Cursor_getTemplateArgumentKind, libclang), CXTemplateArgumentKind, (CXCursor, Cuint), C, I)
+    @ccall libclang.clang_Cursor_getTemplateArgumentKind(C::CXCursor, I::Cuint)::CXTemplateArgumentKind
 end
 
 function clang_Cursor_getTemplateArgumentType(C, I)
-    ccall((:clang_Cursor_getTemplateArgumentType, libclang), CXType, (CXCursor, Cuint), C, I)
+    @ccall libclang.clang_Cursor_getTemplateArgumentType(C::CXCursor, I::Cuint)::CXType
 end
 
 function clang_Cursor_getTemplateArgumentValue(C, I)
-    ccall((:clang_Cursor_getTemplateArgumentValue, libclang), Clonglong, (CXCursor, Cuint), C, I)
+    @ccall libclang.clang_Cursor_getTemplateArgumentValue(C::CXCursor, I::Cuint)::Clonglong
 end
 
 function clang_Cursor_getTemplateArgumentUnsignedValue(C, I)
-    ccall((:clang_Cursor_getTemplateArgumentUnsignedValue, libclang), Culonglong, (CXCursor, Cuint), C, I)
+    @ccall libclang.clang_Cursor_getTemplateArgumentUnsignedValue(C::CXCursor, I::Cuint)::Culonglong
 end
 
 function clang_equalTypes(A, B)
-    ccall((:clang_equalTypes, libclang), Cuint, (CXType, CXType), A, B)
+    @ccall libclang.clang_equalTypes(A::CXType, B::CXType)::Cuint
 end
 
 function clang_getCanonicalType(T)
-    ccall((:clang_getCanonicalType, libclang), CXType, (CXType,), T)
+    @ccall libclang.clang_getCanonicalType(T::CXType)::CXType
 end
 
 function clang_isConstQualifiedType(T)
-    ccall((:clang_isConstQualifiedType, libclang), Cuint, (CXType,), T)
+    @ccall libclang.clang_isConstQualifiedType(T::CXType)::Cuint
 end
 
 function clang_Cursor_isMacroFunctionLike(C)
-    ccall((:clang_Cursor_isMacroFunctionLike, libclang), Cuint, (CXCursor,), C)
+    @ccall libclang.clang_Cursor_isMacroFunctionLike(C::CXCursor)::Cuint
 end
 
 function clang_Cursor_isMacroBuiltin(C)
-    ccall((:clang_Cursor_isMacroBuiltin, libclang), Cuint, (CXCursor,), C)
+    @ccall libclang.clang_Cursor_isMacroBuiltin(C::CXCursor)::Cuint
 end
 
 function clang_Cursor_isFunctionInlined(C)
-    ccall((:clang_Cursor_isFunctionInlined, libclang), Cuint, (CXCursor,), C)
+    @ccall libclang.clang_Cursor_isFunctionInlined(C::CXCursor)::Cuint
 end
 
 function clang_isVolatileQualifiedType(T)
-    ccall((:clang_isVolatileQualifiedType, libclang), Cuint, (CXType,), T)
+    @ccall libclang.clang_isVolatileQualifiedType(T::CXType)::Cuint
 end
 
 function clang_isRestrictQualifiedType(T)
-    ccall((:clang_isRestrictQualifiedType, libclang), Cuint, (CXType,), T)
+    @ccall libclang.clang_isRestrictQualifiedType(T::CXType)::Cuint
 end
 
 function clang_getAddressSpace(T)
-    ccall((:clang_getAddressSpace, libclang), Cuint, (CXType,), T)
+    @ccall libclang.clang_getAddressSpace(T::CXType)::Cuint
 end
 
 function clang_getTypedefName(CT)
-    ccall((:clang_getTypedefName, libclang), CXString, (CXType,), CT)
+    @ccall libclang.clang_getTypedefName(CT::CXType)::CXString
 end
 
 function clang_getPointeeType(T)
-    ccall((:clang_getPointeeType, libclang), CXType, (CXType,), T)
+    @ccall libclang.clang_getPointeeType(T::CXType)::CXType
 end
 
 function clang_getTypeDeclaration(T)
-    ccall((:clang_getTypeDeclaration, libclang), CXCursor, (CXType,), T)
+    @ccall libclang.clang_getTypeDeclaration(T::CXType)::CXCursor
 end
 
 function clang_getDeclObjCTypeEncoding(C)
-    ccall((:clang_getDeclObjCTypeEncoding, libclang), CXString, (CXCursor,), C)
+    @ccall libclang.clang_getDeclObjCTypeEncoding(C::CXCursor)::CXString
 end
 
 function clang_Type_getObjCEncoding(type)
-    ccall((:clang_Type_getObjCEncoding, libclang), CXString, (CXType,), type)
+    @ccall libclang.clang_Type_getObjCEncoding(type::CXType)::CXString
 end
 
 function clang_getTypeKindSpelling(K)
-    ccall((:clang_getTypeKindSpelling, libclang), CXString, (CXTypeKind,), K)
+    @ccall libclang.clang_getTypeKindSpelling(K::CXTypeKind)::CXString
 end
 
 function clang_getFunctionTypeCallingConv(T)
-    ccall((:clang_getFunctionTypeCallingConv, libclang), CXCallingConv, (CXType,), T)
+    @ccall libclang.clang_getFunctionTypeCallingConv(T::CXType)::CXCallingConv
 end
 
 function clang_getResultType(T)
-    ccall((:clang_getResultType, libclang), CXType, (CXType,), T)
+    @ccall libclang.clang_getResultType(T::CXType)::CXType
 end
 
 function clang_getExceptionSpecificationType(T)
-    ccall((:clang_getExceptionSpecificationType, libclang), Cint, (CXType,), T)
+    @ccall libclang.clang_getExceptionSpecificationType(T::CXType)::Cint
 end
 
 function clang_getNumArgTypes(T)
-    ccall((:clang_getNumArgTypes, libclang), Cint, (CXType,), T)
+    @ccall libclang.clang_getNumArgTypes(T::CXType)::Cint
 end
 
 function clang_getArgType(T, i)
-    ccall((:clang_getArgType, libclang), CXType, (CXType, Cuint), T, i)
+    @ccall libclang.clang_getArgType(T::CXType, i::Cuint)::CXType
 end
 
 function clang_Type_getObjCObjectBaseType(T)
-    ccall((:clang_Type_getObjCObjectBaseType, libclang), CXType, (CXType,), T)
+    @ccall libclang.clang_Type_getObjCObjectBaseType(T::CXType)::CXType
 end
 
 function clang_Type_getNumObjCProtocolRefs(T)
-    ccall((:clang_Type_getNumObjCProtocolRefs, libclang), Cuint, (CXType,), T)
+    @ccall libclang.clang_Type_getNumObjCProtocolRefs(T::CXType)::Cuint
 end
 
 function clang_Type_getObjCProtocolDecl(T, i)
-    ccall((:clang_Type_getObjCProtocolDecl, libclang), CXCursor, (CXType, Cuint), T, i)
+    @ccall libclang.clang_Type_getObjCProtocolDecl(T::CXType, i::Cuint)::CXCursor
 end
 
 function clang_Type_getNumObjCTypeArgs(T)
-    ccall((:clang_Type_getNumObjCTypeArgs, libclang), Cuint, (CXType,), T)
+    @ccall libclang.clang_Type_getNumObjCTypeArgs(T::CXType)::Cuint
 end
 
 function clang_Type_getObjCTypeArg(T, i)
-    ccall((:clang_Type_getObjCTypeArg, libclang), CXType, (CXType, Cuint), T, i)
+    @ccall libclang.clang_Type_getObjCTypeArg(T::CXType, i::Cuint)::CXType
 end
 
 function clang_isFunctionTypeVariadic(T)
-    ccall((:clang_isFunctionTypeVariadic, libclang), Cuint, (CXType,), T)
+    @ccall libclang.clang_isFunctionTypeVariadic(T::CXType)::Cuint
 end
 
 function clang_getCursorResultType(C)
-    ccall((:clang_getCursorResultType, libclang), CXType, (CXCursor,), C)
+    @ccall libclang.clang_getCursorResultType(C::CXCursor)::CXType
 end
 
 function clang_getCursorExceptionSpecificationType(C)
-    ccall((:clang_getCursorExceptionSpecificationType, libclang), Cint, (CXCursor,), C)
+    @ccall libclang.clang_getCursorExceptionSpecificationType(C::CXCursor)::Cint
 end
 
 function clang_isPODType(T)
-    ccall((:clang_isPODType, libclang), Cuint, (CXType,), T)
+    @ccall libclang.clang_isPODType(T::CXType)::Cuint
 end
 
 function clang_getElementType(T)
-    ccall((:clang_getElementType, libclang), CXType, (CXType,), T)
+    @ccall libclang.clang_getElementType(T::CXType)::CXType
 end
 
 function clang_getNumElements(T)
-    ccall((:clang_getNumElements, libclang), Clonglong, (CXType,), T)
+    @ccall libclang.clang_getNumElements(T::CXType)::Clonglong
 end
 
 function clang_getArrayElementType(T)
-    ccall((:clang_getArrayElementType, libclang), CXType, (CXType,), T)
+    @ccall libclang.clang_getArrayElementType(T::CXType)::CXType
 end
 
 function clang_getArraySize(T)
-    ccall((:clang_getArraySize, libclang), Clonglong, (CXType,), T)
+    @ccall libclang.clang_getArraySize(T::CXType)::Clonglong
 end
 
 function clang_Type_getNamedType(T)
-    ccall((:clang_Type_getNamedType, libclang), CXType, (CXType,), T)
+    @ccall libclang.clang_Type_getNamedType(T::CXType)::CXType
 end
 
 function clang_Type_isTransparentTagTypedef(T)
-    ccall((:clang_Type_isTransparentTagTypedef, libclang), Cuint, (CXType,), T)
+    @ccall libclang.clang_Type_isTransparentTagTypedef(T::CXType)::Cuint
 end
 
 @cenum CXTypeNullabilityKind::UInt32 begin
@@ -1397,7 +1397,7 @@ end
 end
 
 function clang_Type_getNullability(T)
-    ccall((:clang_Type_getNullability, libclang), CXTypeNullabilityKind, (CXType,), T)
+    @ccall libclang.clang_Type_getNullability(T::CXType)::CXTypeNullabilityKind
 end
 
 @cenum CXTypeLayoutError::Int32 begin
@@ -1410,43 +1410,43 @@ end
 end
 
 function clang_Type_getAlignOf(T)
-    ccall((:clang_Type_getAlignOf, libclang), Clonglong, (CXType,), T)
+    @ccall libclang.clang_Type_getAlignOf(T::CXType)::Clonglong
 end
 
 function clang_Type_getClassType(T)
-    ccall((:clang_Type_getClassType, libclang), CXType, (CXType,), T)
+    @ccall libclang.clang_Type_getClassType(T::CXType)::CXType
 end
 
 function clang_Type_getSizeOf(T)
-    ccall((:clang_Type_getSizeOf, libclang), Clonglong, (CXType,), T)
+    @ccall libclang.clang_Type_getSizeOf(T::CXType)::Clonglong
 end
 
 function clang_Type_getOffsetOf(T, S)
-    ccall((:clang_Type_getOffsetOf, libclang), Clonglong, (CXType, Cstring), T, S)
+    @ccall libclang.clang_Type_getOffsetOf(T::CXType, S::Cstring)::Clonglong
 end
 
 function clang_Type_getModifiedType(T)
-    ccall((:clang_Type_getModifiedType, libclang), CXType, (CXType,), T)
+    @ccall libclang.clang_Type_getModifiedType(T::CXType)::CXType
 end
 
 function clang_Type_getValueType(CT)
-    ccall((:clang_Type_getValueType, libclang), CXType, (CXType,), CT)
+    @ccall libclang.clang_Type_getValueType(CT::CXType)::CXType
 end
 
 function clang_Cursor_getOffsetOfField(C)
-    ccall((:clang_Cursor_getOffsetOfField, libclang), Clonglong, (CXCursor,), C)
+    @ccall libclang.clang_Cursor_getOffsetOfField(C::CXCursor)::Clonglong
 end
 
 function clang_Cursor_isAnonymous(C)
-    ccall((:clang_Cursor_isAnonymous, libclang), Cuint, (CXCursor,), C)
+    @ccall libclang.clang_Cursor_isAnonymous(C::CXCursor)::Cuint
 end
 
 function clang_Cursor_isAnonymousRecordDecl(C)
-    ccall((:clang_Cursor_isAnonymousRecordDecl, libclang), Cuint, (CXCursor,), C)
+    @ccall libclang.clang_Cursor_isAnonymousRecordDecl(C::CXCursor)::Cuint
 end
 
 function clang_Cursor_isInlineNamespace(C)
-    ccall((:clang_Cursor_isInlineNamespace, libclang), Cuint, (CXCursor,), C)
+    @ccall libclang.clang_Cursor_isInlineNamespace(C::CXCursor)::Cuint
 end
 
 @cenum CXRefQualifierKind::UInt32 begin
@@ -1456,23 +1456,23 @@ end
 end
 
 function clang_Type_getNumTemplateArguments(T)
-    ccall((:clang_Type_getNumTemplateArguments, libclang), Cint, (CXType,), T)
+    @ccall libclang.clang_Type_getNumTemplateArguments(T::CXType)::Cint
 end
 
 function clang_Type_getTemplateArgumentAsType(T, i)
-    ccall((:clang_Type_getTemplateArgumentAsType, libclang), CXType, (CXType, Cuint), T, i)
+    @ccall libclang.clang_Type_getTemplateArgumentAsType(T::CXType, i::Cuint)::CXType
 end
 
 function clang_Type_getCXXRefQualifier(T)
-    ccall((:clang_Type_getCXXRefQualifier, libclang), CXRefQualifierKind, (CXType,), T)
+    @ccall libclang.clang_Type_getCXXRefQualifier(T::CXType)::CXRefQualifierKind
 end
 
 function clang_Cursor_isBitField(C)
-    ccall((:clang_Cursor_isBitField, libclang), Cuint, (CXCursor,), C)
+    @ccall libclang.clang_Cursor_isBitField(C::CXCursor)::Cuint
 end
 
 function clang_isVirtualBase(arg1)
-    ccall((:clang_isVirtualBase, libclang), Cuint, (CXCursor,), arg1)
+    @ccall libclang.clang_isVirtualBase(arg1::CXCursor)::Cuint
 end
 
 @cenum CX_CXXAccessSpecifier::UInt32 begin
@@ -1483,7 +1483,7 @@ end
 end
 
 function clang_getCXXAccessSpecifier(arg1)
-    ccall((:clang_getCXXAccessSpecifier, libclang), CX_CXXAccessSpecifier, (CXCursor,), arg1)
+    @ccall libclang.clang_getCXXAccessSpecifier(arg1::CXCursor)::CX_CXXAccessSpecifier
 end
 
 @cenum CX_StorageClass::UInt32 begin
@@ -1498,19 +1498,19 @@ end
 end
 
 function clang_Cursor_getStorageClass(arg1)
-    ccall((:clang_Cursor_getStorageClass, libclang), CX_StorageClass, (CXCursor,), arg1)
+    @ccall libclang.clang_Cursor_getStorageClass(arg1::CXCursor)::CX_StorageClass
 end
 
 function clang_getNumOverloadedDecls(cursor)
-    ccall((:clang_getNumOverloadedDecls, libclang), Cuint, (CXCursor,), cursor)
+    @ccall libclang.clang_getNumOverloadedDecls(cursor::CXCursor)::Cuint
 end
 
 function clang_getOverloadedDecl(cursor, index)
-    ccall((:clang_getOverloadedDecl, libclang), CXCursor, (CXCursor, Cuint), cursor, index)
+    @ccall libclang.clang_getOverloadedDecl(cursor::CXCursor, index::Cuint)::CXCursor
 end
 
 function clang_getIBOutletCollectionType(arg1)
-    ccall((:clang_getIBOutletCollectionType, libclang), CXType, (CXCursor,), arg1)
+    @ccall libclang.clang_getIBOutletCollectionType(arg1::CXCursor)::CXType
 end
 
 @cenum CXChildVisitResult::UInt32 begin
@@ -1523,43 +1523,43 @@ end
 const CXCursorVisitor = Ptr{Cvoid}
 
 function clang_visitChildren(parent, visitor, client_data)
-    ccall((:clang_visitChildren, libclang), Cuint, (CXCursor, CXCursorVisitor, CXClientData), parent, visitor, client_data)
+    @ccall libclang.clang_visitChildren(parent::CXCursor, visitor::CXCursorVisitor, client_data::CXClientData)::Cuint
 end
 
 function clang_getCursorUSR(arg1)
-    ccall((:clang_getCursorUSR, libclang), CXString, (CXCursor,), arg1)
+    @ccall libclang.clang_getCursorUSR(arg1::CXCursor)::CXString
 end
 
 function clang_constructUSR_ObjCClass(class_name)
-    ccall((:clang_constructUSR_ObjCClass, libclang), CXString, (Cstring,), class_name)
+    @ccall libclang.clang_constructUSR_ObjCClass(class_name::Cstring)::CXString
 end
 
 function clang_constructUSR_ObjCCategory(class_name, category_name)
-    ccall((:clang_constructUSR_ObjCCategory, libclang), CXString, (Cstring, Cstring), class_name, category_name)
+    @ccall libclang.clang_constructUSR_ObjCCategory(class_name::Cstring, category_name::Cstring)::CXString
 end
 
 function clang_constructUSR_ObjCProtocol(protocol_name)
-    ccall((:clang_constructUSR_ObjCProtocol, libclang), CXString, (Cstring,), protocol_name)
+    @ccall libclang.clang_constructUSR_ObjCProtocol(protocol_name::Cstring)::CXString
 end
 
 function clang_constructUSR_ObjCIvar(name, classUSR)
-    ccall((:clang_constructUSR_ObjCIvar, libclang), CXString, (Cstring, CXString), name, classUSR)
+    @ccall libclang.clang_constructUSR_ObjCIvar(name::Cstring, classUSR::CXString)::CXString
 end
 
 function clang_constructUSR_ObjCMethod(name, isInstanceMethod, classUSR)
-    ccall((:clang_constructUSR_ObjCMethod, libclang), CXString, (Cstring, Cuint, CXString), name, isInstanceMethod, classUSR)
+    @ccall libclang.clang_constructUSR_ObjCMethod(name::Cstring, isInstanceMethod::Cuint, classUSR::CXString)::CXString
 end
 
 function clang_constructUSR_ObjCProperty(property, classUSR)
-    ccall((:clang_constructUSR_ObjCProperty, libclang), CXString, (Cstring, CXString), property, classUSR)
+    @ccall libclang.clang_constructUSR_ObjCProperty(property::Cstring, classUSR::CXString)::CXString
 end
 
 function clang_getCursorSpelling(arg1)
-    ccall((:clang_getCursorSpelling, libclang), CXString, (CXCursor,), arg1)
+    @ccall libclang.clang_getCursorSpelling(arg1::CXCursor)::CXString
 end
 
 function clang_Cursor_getSpellingNameRange(arg1, pieceIndex, options)
-    ccall((:clang_Cursor_getSpellingNameRange, libclang), CXSourceRange, (CXCursor, Cuint, Cuint), arg1, pieceIndex, options)
+    @ccall libclang.clang_Cursor_getSpellingNameRange(arg1::CXCursor, pieceIndex::Cuint, options::Cuint)::CXSourceRange
 end
 
 const CXPrintingPolicy = Ptr{Cvoid}
@@ -1595,55 +1595,55 @@ const CXPrintingPolicy = Ptr{Cvoid}
 end
 
 function clang_PrintingPolicy_getProperty(Policy, Property)
-    ccall((:clang_PrintingPolicy_getProperty, libclang), Cuint, (CXPrintingPolicy, CXPrintingPolicyProperty), Policy, Property)
+    @ccall libclang.clang_PrintingPolicy_getProperty(Policy::CXPrintingPolicy, Property::CXPrintingPolicyProperty)::Cuint
 end
 
 function clang_PrintingPolicy_setProperty(Policy, Property, Value)
-    ccall((:clang_PrintingPolicy_setProperty, libclang), Cvoid, (CXPrintingPolicy, CXPrintingPolicyProperty, Cuint), Policy, Property, Value)
+    @ccall libclang.clang_PrintingPolicy_setProperty(Policy::CXPrintingPolicy, Property::CXPrintingPolicyProperty, Value::Cuint)::Cvoid
 end
 
 function clang_getCursorPrintingPolicy(arg1)
-    ccall((:clang_getCursorPrintingPolicy, libclang), CXPrintingPolicy, (CXCursor,), arg1)
+    @ccall libclang.clang_getCursorPrintingPolicy(arg1::CXCursor)::CXPrintingPolicy
 end
 
 function clang_PrintingPolicy_dispose(Policy)
-    ccall((:clang_PrintingPolicy_dispose, libclang), Cvoid, (CXPrintingPolicy,), Policy)
+    @ccall libclang.clang_PrintingPolicy_dispose(Policy::CXPrintingPolicy)::Cvoid
 end
 
 function clang_getCursorPrettyPrinted(Cursor, Policy)
-    ccall((:clang_getCursorPrettyPrinted, libclang), CXString, (CXCursor, CXPrintingPolicy), Cursor, Policy)
+    @ccall libclang.clang_getCursorPrettyPrinted(Cursor::CXCursor, Policy::CXPrintingPolicy)::CXString
 end
 
 function clang_getCursorDisplayName(arg1)
-    ccall((:clang_getCursorDisplayName, libclang), CXString, (CXCursor,), arg1)
+    @ccall libclang.clang_getCursorDisplayName(arg1::CXCursor)::CXString
 end
 
 function clang_getCursorReferenced(arg1)
-    ccall((:clang_getCursorReferenced, libclang), CXCursor, (CXCursor,), arg1)
+    @ccall libclang.clang_getCursorReferenced(arg1::CXCursor)::CXCursor
 end
 
 function clang_getCursorDefinition(arg1)
-    ccall((:clang_getCursorDefinition, libclang), CXCursor, (CXCursor,), arg1)
+    @ccall libclang.clang_getCursorDefinition(arg1::CXCursor)::CXCursor
 end
 
 function clang_isCursorDefinition(arg1)
-    ccall((:clang_isCursorDefinition, libclang), Cuint, (CXCursor,), arg1)
+    @ccall libclang.clang_isCursorDefinition(arg1::CXCursor)::Cuint
 end
 
 function clang_getCanonicalCursor(arg1)
-    ccall((:clang_getCanonicalCursor, libclang), CXCursor, (CXCursor,), arg1)
+    @ccall libclang.clang_getCanonicalCursor(arg1::CXCursor)::CXCursor
 end
 
 function clang_Cursor_getObjCSelectorIndex(arg1)
-    ccall((:clang_Cursor_getObjCSelectorIndex, libclang), Cint, (CXCursor,), arg1)
+    @ccall libclang.clang_Cursor_getObjCSelectorIndex(arg1::CXCursor)::Cint
 end
 
 function clang_Cursor_isDynamicCall(C)
-    ccall((:clang_Cursor_isDynamicCall, libclang), Cint, (CXCursor,), C)
+    @ccall libclang.clang_Cursor_isDynamicCall(C::CXCursor)::Cint
 end
 
 function clang_Cursor_getReceiverType(C)
-    ccall((:clang_Cursor_getReceiverType, libclang), CXType, (CXCursor,), C)
+    @ccall libclang.clang_Cursor_getReceiverType(C::CXCursor)::CXType
 end
 
 @cenum CXObjCPropertyAttrKind::UInt32 begin
@@ -1664,15 +1664,15 @@ end
 end
 
 function clang_Cursor_getObjCPropertyAttributes(C, reserved)
-    ccall((:clang_Cursor_getObjCPropertyAttributes, libclang), Cuint, (CXCursor, Cuint), C, reserved)
+    @ccall libclang.clang_Cursor_getObjCPropertyAttributes(C::CXCursor, reserved::Cuint)::Cuint
 end
 
 function clang_Cursor_getObjCPropertyGetterName(C)
-    ccall((:clang_Cursor_getObjCPropertyGetterName, libclang), CXString, (CXCursor,), C)
+    @ccall libclang.clang_Cursor_getObjCPropertyGetterName(C::CXCursor)::CXString
 end
 
 function clang_Cursor_getObjCPropertySetterName(C)
-    ccall((:clang_Cursor_getObjCPropertySetterName, libclang), CXString, (CXCursor,), C)
+    @ccall libclang.clang_Cursor_getObjCPropertySetterName(C::CXCursor)::CXString
 end
 
 @cenum CXObjCDeclQualifierKind::UInt32 begin
@@ -1686,141 +1686,141 @@ end
 end
 
 function clang_Cursor_getObjCDeclQualifiers(C)
-    ccall((:clang_Cursor_getObjCDeclQualifiers, libclang), Cuint, (CXCursor,), C)
+    @ccall libclang.clang_Cursor_getObjCDeclQualifiers(C::CXCursor)::Cuint
 end
 
 function clang_Cursor_isObjCOptional(C)
-    ccall((:clang_Cursor_isObjCOptional, libclang), Cuint, (CXCursor,), C)
+    @ccall libclang.clang_Cursor_isObjCOptional(C::CXCursor)::Cuint
 end
 
 function clang_Cursor_isVariadic(C)
-    ccall((:clang_Cursor_isVariadic, libclang), Cuint, (CXCursor,), C)
+    @ccall libclang.clang_Cursor_isVariadic(C::CXCursor)::Cuint
 end
 
 function clang_Cursor_isExternalSymbol(C, language, definedIn, isGenerated)
-    ccall((:clang_Cursor_isExternalSymbol, libclang), Cuint, (CXCursor, Ptr{CXString}, Ptr{CXString}, Ptr{Cuint}), C, language, definedIn, isGenerated)
+    @ccall libclang.clang_Cursor_isExternalSymbol(C::CXCursor, language::Ptr{CXString}, definedIn::Ptr{CXString}, isGenerated::Ptr{Cuint})::Cuint
 end
 
 function clang_Cursor_getCommentRange(C)
-    ccall((:clang_Cursor_getCommentRange, libclang), CXSourceRange, (CXCursor,), C)
+    @ccall libclang.clang_Cursor_getCommentRange(C::CXCursor)::CXSourceRange
 end
 
 function clang_Cursor_getRawCommentText(C)
-    ccall((:clang_Cursor_getRawCommentText, libclang), CXString, (CXCursor,), C)
+    @ccall libclang.clang_Cursor_getRawCommentText(C::CXCursor)::CXString
 end
 
 function clang_Cursor_getBriefCommentText(C)
-    ccall((:clang_Cursor_getBriefCommentText, libclang), CXString, (CXCursor,), C)
+    @ccall libclang.clang_Cursor_getBriefCommentText(C::CXCursor)::CXString
 end
 
 function clang_Cursor_getMangling(arg1)
-    ccall((:clang_Cursor_getMangling, libclang), CXString, (CXCursor,), arg1)
+    @ccall libclang.clang_Cursor_getMangling(arg1::CXCursor)::CXString
 end
 
 function clang_Cursor_getCXXManglings(arg1)
-    ccall((:clang_Cursor_getCXXManglings, libclang), Ptr{CXStringSet}, (CXCursor,), arg1)
+    @ccall libclang.clang_Cursor_getCXXManglings(arg1::CXCursor)::Ptr{CXStringSet}
 end
 
 function clang_Cursor_getObjCManglings(arg1)
-    ccall((:clang_Cursor_getObjCManglings, libclang), Ptr{CXStringSet}, (CXCursor,), arg1)
+    @ccall libclang.clang_Cursor_getObjCManglings(arg1::CXCursor)::Ptr{CXStringSet}
 end
 
 const CXModule = Ptr{Cvoid}
 
 function clang_Cursor_getModule(C)
-    ccall((:clang_Cursor_getModule, libclang), CXModule, (CXCursor,), C)
+    @ccall libclang.clang_Cursor_getModule(C::CXCursor)::CXModule
 end
 
 function clang_getModuleForFile(arg1, arg2)
-    ccall((:clang_getModuleForFile, libclang), CXModule, (CXTranslationUnit, CXFile), arg1, arg2)
+    @ccall libclang.clang_getModuleForFile(arg1::CXTranslationUnit, arg2::CXFile)::CXModule
 end
 
 function clang_Module_getASTFile(Module)
-    ccall((:clang_Module_getASTFile, libclang), CXFile, (CXModule,), Module)
+    @ccall libclang.clang_Module_getASTFile(Module::CXModule)::CXFile
 end
 
 function clang_Module_getParent(Module)
-    ccall((:clang_Module_getParent, libclang), CXModule, (CXModule,), Module)
+    @ccall libclang.clang_Module_getParent(Module::CXModule)::CXModule
 end
 
 function clang_Module_getName(Module)
-    ccall((:clang_Module_getName, libclang), CXString, (CXModule,), Module)
+    @ccall libclang.clang_Module_getName(Module::CXModule)::CXString
 end
 
 function clang_Module_getFullName(Module)
-    ccall((:clang_Module_getFullName, libclang), CXString, (CXModule,), Module)
+    @ccall libclang.clang_Module_getFullName(Module::CXModule)::CXString
 end
 
 function clang_Module_isSystem(Module)
-    ccall((:clang_Module_isSystem, libclang), Cint, (CXModule,), Module)
+    @ccall libclang.clang_Module_isSystem(Module::CXModule)::Cint
 end
 
 function clang_Module_getNumTopLevelHeaders(arg1, Module)
-    ccall((:clang_Module_getNumTopLevelHeaders, libclang), Cuint, (CXTranslationUnit, CXModule), arg1, Module)
+    @ccall libclang.clang_Module_getNumTopLevelHeaders(arg1::CXTranslationUnit, Module::CXModule)::Cuint
 end
 
 function clang_Module_getTopLevelHeader(arg1, Module, Index)
-    ccall((:clang_Module_getTopLevelHeader, libclang), CXFile, (CXTranslationUnit, CXModule, Cuint), arg1, Module, Index)
+    @ccall libclang.clang_Module_getTopLevelHeader(arg1::CXTranslationUnit, Module::CXModule, Index::Cuint)::CXFile
 end
 
 function clang_CXXConstructor_isConvertingConstructor(C)
-    ccall((:clang_CXXConstructor_isConvertingConstructor, libclang), Cuint, (CXCursor,), C)
+    @ccall libclang.clang_CXXConstructor_isConvertingConstructor(C::CXCursor)::Cuint
 end
 
 function clang_CXXConstructor_isCopyConstructor(C)
-    ccall((:clang_CXXConstructor_isCopyConstructor, libclang), Cuint, (CXCursor,), C)
+    @ccall libclang.clang_CXXConstructor_isCopyConstructor(C::CXCursor)::Cuint
 end
 
 function clang_CXXConstructor_isDefaultConstructor(C)
-    ccall((:clang_CXXConstructor_isDefaultConstructor, libclang), Cuint, (CXCursor,), C)
+    @ccall libclang.clang_CXXConstructor_isDefaultConstructor(C::CXCursor)::Cuint
 end
 
 function clang_CXXConstructor_isMoveConstructor(C)
-    ccall((:clang_CXXConstructor_isMoveConstructor, libclang), Cuint, (CXCursor,), C)
+    @ccall libclang.clang_CXXConstructor_isMoveConstructor(C::CXCursor)::Cuint
 end
 
 function clang_CXXField_isMutable(C)
-    ccall((:clang_CXXField_isMutable, libclang), Cuint, (CXCursor,), C)
+    @ccall libclang.clang_CXXField_isMutable(C::CXCursor)::Cuint
 end
 
 function clang_CXXMethod_isDefaulted(C)
-    ccall((:clang_CXXMethod_isDefaulted, libclang), Cuint, (CXCursor,), C)
+    @ccall libclang.clang_CXXMethod_isDefaulted(C::CXCursor)::Cuint
 end
 
 function clang_CXXMethod_isPureVirtual(C)
-    ccall((:clang_CXXMethod_isPureVirtual, libclang), Cuint, (CXCursor,), C)
+    @ccall libclang.clang_CXXMethod_isPureVirtual(C::CXCursor)::Cuint
 end
 
 function clang_CXXMethod_isStatic(C)
-    ccall((:clang_CXXMethod_isStatic, libclang), Cuint, (CXCursor,), C)
+    @ccall libclang.clang_CXXMethod_isStatic(C::CXCursor)::Cuint
 end
 
 function clang_CXXMethod_isVirtual(C)
-    ccall((:clang_CXXMethod_isVirtual, libclang), Cuint, (CXCursor,), C)
+    @ccall libclang.clang_CXXMethod_isVirtual(C::CXCursor)::Cuint
 end
 
 function clang_CXXRecord_isAbstract(C)
-    ccall((:clang_CXXRecord_isAbstract, libclang), Cuint, (CXCursor,), C)
+    @ccall libclang.clang_CXXRecord_isAbstract(C::CXCursor)::Cuint
 end
 
 function clang_EnumDecl_isScoped(C)
-    ccall((:clang_EnumDecl_isScoped, libclang), Cuint, (CXCursor,), C)
+    @ccall libclang.clang_EnumDecl_isScoped(C::CXCursor)::Cuint
 end
 
 function clang_CXXMethod_isConst(C)
-    ccall((:clang_CXXMethod_isConst, libclang), Cuint, (CXCursor,), C)
+    @ccall libclang.clang_CXXMethod_isConst(C::CXCursor)::Cuint
 end
 
 function clang_getTemplateCursorKind(C)
-    ccall((:clang_getTemplateCursorKind, libclang), CXCursorKind, (CXCursor,), C)
+    @ccall libclang.clang_getTemplateCursorKind(C::CXCursor)::CXCursorKind
 end
 
 function clang_getSpecializedCursorTemplate(C)
-    ccall((:clang_getSpecializedCursorTemplate, libclang), CXCursor, (CXCursor,), C)
+    @ccall libclang.clang_getSpecializedCursorTemplate(C::CXCursor)::CXCursor
 end
 
 function clang_getCursorReferenceNameRange(C, NameFlags, PieceIndex)
-    ccall((:clang_getCursorReferenceNameRange, libclang), CXSourceRange, (CXCursor, Cuint, Cuint), C, NameFlags, PieceIndex)
+    @ccall libclang.clang_getCursorReferenceNameRange(C::CXCursor, NameFlags::Cuint, PieceIndex::Cuint)::CXSourceRange
 end
 
 @cenum CXNameRefFlags::UInt32 begin
@@ -1843,51 +1843,51 @@ mutable struct CXToken
 end
 
 function clang_getToken(TU, Location)
-    ccall((:clang_getToken, libclang), Ptr{CXToken}, (CXTranslationUnit, CXSourceLocation), TU, Location)
+    @ccall libclang.clang_getToken(TU::CXTranslationUnit, Location::CXSourceLocation)::Ptr{CXToken}
 end
 
 function clang_getTokenKind(arg1)
-    ccall((:clang_getTokenKind, libclang), CXTokenKind, (CXToken,), arg1)
+    @ccall libclang.clang_getTokenKind(arg1::CXToken)::CXTokenKind
 end
 
 function clang_getTokenSpelling(arg1, arg2)
-    ccall((:clang_getTokenSpelling, libclang), CXString, (CXTranslationUnit, CXToken), arg1, arg2)
+    @ccall libclang.clang_getTokenSpelling(arg1::CXTranslationUnit, arg2::CXToken)::CXString
 end
 
 function clang_getTokenLocation(arg1, arg2)
-    ccall((:clang_getTokenLocation, libclang), CXSourceLocation, (CXTranslationUnit, CXToken), arg1, arg2)
+    @ccall libclang.clang_getTokenLocation(arg1::CXTranslationUnit, arg2::CXToken)::CXSourceLocation
 end
 
 function clang_getTokenExtent(arg1, arg2)
-    ccall((:clang_getTokenExtent, libclang), CXSourceRange, (CXTranslationUnit, CXToken), arg1, arg2)
+    @ccall libclang.clang_getTokenExtent(arg1::CXTranslationUnit, arg2::CXToken)::CXSourceRange
 end
 
 function clang_tokenize(TU, Range, Tokens, NumTokens)
-    ccall((:clang_tokenize, libclang), Cvoid, (CXTranslationUnit, CXSourceRange, Ptr{Ptr{CXToken}}, Ptr{Cuint}), TU, Range, Tokens, NumTokens)
+    @ccall libclang.clang_tokenize(TU::CXTranslationUnit, Range::CXSourceRange, Tokens::Ptr{Ptr{CXToken}}, NumTokens::Ptr{Cuint})::Cvoid
 end
 
 function clang_annotateTokens(TU, Tokens, NumTokens, Cursors)
-    ccall((:clang_annotateTokens, libclang), Cvoid, (CXTranslationUnit, Ptr{CXToken}, Cuint, Ptr{CXCursor}), TU, Tokens, NumTokens, Cursors)
+    @ccall libclang.clang_annotateTokens(TU::CXTranslationUnit, Tokens::Ptr{CXToken}, NumTokens::Cuint, Cursors::Ptr{CXCursor})::Cvoid
 end
 
 function clang_disposeTokens(TU, Tokens, NumTokens)
-    ccall((:clang_disposeTokens, libclang), Cvoid, (CXTranslationUnit, Ptr{CXToken}, Cuint), TU, Tokens, NumTokens)
+    @ccall libclang.clang_disposeTokens(TU::CXTranslationUnit, Tokens::Ptr{CXToken}, NumTokens::Cuint)::Cvoid
 end
 
 function clang_getCursorKindSpelling(Kind)
-    ccall((:clang_getCursorKindSpelling, libclang), CXString, (CXCursorKind,), Kind)
+    @ccall libclang.clang_getCursorKindSpelling(Kind::CXCursorKind)::CXString
 end
 
 function clang_getDefinitionSpellingAndExtent(arg1, startBuf, endBuf, startLine, startColumn, endLine, endColumn)
-    ccall((:clang_getDefinitionSpellingAndExtent, libclang), Cvoid, (CXCursor, Ptr{Cstring}, Ptr{Cstring}, Ptr{Cuint}, Ptr{Cuint}, Ptr{Cuint}, Ptr{Cuint}), arg1, startBuf, endBuf, startLine, startColumn, endLine, endColumn)
+    @ccall libclang.clang_getDefinitionSpellingAndExtent(arg1::CXCursor, startBuf::Ptr{Cstring}, endBuf::Ptr{Cstring}, startLine::Ptr{Cuint}, startColumn::Ptr{Cuint}, endLine::Ptr{Cuint}, endColumn::Ptr{Cuint})::Cvoid
 end
 
 function clang_enableStackTraces()
-    ccall((:clang_enableStackTraces, libclang), Cvoid, ())
+    @ccall libclang.clang_enableStackTraces()::Cvoid
 end
 
 function clang_executeOnThread(fn, user_data, stack_size)
-    ccall((:clang_executeOnThread, libclang), Cvoid, (Ptr{Cvoid}, Ptr{Cvoid}, Cuint), fn, user_data, stack_size)
+    @ccall libclang.clang_executeOnThread(fn::Ptr{Cvoid}, user_data::Ptr{Cvoid}, stack_size::Cuint)::Cvoid
 end
 
 const CXCompletionString = Ptr{Cvoid}
@@ -1922,47 +1922,47 @@ end
 end
 
 function clang_getCompletionChunkKind(completion_string, chunk_number)
-    ccall((:clang_getCompletionChunkKind, libclang), CXCompletionChunkKind, (CXCompletionString, Cuint), completion_string, chunk_number)
+    @ccall libclang.clang_getCompletionChunkKind(completion_string::CXCompletionString, chunk_number::Cuint)::CXCompletionChunkKind
 end
 
 function clang_getCompletionChunkText(completion_string, chunk_number)
-    ccall((:clang_getCompletionChunkText, libclang), CXString, (CXCompletionString, Cuint), completion_string, chunk_number)
+    @ccall libclang.clang_getCompletionChunkText(completion_string::CXCompletionString, chunk_number::Cuint)::CXString
 end
 
 function clang_getCompletionChunkCompletionString(completion_string, chunk_number)
-    ccall((:clang_getCompletionChunkCompletionString, libclang), CXCompletionString, (CXCompletionString, Cuint), completion_string, chunk_number)
+    @ccall libclang.clang_getCompletionChunkCompletionString(completion_string::CXCompletionString, chunk_number::Cuint)::CXCompletionString
 end
 
 function clang_getNumCompletionChunks(completion_string)
-    ccall((:clang_getNumCompletionChunks, libclang), Cuint, (CXCompletionString,), completion_string)
+    @ccall libclang.clang_getNumCompletionChunks(completion_string::CXCompletionString)::Cuint
 end
 
 function clang_getCompletionPriority(completion_string)
-    ccall((:clang_getCompletionPriority, libclang), Cuint, (CXCompletionString,), completion_string)
+    @ccall libclang.clang_getCompletionPriority(completion_string::CXCompletionString)::Cuint
 end
 
 function clang_getCompletionAvailability(completion_string)
-    ccall((:clang_getCompletionAvailability, libclang), CXAvailabilityKind, (CXCompletionString,), completion_string)
+    @ccall libclang.clang_getCompletionAvailability(completion_string::CXCompletionString)::CXAvailabilityKind
 end
 
 function clang_getCompletionNumAnnotations(completion_string)
-    ccall((:clang_getCompletionNumAnnotations, libclang), Cuint, (CXCompletionString,), completion_string)
+    @ccall libclang.clang_getCompletionNumAnnotations(completion_string::CXCompletionString)::Cuint
 end
 
 function clang_getCompletionAnnotation(completion_string, annotation_number)
-    ccall((:clang_getCompletionAnnotation, libclang), CXString, (CXCompletionString, Cuint), completion_string, annotation_number)
+    @ccall libclang.clang_getCompletionAnnotation(completion_string::CXCompletionString, annotation_number::Cuint)::CXString
 end
 
 function clang_getCompletionParent(completion_string, kind)
-    ccall((:clang_getCompletionParent, libclang), CXString, (CXCompletionString, Ptr{CXCursorKind}), completion_string, kind)
+    @ccall libclang.clang_getCompletionParent(completion_string::CXCompletionString, kind::Ptr{CXCursorKind})::CXString
 end
 
 function clang_getCompletionBriefComment(completion_string)
-    ccall((:clang_getCompletionBriefComment, libclang), CXString, (CXCompletionString,), completion_string)
+    @ccall libclang.clang_getCompletionBriefComment(completion_string::CXCompletionString)::CXString
 end
 
 function clang_getCursorCompletionString(cursor)
-    ccall((:clang_getCursorCompletionString, libclang), CXCompletionString, (CXCursor,), cursor)
+    @ccall libclang.clang_getCursorCompletionString(cursor::CXCursor)::CXCompletionString
 end
 
 mutable struct CXCodeCompleteResults
@@ -1971,11 +1971,11 @@ mutable struct CXCodeCompleteResults
 end
 
 function clang_getCompletionNumFixIts(results, completion_index)
-    ccall((:clang_getCompletionNumFixIts, libclang), Cuint, (Ptr{CXCodeCompleteResults}, Cuint), results, completion_index)
+    @ccall libclang.clang_getCompletionNumFixIts(results::Ptr{CXCodeCompleteResults}, completion_index::Cuint)::Cuint
 end
 
 function clang_getCompletionFixIt(results, completion_index, fixit_index, replacement_range)
-    ccall((:clang_getCompletionFixIt, libclang), CXString, (Ptr{CXCodeCompleteResults}, Cuint, Cuint, Ptr{CXSourceRange}), results, completion_index, fixit_index, replacement_range)
+    @ccall libclang.clang_getCompletionFixIt(results::Ptr{CXCodeCompleteResults}, completion_index::Cuint, fixit_index::Cuint, replacement_range::Ptr{CXSourceRange})::CXString
 end
 
 @cenum CXCodeComplete_Flags::UInt32 begin
@@ -2015,58 +2015,58 @@ end
 end
 
 function clang_defaultCodeCompleteOptions()
-    ccall((:clang_defaultCodeCompleteOptions, libclang), Cuint, ())
+    @ccall libclang.clang_defaultCodeCompleteOptions()::Cuint
 end
 
 function clang_codeCompleteAt(TU, complete_filename, complete_line, complete_column, unsaved_files, num_unsaved_files, options)
-    ccall((:clang_codeCompleteAt, libclang), Ptr{CXCodeCompleteResults}, (CXTranslationUnit, Cstring, Cuint, Cuint, Ptr{CXUnsavedFile}, Cuint, Cuint), TU, complete_filename, complete_line, complete_column, unsaved_files, num_unsaved_files, options)
+    @ccall libclang.clang_codeCompleteAt(TU::CXTranslationUnit, complete_filename::Cstring, complete_line::Cuint, complete_column::Cuint, unsaved_files::Ptr{CXUnsavedFile}, num_unsaved_files::Cuint, options::Cuint)::Ptr{CXCodeCompleteResults}
 end
 
 function clang_sortCodeCompletionResults(Results, NumResults)
-    ccall((:clang_sortCodeCompletionResults, libclang), Cvoid, (Ptr{CXCompletionResult}, Cuint), Results, NumResults)
+    @ccall libclang.clang_sortCodeCompletionResults(Results::Ptr{CXCompletionResult}, NumResults::Cuint)::Cvoid
 end
 
 function clang_disposeCodeCompleteResults(Results)
-    ccall((:clang_disposeCodeCompleteResults, libclang), Cvoid, (Ptr{CXCodeCompleteResults},), Results)
+    @ccall libclang.clang_disposeCodeCompleteResults(Results::Ptr{CXCodeCompleteResults})::Cvoid
 end
 
 function clang_codeCompleteGetNumDiagnostics(Results)
-    ccall((:clang_codeCompleteGetNumDiagnostics, libclang), Cuint, (Ptr{CXCodeCompleteResults},), Results)
+    @ccall libclang.clang_codeCompleteGetNumDiagnostics(Results::Ptr{CXCodeCompleteResults})::Cuint
 end
 
 function clang_codeCompleteGetDiagnostic(Results, Index)
-    ccall((:clang_codeCompleteGetDiagnostic, libclang), CXDiagnostic, (Ptr{CXCodeCompleteResults}, Cuint), Results, Index)
+    @ccall libclang.clang_codeCompleteGetDiagnostic(Results::Ptr{CXCodeCompleteResults}, Index::Cuint)::CXDiagnostic
 end
 
 function clang_codeCompleteGetContexts(Results)
-    ccall((:clang_codeCompleteGetContexts, libclang), Culonglong, (Ptr{CXCodeCompleteResults},), Results)
+    @ccall libclang.clang_codeCompleteGetContexts(Results::Ptr{CXCodeCompleteResults})::Culonglong
 end
 
 function clang_codeCompleteGetContainerKind(Results, IsIncomplete)
-    ccall((:clang_codeCompleteGetContainerKind, libclang), CXCursorKind, (Ptr{CXCodeCompleteResults}, Ptr{Cuint}), Results, IsIncomplete)
+    @ccall libclang.clang_codeCompleteGetContainerKind(Results::Ptr{CXCodeCompleteResults}, IsIncomplete::Ptr{Cuint})::CXCursorKind
 end
 
 function clang_codeCompleteGetContainerUSR(Results)
-    ccall((:clang_codeCompleteGetContainerUSR, libclang), CXString, (Ptr{CXCodeCompleteResults},), Results)
+    @ccall libclang.clang_codeCompleteGetContainerUSR(Results::Ptr{CXCodeCompleteResults})::CXString
 end
 
 function clang_codeCompleteGetObjCSelector(Results)
-    ccall((:clang_codeCompleteGetObjCSelector, libclang), CXString, (Ptr{CXCodeCompleteResults},), Results)
+    @ccall libclang.clang_codeCompleteGetObjCSelector(Results::Ptr{CXCodeCompleteResults})::CXString
 end
 
 function clang_getClangVersion()
-    ccall((:clang_getClangVersion, libclang), CXString, ())
+    @ccall libclang.clang_getClangVersion()::CXString
 end
 
 function clang_toggleCrashRecovery(isEnabled)
-    ccall((:clang_toggleCrashRecovery, libclang), Cvoid, (Cuint,), isEnabled)
+    @ccall libclang.clang_toggleCrashRecovery(isEnabled::Cuint)::Cvoid
 end
 
 # typedef void ( * CXInclusionVisitor ) ( CXFile included_file , CXSourceLocation * inclusion_stack , unsigned include_len , CXClientData client_data )
 const CXInclusionVisitor = Ptr{Cvoid}
 
 function clang_getInclusions(tu, visitor, client_data)
-    ccall((:clang_getInclusions, libclang), Cvoid, (CXTranslationUnit, CXInclusionVisitor, CXClientData), tu, visitor, client_data)
+    @ccall libclang.clang_getInclusions(tu::CXTranslationUnit, visitor::CXInclusionVisitor, client_data::CXClientData)::Cvoid
 end
 
 @cenum CXEvalResultKind::UInt32 begin
@@ -2082,61 +2082,61 @@ end
 const CXEvalResult = Ptr{Cvoid}
 
 function clang_Cursor_Evaluate(C)
-    ccall((:clang_Cursor_Evaluate, libclang), CXEvalResult, (CXCursor,), C)
+    @ccall libclang.clang_Cursor_Evaluate(C::CXCursor)::CXEvalResult
 end
 
 function clang_EvalResult_getKind(E)
-    ccall((:clang_EvalResult_getKind, libclang), CXEvalResultKind, (CXEvalResult,), E)
+    @ccall libclang.clang_EvalResult_getKind(E::CXEvalResult)::CXEvalResultKind
 end
 
 function clang_EvalResult_getAsInt(E)
-    ccall((:clang_EvalResult_getAsInt, libclang), Cint, (CXEvalResult,), E)
+    @ccall libclang.clang_EvalResult_getAsInt(E::CXEvalResult)::Cint
 end
 
 function clang_EvalResult_getAsLongLong(E)
-    ccall((:clang_EvalResult_getAsLongLong, libclang), Clonglong, (CXEvalResult,), E)
+    @ccall libclang.clang_EvalResult_getAsLongLong(E::CXEvalResult)::Clonglong
 end
 
 function clang_EvalResult_isUnsignedInt(E)
-    ccall((:clang_EvalResult_isUnsignedInt, libclang), Cuint, (CXEvalResult,), E)
+    @ccall libclang.clang_EvalResult_isUnsignedInt(E::CXEvalResult)::Cuint
 end
 
 function clang_EvalResult_getAsUnsigned(E)
-    ccall((:clang_EvalResult_getAsUnsigned, libclang), Culonglong, (CXEvalResult,), E)
+    @ccall libclang.clang_EvalResult_getAsUnsigned(E::CXEvalResult)::Culonglong
 end
 
 function clang_EvalResult_getAsDouble(E)
-    ccall((:clang_EvalResult_getAsDouble, libclang), Cdouble, (CXEvalResult,), E)
+    @ccall libclang.clang_EvalResult_getAsDouble(E::CXEvalResult)::Cdouble
 end
 
 function clang_EvalResult_getAsStr(E)
-    ccall((:clang_EvalResult_getAsStr, libclang), Cstring, (CXEvalResult,), E)
+    @ccall libclang.clang_EvalResult_getAsStr(E::CXEvalResult)::Cstring
 end
 
 function clang_EvalResult_dispose(E)
-    ccall((:clang_EvalResult_dispose, libclang), Cvoid, (CXEvalResult,), E)
+    @ccall libclang.clang_EvalResult_dispose(E::CXEvalResult)::Cvoid
 end
 
 const CXRemapping = Ptr{Cvoid}
 
 function clang_getRemappings(path)
-    ccall((:clang_getRemappings, libclang), CXRemapping, (Cstring,), path)
+    @ccall libclang.clang_getRemappings(path::Cstring)::CXRemapping
 end
 
 function clang_getRemappingsFromFileList(filePaths, numFiles)
-    ccall((:clang_getRemappingsFromFileList, libclang), CXRemapping, (Ptr{Cstring}, Cuint), filePaths, numFiles)
+    @ccall libclang.clang_getRemappingsFromFileList(filePaths::Ptr{Cstring}, numFiles::Cuint)::CXRemapping
 end
 
 function clang_remap_getNumFiles(arg1)
-    ccall((:clang_remap_getNumFiles, libclang), Cuint, (CXRemapping,), arg1)
+    @ccall libclang.clang_remap_getNumFiles(arg1::CXRemapping)::Cuint
 end
 
 function clang_remap_getFilenames(arg1, index, original, transformed)
-    ccall((:clang_remap_getFilenames, libclang), Cvoid, (CXRemapping, Cuint, Ptr{CXString}, Ptr{CXString}), arg1, index, original, transformed)
+    @ccall libclang.clang_remap_getFilenames(arg1::CXRemapping, index::Cuint, original::Ptr{CXString}, transformed::Ptr{CXString})::Cvoid
 end
 
 function clang_remap_dispose(arg1)
-    ccall((:clang_remap_dispose, libclang), Cvoid, (CXRemapping,), arg1)
+    @ccall libclang.clang_remap_dispose(arg1::CXRemapping)::Cvoid
 end
 
 @cenum CXVisitorResult::UInt32 begin
@@ -2156,11 +2156,11 @@ end
 end
 
 function clang_findReferencesInFile(cursor, file, visitor)
-    ccall((:clang_findReferencesInFile, libclang), CXResult, (CXCursor, CXFile, CXCursorAndRangeVisitor), cursor, file, visitor)
+    @ccall libclang.clang_findReferencesInFile(cursor::CXCursor, file::CXFile, visitor::CXCursorAndRangeVisitor)::CXResult
 end
 
 function clang_findIncludesInFile(TU, file, visitor)
-    ccall((:clang_findIncludesInFile, libclang), CXResult, (CXTranslationUnit, CXFile, CXCursorAndRangeVisitor), TU, file, visitor)
+    @ccall libclang.clang_findIncludesInFile(TU::CXTranslationUnit, file::CXFile, visitor::CXCursorAndRangeVisitor)::CXResult
 end
 
 const CXIdxClientFile = Ptr{Cvoid}
@@ -2386,61 +2386,61 @@ mutable struct IndexerCallbacks
 end
 
 function clang_index_isEntityObjCContainerKind(arg1)
-    ccall((:clang_index_isEntityObjCContainerKind, libclang), Cint, (CXIdxEntityKind,), arg1)
+    @ccall libclang.clang_index_isEntityObjCContainerKind(arg1::CXIdxEntityKind)::Cint
 end
 
 function clang_index_getObjCContainerDeclInfo(arg1)
-    ccall((:clang_index_getObjCContainerDeclInfo, libclang), Ptr{CXIdxObjCContainerDeclInfo}, (Ptr{CXIdxDeclInfo},), arg1)
+    @ccall libclang.clang_index_getObjCContainerDeclInfo(arg1::Ptr{CXIdxDeclInfo})::Ptr{CXIdxObjCContainerDeclInfo}
 end
 
 function clang_index_getObjCInterfaceDeclInfo(arg1)
-    ccall((:clang_index_getObjCInterfaceDeclInfo, libclang), Ptr{CXIdxObjCInterfaceDeclInfo}, (Ptr{CXIdxDeclInfo},), arg1)
+    @ccall libclang.clang_index_getObjCInterfaceDeclInfo(arg1::Ptr{CXIdxDeclInfo})::Ptr{CXIdxObjCInterfaceDeclInfo}
 end
 
 function clang_index_getObjCCategoryDeclInfo(arg1)
-    ccall((:clang_index_getObjCCategoryDeclInfo, libclang), Ptr{CXIdxObjCCategoryDeclInfo}, (Ptr{CXIdxDeclInfo},), arg1)
+    @ccall libclang.clang_index_getObjCCategoryDeclInfo(arg1::Ptr{CXIdxDeclInfo})::Ptr{CXIdxObjCCategoryDeclInfo}
 end
 
 function clang_index_getObjCProtocolRefListInfo(arg1)
-    ccall((:clang_index_getObjCProtocolRefListInfo, libclang), Ptr{CXIdxObjCProtocolRefListInfo}, (Ptr{CXIdxDeclInfo},), arg1)
+    @ccall libclang.clang_index_getObjCProtocolRefListInfo(arg1::Ptr{CXIdxDeclInfo})::Ptr{CXIdxObjCProtocolRefListInfo}
 end
 
 function clang_index_getObjCPropertyDeclInfo(arg1)
-    ccall((:clang_index_getObjCPropertyDeclInfo, libclang), Ptr{CXIdxObjCPropertyDeclInfo}, (Ptr{CXIdxDeclInfo},), arg1)
+    @ccall libclang.clang_index_getObjCPropertyDeclInfo(arg1::Ptr{CXIdxDeclInfo})::Ptr{CXIdxObjCPropertyDeclInfo}
 end
 
 function clang_index_getIBOutletCollectionAttrInfo(arg1)
-    ccall((:clang_index_getIBOutletCollectionAttrInfo, libclang), Ptr{CXIdxIBOutletCollectionAttrInfo}, (Ptr{CXIdxAttrInfo},), arg1)
+    @ccall libclang.clang_index_getIBOutletCollectionAttrInfo(arg1::Ptr{CXIdxAttrInfo})::Ptr{CXIdxIBOutletCollectionAttrInfo}
 end
 
 function clang_index_getCXXClassDeclInfo(arg1)
-    ccall((:clang_index_getCXXClassDeclInfo, libclang), Ptr{CXIdxCXXClassDeclInfo}, (Ptr{CXIdxDeclInfo},), arg1)
+    @ccall libclang.clang_index_getCXXClassDeclInfo(arg1::Ptr{CXIdxDeclInfo})::Ptr{CXIdxCXXClassDeclInfo}
 end
 
 function clang_index_getClientContainer(arg1)
-    ccall((:clang_index_getClientContainer, libclang), CXIdxClientContainer, (Ptr{CXIdxContainerInfo},), arg1)
+    @ccall libclang.clang_index_getClientContainer(arg1::Ptr{CXIdxContainerInfo})::CXIdxClientContainer
 end
 
 function clang_index_setClientContainer(arg1, arg2)
-    ccall((:clang_index_setClientContainer, libclang), Cvoid, (Ptr{CXIdxContainerInfo}, CXIdxClientContainer), arg1, arg2)
+    @ccall libclang.clang_index_setClientContainer(arg1::Ptr{CXIdxContainerInfo}, arg2::CXIdxClientContainer)::Cvoid
 end
 
 function clang_index_getClientEntity(arg1)
-    ccall((:clang_index_getClientEntity, libclang), CXIdxClientEntity, (Ptr{CXIdxEntityInfo},), arg1)
+    @ccall libclang.clang_index_getClientEntity(arg1::Ptr{CXIdxEntityInfo})::CXIdxClientEntity
 end
 
 function clang_index_setClientEntity(arg1, arg2)
-    ccall((:clang_index_setClientEntity, libclang), Cvoid, (Ptr{CXIdxEntityInfo}, CXIdxClientEntity), arg1, arg2)
+    @ccall libclang.clang_index_setClientEntity(arg1::Ptr{CXIdxEntityInfo}, arg2::CXIdxClientEntity)::Cvoid
 end
 
 const CXIndexAction = Ptr{Cvoid}
 
 function clang_IndexAction_create(CIdx)
-    ccall((:clang_IndexAction_create, libclang), CXIndexAction, (CXIndex,), CIdx)
+    @ccall libclang.clang_IndexAction_create(CIdx::CXIndex)::CXIndexAction
 end
 
 function clang_IndexAction_dispose(arg1)
-    ccall((:clang_IndexAction_dispose, libclang), Cvoid, (CXIndexAction,), arg1)
+    @ccall libclang.clang_IndexAction_dispose(arg1::CXIndexAction)::Cvoid
 end
 
 @cenum CXIndexOptFlags::UInt32 begin
@@ -2453,30 +2453,30 @@ end
 end
 
 function clang_indexSourceFile(arg1, client_data, index_callbacks, index_callbacks_size, index_options, source_filename, command_line_args, num_command_line_args, unsaved_files, num_unsaved_files, out_TU, TU_options)
-    ccall((:clang_indexSourceFile, libclang), Cint, (CXIndexAction, CXClientData, Ptr{IndexerCallbacks}, Cuint, Cuint, Cstring, Ptr{Cstring}, Cint, Ptr{CXUnsavedFile}, Cuint, Ptr{CXTranslationUnit}, Cuint), arg1, client_data, index_callbacks, index_callbacks_size, index_options, source_filename, command_line_args, num_command_line_args, unsaved_files, num_unsaved_files, out_TU, TU_options)
+    @ccall libclang.clang_indexSourceFile(arg1::CXIndexAction, client_data::CXClientData, index_callbacks::Ptr{IndexerCallbacks}, index_callbacks_size::Cuint, index_options::Cuint, source_filename::Cstring, command_line_args::Ptr{Cstring}, num_command_line_args::Cint, unsaved_files::Ptr{CXUnsavedFile}, num_unsaved_files::Cuint, out_TU::Ptr{CXTranslationUnit}, TU_options::Cuint)::Cint
 end
 
 function clang_indexSourceFileFullArgv(arg1, client_data, index_callbacks, index_callbacks_size, index_options, source_filename, command_line_args, num_command_line_args, unsaved_files, num_unsaved_files, out_TU, TU_options)
-    ccall((:clang_indexSourceFileFullArgv, libclang), Cint, (CXIndexAction, CXClientData, Ptr{IndexerCallbacks}, Cuint, Cuint, Cstring, Ptr{Cstring}, Cint, Ptr{CXUnsavedFile}, Cuint, Ptr{CXTranslationUnit}, Cuint), arg1, client_data, index_callbacks, index_callbacks_size, index_options, source_filename, command_line_args, num_command_line_args, unsaved_files, num_unsaved_files, out_TU, TU_options)
+    @ccall libclang.clang_indexSourceFileFullArgv(arg1::CXIndexAction, client_data::CXClientData, index_callbacks::Ptr{IndexerCallbacks}, index_callbacks_size::Cuint, index_options::Cuint, source_filename::Cstring, command_line_args::Ptr{Cstring}, num_command_line_args::Cint, unsaved_files::Ptr{CXUnsavedFile}, num_unsaved_files::Cuint, out_TU::Ptr{CXTranslationUnit}, TU_options::Cuint)::Cint
 end
 
 function clang_indexTranslationUnit(arg1, client_data, index_callbacks, index_callbacks_size, index_options, arg6)
-    ccall((:clang_indexTranslationUnit, libclang), Cint, (CXIndexAction, CXClientData, Ptr{IndexerCallbacks}, Cuint, Cuint, CXTranslationUnit), arg1, client_data, index_callbacks, index_callbacks_size, index_options, arg6)
+    @ccall libclang.clang_indexTranslationUnit(arg1::CXIndexAction, client_data::CXClientData, index_callbacks::Ptr{IndexerCallbacks}, index_callbacks_size::Cuint, index_options::Cuint, arg6::CXTranslationUnit)::Cint
 end
 
 function clang_indexLoc_getFileLocation(loc, indexFile, file, line, column, offset)
-    ccall((:clang_indexLoc_getFileLocation, libclang), Cvoid, (CXIdxLoc, Ptr{CXIdxClientFile}, Ptr{CXFile}, Ptr{Cuint}, Ptr{Cuint}, Ptr{Cuint}), loc, indexFile, file, line, column, offset)
+    @ccall libclang.clang_indexLoc_getFileLocation(loc::CXIdxLoc, indexFile::Ptr{CXIdxClientFile}, file::Ptr{CXFile}, line::Ptr{Cuint}, column::Ptr{Cuint}, offset::Ptr{Cuint})::Cvoid
 end
 
 function clang_indexLoc_getCXSourceLocation(loc)
-    ccall((:clang_indexLoc_getCXSourceLocation, libclang), CXSourceLocation, (CXIdxLoc,), loc)
+    @ccall libclang.clang_indexLoc_getCXSourceLocation(loc::CXIdxLoc)::CXSourceLocation
 end
 
 # typedef enum CXVisitorResult ( * CXFieldVisitor ) ( CXCursor C , CXClientData client_data )
 const CXFieldVisitor = Ptr{Cvoid}
 
 function clang_Type_visitFields(T, visitor, client_data)
-    ccall((:clang_Type_visitFields, libclang), Cuint, (CXType, CXFieldVisitor, CXClientData), T, visitor, client_data)
+    @ccall libclang.clang_Type_visitFields(T::CXType, visitor::CXFieldVisitor, client_data::CXClientData)::Cuint
 end
 
 mutable struct CXComment
@@ -2485,7 +2485,7 @@ mutable struct CXComment
 end
 
 function clang_Cursor_getParsedComment(C)
-    ccall((:clang_Cursor_getParsedComment, libclang), CXComment, (CXCursor,), C)
+    @ccall libclang.clang_Cursor_getParsedComment(C::CXCursor)::CXComment
 end
 
 @cenum CXCommentKind::UInt32 begin
@@ -2519,135 +2519,135 @@ end
 end
 
 function clang_Comment_getKind(Comment)
-    ccall((:clang_Comment_getKind, libclang), CXCommentKind, (CXComment,), Comment)
+    @ccall libclang.clang_Comment_getKind(Comment::CXComment)::CXCommentKind
 end
 
 function clang_Comment_getNumChildren(Comment)
-    ccall((:clang_Comment_getNumChildren, libclang), Cuint, (CXComment,), Comment)
+    @ccall libclang.clang_Comment_getNumChildren(Comment::CXComment)::Cuint
 end
 
 function clang_Comment_getChild(Comment, ChildIdx)
-    ccall((:clang_Comment_getChild, libclang), CXComment, (CXComment, Cuint), Comment, ChildIdx)
+    @ccall libclang.clang_Comment_getChild(Comment::CXComment, ChildIdx::Cuint)::CXComment
 end
 
 function clang_Comment_isWhitespace(Comment)
-    ccall((:clang_Comment_isWhitespace, libclang), Cuint, (CXComment,), Comment)
+    @ccall libclang.clang_Comment_isWhitespace(Comment::CXComment)::Cuint
 end
 
 function clang_InlineContentComment_hasTrailingNewline(Comment)
-    ccall((:clang_InlineContentComment_hasTrailingNewline, libclang), Cuint, (CXComment,), Comment)
+    @ccall libclang.clang_InlineContentComment_hasTrailingNewline(Comment::CXComment)::Cuint
 end
 
 function clang_TextComment_getText(Comment)
-    ccall((:clang_TextComment_getText, libclang), CXString, (CXComment,), Comment)
+    @ccall libclang.clang_TextComment_getText(Comment::CXComment)::CXString
 end
 
 function clang_InlineCommandComment_getCommandName(Comment)
-    ccall((:clang_InlineCommandComment_getCommandName, libclang), CXString, (CXComment,), Comment)
+    @ccall libclang.clang_InlineCommandComment_getCommandName(Comment::CXComment)::CXString
 end
 
 function clang_InlineCommandComment_getRenderKind(Comment)
-    ccall((:clang_InlineCommandComment_getRenderKind, libclang), CXCommentInlineCommandRenderKind, (CXComment,), Comment)
+    @ccall libclang.clang_InlineCommandComment_getRenderKind(Comment::CXComment)::CXCommentInlineCommandRenderKind
 end
 
 function clang_InlineCommandComment_getNumArgs(Comment)
-    ccall((:clang_InlineCommandComment_getNumArgs, libclang), Cuint, (CXComment,), Comment)
+    @ccall libclang.clang_InlineCommandComment_getNumArgs(Comment::CXComment)::Cuint
 end
 
 function clang_InlineCommandComment_getArgText(Comment, ArgIdx)
-    ccall((:clang_InlineCommandComment_getArgText, libclang), CXString, (CXComment, Cuint), Comment, ArgIdx)
+    @ccall libclang.clang_InlineCommandComment_getArgText(Comment::CXComment, ArgIdx::Cuint)::CXString
 end
 
 function clang_HTMLTagComment_getTagName(Comment)
-    ccall((:clang_HTMLTagComment_getTagName, libclang), CXString, (CXComment,), Comment)
+    @ccall libclang.clang_HTMLTagComment_getTagName(Comment::CXComment)::CXString
 end
 
 function clang_HTMLStartTagComment_isSelfClosing(Comment)
-    ccall((:clang_HTMLStartTagComment_isSelfClosing, libclang), Cuint, (CXComment,), Comment)
+    @ccall libclang.clang_HTMLStartTagComment_isSelfClosing(Comment::CXComment)::Cuint
 end
 
 function clang_HTMLStartTag_getNumAttrs(Comment)
-    ccall((:clang_HTMLStartTag_getNumAttrs, libclang), Cuint, (CXComment,), Comment)
+    @ccall libclang.clang_HTMLStartTag_getNumAttrs(Comment::CXComment)::Cuint
 end
 
 function clang_HTMLStartTag_getAttrName(Comment, AttrIdx)
-    ccall((:clang_HTMLStartTag_getAttrName, libclang), CXString, (CXComment, Cuint), Comment, AttrIdx)
+    @ccall libclang.clang_HTMLStartTag_getAttrName(Comment::CXComment, AttrIdx::Cuint)::CXString
 end
 
 function clang_HTMLStartTag_getAttrValue(Comment, AttrIdx)
-    ccall((:clang_HTMLStartTag_getAttrValue, libclang), CXString, (CXComment, Cuint), Comment, AttrIdx)
+    @ccall libclang.clang_HTMLStartTag_getAttrValue(Comment::CXComment, AttrIdx::Cuint)::CXString
 end
 
 function clang_BlockCommandComment_getCommandName(Comment)
-    ccall((:clang_BlockCommandComment_getCommandName, libclang), CXString, (CXComment,), Comment)
+    @ccall libclang.clang_BlockCommandComment_getCommandName(Comment::CXComment)::CXString
 end
 
 function clang_BlockCommandComment_getNumArgs(Comment)
-    ccall((:clang_BlockCommandComment_getNumArgs, libclang), Cuint, (CXComment,), Comment)
+    @ccall libclang.clang_BlockCommandComment_getNumArgs(Comment::CXComment)::Cuint
 end
 
 function clang_BlockCommandComment_getArgText(Comment, ArgIdx)
-    ccall((:clang_BlockCommandComment_getArgText, libclang), CXString, (CXComment, Cuint), Comment, ArgIdx)
+    @ccall libclang.clang_BlockCommandComment_getArgText(Comment::CXComment, ArgIdx::Cuint)::CXString
 end
 
 function clang_BlockCommandComment_getParagraph(Comment)
-    ccall((:clang_BlockCommandComment_getParagraph, libclang), CXComment, (CXComment,), Comment)
+    @ccall libclang.clang_BlockCommandComment_getParagraph(Comment::CXComment)::CXComment
 end
 
 function clang_ParamCommandComment_getParamName(Comment)
-    ccall((:clang_ParamCommandComment_getParamName, libclang), CXString, (CXComment,), Comment)
+    @ccall libclang.clang_ParamCommandComment_getParamName(Comment::CXComment)::CXString
 end
 
 function clang_ParamCommandComment_isParamIndexValid(Comment)
-    ccall((:clang_ParamCommandComment_isParamIndexValid, libclang), Cuint, (CXComment,), Comment)
+    @ccall libclang.clang_ParamCommandComment_isParamIndexValid(Comment::CXComment)::Cuint
 end
 
 function clang_ParamCommandComment_getParamIndex(Comment)
-    ccall((:clang_ParamCommandComment_getParamIndex, libclang), Cuint, (CXComment,), Comment)
+    @ccall libclang.clang_ParamCommandComment_getParamIndex(Comment::CXComment)::Cuint
 end
 
 function clang_ParamCommandComment_isDirectionExplicit(Comment)
-    ccall((:clang_ParamCommandComment_isDirectionExplicit, libclang), Cuint, (CXComment,), Comment)
+    @ccall libclang.clang_ParamCommandComment_isDirectionExplicit(Comment::CXComment)::Cuint
 end
 
 function clang_ParamCommandComment_getDirection(Comment)
-    ccall((:clang_ParamCommandComment_getDirection, libclang), CXCommentParamPassDirection, (CXComment,), Comment)
+    @ccall libclang.clang_ParamCommandComment_getDirection(Comment::CXComment)::CXCommentParamPassDirection
 end
 
 function clang_TParamCommandComment_getParamName(Comment)
-    ccall((:clang_TParamCommandComment_getParamName, libclang), CXString, (CXComment,), Comment)
+    @ccall libclang.clang_TParamCommandComment_getParamName(Comment::CXComment)::CXString
 end
 
 function clang_TParamCommandComment_isParamPositionValid(Comment)
-    ccall((:clang_TParamCommandComment_isParamPositionValid, libclang), Cuint, (CXComment,), Comment)
+    @ccall libclang.clang_TParamCommandComment_isParamPositionValid(Comment::CXComment)::Cuint
 end
 
 function clang_TParamCommandComment_getDepth(Comment)
-    ccall((:clang_TParamCommandComment_getDepth, libclang), Cuint, (CXComment,), Comment)
+    @ccall libclang.clang_TParamCommandComment_getDepth(Comment::CXComment)::Cuint
 end
 
 function clang_TParamCommandComment_getIndex(Comment, Depth)
-    ccall((:clang_TParamCommandComment_getIndex, libclang), Cuint, (CXComment, Cuint), Comment, Depth)
+    @ccall libclang.clang_TParamCommandComment_getIndex(Comment::CXComment, Depth::Cuint)::Cuint
 end
 
 function clang_VerbatimBlockLineComment_getText(Comment)
-    ccall((:clang_VerbatimBlockLineComment_getText, libclang), CXString, (CXComment,), Comment)
+    @ccall libclang.clang_VerbatimBlockLineComment_getText(Comment::CXComment)::CXString
 end
 
 function clang_VerbatimLineComment_getText(Comment)
-    ccall((:clang_VerbatimLineComment_getText, libclang), CXString, (CXComment,), Comment)
+    @ccall libclang.clang_VerbatimLineComment_getText(Comment::CXComment)::CXString
 end
 
 function clang_HTMLTagComment_getAsString(Comment)
-    ccall((:clang_HTMLTagComment_getAsString, libclang), CXString, (CXComment,), Comment)
+    @ccall libclang.clang_HTMLTagComment_getAsString(Comment::CXComment)::CXString
 end
 
 function clang_FullComment_getAsHTML(Comment)
-    ccall((:clang_FullComment_getAsHTML, libclang), CXString, (CXComment,), Comment)
+    @ccall libclang.clang_FullComment_getAsHTML(Comment::CXComment)::CXString
 end
 
 function clang_FullComment_getAsXML(Comment)
-    ccall((:clang_FullComment_getAsXML, libclang), CXString, (CXComment,), Comment)
+    @ccall libclang.clang_FullComment_getAsXML(Comment::CXComment)::CXString
 end
 
 const CXCompilationDatabase = Ptr{Cvoid}
@@ -2662,69 +2662,69 @@ const CXCompileCommand = Ptr{Cvoid}
 end
 
 function clang_CompilationDatabase_fromDirectory(BuildDir, ErrorCode)
-    ccall((:clang_CompilationDatabase_fromDirectory, libclang), CXCompilationDatabase, (Cstring, Ptr{CXCompilationDatabase_Error}), BuildDir, ErrorCode)
+    @ccall libclang.clang_CompilationDatabase_fromDirectory(BuildDir::Cstring, ErrorCode::Ptr{CXCompilationDatabase_Error})::CXCompilationDatabase
 end
 
 function clang_CompilationDatabase_dispose(arg1)
-    ccall((:clang_CompilationDatabase_dispose, libclang), Cvoid, (CXCompilationDatabase,), arg1)
+    @ccall libclang.clang_CompilationDatabase_dispose(arg1::CXCompilationDatabase)::Cvoid
 end
 
 function clang_CompilationDatabase_getCompileCommands(arg1, CompleteFileName)
-    ccall((:clang_CompilationDatabase_getCompileCommands, libclang), CXCompileCommands, (CXCompilationDatabase, Cstring), arg1, CompleteFileName)
+    @ccall libclang.clang_CompilationDatabase_getCompileCommands(arg1::CXCompilationDatabase, CompleteFileName::Cstring)::CXCompileCommands
 end
 
 function clang_CompilationDatabase_getAllCompileCommands(arg1)
-    ccall((:clang_CompilationDatabase_getAllCompileCommands, libclang), CXCompileCommands, (CXCompilationDatabase,), arg1)
+    @ccall libclang.clang_CompilationDatabase_getAllCompileCommands(arg1::CXCompilationDatabase)::CXCompileCommands
 end
 
 function clang_CompileCommands_dispose(arg1)
-    ccall((:clang_CompileCommands_dispose, libclang), Cvoid, (CXCompileCommands,), arg1)
+    @ccall libclang.clang_CompileCommands_dispose(arg1::CXCompileCommands)::Cvoid
 end
 
 function clang_CompileCommands_getSize(arg1)
-    ccall((:clang_CompileCommands_getSize, libclang), Cuint, (CXCompileCommands,), arg1)
+    @ccall libclang.clang_CompileCommands_getSize(arg1::CXCompileCommands)::Cuint
 end
 
 function clang_CompileCommands_getCommand(arg1, I)
-    ccall((:clang_CompileCommands_getCommand, libclang), CXCompileCommand, (CXCompileCommands, Cuint), arg1, I)
+    @ccall libclang.clang_CompileCommands_getCommand(arg1::CXCompileCommands, I::Cuint)::CXCompileCommand
 end
 
 function clang_CompileCommand_getDirectory(arg1)
-    ccall((:clang_CompileCommand_getDirectory, libclang), CXString, (CXCompileCommand,), arg1)
+    @ccall libclang.clang_CompileCommand_getDirectory(arg1::CXCompileCommand)::CXString
 end
 
 function clang_CompileCommand_getFilename(arg1)
-    ccall((:clang_CompileCommand_getFilename, libclang), CXString, (CXCompileCommand,), arg1)
+    @ccall libclang.clang_CompileCommand_getFilename(arg1::CXCompileCommand)::CXString
 end
 
 function clang_CompileCommand_getNumArgs(arg1)
-    ccall((:clang_CompileCommand_getNumArgs, libclang), Cuint, (CXCompileCommand,), arg1)
+    @ccall libclang.clang_CompileCommand_getNumArgs(arg1::CXCompileCommand)::Cuint
 end
 
 function clang_CompileCommand_getArg(arg1, I)
-    ccall((:clang_CompileCommand_getArg, libclang), CXString, (CXCompileCommand, Cuint), arg1, I)
+    @ccall libclang.clang_CompileCommand_getArg(arg1::CXCompileCommand, I::Cuint)::CXString
 end
 
 function clang_CompileCommand_getNumMappedSources(arg1)
-    ccall((:clang_CompileCommand_getNumMappedSources, libclang), Cuint, (CXCompileCommand,), arg1)
+    @ccall libclang.clang_CompileCommand_getNumMappedSources(arg1::CXCompileCommand)::Cuint
 end
 
 function clang_CompileCommand_getMappedSourcePath(arg1, I)
     @warn "`clang_CompileCommand_getMappedSourcePath` Left here for backward compatibility.\nNo mapped sources exists in the C++ backend anymore.\nThis function just return Null `CXString`.\nSee:\n- [Remove unused CompilationDatabase::MappedSources](https://reviews.llvm.org/D32351)\n"
-    ccall((:clang_CompileCommand_getMappedSourcePath, libclang), CXString, (CXCompileCommand, Cuint), arg1, I)
+    @ccall libclang.clang_CompileCommand_getMappedSourcePath(arg1::CXCompileCommand, I::Cuint)::CXString
 end
 
 function clang_CompileCommand_getMappedSourceContent(arg1, I)
     @warn "`clang_CompileCommand_getMappedSourceContent` Left here for backward compatibility.\nNo mapped sources exists in the C++ backend anymore.\nThis function just return Null `CXString`.\nSee:\n- [Remove unused CompilationDatabase::MappedSources](https://reviews.llvm.org/D32351)\n"
-    ccall((:clang_CompileCommand_getMappedSourceContent, libclang), CXString, (CXCompileCommand, Cuint), arg1, I)
+    @ccall libclang.clang_CompileCommand_getMappedSourceContent(arg1::CXCompileCommand, I::Cuint)::CXString
 end
 
 function clang_install_aborting_llvm_fatal_error_handler()
-    ccall((:clang_install_aborting_llvm_fatal_error_handler, libclang), Cvoid, ())
+    @ccall libclang.clang_install_aborting_llvm_fatal_error_handler()::Cvoid
 end
 
 function clang_uninstall_llvm_fatal_error_handler()
-    ccall((:clang_uninstall_llvm_fatal_error_handler, libclang), Cvoid, ())
+    @ccall libclang.clang_uninstall_llvm_fatal_error_handler()::Cvoid
 end
 
 const CINDEX_VERSION_MAJOR = 0

@@ -126,6 +126,9 @@ opaque_func_arg_as_PtrCvoid = false
 # if true, opaque types are translated to `mutable struct` instead of `Cvoid`.
 opaque_as_mutable_struct = true
 
+# if true, use Julia 1.5's new `@ccall` macro 
+use_ccall_macro = true
+
 # generate getproperty/setproperty! methods for the types in the following list
 field_access_method_list = []
 

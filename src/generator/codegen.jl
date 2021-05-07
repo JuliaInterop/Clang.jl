@@ -63,12 +63,25 @@ function emit!(dag::ExprDAG, node::ExprNode{FunctionProto}, options::Dict; args.
         Expr(:call, func_name, arg_names...)
     end
 
-    body = :(ccall(
-        ($(QuoteNode(func_name)), $library_expr),
-        $ret_type,
-        $(Expr(:tuple, args...)),
-        $(arg_names...),
-    ))
+    use_ccall_macro = get(options, "use_ccall_macro", false)
+    if use_ccall_macro
+        name_type_pairs = [Expr(:(::), n, t) for (n, t) in zip(arg_names, args)]
+        body = Expr(:macrocall, Symbol("@ccall"), nothing,
+                    Expr(:(::), Expr(:call,
+                                        :($library_expr.$func_name),
+                                        name_type_pairs...,
+                                    ),
+                         ret_type
+                        )
+                    )
+    else
+        body = :(ccall(
+            ($(QuoteNode(func_name)), $library_expr),
+            $ret_type,
+            $(Expr(:tuple, args...)),
+            $(arg_names...),
+        ))
+    end
 
     push!(node.exprs, Expr(:function, signature, Expr(:block, body)))
 

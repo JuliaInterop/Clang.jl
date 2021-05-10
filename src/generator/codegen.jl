@@ -32,12 +32,22 @@ function emit!(dag::ExprDAG, node::ExprNode{FunctionProto}, options::Dict; args.
     arg_types = [getArgType(getCursorType(cursor), i - 1) for i in 1:length(func_args)]
     ret_type = translate(tojulia(getCursorResultType(cursor)), options)
 
-    args = [translate(tojulia(arg), options) for arg in arg_types]
+    args = Union{Expr,Symbol}[translate(tojulia(arg), options) for arg in arg_types]
     for (i, arg) in enumerate(args)
         # array function arguments should decay to pointers
         # e.g. double f[3] => Ptr{Cdouble} instead of NTuple{3, Cdouble}
         if Meta.isexpr(arg, :curly) && first(arg.args) == :NTuple
             args[i] = Expr(:curly, :Ptr, last(arg.args))
+        end
+
+        # do the same test for the underlying type of a typedef
+        c = getTypeDeclaration(arg_types[i])
+        if c isa CLTypedefDecl
+            ty = getCanonicalType(getTypedefDeclUnderlyingType(c))
+            jl = translate(tojulia(ty), options)
+            if Meta.isexpr(jl, :curly) && first(jl.args) == :NTuple
+                args[i] = Expr(:curly, :Ptr, last(jl.args))
+            end
         end
     end
 

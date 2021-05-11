@@ -97,6 +97,9 @@ smart_de_anonymize = true
 # this option is default to false, do read the paragraph below before using this feature.
 auto_mutability = true
 
+# add inner constructor `Foo() = new()`
+auto_mutability_with_new = true
+
 # if you feel like certain structs should not be generated as mutable struct, please add them in the following list. 
 # for example, if a C function accepts a `Vector` of some type as its argument like:
 #     void foo(mutable_type *list, int n);

@@ -719,6 +719,7 @@ function (x::TweakMutability)(dag::ExprDAG, options::Dict)
     show_info = get(log_options, "TweakMutability_log", x.show_info)
     blacklist = get(general_options, "auto_mutability_blacklist", [])
     whitelist = get(general_options, "auto_mutability_whitelist", [])
+    add_new = get(general_options, "auto_mutability_with_new", true)
 
     # collect referenced node ids
     empty!(x.idxs)
@@ -753,6 +754,7 @@ function (x::TweakMutability)(dag::ExprDAG, options::Dict)
 
         if apply_reset
             expr.args[1] = true
+            add_new && push!(expr.args[3].args, Expr(:(=), Expr(:call, expr.args[2]), Expr(:call, :new)))
             show_info &&
                 @info "[TweakMutability]: reset the mutability of $type_name to mutable"
         end

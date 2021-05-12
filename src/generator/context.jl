@@ -40,25 +40,25 @@ function find_dependent_headers(headers::Vector{T}, args::Vector, system_dirs) w
         empty!(new_headers)
         for header in all_headers
             try
-                parse_header(idx, header, args, flags)
+                tu = parse_header(idx, header, args, flags)
+                GC.@preserve tu begin
+                    tu_cursor = getTranslationUnitCursor(tu)
+                    for cursor in children(tu_cursor)
+                        is_inclusion_directive(cursor) || continue
+                        file = getIncludedFile(cursor)
+                        file_name = get_filename(file) |> normpath
+                        (isempty(file_name) || !isfile(file_name)) && continue
+                        # skip system headers
+                        any(sysdir->startswith(file_name, sysdir), system_dirs) && continue
+                        file_name ∈ all_headers && continue
+                        file_name ∈ dependent_headers && continue
+                        file_name ∈ new_headers && continue
+                        push!(new_headers, file_name)
+                    end
+                end
             catch err
                 @warn "failed to parse $header, skip..."
                 continue
-            end
-            tu = parse_header(idx, header, args, flags)
-            GC.@preserve tu begin
-                tu_cursor = getTranslationUnitCursor(tu)
-                for cursor in children(tu_cursor)
-                    is_inclusion_directive(cursor) || continue
-                    file = getIncludedFile(cursor)
-                    file_name = get_filename(file) |> normpath
-                    (isempty(file_name) || !isfile(file_name)) && continue
-                    # skip system headers
-                    any(sysdir->startswith(file_name, sysdir), system_dirs) && continue
-                    file_name ∈ all_headers && continue
-                    file_name ∈ new_headers && continue
-                    push!(new_headers, file_name)
-                end
             end
         end
         isempty(new_headers) && break
@@ -85,6 +85,7 @@ function create_context(headers::Vector, args::Vector=String[], options::Dict=Di
     system_dirs = map(x->x[9:end], filter(x->startswith(x, "-isystem"), args))
     dependent_headers = find_dependent_headers(headers, args, system_dirs)
 
+    @info "Parsing headers..."
     parse_headers!(ctx, headers, args)
 
     push!(ctx.passes, CollectTopLevelNode(ctx.trans_units, dependent_headers, system_dirs))

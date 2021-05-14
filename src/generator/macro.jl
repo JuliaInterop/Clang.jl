@@ -49,24 +49,14 @@ const LITERAL_LONG = ["L", "l"]
 const LITERAL_ULONG = ["UL", "Ul", "uL", "ul", "LU", "Lu", "lU", "lu"]
 const LITERAL_ULONGLONG = ["ULL", "Ull", "uLL", "ull", "LLU", "LLu", "llU", "llu"]
 const LITERAL_LONGLONG = ["LL", "ll"]
-
-const LITERAL_SUFFIXES = [
-    LITERAL_ULONGLONG..., LITERAL_LONGLONG..., LITERAL_ULONG..., LITERAL_LONG...,
-    "U", "u", "F", "f"
+const LITERAL_NON_FLOAT_SUFFIXES = [
+    LITERAL_ULONGLONG..., LITERAL_LONGLONG..., LITERAL_ULONG..., LITERAL_LONG..., "U", "u",
 ]
+const LITERAL_FLOAT_SUFFIXES = ["F", "f"]
+const LITERAL_SUFFIXES = vcat(LITERAL_NON_FLOAT_SUFFIXES, LITERAL_FLOAT_SUFFIXES)
 
-function c_literal_to_julia(txt, sfx)
+function c_non_float_literal_to_julia(sfx)
     sfx = lowercase(sfx)
-
-    # floats following http://en.cppreference.com/w/cpp/language/floating_literal
-    float64 = occursin(".", txt) && occursin("l", sfx)  # long double
-    float32 = occursin("f", sfx)
-
-    if float64 || float32
-        float64 && return "Float64"
-        float32 && return "Float32"
-    end
-
     # integers following http://en.cppreference.com/w/cpp/language/integer_literal
     unsigned = occursin("u", sfx)
     if unsigned && (endswith(sfx, "llu") || endswith(sfx, "ull"))
@@ -82,13 +72,32 @@ function c_literal_to_julia(txt, sfx)
     end
 end
 
+function c_float_literal_to_julia(txt, sfx)
+    sfx = lowercase(sfx)
+    # floats following http://en.cppreference.com/w/cpp/language/floating_literal
+    float64 = occursin(".", txt) && occursin("l", sfx)  # long double
+    float32 = occursin("f", sfx)
+
+    if float64 || float32
+        float64 && return "Float64"
+        float32 && return "Float32"
+    end
+end
+
 function normalize_literal_type(text::AbstractString)
     txt = strip(text)
-    for sfx in LITERAL_SUFFIXES
+    for sfx in LITERAL_NON_FLOAT_SUFFIXES
         if endswith(txt, sfx)
-            type = c_literal_to_julia(txt, sfx)
-            txt = txt[1:(end - length(sfx))]
-            return "$(type)($txt)"
+            txt_no_sfx = replace(txt, Regex(sfx*"\$")=>"")
+            type = c_non_float_literal_to_julia(sfx)
+            return "$(type)($txt_no_sfx)"
+        end
+    end
+    for sfx in LITERAL_FLOAT_SUFFIXES
+        if !occursin("0x", lowercase(txt)) && endswith(txt, sfx)
+            txt_no_sfx = replace(txt, Regex(sfx*"\$")=>"")
+            type = c_float_literal_to_julia(txt_no_sfx, sfx)
+            return "$(type)($txt_no_sfx)"
         end
     end
     # Char to Cchar
@@ -192,6 +201,8 @@ const MACRO_IDK_BLACKLIST = [
     "_Pragma",
     "__attribute__",
     "__typeof__",
+    "__inline__",
+    "__func__",
     "noexcept",
     "##",
     "#",

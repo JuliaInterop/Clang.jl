@@ -70,11 +70,11 @@ function (x::CollectDependantSystemNode)(dag::ExprDAG, options::Dict)
     isempty(x.dependents) && return dag
 
     unique!(x.dependents)
-    deps = copy(x.dependents)
+    new_deps = copy(x.dependents)
     candidate_nodes = copy(x.dependents)
     while !isempty(x.dependents)
         empty!(x.dependents)
-        for node in deps
+        for node in new_deps
             collect_dependent_system_nodes!(dag, node, x.dependents)
         end
 
@@ -82,11 +82,13 @@ function (x::CollectDependantSystemNode)(dag::ExprDAG, options::Dict)
         isempty(x.dependents) && break
 
         unique!(x.dependents)
+        empty!(new_deps)
         for n in x.dependents
-            n ∉ candidate_nodes && pushfirst!(candidate_nodes, n)
+            if n ∉ candidate_nodes
+                pushfirst!(candidate_nodes, n)
+                push!(new_deps, n)
+            end
         end
-
-        deps = copy(x.dependents)
     end
 
     show_info && @warn "[CollectDependantSystemNode]: found symbols in the system headers: $([n.id for n in candidate_nodes])"

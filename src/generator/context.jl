@@ -92,7 +92,7 @@ function create_context(headers::Vector, args::Vector=String[], options::Dict=Di
     push!(ctx.passes, LinkTypedefToAnonymousTagType())
     push!(ctx.passes, LinkTypedefToAnonymousTagType(is_system=true))
     push!(ctx.passes, IndexDefinition())
-    push!(ctx.passes, CollectDependantSystemNode())
+    push!(ctx.passes, CollectDependentSystemNode())
     push!(ctx.passes, IndexDefinition())
     push!(ctx.passes, CollectNestedRecord())
     push!(ctx.passes, FindOpaques())
@@ -153,7 +153,7 @@ Run all passes.
 function build!(ctx::Context, stage=BUILDSTAGE_ALL)
     reset_counter()
     for pass in ctx.passes
-        pass isa CollectDependantSystemNode && stage != BUILDSTAGE_PRINTING_ONLY && @info "Building the DAG..."
+        pass isa CollectDependentSystemNode && stage != BUILDSTAGE_PRINTING_ONLY && @info "Building the DAG..."
         pass isa Codegen && stage != BUILDSTAGE_PRINTING_ONLY && @info "Emit Julia expressions..."
         if stage == BUILDSTAGE_NO_PRINTING
             pass isa AbstractPrinter && continue

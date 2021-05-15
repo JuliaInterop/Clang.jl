@@ -47,21 +47,21 @@ function (x::CollectTopLevelNode)(dag::ExprDAG, options::Dict)
 end
 
 """
-    CollectDependantSystemNode <: AbstractPass
+    CollectDependentSystemNode <: AbstractPass
 In this pass, those dependent tags/identifiers are to the `dag.nodes`.
 
 See also [`collect_system_nodes!`](@ref).
 """
-mutable struct CollectDependantSystemNode <: AbstractPass
+mutable struct CollectDependentSystemNode <: AbstractPass
     dependents::Vector{ExprNode}
     show_info::Bool
 end
-CollectDependantSystemNode(; info=true) = CollectDependantSystemNode(ExprNode[], info)
+CollectDependentSystemNode(; info=true) = CollectDependentSystemNode(ExprNode[], info)
 
-function (x::CollectDependantSystemNode)(dag::ExprDAG, options::Dict)
+function (x::CollectDependentSystemNode)(dag::ExprDAG, options::Dict)
     general_options = get(options, "general", Dict())
     log_options = get(general_options, "log", Dict())
-    show_info = get(log_options, "CollectDependantSystemNode_log", x.show_info)
+    show_info = get(log_options, "CollectDependentSystemNode_log", x.show_info)
 
     empty!(x.dependents)
     for node in dag.nodes
@@ -91,7 +91,7 @@ function (x::CollectDependantSystemNode)(dag::ExprDAG, options::Dict)
         end
     end
 
-    show_info && @warn "[CollectDependantSystemNode]: found symbols in the system headers: $([n.id for n in candidate_nodes])"
+    show_info && @warn "[CollectDependentSystemNode]: found symbols in the system headers: $([n.id for n in candidate_nodes])"
     for n in candidate_nodes
         pushfirst!(dag.nodes, n)
     end

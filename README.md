@@ -75,14 +75,11 @@ The generator is currently used by several projects and you can take them as exa
 - [JuliaMultimedia/CSFML.jl](https://github.com/JuliaMultimedia/CSFML.jl): config multiple library names
 - [JuliaGraphics/FreeType.jl](https://github.com/JuliaGraphics/FreeType.jl): select function-like macros
 - [maleadt/LLVM.jl](https://github.com/maleadt/LLVM.jl): cross-platform support with patches
-<!-- - [JuliaWeb/LibCURL.jl](https://github.com/JuliaWeb/LibCURL.jl): cross-platform build -->
-<!-- - [scipopt/SCIP.jl](https://github.com/scipopt/SCIP.jl): applying custom patches by using `prologue.jl`&`epilogue.jl` -->
-<!-- - [JuliaLang/SuiteSparse.jl](https://github.com/JuliaLang/SuiteSparse.jl): config compiler definitions for cross-platform -->
+- [JuliaWeb/LibCURL.jl](https://github.com/JuliaWeb/LibCURL.jl): cross-platform build
+- [scipopt/SCIP.jl](https://github.com/scipopt/SCIP.jl): applying custom patches by using `prologue.jl`&`epilogue.jl`
+- [JuliaLang/SuiteSparse.jl](https://github.com/JuliaLang/SuiteSparse.jl): config compiler definitions for cross-platform
 - [JuliaGPU/VulkanCore.jl](https://github.com/JuliaGPU/VulkanCore.jl): cross-platform build with third-party JLL dependencies
 - [JuliaGPU/oneAPI.jl](https://github.com/JuliaGPU/oneAPI.jl): format the generated code with [JuliaFormatter.jl](https://github.com/domluna/JuliaFormatter.jl)
 
 <!-- - [JuliaGPU/CUDA.jl](https://github.com/JuliaGPU/CUDA.jl/tree/master/res/wrap): old generator
 - [SciML/Sundials.jl](https://github.com/SciML/Sundials.jl/blob/master/scripts/wrap_sundials.jl): old generator -->
-
-
-

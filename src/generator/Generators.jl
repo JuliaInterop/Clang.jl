@@ -80,7 +80,7 @@ export Codegen
 export CodegenMacro
 export CodegenPostprocessing
 export CodegenPreprocessing
-export CollectDependantSystemNode
+export CollectDependentSystemNode
 export CollectNestedRecord
 export CollectTopLevelNode
 export CommonPrinter

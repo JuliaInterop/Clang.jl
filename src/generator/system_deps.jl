@@ -26,9 +26,12 @@ function collect_dependent_system_nodes!(dag::ExprDAG, node::ExprNode{FunctionPr
             (hasref && is_jl_pointer(jlty))
             # pass
         else
-            # FIXME: this assumes duplicated symbols in the system headers are the same.
-            idx = findfirst(x->x.id == leaf_ty.sym, dag.sys)
-            idx != nothing && push!(system_nodes, dag.sys[idx])
+            # add all sys nodes with the same id
+            for (i, n) in enumerate(dag.sys)
+                if n.id == leaf_ty.sym
+                    system_nodes[n] = i
+                end
+            end
         end
     end
     return system_nodes
@@ -49,9 +52,12 @@ function collect_dependent_system_nodes!(dag::ExprDAG, node::ExprNode{FunctionNo
         haskey(dag.ids_extra, leaf_ty.sym)
         # pass
     else
-        # FIXME: this assumes duplicated symbols in the system headers are the same.
-        idx = findfirst(x->x.id == leaf_ty.sym, dag.sys)
-        idx != nothing && push!(system_nodes, dag.sys[idx])
+        # add all sys nodes with the same id
+        for (i, n) in enumerate(dag.sys)
+            if n.id == leaf_ty.sym
+                system_nodes[n] = i
+            end
+        end
     end
 
     return system_nodes
@@ -66,9 +72,12 @@ function collect_dependent_system_nodes!(dag::ExprDAG, node::ExprNode{TypedefEla
     is_jl_basic(leaf_ty) && return system_nodes
 
     if !haskey(dag.tags, leaf_ty.sym)
-        # FIXME: this assumes duplicated symbols in the system headers are the same.
-        idx = findfirst(x->x.id == leaf_ty.sym, dag.sys)
-        idx != nothing && push!(system_nodes, dag.sys[idx])
+        # add all sys nodes with the same id
+        for (i, n) in enumerate(dag.sys)
+            if n.id == leaf_ty.sym
+                system_nodes[n] = i
+            end
+        end
     end
 
     return system_nodes
@@ -86,18 +95,24 @@ function collect_dependent_system_nodes!(dag::ExprDAG, node::ExprNode{TypedefDef
     is_jl_unknown(leaf_ty) && return system_nodes
 
     if !(haskey(dag.ids, leaf_ty.sym) || haskey(dag.ids_extra, leaf_ty.sym))
-        # FIXME: this assumes duplicated symbols in the system headers are the same.
-        idx = findfirst(x->x.id == leaf_ty.sym, dag.sys)
-        idx != nothing && push!(system_nodes, dag.sys[idx])
+        # add all sys nodes with the same id
+        for (i, n) in enumerate(dag.sys)
+            if n.id == leaf_ty.sym
+                system_nodes[n] = i
+            end
+        end
     end
 
     return system_nodes
 end
 
 function collect_dependent_system_nodes!(dag::ExprDAG, node::ExprNode{TypedefToAnonymous}, system_nodes)
-    # FIXME: this assumes duplicated symbols in the system headers are the same.
-    idx = findfirst(x->x.id == node.type.sym, dag.sys)
-    idx != nothing && push!(system_nodes, dag.sys[idx])
+    # add all sys nodes with the same id
+    for (i, n) in enumerate(dag.sys)
+        if n.id == node.type.sym
+            system_nodes[n] = i
+        end
+    end
     return system_nodes
 end
 
@@ -117,9 +132,12 @@ function collect_dependent_system_nodes!(dag::ExprDAG, node::ExprNode{<:Abstract
             occursin("anonymous", spelling(ty))
             # pass
         else
-            # FIXME: this assumes duplicated symbols in the system headers are the same.
-            idx = findfirst(x->x.id == leaf_ty.sym, dag.sys)
-            idx != nothing && push!(system_nodes, dag.sys[idx])
+            # add all sys nodes with the same id
+            for (i, n) in enumerate(dag.sys)
+                if n.id == leaf_ty.sym
+                    system_nodes[n] = i
+                end
+            end
         end
     end
     return dag

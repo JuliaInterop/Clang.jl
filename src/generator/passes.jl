@@ -53,11 +53,12 @@ In this pass, those dependent tags/identifiers are to the `dag.nodes`.
 See also [`collect_system_nodes!`](@ref).
 """
 mutable struct CollectDependentSystemNode <: AbstractPass
-    dependents::Vector{ExprNode}
+    dependents::Dict{ExprNode,Int}
     show_info::Bool
 end
-CollectDependentSystemNode(; info=true) = CollectDependentSystemNode(ExprNode[], info)
+CollectDependentSystemNode(; info=true) = CollectDependentSystemNode(Dict{ExprNode,Int}(), info)
 
+# FIXME: refactor and improve the support for system nodes
 function (x::CollectDependentSystemNode)(dag::ExprDAG, options::Dict)
     general_options = get(options, "general", Dict())
     log_options = get(general_options, "log", Dict())
@@ -69,32 +70,22 @@ function (x::CollectDependentSystemNode)(dag::ExprDAG, options::Dict)
     end
     isempty(x.dependents) && return dag
 
-    unique!(x.dependents)
     new_deps = copy(x.dependents)
-    candidate_nodes = copy(x.dependents)
-    while !isempty(x.dependents)
-        empty!(x.dependents)
-        for node in new_deps
+    old_deps = copy(x.dependents)
+    while true
+        for (node, i) in new_deps
             collect_dependent_system_nodes!(dag, node, x.dependents)
         end
 
-        # break earlier
-        isempty(x.dependents) && break
+        new_deps = setdiff(x.dependents, old_deps)
 
-        unique!(x.dependents)
-        empty!(new_deps)
-        for n in x.dependents
-            if n ∉ candidate_nodes
-                pushfirst!(candidate_nodes, n)
-                push!(new_deps, n)
-            end
-        end
+        isempty(new_deps) && break
+
+        old_deps = copy(x.dependents)
     end
 
-    show_info && @warn "[CollectDependentSystemNode]: found symbols in the system headers: $([n.id for n in candidate_nodes])"
-    for n in candidate_nodes
-        pushfirst!(dag.nodes, n)
-    end
+    show_info && @warn "[CollectDependentSystemNode]: found symbols in the system headers: $([n.id for (n,v) in x.dependents])"
+    prepend!(dag.nodes, collect(v[1] for v in sort(collect(x.dependents), by=x->x[2])))
 
     return dag
 end

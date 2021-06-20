@@ -7,7 +7,7 @@ cxname2clname(x::Symbol) = cxname2clname(string(x))
 # so that we can dispatch directly on node kinds.
 abstract type CLCursor end
 
-const CXCursorMap = Dict()
+const CXCursorMap = Dict{CXCursorKind,Any}()
 
 for (sym, val) in name_value_pairs(CXCursorKind)
     clsym = Symbol(cxname2clname(sym))
@@ -31,7 +31,7 @@ Base.show(io::IO, x::CLCursor) = print(io, "CLCursor (", typeof(x), ") ", name(x
 # so that we can dispatch directly on node kinds.
 abstract type CLType end
 
-const CLTypeMap = Dict()
+const CLTypeMap = Dict{CXTypeKind,Any}()
 
 for (sym, val) in name_value_pairs(CXTypeKind)
     clsym = Symbol(cxname2clname(sym))
@@ -54,7 +54,7 @@ Base.show(io::IO, x::CLType) = print(io, "CLType (", typeof(x), ") ")
 # CLToken
 abstract type CLToken end
 
-const CLTokenMap = Dict()
+const CLTokenMap = Dict{CXTokenKind,Any}()
 
 for (sym, val) in name_value_pairs(CXTokenKind)
     clsym = Symbol(last(split(string(sym), '_'; limit=2)))

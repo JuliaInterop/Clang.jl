@@ -116,6 +116,10 @@ function create_context(headers::Vector, args::Vector=String[], options::Dict=Di
         push!(ctx.passes, TweakMutability())
     end
 
+    if get(general_options, "add_fptr_methods", false)
+        push!(ctx.passes, AddFPtrMethods())
+    end
+
     # support old behavior
     api_file = get(general_options, "output_api_file_path", "")
     common_file = get(general_options, "output_common_file_path", "")

@@ -756,6 +756,51 @@ function (x::TweakMutability)(dag::ExprDAG, options::Dict)
     return dag
 end
 
+"""
+    AddFPtrMethods <: AbstractPass
+This pass adds a method definition for each function prototype method which `ccall`s into a library.
+
+The generated method allows the use of a function pointer to `ccall` into directly, instead
+of relying on a library to give the pointer via a symbol look up. This is useful for libraries that
+use runtime loaders to dynamically resolve function pointers for API calls.
+"""
+struct AddFPtrMethods <: AbstractPass end
+
+function (::AddFPtrMethods)(dag::ExprDAG, options::Dict)
+    codegen_options = get(options, "codegen", Dict())
+    use_ccall_macro = get(codegen_options, "use_ccall_macro", false)
+    for node in dag.nodes
+        node.type isa FunctionProto || continue
+        for _ex in copy(node.exprs)
+            ex = deepcopy(_ex)
+            Base.is_expr(ex, :function) || continue
+            if Base.is_expr(ex.args[1], :where)
+                call = ex.args[1].args[1]
+            else
+                call = ex.args[1]
+            end
+            push!(call.args, :fptr)
+            body_idx = findfirst(x -> Base.is_expr(x, :block), ex.args)
+            body = ex.args[body_idx]
+            idx = if use_ccall_macro
+                findfirst(x -> Base.is_expr(x, :macrocall) && x.args[1] == Symbol("@ccall"), body.args)
+            else
+                findfirst(x -> Base.is_expr(x, :call) && x.args[1] == :ccall, body.args)
+            end
+            !isnothing(idx) || continue
+            stmt = body.args[idx]
+            if use_ccall_macro
+                assert_idx = findfirst(x -> Base.is_expr(x, :(::)), stmt.args)
+                call_idx = findfirst(x -> Base.is_expr(x, :call), stmt.args[assert_idx].args)
+                stmt.args[assert_idx].args[call_idx].args[1] = Expr(:$, :fptr)
+            else
+                stmt.args[2] = :fptr
+            end
+            push!(node.exprs, ex)
+        end
+    end
+end
+
 const DEFAULT_AUDIT_FUNCTIONS = [
     audit_library_name,
     sanity_check,

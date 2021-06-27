@@ -771,33 +771,24 @@ function (::AddFPtrMethods)(dag::ExprDAG, options::Dict)
     use_ccall_macro = get(codegen_options, "use_ccall_macro", false)
     for node in dag.nodes
         node.type isa FunctionProto || continue
-        for _ex in copy(node.exprs)
-            ex = deepcopy(_ex)
-            Base.is_expr(ex, :function) || continue
-            if Base.is_expr(ex.args[1], :where)
-                call = ex.args[1].args[1]
-            else
-                call = ex.args[1]
-            end
-            push!(call.args, :fptr)
-            body_idx = findfirst(x -> Base.is_expr(x, :block), ex.args)
-            body = ex.args[body_idx]
-            idx = if use_ccall_macro
-                findfirst(x -> Base.is_expr(x, :macrocall) && x.args[1] == Symbol("@ccall"), body.args)
-            else
-                findfirst(x -> Base.is_expr(x, :call) && x.args[1] == :ccall, body.args)
-            end
-            !isnothing(idx) || continue
-            stmt = body.args[idx]
-            if use_ccall_macro
-                assert_idx = findfirst(x -> Base.is_expr(x, :(::)), stmt.args)
-                call_idx = findfirst(x -> Base.is_expr(x, :call), stmt.args[assert_idx].args)
-                stmt.args[assert_idx].args[call_idx].args[1] = Expr(:$, :fptr)
-            else
-                stmt.args[2] = :fptr
-            end
-            push!(node.exprs, ex)
+        ex = copy(first(node.exprs))
+        call = ex.args[1]
+        push!(call.args, :fptr)
+        body = ex.args[findfirst(x -> Base.is_expr(x, :block), ex.args)]
+        stmt_idx = if use_ccall_macro
+            findfirst(x -> Base.is_expr(x, :macrocall) && x.args[1] == Symbol("@ccall"), body.args)
+        else
+            findfirst(x -> Base.is_expr(x, :call) && x.args[1] == :ccall, body.args)
         end
+        stmt = body.args[stmt_idx]
+        if use_ccall_macro
+            typeassert = stmt.args[findfirst(x -> Base.is_expr(x, :(::)), stmt.args)]
+            call = typeassert.args[findfirst(x -> Base.is_expr(x, :call), typeassert.args)]
+            call.args[1] = Expr(:$, :fptr)
+        else
+            stmt.args[2] = :fptr
+        end
+        push!(node.exprs, ex)
     end
 end
 

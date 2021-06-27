@@ -320,6 +320,73 @@ function emit_setproperty!(dag, node, options)
     return dag
 end
 
+function get_names_types(root_cursor, cursor, options)
+    field_cursors = fields(getCursorType(cursor))
+    field_cursors = isempty(field_cursors) ? children(cursor) : field_cursors
+    tys = []
+    fsyms = []
+    for field_cursor in field_cursors
+        n = name(field_cursor)
+        if isempty(n)
+            _emit_getproperty_ptr!(root_cursor, field_cursor, options)
+            continue
+        end
+        fsym = make_symbol_safe(n)
+        fty = getCursorType(field_cursor)
+        ty = translate(tojulia(fty), options)
+        push!(tys, ty)
+        push!(fsyms, fsym)
+    end
+    fsyms, tys
+end
+
+function emit_constructor!(dag, node::ExprNode{<:AbstractUnionNodeType}, options)
+    sym = make_symbol_safe(node.id)
+    fsyms, tys = get_names_types(node.cursor, node.cursor, options)
+    union_sym = Symbol(:__U_, sym)
+    push!(node.exprs, :(const $union_sym = Union{$(tys...)}))
+    body = Expr(:block,
+        :(ref = Ref{$sym}()),
+        :(ptr = Base.unsafe_convert(Ptr{$sym}, ref)),
+    )
+
+    branch_args = map(zip(fsyms, tys)) do (fsym, ty)
+        cond = :(val isa $ty)
+        assign = :(ptr.$fsym = val)
+        (cond, assign)
+    end
+
+    first_args, rest = Iterators.peel(branch_args)
+    ex = Expr(:if, first_args...)
+    push!(body.args, ex)
+    foreach(rest) do (cond, assign)
+        _ex = Expr(:elseif, cond, assign)
+        push!(ex.args, _ex)
+        ex = _ex
+    end
+
+    push!(body.args, :(ref[]))
+
+    push!(node.exprs, Expr(:function, Expr(:call, sym, :(val::$union_sym)), body))
+end
+
+function emit_constructor!(dag, node::ExprNode{<:StructLayout}, options)
+    sym = make_symbol_safe(node.id)
+    fsyms, tys = get_names_types(node.cursor, node.cursor, options)
+    body = quote
+        ref = Ref{$sym}()
+        ptr = Base.unsafe_convert(Ptr{$sym}, ref)
+        $((:(ptr.$fsym = $fsym) for fsym in fsyms)...)
+        ref[]
+    end
+
+    rm_line_num_node!(body)
+
+    push!(body.args, )
+    func = Expr(:function, Expr(:call, sym, (:($fsym::$ty) for (fsym, ty) in zip(fsyms, tys))...), body)
+    push!(node.exprs, func)
+end
+
 function emit!(dag::ExprDAG, node::ExprNode{<:AbstractStructNodeType}, options::Dict; args...)
     struct_sym = make_symbol_safe(node.id)
     block = Expr(:block)
@@ -434,6 +501,8 @@ function emit!(dag::ExprDAG, node::ExprNode{<:RecordLayouts}, options::Dict; arg
     emit_getproperty_ptr!(dag, node, options)
     emit_getproperty!(dag, node, options)
     emit_setproperty!(dag, node, options)
+
+    emit_constructor!(dag, node, options)
 
     return dag
 end

@@ -350,24 +350,37 @@ function emit_constructor!(dag, node::ExprNode{<:AbstractUnionNodeType}, options
         :(ptr = Base.unsafe_convert(Ptr{$sym}, ref)),
     )
 
-    branch_args = map(zip(fsyms, tys)) do (fsym, ty)
-        cond = :(val isa $ty)
-        assign = :(ptr.$fsym = val)
-        (cond, assign)
+    if get(options, "union_single_constructor", false)
+        branch_args = map(zip(fsyms, tys)) do (fsym, ty)
+            cond = :(val isa $ty)
+            assign = :(ptr.$fsym = val)
+            (cond, assign)
+        end
+
+        first_args, rest = Iterators.peel(branch_args)
+        ex = Expr(:if, first_args...)
+        push!(body.args, ex)
+        foreach(rest) do (cond, assign)
+            _ex = Expr(:elseif, cond, assign)
+            push!(ex.args, _ex)
+            ex = _ex
+        end
+
+        push!(body.args, :(ref[]))
+        push!(node.exprs, Expr(:function, Expr(:call, sym, :(val::$union_sym)), body))
+    else
+        foreach(zip(fsyms, tys)) do (fsym, ty)
+            _body = copy(body)
+            append!(_body.args,
+                [
+                    :(ptr.$fsym = $fsym),
+                    :(ref[]),
+                ]
+            )
+            func = Expr(:function, :($sym($fsym::$ty)), _body)
+            push!(node.exprs, func)
+        end
     end
-
-    first_args, rest = Iterators.peel(branch_args)
-    ex = Expr(:if, first_args...)
-    push!(body.args, ex)
-    foreach(rest) do (cond, assign)
-        _ex = Expr(:elseif, cond, assign)
-        push!(ex.args, _ex)
-        ex = _ex
-    end
-
-    push!(body.args, :(ref[]))
-
-    push!(node.exprs, Expr(:function, Expr(:call, sym, :(val::$union_sym)), body))
 end
 
 function emit_constructor!(dag, node::ExprNode{<:StructLayout}, options)
@@ -501,7 +514,10 @@ function emit!(dag::ExprDAG, node::ExprNode{<:RecordLayouts}, options::Dict; arg
     emit_getproperty!(dag, node, options)
     emit_setproperty!(dag, node, options)
 
-    emit_constructor!(dag, node, options)
+    opt = get(options, "add_record_constructors", [])
+    if (opt isa Bool && opt) || sym in opt
+        emit_constructor!(dag, node, options)
+    end
 
     return dag
 end

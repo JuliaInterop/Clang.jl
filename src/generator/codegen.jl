@@ -382,7 +382,6 @@ function emit_constructor!(dag, node::ExprNode{<:StructLayout}, options)
 
     rm_line_num_node!(body)
 
-    push!(body.args, )
     func = Expr(:function, Expr(:call, sym, (:($fsym::$ty) for (fsym, ty) in zip(fsyms, tys))...), body)
     push!(node.exprs, func)
 end

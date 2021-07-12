@@ -53,14 +53,6 @@ for header in find_std_headers()
 end
 ```
 
-#### v0.8 compatibility
-If you miss those old behaviors before v0.8, please `Pkg.pin` the package to v0.8 and
-make the following change in your old generator script:
-```julia
-using Clang: CLANG_INCLUDE
-using Clang.Deprecated.wrap_c
-using Clang.Deprecated.cindex
-```
 
 ## Build a custom C-bindings generator
 A custom C-bindings generator tends to be used on large codebases, often with multiple API versions to support. Building a generator requires some customization effort, so for small libraries the initial
@@ -111,7 +103,7 @@ build!(ctx)
 Please refer to [this toml file](https://github.com/JuliaInterop/Clang.jl/blob/master/gen/generator.toml) for a full list of configuration options.
 
 ### v0.12 example
-The generator above is the recommended generator for v0.13 and above. There was another generator wrappper before, here is an example.
+The generator above is the recommended generator for v0.14 and above. There was another generator wrappper before, here is an example.
 ```julia
 using Clang
 using Clang_jll # `pkg> activate Clang`

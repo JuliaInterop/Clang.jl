@@ -35,17 +35,17 @@ Parsing and querying the fields of this struct requires just a few lines of code
 ```julia
 julia> using Clang
 
-julia> trans_unit = parse_header("example.h")
+julia> trans_unit = Clang.parse_header(Index(), "example.h")
 TranslationUnit(Ptr{Nothing} @0x00007fe13cdc8a00, Index(Ptr{Nothing} @0x00007fe13cc8dde0, 0, 1))
 
-julia> root_cursor = getcursor(trans_unit)
+julia> root_cursor = Clang.getTranslationUnitCursor(trans_unit)
 CLCursor (CLTranslationUnit) example.h
 
-julia> struct_cursor = search(root_cursor, "ExStruct")[1]
+julia> struct_cursor = search(root_cursor, "ExStruct") |> only
 CLCursor (CLStructDecl) ExStruct
 
 julia> for c in children(struct_cursor)  # print children
-           println("Cursor: ", c, "\n  Kind: ", kind(c), "\n  Name: ", name(c), "\n  Type: ", getCursorType(c))
+           println("Cursor: ", c, "\n  Kind: ", kind(c), "\n  Name: ", name(c), "\n  Type: ", Clang.getCursorType(c))
        end
 Cursor: CLCursor (CLFieldDecl) kind
   Kind: CXCursor_FieldDecl(6)
@@ -154,7 +154,7 @@ To find the cursor for this function declaration, we use function `search` to re
 ```julia
 julia> using Clang.LibClang  # CXCursor_FunctionDecl is exposed from LibClang
 
-julia> fdecl = search(root_cursor, CXCursor_FunctionDecl)[end]
+julia> fdecl = search(root_cursor, CXCursor_FunctionDecl) |> only
 CLCursor (CLFunctionDecl) ExFunction(int, char *, float *)
 
 julia> fdecl_children = [c for c in children(fdecl)]
@@ -166,7 +166,7 @@ julia> fdecl_children = [c for c in children(fdecl)]
 ```
 The first three children are `CLParmDecl` cursors with the same name as the arguments in the function signature. Checking the types of the `CLParmDecl` cursors indicates a similarity to the function signature:
 ```julia
-julia> [getCursorType(t) for t in fdecl_children[1:3]]
+julia> [Clang.getCursorType(t) for t in fdecl_children[1:3]]
 3-element Array{CLType,1}:
  CLType (CLInt)     
  CLType (CLPointer)
@@ -174,7 +174,7 @@ julia> [getCursorType(t) for t in fdecl_children[1:3]]
 ```
 And, finally, retrieving the target type of each `CLPointer` argument confirms that these cursors represent the function argument type declaration:
 ```julia
-julia> [getPointeeType(getCursorType(t)) for t in fdecl_children[2:3]]
+julia> [Clang.getPointeeType(Clang.getCursorType(t)) for t in fdecl_children[2:3]]
 2-element Array{CLType,1}:
  CLType (CLChar_S)
  CLType (CLFloat)  
@@ -188,11 +188,11 @@ printind(ind::Int, st...) = println(join([repeat(" ", 2*ind), st...]))
 printobj(cursor::CLCursor) = printobj(0, cursor)
 printobj(t::CLType) = join(typeof(t), " ", spelling(t))
 printobj(t::CLInt) = t
-printobj(t::CLPointer) = getPointeeType(t)
+printobj(t::CLPointer) = Clang.getPointeeType(t)
 printobj(ind::Int, t::CLType) = printind(ind, printobj(t))
 
 function printobj(ind::Int, cursor::Union{CLFieldDecl, CLParmDecl})
-    printind(ind+1, typeof(cursor), " ", printobj(getCursorType(cursor)), " ", name(cursor))
+    printind(ind+1, typeof(cursor), " ", printobj(Clang.getCursorType(cursor)), " ", name(cursor))
 end
 
 function printobj(ind::Int, node::Union{CLCursor, CLStructDecl, CLCompoundStmt,

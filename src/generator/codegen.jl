@@ -236,13 +236,14 @@ function _emit_getproperty_ptr!(body, root_cursor, cursor, options)
         fty = getCursorType(field_cursor)
         ty = translate(tojulia(fty), options)
         offset = getOffsetOf(getCursorType(root_cursor), n)
-        d, r = divrem(offset, 8)
-        if r == 0
-            ex = :(f === $(QuoteNode(fsym)) && return Ptr{$ty}(x + $d))
-        else
-            # this is a bitfield
+        if isBitField(field_cursor)
             w = getFieldDeclBitWidth(field_cursor)
-            ex = :(f === $(QuoteNode(fsym)) && return (Ptr{$ty}(x + $d), $r, $w))
+            @assert w < 32 # Bit fields should not be larger than int(32 bits)
+            d, r = divrem(offset, 32)
+            ex = :(f === $(QuoteNode(fsym)) && return (Ptr{$ty}(x + $(4d)), $r, $w))
+        else
+            d = offset ÷ 8
+            ex = :(f === $(QuoteNode(fsym)) && return Ptr{$ty}(x + $d))
         end
         push!(body.args, ex)
     end
@@ -278,8 +279,10 @@ function emit_getproperty!(dag, node, options)
     load_expr = :(GC.@preserve r unsafe_load(fptr))
     load_expr.args[2] = nothing
 
-    load_base_expr = :(GC.@preserve r unsafe_load(baseptr))
+    load_base_expr = :(GC.@preserve r unsafe_load(baseptr32))
     load_base_expr.args[2] = nothing
+    load_next_expr = :(GC.@preserve r unsafe_load(baseptr32 + 4))
+    load_next_expr.args[2] = nothing
 
     if is_bitfield_type(node.type)
         ex = quote
@@ -288,11 +291,13 @@ function emit_getproperty!(dag, node, options)
             else
                 baseptr, offset, width = fptr
                 ty = eltype(baseptr)
-                i8 = $load_base_expr
-                bitstr = bitstring(i8)
-                sig = bitstr[end-offset-(width-1):end-offset]
-                zexted = lpad(sig, 8*sizeof(ty), '0')
-                return parse(ty, zexted; base=2)
+                baseptr32 = convert(Ptr{UInt32}, ptr)
+                u64 = $load_base_expr
+                if offset + width > 32
+                    u64 |= ($load_next_expr) << 32
+                end
+                u64 = (u64 >> offset) & ((1 << width) - 1)
+                return u64 % ty
             end
         end
     else
@@ -314,7 +319,33 @@ function emit_setproperty!(dag, node, options)
     sym = make_symbol_safe(node.id)
     signature = Expr(:call, :(Base.setproperty!), :(x::Ptr{$sym}), :(f::Symbol), :v)
     store_expr = :(unsafe_store!(getproperty(x, f), v))
-    body = Expr(:block, store_expr)
+    if is_bitfield_type(node.type)
+        body = quote
+            fptr = getproperty(x, f)
+            if fptr isa Ptr
+                $store_expr
+            else
+                baseptr, offset, width = fptr
+                ty = eltype(baseptr)
+                baseptr32 = convert(Ptr{UInt32}, x)
+                u64 = unsafe_load(baseptr32)
+                straddle = offset + width > 32
+                if straddle
+                    u64 |= unsafe_load(baseptr32 + 4) << 32
+                end
+                mask = ((1 << width) - 1)
+                u64 &= ~(mask << offset)
+                u64 |= (unsigned(v) & mask) << offset
+                unsafe_store!(baseptr32, u64 & typemax(UInt32))
+                if straddle
+                    unsafe_store!(baseptr32 + 4, u64 >> 32)
+                end
+            end
+        end
+        rm_line_num_node!(body)
+    else
+        body = Expr(:block, store_expr)
+    end
     setproperty_expr = Expr(:function, signature, body)
     push!(node.exprs, setproperty_expr)
     return dag

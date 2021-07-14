@@ -53,14 +53,6 @@ for header in find_std_headers()
 end
 ```
 
-#### Backward compatibility
-If you miss those old behaviors before v0.8, please `Pkg.pin` the package to v0.8 and
-make the following change in your old generator script:
-```julia
-using Clang: CLANG_INCLUDE
-using Clang.Deprecated.wrap_c
-using Clang.Deprecated.cindex
-```
 
 ## Build a custom C-bindings generator
 A custom C-bindings generator tends to be used on large codebases, often with multiple API versions to support. Building a generator requires some customization effort, so for small libraries the initial
@@ -70,6 +62,48 @@ The above-mentioned C-bindings generator only exposes several entry points for c
 In fact, it's actually not that hard to directly build your own C-bindings generator,
 for example, the following script is used for generating `LibClang`, you could refer to [Tutorial](@ref) for
 further details.
+
+Write a config file `generator.toml`:
+```
+[general]
+library_name = "libclang"
+output_file_path = "./LibClang.jl"
+module_name = "LibClang"
+jll_pkg_name = "Clang_jll"
+export_symbol_prefixes = ["CX", "clang_"]
+```
+
+and a Julia script `generator.jl`:
+```julia
+using Clang.Generators
+using Clang.LibClang.Clang_jll
+
+cd(@__DIR__)
+
+include_dir = joinpath(Clang_jll.artifact_dir, "include") |> normpath
+clang_dir = joinpath(include_dir, "clang-c")
+
+options = load_options(joinpath(@__DIR__, "generator.toml"))
+
+# add compiler flags, e.g. "-DXXXXXXXXX"
+args = get_default_args()
+push!(args, "-I$include_dir")
+
+headers = [joinpath(clang_dir, header) for header in readdir(clang_dir) if endswith(header, ".h")]
+# there is also an experimental `detect_headers` function for auto-detecting top-level headers in the directory
+# headers = detect_headers(clang_dir, args)
+
+# create context
+ctx = create_context(headers, args, options)
+
+# run generator
+build!(ctx)
+```
+
+Please refer to [this toml file](https://github.com/JuliaInterop/Clang.jl/blob/master/gen/generator.toml) for a full list of configuration options.
+
+### v0.12 example
+The generator above is the recommended generator for v0.14 and above. There was another generator wrappper before, here is an example.
 ```julia
 using Clang
 using Clang_jll # `pkg> activate Clang`

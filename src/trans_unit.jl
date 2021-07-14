@@ -111,7 +111,7 @@ See also [`parse_headers`](@ref).
 function parse_header(
     index::Index,
     header::AbstractString,
-    args::Vector{String}=[],
+    args::Vector{String}=String[],
     flags=CXTranslationUnit_None,
 )
     # TODO: support parsing in-memory with CXUnsavedFile arg

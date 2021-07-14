@@ -238,7 +238,7 @@ function _emit_getproperty_ptr!(body, root_cursor, cursor, options)
         offset = getOffsetOf(getCursorType(root_cursor), n)
         if isBitField(field_cursor)
             w = getFieldDeclBitWidth(field_cursor)
-            @assert w < 32 # Bit fields should not be larger than int(32 bits)
+            @assert w <= 32 # Bit fields should not be larger than int(32 bits)
             d, r = divrem(offset, 32)
             ex = :(f === $(QuoteNode(fsym)) && return (Ptr{$ty}(x + $(4d)), $r, $w))
         else
@@ -326,8 +326,7 @@ function emit_setproperty!(dag, node, options)
                 $store_expr
             else
                 baseptr, offset, width = fptr
-                ty = eltype(baseptr)
-                baseptr32 = convert(Ptr{UInt32}, x)
+                baseptr32 = convert(Ptr{UInt32}, baseptr)
                 u64 = unsafe_load(baseptr32)
                 straddle = offset + width > 32
                 if straddle

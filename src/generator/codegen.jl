@@ -291,7 +291,7 @@ function emit_getproperty!(dag, node, options)
             else
                 baseptr, offset, width = fptr
                 ty = eltype(baseptr)
-                baseptr32 = convert(Ptr{UInt32}, ptr)
+                baseptr32 = convert(Ptr{UInt32}, baseptr)
                 u64 = $load_base_expr
                 if offset + width > 32
                     u64 |= ($load_next_expr) << 32

@@ -20,9 +20,34 @@ run(wc)</code></pre><p>Note that it might complain about missing some std header
 using Clang: find_std_headers
 for header in find_std_headers()
     push!(clang_args, &quot;-I&quot;*header)
-end</code></pre><h4 id="Backward-compatibility"><a class="docs-heading-anchor" href="#Backward-compatibility">Backward compatibility</a><a id="Backward-compatibility-1"></a><a class="docs-heading-anchor-permalink" href="#Backward-compatibility" title="Permalink"></a></h4><p>If you miss those old behaviors before v0.8, please <code>Pkg.pin</code> the package to v0.8 and make the following change in your old generator script:</p><pre><code class="language-julia">using Clang: CLANG_INCLUDE
-using Clang.Deprecated.wrap_c
-using Clang.Deprecated.cindex</code></pre><h2 id="Build-a-custom-C-bindings-generator"><a class="docs-heading-anchor" href="#Build-a-custom-C-bindings-generator">Build a custom C-bindings generator</a><a id="Build-a-custom-C-bindings-generator-1"></a><a class="docs-heading-anchor-permalink" href="#Build-a-custom-C-bindings-generator" title="Permalink"></a></h2><p>A custom C-bindings generator tends to be used on large codebases, often with multiple API versions to support. Building a generator requires some customization effort, so for small libraries the initial investment may not pay off.</p><p>The above-mentioned C-bindings generator only exposes several entry points for customization. In fact, it&#39;s actually not that hard to directly build your own C-bindings generator, for example, the following script is used for generating <code>LibClang</code>, you could refer to <a href="tutorial/#Tutorial">Tutorial</a> for further details.</p><pre><code class="language-julia">using Clang
+end</code></pre><h2 id="Build-a-custom-C-bindings-generator"><a class="docs-heading-anchor" href="#Build-a-custom-C-bindings-generator">Build a custom C-bindings generator</a><a id="Build-a-custom-C-bindings-generator-1"></a><a class="docs-heading-anchor-permalink" href="#Build-a-custom-C-bindings-generator" title="Permalink"></a></h2><p>A custom C-bindings generator tends to be used on large codebases, often with multiple API versions to support. Building a generator requires some customization effort, so for small libraries the initial investment may not pay off.</p><p>The above-mentioned C-bindings generator only exposes several entry points for customization. In fact, it&#39;s actually not that hard to directly build your own C-bindings generator, for example, the following script is used for generating <code>LibClang</code>, you could refer to <a href="tutorial/#Tutorial">Tutorial</a> for further details.</p><p>Write a config file <code>generator.toml</code>:</p><pre><code class="nohighlight">[general]
+library_name = &quot;libclang&quot;
+output_file_path = &quot;./LibClang.jl&quot;
+module_name = &quot;LibClang&quot;
+jll_pkg_name = &quot;Clang_jll&quot;
+export_symbol_prefixes = [&quot;CX&quot;, &quot;clang_&quot;]</code></pre><p>and a Julia script <code>generator.jl</code>:</p><pre><code class="language-julia">using Clang.Generators
+using Clang.LibClang.Clang_jll
+
+cd(@__DIR__)
+
+include_dir = joinpath(Clang_jll.artifact_dir, &quot;include&quot;) |&gt; normpath
+clang_dir = joinpath(include_dir, &quot;clang-c&quot;)
+
+options = load_options(joinpath(@__DIR__, &quot;generator.toml&quot;))
+
+# add compiler flags, e.g. &quot;-DXXXXXXXXX&quot;
+args = get_default_args()
+push!(args, &quot;-I$include_dir&quot;)
+
+headers = [joinpath(clang_dir, header) for header in readdir(clang_dir) if endswith(header, &quot;.h&quot;)]
+# there is also an experimental `detect_headers` function for auto-detecting top-level headers in the directory
+# headers = detect_headers(clang_dir, args)
+
+# create context
+ctx = create_context(headers, args, options)
+
+# run generator
+build!(ctx)</code></pre><p>Please refer to <a href="https://github.com/JuliaInterop/Clang.jl/blob/master/gen/generator.toml">this toml file</a> for a full list of configuration options.</p><h3 id="v0.12-example"><a class="docs-heading-anchor" href="#v0.12-example">v0.12 example</a><a id="v0.12-example-1"></a><a class="docs-heading-anchor-permalink" href="#v0.12-example" title="Permalink"></a></h3><p>The generator above is the recommended generator for v0.14 and above. There was another generator wrappper before, here is an example.</p><pre><code class="language-julia">using Clang
 using Clang_jll # `pkg&gt; activate Clang`
 
 const LIBCLANG_INCLUDE = joinpath(dirname(Clang_jll.libclang_path), &quot;..&quot;, &quot;include&quot;, &quot;clang-c&quot;) |&gt; normpath
@@ -81,4 +106,4 @@ end
 
 # uncomment the following code to generate dependency and template files
 # copydeps(dirname(api_file))
-# print_template(joinpath(dirname(api_file), &quot;LibTemplate.jl&quot;))</code></pre><h2 id="LibClang"><a class="docs-heading-anchor" href="#LibClang">LibClang</a><a id="LibClang-1"></a><a class="docs-heading-anchor-permalink" href="#LibClang" title="Permalink"></a></h2><p>LibClang is a thin wrapper over libclang. It&#39;s one-to-one mapped to the libclang APIs. By <code>using Clang.LibClang</code>, all of the <code>CX</code>/<code>clang_</code>-prefixed libclang APIs are imported into the current namespace, with which you could build up your own tools from the scratch. If you are unfamiliar with the Clang AST, a good starting point is the <a href="http://clang.llvm.org/docs/IntroductionToTheClangAST.html">Introduction to the Clang AST</a>.</p></article><nav class="docs-footer"><a class="docs-footer-nextpage" href="tutorial/">Tutorial »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Tuesday 29 June 2021 02:14">Tuesday 29 June 2021</span>. Using Julia version 1.6.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+# print_template(joinpath(dirname(api_file), &quot;LibTemplate.jl&quot;))</code></pre><h2 id="LibClang"><a class="docs-heading-anchor" href="#LibClang">LibClang</a><a id="LibClang-1"></a><a class="docs-heading-anchor-permalink" href="#LibClang" title="Permalink"></a></h2><p>LibClang is a thin wrapper over libclang. It&#39;s one-to-one mapped to the libclang APIs. By <code>using Clang.LibClang</code>, all of the <code>CX</code>/<code>clang_</code>-prefixed libclang APIs are imported into the current namespace, with which you could build up your own tools from the scratch. If you are unfamiliar with the Clang AST, a good starting point is the <a href="http://clang.llvm.org/docs/IntroductionToTheClangAST.html">Introduction to the Clang AST</a>.</p></article><nav class="docs-footer"><a class="docs-footer-nextpage" href="tutorial/">Tutorial »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.3 on <span class="colophon-date" title="Wednesday 14 July 2021 13:33">Wednesday 14 July 2021</span>. Using Julia version 1.6.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

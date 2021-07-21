@@ -60,7 +60,7 @@ investment may not pay off.
 
 The above-mentioned C-bindings generator only exposes several entry points for customization.
 In fact, it's actually not that hard to directly build your own C-bindings generator,
-for example, the following script is used for generating `LibClang`, you could refer to [Tutorial](@ref) for
+for example, the following script is used for generating `LibClang`, you could refer to [LibClang Tutorial](@ref) for
 further details.
 
 Write a config file `generator.toml`:

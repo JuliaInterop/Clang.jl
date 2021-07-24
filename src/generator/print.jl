@@ -82,7 +82,19 @@ end
 
 function pretty_print(io, node::ExprNode{<:AbstractStructNodeType}, options::Dict)
     @assert !isempty(node.exprs)
-    for expr in node.exprs
+    extract_comment = get(options, "extract_c_comment", false)
+    struct_def = node.exprs[1]
+    mutable, name, members = struct_def.args
+    child_nodes = children(node.cursor)
+    @assert length(child_nodes) == length(members.args)
+    mutable && print(io, "mutable ")
+    println(io, "struct ", name)
+    for (expr, child) in zip(members.args, child_nodes)
+        extract_comment && print_documentation(io, child, "    ")
+        print(io, "    ", string(expr))
+    end
+    println("end")
+    for expr in node.exprs[2:end]
         println(io, expr)
         println(io)
     end
@@ -92,6 +104,7 @@ end
 function pretty_print(io, node::ExprNode{StructMutualRef}, options::Dict)
     @assert !isempty(node.exprs)
     expr = node.exprs[1]
+    extract_comment = get(options, "extract_c_comment", false)
 
     @assert Meta.isexpr(expr, :struct)
     mutability = expr.args[1] ? "mutable struct" : "struct"
@@ -100,11 +113,17 @@ function pretty_print(io, node::ExprNode{StructMutualRef}, options::Dict)
 
     block = expr.args[3]
     @assert Meta.isexpr(block, :block)
-    for ex in block.args
+
+    child_nodes = filter(x->x isa CLFieldDecl, children(node.cursor))
+    @assert length(child_nodes) == length(block.args)
+
+    # A StructDecl is inserted before the FieldDecl with forward decl
+    for (ex, child) in zip(block.args, child_nodes)
+        print_documentation(io, child, "    ")
         if Meta.isexpr(ex, :block)
-            println(io, "    # " * string(ex.args[1]))
+            println(io, "    ", string(ex.args[2]), " # ", string(ex.args[1]))
         else
-            println(io, "    " * string(ex))
+            println(io, "    ", string(ex))
         end
     end
     println(io, "end")
@@ -121,6 +140,7 @@ end
 function pretty_print(io, node::ExprNode{<:AbstractEnumNodeType}, options::Dict)
     @assert !isempty(node.exprs)
     use_native_enum = get(options, "use_julia_native_enum_type", false)
+    extract_comment = get(options, "extract_c_comment", false)
     enum_values = Dict()
 
     head = node.exprs[1]
@@ -128,7 +148,10 @@ function pretty_print(io, node::ExprNode{<:AbstractEnumNodeType}, options::Dict)
     if length(node.exprs) ≥ 2
         enum_macro = use_native_enum ? "@enum" : "@cenum"
         println(io, "$enum_macro $head_expr begin")
-        for i = 2:length(node.exprs)
+        child_nodes = children(node.cursor)
+        @assert length(child_nodes) == length(node.exprs) - 1
+        for (i, child) = zip(2:length(node.exprs), child_nodes)
+            extract_comment && print_documentation(io, child, "    ")
             expr = node.exprs[i]
             if use_native_enum
                 n, v = expr.args
@@ -165,7 +188,7 @@ pretty_print(io, node::ExprNode{<:ForwardDecls}, options::Dict) = nothing
 function pretty_print(io, node::ExprNode{<:OpaqueTags}, options::Dict)
     @assert length(node.exprs) == 1
     expr = node.exprs[1]
-
+    
     codegen_ops = get(options, "codegen", Dict())
     opaque_as_mutable = get(codegen_ops, "opaque_as_mutable_struct", true)
 

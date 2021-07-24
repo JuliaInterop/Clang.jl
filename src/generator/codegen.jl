@@ -462,9 +462,11 @@ function emit!(dag::ExprDAG, node::ExprNode{StructMutualRef}, options::Dict; arg
                 # also emit the original expressions, so we can add corresponding comments
                 # in the pretty-print pass
                 comment = Expr(:(::), field_sym, deepcopy(translated))
-                push!(block.args, Expr(:block, comment))
                 replace_pointee!(translated, :Cvoid)
                 push!(mutual_ref_field_cursors, field_cursor)
+                # Avoid pushing two expressions for one field
+                push!(block.args, Expr(:block, comment, :($field_sym::$translated)))
+                continue
             end
         end
 

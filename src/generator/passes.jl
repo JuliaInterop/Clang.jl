@@ -891,29 +891,29 @@ In this pass, all symbols are dumped to file.
 mutable struct GeneralPrinter <: AbstractPrinter
     file::AbstractString
     show_info::Bool
-    extract_comment::Bool
 end
-GeneralPrinter(file::AbstractString; info=true, extract_comment=false) = GeneralPrinter(file, info, extract_comment)
+GeneralPrinter(file::AbstractString; info=true) = GeneralPrinter(file, info)
 
 function (x::GeneralPrinter)(dag::ExprDAG, options::Dict)
     general_options = get(options, "general", Dict())
     log_options = get(general_options, "log", Dict())
     show_info = get(log_options, "GeneralPrinter_log", x.show_info)
     blacklist = get(general_options, "printer_blacklist", [])
+    extract_c_comment = get(general_options, "extract_c_comment", false)
 
     show_info && @info "[GeneralPrinter]: print to $(x.file)"
     open(x.file, "a") do io
         for node in dag.nodes
             string(node.id) ∈ blacklist && continue
             node.type isa AbstractMacroNodeType && continue
-            isempty(node.exprs) || print_documentation(io, node)
+            isempty(node.exprs) || extract_c_comment && print_documentation(io, node, "")
             pretty_print(io, node, general_options)
         end
         # print macros in the bottom of the file
         for node in dag.nodes
             string(node.id) ∈ blacklist && continue
             node.type isa AbstractMacroNodeType || continue
-            isempty(node.exprs) || print_documentation(io, node)
+            isempty(node.exprs) || extract_c_comment && print_documentation(io, node, "")
             pretty_print(io, node, options)
         end
     end
@@ -1082,19 +1082,22 @@ function (x::CodegenMacro)(dag::ExprDAG, options::Dict)
     return dag
 end
 
-function print_documentation(io::IO, node::ExprNode)
-    cursor = node.cursor
+print_documentation(io::IO, node::ExprNode, indent) = print_documentation(io, node.cursor, indent)
+function print_documentation(io::IO, cursor::Union{CLCursor, CXCursor}, indent)
     comment = Clang.getRawCommentText(cursor)
     doc = strip_comment_markers(comment)
     # Do not print """ if no doc
-    isempty(doc) && return
-    println(io, '"'^3)
-    println(io, replace(doc, "\\"=>"\\\\"))
-    println(io, '"'^3)
+    all(isempty, doc) && return
+
+    println(io, indent * '"'^3)
+    for line in doc
+        println(io, indent, replace(line, "\\"=>"\\\\"))
+    end
+    println(io, indent * '"'^3)
 end
 
-function strip_comment_markers(s::AbstractString)
-    # Assume the comment is either /**/ or //, 
+function strip_comment_markers(s::AbstractString)::Vector
+    # Assume the comments are either /**/ or //, 
     # although Clang may associate multiple consecutive comments as a whole
 
     # // /*
@@ -1104,17 +1107,17 @@ function strip_comment_markers(s::AbstractString)
     # // */
     last_line_pattern = r"^\s*(/{2,}!?\s*(.*)|(.*?)\*+/)$"
     # // /**/
-    single_line_pattern = r"^\s*(/\*\s*(.*)\s*\*/|/{2,}\s*(.*))$"
+    single_line_pattern = r"^\s*(/\*\s*(.*)\s*\*/|/{2,}!?\s*(.*))$"
 
     lines = split(s, '\n')
     if length(lines) == 0
-        return ""
+        return []
     elseif length(lines) == 1
         m = match(single_line_pattern, only(lines))
         if isnothing(m)
-            return s
+            return [s]
         else
-            return isnothing(m[2]) ? m[3] : m[2]
+            return [isnothing(m[2]) ? m[3] : m[2]]
         end
     else
         first = lines[1]
@@ -1142,6 +1145,6 @@ function strip_comment_markers(s::AbstractString)
             m = isnothing(m_last[2]) ? m_last[3] : m_last[2]
             isempty(m) || push!(stripped, m)
         end
-        return join(stripped, '\n')
+        return stripped
     end
 end

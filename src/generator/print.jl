@@ -95,15 +95,16 @@ function pretty_print(io, node::ExprNode{<:AbstractStructNodeType}, options::Dic
     extract_comment = get(options, "extract_c_comment", false)
     struct_def = node.exprs[1]
     mutable, name, members = struct_def.args
-    child_nodes = children(node.cursor)
+    # `chldren(node.cursor)` may also return forward declaration of struct type for example, so we filter these out.
+    child_nodes = filter(x->x isa CLFieldDecl, children(node.cursor))
     @assert length(child_nodes) == length(members.args)
     mutable && print(io, "mutable ")
     println(io, "struct ", name)
     for (expr, child) in zip(members.args, child_nodes)
         extract_comment && print_documentation(io, child, "    ")
-        print(io, "    ", string(expr))
+        println(io, "    ", string(expr))
     end
-    println("end")
+    println(io, "end")
     for expr in node.exprs[2:end]
         println(io, expr)
         println(io)
@@ -158,7 +159,7 @@ function pretty_print(io, node::ExprNode{<:AbstractEnumNodeType}, options::Dict)
     if length(node.exprs) ≥ 2
         enum_macro = use_native_enum ? "@enum" : "@cenum"
         println(io, "$enum_macro $head_expr begin")
-        child_nodes = children(node.cursor)
+        child_nodes = filter(x->x isa CLEnumConstantDecl, children(node.cursor))
         @assert length(child_nodes) == length(node.exprs) - 1
         for (i, child) = zip(2:length(node.exprs), child_nodes)
             extract_comment && print_documentation(io, child, "    ")

@@ -296,7 +296,9 @@ function macro_emit!(dag::ExprDAG, node::ExprNode{MacroDefault}, options::Dict)
     end
     str = reduce(add_spaces_for_macros, txts)
     try
-        push!(node.exprs, Expr(:const, Expr(:(=), sym, Meta.parse(str))))
+        ex = Meta.parse(str)
+        Meta.isexpr(ex, :incomplete) && throw(ParseError(ex.args|>only))
+        push!(node.exprs, Expr(:const, Expr(:(=), sym, ex)))
     catch err
         print_comment && push!(node.exprs, get_comment_expr(toks))
     end

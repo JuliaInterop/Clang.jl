@@ -1091,7 +1091,7 @@ function print_documentation(io::IO, cursor::Union{CLCursor, CXCursor}, indent)
 
     println(io, indent * '"'^3)
     for line in doc
-        println(io, indent, replace(line, "\\"=>"\\\\"))
+        println(io, indent, replace(line, r"([\\$])"=>s"\\\1"))
     end
     println(io, indent * '"'^3)
 end
@@ -1107,7 +1107,7 @@ function strip_comment_markers(s::AbstractString)::Vector
     # // */
     last_line_pattern = r"^\s*(/{2,}!?\s*(.*)|(.*?)\*+/)$"
     # // /**/
-    single_line_pattern = r"^\s*(/\*\s*(.*)\s*\*/|/{2,}!?\s*(.*))$"
+    single_line_pattern = r"^\s*(/\*+<?\s*(.*)\s*\*/|/{2,}!?\s*(.*))$"
 
     lines = split(s, '\n')
     if length(lines) == 0

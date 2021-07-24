@@ -124,12 +124,11 @@ function create_context(headers::Vector, args::Vector=String[], options::Dict=Di
     common_file = get(general_options, "output_common_file_path", "")
 
     output_file_path = get(general_options, "output_file_path", "")
-    extract_c_comment = get(general_options, "extract_c_comment", false)
 
     if isempty(api_file) && isempty(common_file)
         if !isempty(output_file_path)
             push!(ctx.passes, ProloguePrinter(output_file_path))
-            push!(ctx.passes, GeneralPrinter(output_file_path, extract_comment=extract_c_comment))
+            push!(ctx.passes, GeneralPrinter(output_file_path))
             push!(ctx.passes, EpiloguePrinter(output_file_path))
         else
             # print to stdout if there is no `output_file_path`

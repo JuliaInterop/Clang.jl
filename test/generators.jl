@@ -34,10 +34,11 @@ include("rewriter.jl")
 end
 
 @testset "Comments" begin
-    @test strip_comment_markers("/* abc */") == "abc "
-    @test strip_comment_markers("/// hello") == "hello"
-    @test strip_comment_markers("/**\n * line1\n * line2\n */") == "line1\nline2"
-    @test strip_comment_markers("/*!\n * line1\n * line2\n */") == "line1\nline2"
-    @test strip_comment_markers("    /// line1\n    /// line2") == "line1\nline2"
-    @test strip_comment_markers("//! line1\n//! line2") == "line1\nline2"
+    @test strip_comment_markers("/* abc */") == ["abc "]
+    @test strip_comment_markers("/// hello") == ["hello"]
+    @test strip_comment_markers("/**\n * line1\n * line2\n */") == ["line1", "line2"]
+    @test strip_comment_markers("/*!\n * line1\n * line2\n */") == ["line1", "line2"]
+    @test strip_comment_markers("    /// line1\n    /// line2") == ["line1", "line2"]
+    @test strip_comment_markers("//! line1\n//! line2") == ["line1", "line2"]
+    @test strip_comment_markers("//! line1") == ["line1"]
 end

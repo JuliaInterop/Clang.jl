@@ -1,6 +1,7 @@
 using Clang.Generators
 using Clang.LibClang.Clang_jll
 using Test
+using Clang.Generators: strip_comment_markers
 
 include("rewriter.jl")
 
@@ -30,4 +31,13 @@ include("rewriter.jl")
 
     # print
     @test_logs (:info, "Done!") match_mode=:any build!(ctx, BUILDSTAGE_PRINTING_ONLY)
+end
+
+@testset "Comments" begin
+    @test strip_comment_markers("/* abc */") == "abc "
+    @test strip_comment_markers("/// hello") == "hello"
+    @test strip_comment_markers("/**\n * line1\n * line2\n */") == "line1\nline2"
+    @test strip_comment_markers("/*!\n * line1\n * line2\n */") == "line1\nline2"
+    @test strip_comment_markers("    /// line1\n    /// line2") == "line1\nline2"
+    @test strip_comment_markers("//! line1\n//! line2") == "line1\nline2"
 end

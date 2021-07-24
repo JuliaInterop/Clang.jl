@@ -891,8 +891,9 @@ In this pass, all symbols are dumped to file.
 mutable struct GeneralPrinter <: AbstractPrinter
     file::AbstractString
     show_info::Bool
+    extract_comment::Bool
 end
-GeneralPrinter(file::AbstractString; info=true) = GeneralPrinter(file, info)
+GeneralPrinter(file::AbstractString; info=true, extract_comment=false) = GeneralPrinter(file, info, extract_comment)
 
 function (x::GeneralPrinter)(dag::ExprDAG, options::Dict)
     general_options = get(options, "general", Dict())
@@ -905,12 +906,14 @@ function (x::GeneralPrinter)(dag::ExprDAG, options::Dict)
         for node in dag.nodes
             string(node.id) ∈ blacklist && continue
             node.type isa AbstractMacroNodeType && continue
+            isempty(node.exprs) || print_documentation(io, node)
             pretty_print(io, node, general_options)
         end
         # print macros in the bottom of the file
         for node in dag.nodes
             string(node.id) ∈ blacklist && continue
             node.type isa AbstractMacroNodeType || continue
+            isempty(node.exprs) || print_documentation(io, node)
             pretty_print(io, node, options)
         end
     end
@@ -1089,4 +1092,68 @@ function (x::CodegenMacro)(dag::ExprDAG, options::Dict)
     end
 
     return dag
+end
+
+function print_documentation(io::IO, node::ExprNode)
+    cursor = node.cursor
+    comment = Clang.getRawCommentText(cursor)
+    doc = strip_comment_markers(comment)
+    # Do not print """ if no doc
+    isempty(doc) && return
+    println(io, '"'^3)
+    println(io, replace(doc, "\\"=>"\\\\"))
+    println(io, '"'^3)
+end
+
+function strip_comment_markers(s::AbstractString)
+    # Assume the comment is either /**/ or //, 
+    # although Clang may associate multiple consecutive comments as a whole
+
+    # // /*
+    first_line_pattern = r"^\s*(/{2,}!?|/\*+!?)\s*(.*)$"
+    # // *
+    middle_line_pattern = r"^\s*(/{2,}!?\s?|\*?\s?)(.*)$"
+    # // */
+    last_line_pattern = r"^\s*(/{2,}!?\s*(.*)|(.*?)\*+/)$"
+    # // /**/
+    single_line_pattern = r"^\s*(/\*\s*(.*)\s*\*/|/{2,}\s*(.*))$"
+
+    lines = split(s, '\n')
+    if length(lines) == 0
+        return ""
+    elseif length(lines) == 1
+        m = match(single_line_pattern, only(lines))
+        if isnothing(m)
+            return s
+        else
+            return isnothing(m[2]) ? m[3] : m[2]
+        end
+    else
+        first = lines[1]
+        last = lines[end]
+        middle = lines[2:end-1]
+        stripped = SubString{String}[]
+        m_first = match(first_line_pattern, first)
+        m_last = match(last_line_pattern, last)
+        if isnothing(m_first)
+            push!(stripped, first)
+        elseif !isempty(m_first[2])
+            push!(stripped, m_first[2])
+        end
+        for line in middle
+            m = match(middle_line_pattern, line)
+            if isnothing(m)
+                push!(stripped, line)
+            else
+                push!(stripped, m[2])
+            end
+        end
+        if isnothing(m_last)
+            push!(stripped, last)
+        else
+            m = isnothing(m_last[2]) ? m_last[3] : m_last[2]
+            isempty(m) || push!(stripped, m)
+        end
+        return join(stripped, '\n')
+    end
 end

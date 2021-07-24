@@ -18,6 +18,14 @@ Base.hash(x::CLCursor) = hash(x.cursor)
 Base.:(==)(c1::CLCursor, c2::CXCursor) = c1.cursor == c2
 Base.:(==)(c1::CXCursor, c2::CLCursor) = c1 == c2.cursor
 
+function Base.convert(::Type{String}, cxstr::CXString)
+    ptr = clang_getCString(cxstr)
+    ptr == C_NULL && return ""
+    s = unsafe_string(ptr)
+    clang_disposeString(cxstr)
+    return s
+end
+
 """
     kind(c::CXCursor) -> CXCursorKind
 Return the kind of the given cursor.
@@ -394,8 +402,8 @@ isVariadic(c::Union{CXCursor,CLCursor}) = clang_Cursor_isVariadic(c) != 0
 
 # clang_Cursor_isExternalSymbol
 # clang_Cursor_getCommentRange
-# clang_Cursor_getRawCommentText
-# clang_Cursor_getBriefCommentText
+getRawCommentText(c::Union{CXCursor, CLCursor}) = convert(String, clang_Cursor_getRawCommentText(c))
+getBriefCommentText(c::Union{CXCursor, CLCursor}) = convert(String, clang_Cursor_getBriefCommentText(c))
 
 function spelling(k::CXCursorKind)
     cxstr = clang_getCursorKindSpelling(k)

@@ -112,6 +112,10 @@ auto_mutability_blacklist = []
 # opposite to `auto_mutability_blacklist` and has a higher priority
 auto_mutability_whitelist = []
 
+# if true, C comments are also extracted and printed as docstring.
+# By default, Clang only parses doxygen comment, pass `-fparse-all-comments` to Clang to parse non-doxygen comments.
+extract_c_comment = false
+
 [codegen]
 # map C's bool to Julia's Bool instead of `Cuchar` a.k.a `UInt8`.
 use_julia_bool = true

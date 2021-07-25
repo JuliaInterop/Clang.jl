@@ -132,6 +132,9 @@ opaque_as_mutable_struct = true
 # if true, use Julia 1.5's new `@ccall` macro 
 use_ccall_macro = true
 
+# if true, variadic functions are wrapped with `@ccall` macro. Otherwise variadic functions are ignored.
+wrap_variadic_function = false
+
 # generate getproperty/setproperty! methods for the types in the following list
 field_access_method_list = []
 

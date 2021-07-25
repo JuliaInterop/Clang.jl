@@ -959,6 +959,7 @@ ProloguePrinter(file::AbstractString; info=true) = ProloguePrinter(file, info)
 
 function (x::ProloguePrinter)(dag::ExprDAG, options::Dict)
     general_options = get(options, "general", Dict())
+    codegen_options = get(options, "codegen", Dict())
     log_options = get(general_options, "log", Dict())
     show_info = get(log_options, "ProloguePrinter_log", x.show_info)
     module_name = get(general_options, "module_name", "")
@@ -967,6 +968,7 @@ function (x::ProloguePrinter)(dag::ExprDAG, options::Dict)
     prologue_file_path = get(general_options, "prologue_file_path", "")
     use_native_enum = get(general_options, "use_julia_native_enum_type", false)
     print_CEnum = get(general_options, "print_using_CEnum", true)
+    wrap_variadic_function = get(codegen_options, "wrap_variadic_function", false)
 
     show_info && @info "[ProloguePrinter]: print to $(x.file)"
     open(x.file, "w") do io
@@ -995,6 +997,16 @@ function (x::ProloguePrinter)(dag::ExprDAG, options::Dict)
             println(io, "using CEnum")
             println(io)
         end
+
+        if wrap_variadic_function
+            println(io, """
+            to_c_type(t::Type) = t
+            to_c_type_pairs(va_list) = map(enumerate(to_c_type.(va_list))) do (ind, type)
+                :(va_list[\$ind]::\$type)
+            end
+            """)
+        end
+
         # print prelogue patches
         if !isempty(prologue_file_path)
             println(io, read(prologue_file_path, String))

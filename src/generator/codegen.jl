@@ -19,19 +19,28 @@ function _get_func_name(cursor, options)
     return library_name
 end
 
-function emit!(dag::ExprDAG, node::ExprNode{FunctionProto}, options::Dict; args...)
+"Get argument names and types. Return (names, types)."
+function _get_func_arg(cursor, options, dag)
+    # argument names
     conflict_syms = get(options, "function_argument_conflict_symbols", [])
-
-    cursor = node.cursor
-
-    library_name = _get_func_name(cursor, options)
-    library_expr = Meta.parse(library_name)
-
-    func_name = Symbol(spelling(cursor))
     func_args = get_function_args(cursor)
-    arg_types = [getArgType(getCursorType(cursor), i - 1) for i in 1:length(func_args)]
-    ret_type = translate(tojulia(getCursorResultType(cursor)), options)
+    # handle unnamed args
+    arg_names = Vector{Symbol}(undef, length(func_args))
+    for (i, arg) in enumerate(func_args)
+        ns = Symbol(name(arg))
+        safe_name = make_name_safe(ns)
+        safe_name = isempty(safe_name) ? "arg$i" : safe_name
+        # handle name collisions
+        if haskey(dag.tags, ns) || haskey(dag.ids, ns) || haskey(dag.ids_extra, ns)
+            safe_name *= "_"
+        elseif safe_name ∈ conflict_syms
+            safe_name = "_" * safe_name
+        end
+        arg_names[i] = Symbol(safe_name)
+    end
 
+    # argument types
+    arg_types = [getArgType(getCursorType(cursor), i - 1) for i in 1:length(func_args)]
     args = Union{Expr,Symbol}[translate(tojulia(arg), options) for arg in arg_types]
     for (i, arg) in enumerate(args)
         # array function arguments should decay to pointers
@@ -50,21 +59,23 @@ function emit!(dag::ExprDAG, node::ExprNode{FunctionProto}, options::Dict; args.
             end
         end
     end
+    return arg_names, args
+end
 
-    # handle unnamed args
-    arg_names = Vector{Symbol}(undef, length(func_args))
-    for (i, arg) in enumerate(func_args)
-        ns = Symbol(name(arg))
-        safe_name = make_name_safe(ns)
-        safe_name = isempty(safe_name) ? "arg$i" : safe_name
-        # handle name collisions
-        if haskey(dag.tags, ns) || haskey(dag.ids, ns) || haskey(dag.ids_extra, ns)
-            safe_name *= "_"
-        elseif safe_name ∈ conflict_syms
-            safe_name = "_" * safe_name
-        end
-        arg_names[i] = Symbol(safe_name)
-    end
+function _get_func_return_type(cursor, options)
+    translate(tojulia(getCursorResultType(cursor)), options)
+end
+
+function emit!(dag::ExprDAG, node::ExprNode{FunctionProto}, options::Dict; args...)
+    cursor = node.cursor
+
+    library_name = _get_func_name(cursor, options)
+    library_expr = Meta.parse(library_name)
+
+    func_name = Symbol(spelling(cursor))
+    
+    arg_names, args = _get_func_arg(cursor, options, dag)
+    ret_type = _get_func_return_type(cursor, options)
 
     is_strict_typed = get(options, "is_function_strictly_typed", false)
     signature = if is_strict_typed
@@ -131,7 +142,35 @@ function emit!(dag::ExprDAG, node::ExprNode{FunctionNoProto}, options::Dict; arg
 end
 
 function emit!(dag::ExprDAG, node::ExprNode{FunctionVariadic}, options::Dict; args...)
-    # TODO: add impl
+    # @ccall is needed to support variadic argument
+    use_ccall_macro = get(options, "use_ccall_macro", true)
+    if use_ccall_macro
+        cursor = node.cursor
+        is_strict_typed = get(options, "is_function_strictly_typed", false)
+        arg_names, args = _get_func_arg(cursor, options, dag)
+        ret_type = _get_func_return_type(cursor, options)
+        library_name = _get_func_name(cursor, options)
+        library_expr = Meta.parse(library_name)
+        func_name = Symbol(spelling(cursor))
+        
+        signature = is_strict_typed ? efunsig(func_name, arg_names, args) : Expr(:call, func_name, arg_names...)
+        push!(signature.args, :(va_list...))
+        
+        fixed_args = map(arg_names, args) do name, type
+            :($name::$type)
+        end
+        va_list_expr = Expr(:$, :(to_c_type_pairs(va_list)...))
+        ccall_body = :($library_expr.$func_name($(fixed_args...); $va_list_expr)::$ret_type)
+        ccall_expr = Expr(:macrocall, Symbol("@ccall"), nothing, ccall_body) 
+        body = quote
+            $(Meta.quot(ccall_expr))
+        end
+
+        generated = Expr(:function, signature, body)
+        ex = Expr(:macrocall, Symbol("@generated"), nothing, generated)
+        rm_line_num_node!(ex)
+        push!(node.exprs, ex)
+    end
     return dag
 end
 

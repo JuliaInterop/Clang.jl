@@ -12,7 +12,8 @@ makedocs(;
     ),
     pages=[
         "Introduction" => "index.md",
-        "Tutorial" => "tutorial.md",
+        "Generator Tutorial" => "generator.md",
+        "LibClang Tutorial" => "tutorial.md",
         "API Reference" => "api.md",
     ],
 )

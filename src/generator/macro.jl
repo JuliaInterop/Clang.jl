@@ -271,6 +271,34 @@ function macro_emit!(dag::ExprDAG, node::ExprNode{MacroUnsupported}, options::Di
     return dag
 end
 
+"Try to parse the string, return `nothing` if the string is incomplete or has syntax error."
+function try_parse(str)
+    try
+        ex = Meta.parse(str)
+        Meta.isexpr(ex, :incomplete) && throw(Meta.ParseError("failed to parse:  $str"))
+        return ex
+    catch err
+        return nothing
+    end
+end
+
+"Parse a string potentially as a pointer type (`type *``). Issue #311"
+function parse_as_pointer(str)
+    m = match(r"^(.+?)((?:\s(:?\*|const|volatile))+)$", str)
+    isnothing(m) && return nothing
+
+    base_type = m[1]
+    ptr_postfix = m[2]
+    ex = try_parse(base_type)
+    isnothing(ex) && return nothing
+
+    ptr_count = count("*", ptr_postfix)
+    for _ in 1:ptr_count
+        ex = :(Ptr{$ex})
+    end
+    return ex
+end
+
 function macro_emit!(dag::ExprDAG, node::ExprNode{MacroDefault}, options::Dict)
     mode = get(options, "macro_mode", "basic")
     print_comment = get(options, "add_comment_for_skipped_macro", true)
@@ -295,12 +323,11 @@ function macro_emit!(dag::ExprDAG, node::ExprNode{MacroDefault}, options::Dict)
         txts[i] = tok.text
     end
     str = reduce(add_spaces_for_macros, txts)
-    try
-        ex = Meta.parse(str)
-        Meta.isexpr(ex, :incomplete) && throw(Meta.ParseError("failed to parse:  $str"))
-        push!(node.exprs, Expr(:const, Expr(:(=), sym, ex)))
-    catch err
+    ex = parse_as_pointer(str)
+    if isnothing(ex)
         print_comment && push!(node.exprs, get_comment_expr(toks))
+    else
+        push!(node.exprs, Expr(:const, Expr(:(=), sym, ex)))
     end
 
     return dag

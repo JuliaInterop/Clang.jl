@@ -1084,10 +1084,11 @@ end
 
 print_documentation(io::IO, node::ExprNode, indent) = print_documentation(io, node.cursor, indent)
 function print_documentation(io::IO, cursor::Union{CLCursor, CXCursor}, indent)
-    comment = Clang.getRawCommentText(cursor)
-    doc = strip_comment_markers(comment)
+    doc = format_doxygen(Clang.getParsedComment(cursor))
+    # comment = Clang.getRawCommentText(cursor)
+    # doc = strip_comment_markers(comment)
     # Do not print """ if no doc
-    all(isempty, doc) && return
+    ismissing(doc) && return
 
     println(io, indent * '"'^3)
     for line in doc
@@ -1147,4 +1148,99 @@ function strip_comment_markers(s::AbstractString)::Vector
         end
         return stripped
     end
+end
+
+using Printf
+
+format_doxygen(c::Clang.Null) = missing
+
+function format_doxygen(comment::Clang.FullComment)
+    child_nodes = children(comment)
+    # Collect parameters
+    parameters, paragraphs = [], []
+    returns = missing
+    for c in child_nodes
+        if c isa Clang.ParamCommand
+            push!(parameters, c)
+        elseif c isa Clang.BlockCommand
+            if Clang.getCommandName(c) == "returns"
+                returns = c
+            else
+                push!(paragraphs, c)
+            end
+        elseif c isa Union{Clang.Paragraph,Clang.VerbatimLine,Clang.VerbatimBlockCommand}
+            push!(paragraphs, c)
+        else
+            @info "Unhandled toplevel element: $c $(children(c))"
+            @show format_fallback(c)
+        end
+    end
+    lines = String[]
+    for p in paragraphs
+        Clang.isWhiteSpace(p) && continue
+        t = format_fallback(p)
+        if t isa String
+            push!(lines, t)
+        else
+            append!(lines, t)
+        end
+    end
+    if !isempty(parameters)
+        push!(lines, "### Parameters:")
+        append!(lines, format_parameter.(parameters))
+    end
+    if !ismissing(returns)
+        push!(lines, "### Returns")
+        push!(lines, format_fallback(Clang.getParagraph(returns)))
+    end
+    lines
+end
+
+function format_parameter(p)
+    name = Clang.getParamName(p)
+    name = replace(name, "_"=>"\\_")
+    content = join(format_fallback.(children(p)))
+    # Markdown lists seem to need a newline as separator
+    "* **$name**:$content\n"
+end
+
+format_fallback(t::Clang.Text) = Clang.getText(t)
+function format_fallback(t::Clang.VerbatimLine)
+    "`" * Clang.getText(t) * "`"
+end
+function format_fallback(t::Clang.VerbatimBlockCommand)
+    lines = Clang.getText.(children(t))
+    # I don't know but Clang does not parse its own documentation right
+    lines = filter(x->!occursin('\n', x), lines)
+    ["```c++", lines..., "```"]
+end
+function format_fallback(c::Clang.InlineCommand)
+    k = Clang.getRenderKind(c)
+    args = join(Clang.getArguments(c), ' ')
+    if k == Clang.CXCommentInlineCommandRenderKind_Normal
+        return args
+    elseif k == Clang.CXCommentInlineCommandRenderKind_Bold
+        return "**" * args * "**"
+    elseif k == Clang.CXCommentInlineCommandRenderKind_Monospaced
+        return "`" * args * "`"
+    elseif k == Clang.CXCommentInlineCommandRenderKind_Emphasized
+        return "*" * args * "*"
+    elseif k == Clang.CXCommentInlineCommandRenderKind_Anchor
+        return ""
+    end
+end
+format_fallback(p::Clang.Paragraph) = join(format_fallback.(children(p)))
+function format_fallback(p::Clang.ParamCommand)
+    name = Clang.getParamName(p)
+    name = replace(name, "_"=>"\\_")
+    dir = Clang.getDirection(p)
+    content = join(format_fallback.(children(p)))
+    "\\param $name$content"
+end
+function format_fallback(c::Clang.BlockCommand)
+    name = Clang.getCommandName(c)
+    args = join(Clang.getArguments(c), ' ')
+    content = format_fallback(Clang.getParagraph(c))
+    name == "li" && return "*$content"
+    "\\$name$args$content"
 end

@@ -547,3 +547,97 @@ function is_inclusion_directive(x::CLCursor)
     k = kind(x)
     return k == CXCursor_InclusionDirective && k == CXCursor_LastPreprocessing
 end
+
+
+## Comment utilities
+
+getParsedComment(c::CXCursor) = clang_Cursor_getParsedComment(c)
+getParsedComment(c::CLCursor)::CLComment = getParsedComment(c.cursor)
+
+kind(c::Union{CXComment, CXComment}) = clang_Comment_getKind(c)
+
+getNumChildren(c::Union{CXComment, CLComment}) = clang_Comment_getNumChildren(c)
+
+getChild(c::CXComment, i) = clang_Comment_getChild(c, i)
+getChild(c::CLComment, i)::CLComment = getChild(c.comment, i)
+
+isWhiteSpace(c::Union{CXComment, CLComment}) = !iszero(clang_Comment_isWhitespace(c))
+hasTrailingNewline(c::Union{CXComment, CLComment}) = !iszero(clang_InlineContentComment_hasTrailingNewline(c))
+
+getText(c::Text) = _cxstring_to_string(clang_TextComment_getText(c))
+getText(c::VerbatimBlockLine) = _cxstring_to_string(clang_VerbatimBlockLineComment_getText(c))
+getText(c::VerbatimLine) = _cxstring_to_string(clang_VerbatimLineComment_getText(c))
+
+getCommandName(c::InlineCommand) = _cxstring_to_string(clang_InlineCommandComment_getCommandName(c))
+getCommandName(c::BlockCommand) = _cxstring_to_string(clang_BlockCommandComment_getCommandName(c))
+
+getParamName(c::ParamCommand) = _cxstring_to_string(clang_ParamCommandComment_getParamName(c))
+getParamName(c::TParamCommand) = _cxstring_to_string(clang_TParamCommandComment_getParamName(c))
+
+getNumArgs(c::InlineCommand) = clang_InlineCommandComment_getNumArgs(c)
+getNumArgs(c::BlockCommand) = clang_BlockCommandComment_getNumArgs(c)
+
+getArgText(c::InlineCommand, i) = _cxstring_to_string(clang_InlineCommandComment_getArgText(c, i))
+getArgText(c::BlockCommand, i) = _cxstring_to_string(clang_BlockCommandComment_getArgText(c, i))
+
+getParagraph(c::CXComment) = clang_BlockCommandComment_getParagraph(c)
+getParagraph(c::BlockCommand)::CLComment = clang_BlockCommandComment_getParagraph(c)
+
+getRenderKind(c::Union{CXComment, InlineCommand}) = clang_InlineCommandComment_getRenderKind(c)
+getTagName(c::Union{CXComment, HTMLStartTag, HTMLEndTag}) = _cxstring_to_string(clang_HTMLTagComment_getTagName(c))
+isSelfClosing(c::Union{CXComment, HTMLStartTag}) = !iszero(clang_HTMLStartTagComment_isSelfClosing(c))
+getNumAttrs(c::Union{CXComment, HTMLStartTag}) = clang_HTMLStartTag_getNumAttrs(c)
+getAttrName(c::Union{CXComment, HTMLStartTag}, i) = _cxstring_to_string(clang_HTMLStartTag_getAttrName(c, i))
+getAttrValue(c::Union{CXComment, HTMLStartTag}, i) = _cxstring_to_string(clang_HTMLStartTag_getAttrName(c, i))
+getAsString(c::Union{CXComment, HTMLStartTag, HTMLEndTag}) = _cxstring_to_string(clang_HTMLTagComment_getAsString(c))
+getAsHTML(c::Union{CXComment, FullComment}) = _cxstring_to_string(clang_FullComment_getAsHTML(c))
+getAsXML(c::Union{CXComment, FullComment}) = _cxstring_to_string(clang_FullComment_getAsXML(c))
+
+function getIndex(c::Union{CXComment, ParamCommand})
+    if iszero(clang_ParamCommandComment_isParamIndexValid(c))
+        return missing
+    else
+        return clang_ParamCommandComment_getParamIndex(c)
+    end
+end
+
+function getDirection(c::Union{CXComment, ParamCommand})
+    if iszero(clang_ParamCommandComment_isDirectionExplicit(c))
+        return missing
+    else
+        return clang_ParamCommandComment_getDirection(c)
+    end
+end
+
+function children(c::CXComment)
+    num = getNumChildren(c)
+    result = Vector{CXComment}(undef, num)
+    for i in 1:num
+        result[i] = getChild(c, i-1)
+    end
+    result
+end
+
+function children(c::CLComment)
+    num = getNumChildren(c)
+    result = Vector{CLComment}(undef, num)
+    for i in 1:num
+        result[i] = getChild(c, i-1)
+    end
+    result
+end
+
+function getArguments(c::Union{BlockCommand, InlineCommand})
+    num = getNumArgs(c)
+    result = Vector{String}(undef, num)
+    for i in 1:num
+        result[i] = getArgText(c, i-1)
+    end
+    return result
+end
+
+
+# clang_TParamCommandComment_isParamPositionValid
+# clang_TParamCommandComment_getDepth
+# clang_TParamCommandComment_getIndex
+

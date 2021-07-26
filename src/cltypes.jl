@@ -73,3 +73,28 @@ Base.unsafe_convert(::Type{CXToken}, x::CLToken) = x.token
 
 Base.show(io::IO, x::CXToken) = print(io, "$(kind(x))")
 Base.show(io::IO, x::CLToken) = print(io, typeof(x), "(\"", x.text, "\")")
+
+# CLToken
+abstract type CLComment end
+
+const CLCommentMap = Dict()
+
+for (sym, val) in name_value_pairs(CXCommentKind)
+    clsym = Symbol(last(split(string(sym), '_'; limit=2)))
+    @eval begin
+        struct $clsym <: CLComment
+            comment::CXComment
+        end
+        CLCommentMap[$sym] = $clsym
+    end
+end
+
+CLComment(c::CXComment) = CLCommentMap[kind(c)](c)
+Base.convert(::Type{T}, x::CXComment) where {T<:CLComment} = CLComment(x)
+Base.cconvert(::Type{CXComment}, x::CLComment) = x
+Base.unsafe_convert(::Type{CXComment}, x::CLComment) = x.comment
+
+Base.show(io::IO, x::CXComment) = print(io, "$(kind(x))")
+Base.show(io::IO, x::CLComment) = print(io, "CLComment (", typeof(x), ")")
+
+getTranslationUnit(c::CLComment) = c.TranslationUnit

@@ -1101,12 +1101,17 @@ function print_documentation(io::IO, cursor::Union{CLCursor, CXCursor}, indent)
     # doc = strip_comment_markers(comment)
     # Do not print """ if no doc
     ismissing(doc) && return
-
-    println(io, indent * '"'^3)
-    for line in doc
-        println(io, indent, replace(line, r"([\\$])"=>s"\\\1"))
+    doc = replace.(doc, r"([\\$\"])"=>s"\\\1")
+    if length(doc) == 1
+        line = only(doc)
+        println(io, indent, '"'^3, line, '"'^3)
+    else
+        println(io, indent * '"'^3)
+        for line in doc
+            println(io, indent, line)
+        end
+        println(io, indent * '"'^3)
     end
-    println(io, indent * '"'^3)
 end
 
 function strip_comment_markers(s::AbstractString)::Vector
@@ -1162,7 +1167,6 @@ function strip_comment_markers(s::AbstractString)::Vector
     end
 end
 
-using Printf
 
 format_doxygen(c::Clang.Null) = missing
 
@@ -1184,7 +1188,6 @@ function format_doxygen(comment::Clang.FullComment)
             push!(paragraphs, c)
         else
             @info "Unhandled toplevel element: $c $(children(c))"
-            @show format_fallback(c)
         end
     end
     lines = String[]
@@ -1256,3 +1259,16 @@ function format_fallback(c::Clang.BlockCommand)
     name == "li" && return "*$content"
     "\\$name$args$content"
 end
+function format_fallback(t::Clang.HTMLStartTag)
+    name = Clang.getTagName(t)
+    attrs = Clang.getAttributes(t)
+    pairs = String[]
+    for (k, v) in attrs
+        push!(pairs, " ", k, "=", escape_string(v))
+    end
+    tag_start = "<"
+    tag_end = Clang.isSelfClosing(t) ? "/>" : ">"
+    tag = join([tag_start, name, pairs..., tag_end])
+    return tag
+end
+format_fallback(t::Clang.HTMLEndTag) = "</" * Clang.getTagName(t) * ">"

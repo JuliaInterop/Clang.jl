@@ -899,21 +899,20 @@ function (x::GeneralPrinter)(dag::ExprDAG, options::Dict)
     log_options = get(general_options, "log", Dict())
     show_info = get(log_options, "GeneralPrinter_log", x.show_info)
     blacklist = get(general_options, "printer_blacklist", [])
-    extract_c_comment = get(general_options, "extract_c_comment", false)
 
     show_info && @info "[GeneralPrinter]: print to $(x.file)"
     open(x.file, "a") do io
         for node in dag.nodes
             string(node.id) ∈ blacklist && continue
             node.type isa AbstractMacroNodeType && continue
-            isempty(node.exprs) || extract_c_comment && print_documentation(io, node, "")
+            isempty(node.exprs) || print_documentation(io, node, "", general_options)
             pretty_print(io, node, general_options)
         end
         # print macros in the bottom of the file
         for node in dag.nodes
             string(node.id) ∈ blacklist && continue
             node.type isa AbstractMacroNodeType || continue
-            isempty(node.exprs) || extract_c_comment && print_documentation(io, node, "")
+            isempty(node.exprs) || print_documentation(io, node, "", general_options)
             pretty_print(io, node, options)
         end
     end

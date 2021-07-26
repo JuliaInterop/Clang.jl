@@ -57,6 +57,7 @@ include("system_deps.jl")
 include("nested.jl")
 include("resolve_deps.jl")
 include("preprocessing.jl")
+include("documentation.jl")
 
 include("translate.jl")
 export translate

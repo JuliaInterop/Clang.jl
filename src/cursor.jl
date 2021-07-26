@@ -636,6 +636,14 @@ function getArguments(c::Union{BlockCommand, InlineCommand})
     return result
 end
 
+function getAttributes(c::Union{CXComment, HTMLStartTag})
+    num = getNumAttrs(c)
+    result = Vector{Tuple{String, String}}(undef, num)
+    for i in 1:num
+        result[i] = (getAttrName(c, i-1), getAttrValue(c, i-1))
+    end
+    return result
+end
 
 # clang_TParamCommandComment_isParamPositionValid
 # clang_TParamCommandComment_getDepth

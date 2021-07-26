@@ -1,13 +1,22 @@
 
-print_documentation(io::IO, node::ExprNode, indent) = print_documentation(io, node.cursor, indent)
-function print_documentation(io::IO, cursor::Union{CLCursor, CXCursor}, indent)
-    doc = format_doxygen(Clang.getParsedComment(cursor))
-    # comment = Clang.getRawCommentText(cursor)
-    # doc = strip_comment_markers(comment)
+print_documentation(io::IO, node::ExprNode, indent, options) = print_documentation(io, node.cursor, indent, options)
+function print_documentation(io::IO, cursor::Union{CLCursor, CXCursor}, indent, options)
+    fold_single_line_comment = get(options, "fold_single_line_comment", false)
+    extract_c_comment_style = get(options, "extract_c_comment_style", missing)
+    if ismissing(extract_c_comment_style)
+        return
+    elseif extract_c_comment_style == "doxygen"
+        comment = Clang.getParsedComment(cursor)
+        doc = format_doxygen(comment)
+    elseif extract_c_comment_style == "raw"
+        comment = Clang.getRawCommentText(cursor)
+        doc = strip_comment_markers(comment)
+    end
+    
     # Do not print """ if no doc
-    ismissing(doc) && return
+    all(isempty, doc) && return
     doc = replace.(doc, r"([\\$\"])"=>s"\\\1")
-    if length(doc) == 1
+    if length(doc) == 1 && fold_single_line_comment
         line = only(doc)
         println(io, indent, '"'^3, line, '"'^3)
     else
@@ -73,7 +82,7 @@ function strip_comment_markers(s::AbstractString)::Vector
 end
 
 
-format_doxygen(c::Clang.Null) = missing
+format_doxygen(c::Clang.Null) = []
 
 function format_doxygen(comment::Clang.FullComment)
     child_nodes = children(comment)

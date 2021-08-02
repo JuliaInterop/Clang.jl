@@ -16,6 +16,7 @@ function print_documentation(io::IO, cursor::Union{CLCursor, CXCursor}, indent, 
     # Do not print """ if no doc
     all(isempty, doc) && return
     doc = replace.(doc, r"([\\$\"])"=>s"\\\1")
+    last(doc) == "" && pop!(doc)
     if length(doc) == 1 && fold_single_line_comment
         line = only(doc)
         println(io, indent, '"'^3, line, '"'^3)
@@ -107,43 +108,92 @@ function format_doxygen(comment::Clang.FullComment)
     lines = String[]
     for p in paragraphs
         Clang.isWhiteSpace(p) && continue
-        t = format_fallback(p)
-        if t isa String
-            push!(lines, t)
-        else
-            append!(lines, t)
-        end
+        t = format_block(p)
+        append!(lines, t)
+        push!(lines, "")
     end
     if !isempty(parameters)
-        push!(lines, "### Parameters:")
-        append!(lines, format_parameter.(parameters))
+        push!(lines, "### Parameters")
+        for p in parameters
+            append!(lines, format_parameter(p))
+            push!(lines, "")
+        end
     end
     if !ismissing(returns)
         push!(lines, "### Returns")
-        push!(lines, format_fallback(Clang.getParagraph(returns)))
+        push!(lines, format_inline(Clang.getParagraph(returns)))
     end
     lines
 end
 
-function format_parameter(p)
-    name = Clang.getParamName(p)
-    name = replace(name, "_"=>"\\_")
-    content = join(format_fallback.(children(p)))
-    # Markdown lists seem to need a newline as separator
-    "* **$name**:$content\n"
+"""
+    format_block(comment) -> Vector{String}
+Format block elements, return a collection of lines.
+"""
+function format_block end
+
+function format_block(t::Clang.VerbatimLine)
+    ["`" * Clang.getText(t) * "`"]
 end
 
-format_fallback(t::Clang.Text) = Clang.getText(t)
-function format_fallback(t::Clang.VerbatimLine)
+function format_block(t::Clang.VerbatimBlockCommand)
+    lines = Clang.getText.(children(t))
+    # Clang does not parse its own documentation right
+    # This is a quick fix for it
+    lines = filter(x->!occursin('\n', x), lines)
+    ["```c++"; lines; "```"]
+end
+
+format_block(x::Clang.Paragraph) = [format_inline(x)]
+
+function format_block(t::Clang.VerbatimBlockCommand)
+    lines = Clang.getText.(children(t))
+    # Clang does not parse its own documentation right
+    # This is a quick fix for it
+    lines = filter(x->!occursin('\n', x), lines)
+    ["```c++"; lines; "```"]
+end
+
+
+function format_block(x::Clang.BlockCommand)
+    name = Clang.getCommandName(x)
+    args = join(Clang.getArguments(x), ' ')
+    content = format_inline(Clang.getParagraph(x))
+    name in ["li", "arg"] && return ["*$content"]
+    name == "brief" && return [" $content"]
+    ["\\$name$args$content"]
+end
+
+
+function format_parameter(p)
+    name = Clang.getParamName(p)
+    # TODO: escape all markdown symbols
+    name = replace(name, "_"=>"\\_")
+    content = format_inline.(children(p))
+    ["* **$name**:$(content[1])"; @view content[2:end]]
+end
+
+"""
+    format_inline(comment) -> String
+Format inline elements, return a string.
+"""
+function format_inline end
+
+format_inline(t::Clang.Text) = Clang.getText(t)
+
+function format_inline(t::Clang.VerbatimLine)
     "`" * Clang.getText(t) * "`"
 end
-function format_fallback(t::Clang.VerbatimBlockCommand)
+
+function format_inline(t::Clang.VerbatimBlockCommand)
     lines = Clang.getText.(children(t))
-    # I don't know but Clang does not parse its own documentation right
+    # Clang does not parse its own documentation right
+    # This is a quick fix for it
     lines = filter(x->!occursin('\n', x), lines)
-    ["```c++", lines..., "```"]
+    ["```c++"; lines; "```"]
 end
-function format_fallback(c::Clang.InlineCommand)
+
+function format_inline(c::Clang.InlineCommand)
     k = Clang.getRenderKind(c)
     args = join(Clang.getArguments(c), ' ')
     if k == Clang.CXCommentInlineCommandRenderKind_Normal
@@ -158,31 +208,31 @@ function format_fallback(c::Clang.InlineCommand)
         return ""
     end
 end
-format_fallback(p::Clang.Paragraph) = join(format_fallback.(children(p)))
-function format_fallback(p::Clang.ParamCommand)
+
+format_inline(p::Clang.Paragraph) = join(format_inline.(children(p)))
+
+function parameter_direction_name(d)
+    ismissing(d) && return ""
+    d == Clang.CXCommentParamPassDirection_In && return raw"\[in\]"
+    d == Clang.CXCommentParamPassDirection_Out && return raw"\[out\]"
+    d == Clang.CXCommentParamPassDirection_InOut && return raw"\[in,out\]"
+end
+
+function format_inline(p::Clang.ParamCommand)
     name = Clang.getParamName(p)
     name = replace(name, "_"=>"\\_")
     dir = Clang.getDirection(p)
-    content = join(format_fallback.(children(p)))
+    content = join(format_inline.(children(p)))
     "\\param $name$content"
 end
-function format_fallback(c::Clang.BlockCommand)
+
+function format_inline(c::Clang.BlockCommand)
     name = Clang.getCommandName(c)
     args = join(Clang.getArguments(c), ' ')
-    content = format_fallback(Clang.getParagraph(c))
-    name == "li" && return "*$content"
+    content = format_inline(Clang.getParagraph(c))
     "\\$name$args$content"
 end
-function format_fallback(t::Clang.HTMLStartTag)
-    name = Clang.getTagName(t)
-    attrs = Clang.getAttributes(t)
-    pairs = String[]
-    for (k, v) in attrs
-        push!(pairs, " ", k, "=", escape_string(v))
-    end
-    tag_start = "<"
-    tag_end = Clang.isSelfClosing(t) ? "/>" : ">"
-    tag = join([tag_start, name, pairs..., tag_end])
-    return tag
-end
-format_fallback(t::Clang.HTMLEndTag) = "</" * Clang.getTagName(t) * ">"
+
+format_inline(t::Clang.HTMLStartTag) = Clang.getAsString(t)
+
+format_inline(t::Clang.HTMLEndTag) = Clang.getAsString(t)

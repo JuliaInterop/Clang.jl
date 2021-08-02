@@ -42,7 +42,7 @@ function strip_comment_markers(s::AbstractString)::Vector
     # // */
     last_line_pattern = r"^\s*(/{2,}!?\s*(.*)|(.*?)\*+/)$"
     # // /**/
-    single_line_pattern = r"^\s*(/\*+<?\s*(.*)\s*\*/|/{2,}!?\s*(.*))$"
+    single_line_pattern = r"^\s*(/\*+<?\s*(.*)\s*\*/|/{2,}!?<?\s*(.*))$"
 
     lines = split(s, '\n')
     if length(lines) == 0
@@ -172,8 +172,9 @@ function format_parameter(p)
     name = Clang.getParamName(p)
     # TODO: escape all markdown symbols
     name = replace(name, "_"=>"\\_")
+    dir = parameter_pass_direction_name(Clang.getDirection(p))
     content = format_inline.(children(p))
-    ["* **$name**:$(content[1])"; @view content[2:end]]
+    ["* **$name**:$dir$(content[1])"; @view content[2:end]]
 end
 
 """
@@ -214,7 +215,7 @@ end
 
 format_inline(p::Clang.Paragraph) = join(format_inline.(children(p)))
 
-function parameter_direction_name(d)
+function parameter_pass_direction_name(d)
     ismissing(d) && return ""
     d == Clang.CXCommentParamPassDirection_In && return raw"\[in\]"
     d == Clang.CXCommentParamPassDirection_Out && return raw"\[out\]"
@@ -224,9 +225,9 @@ end
 function format_inline(p::Clang.ParamCommand)
     name = Clang.getParamName(p)
     name = replace(name, "_"=>"\\_")
-    dir = Clang.getDirection(p)
+    dir = parameter_pass_direction_name(Clang.getDirection(p))
     content = join(format_inline.(children(p)))
-    "\\param $name$content"
+    "\\param$dir $name$content"
 end
 
 function format_inline(c::Clang.BlockCommand)

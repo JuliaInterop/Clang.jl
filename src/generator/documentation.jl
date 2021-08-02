@@ -139,14 +139,6 @@ function format_block(t::Clang.VerbatimLine)
     ["`" * Clang.getText(t) * "`"]
 end
 
-function format_block(t::Clang.VerbatimBlockCommand)
-    lines = Clang.getText.(children(t))
-    # Clang does not parse its own documentation right
-    # This is a quick fix for it
-    lines = filter(x->!occursin('\n', x), lines)
-    ["```c++"; lines; "```"]
-end
-
 format_block(x::Clang.Paragraph) = [format_inline(x)]
 
 function format_block(t::Clang.VerbatimBlockCommand)

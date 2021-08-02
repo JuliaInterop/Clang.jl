@@ -17,7 +17,7 @@ end
 function pretty_print(io, node::ExprNode{FunctionProto}, options::Dict)
     @assert !isempty(node.exprs)
     prototype = node.exprs[1].args[1]
-    prologue = ["    " * sprint(Base.show_unquoted, prototype), ""]
+    prologue = ["    " * string(prototype), ""]
     print_documentation(io, node, "", options; prologue)
     for expr in node.exprs
         println(io, expr)
@@ -30,7 +30,7 @@ function pretty_print(io, node::ExprNode{FunctionNoProto}, options::Dict)
     @assert !isempty(node.exprs)
     file, line, col = get_file_line_column(node.cursor)
     prototype = node.exprs[1].args[1]
-    prologue = ["    " * sprint(Base.show_unquoted, prototype), ""]
+    prologue = ["    " * string(prototype), ""]
     println(io, "# no prototype is found for this function at $(basename(file)):$line:$col, please use with caution")
     print_documentation(io, node, "", options)
     for expr in node.exprs
@@ -101,11 +101,16 @@ function pretty_print(io, node::ExprNode{<:AbstractStructNodeType}, options::Dic
 
     # `chldren(node.cursor)` may also return forward declaration of struct type for example, so we filter these out.
     child_nodes = filter(x->x isa CLFieldDecl, children(node.cursor))
-    @assert length(child_nodes) == length(members.args)
+    fields = filter(x->Meta.isexpr(x, :(::)), members.args)
+    others = filter(x->!Meta.isexpr(x, :(::)), members.args)
+    @assert length(child_nodes) == length(fields)
     mutable && print(io, "mutable ")
     println(io, "struct ", name)
     for (expr, child) in zip(members.args, child_nodes)
         print_documentation(io, child, "    ", options)
+        println(io, "    ", string(expr))
+    end
+    for expr in others
         println(io, "    ", string(expr))
     end
     println(io, "end")
@@ -113,6 +118,7 @@ function pretty_print(io, node::ExprNode{<:AbstractStructNodeType}, options::Dic
         println(io, expr)
         println(io)
     end
+    println(io)
     return nothing
 end
 

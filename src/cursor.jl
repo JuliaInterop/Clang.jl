@@ -551,48 +551,116 @@ end
 
 ## Comment utilities
 
+"""
+    getParsedComment(c::CXCursor) -> CXComment
+    getParsedComment(c::CLCursor) -> CLComment
+Return the parsed AST of doxygen comment associated with the given node.
+"""
 getParsedComment(c::CXCursor) = clang_Cursor_getParsedComment(c)
 getParsedComment(c::CLCursor)::CLComment = getParsedComment(c.cursor)
 
+"""
+    getAsHTML(c::Union{CXComment, FullComment})
+Convert a comment into an HTML fragment. Check [libclang's documentation](https://clang.llvm.org/doxygen/group__CINDEX__COMMENT.html) for more details.
+"""
+getAsHTML(c::Union{CXComment, FullComment}) = _cxstring_to_string(clang_FullComment_getAsHTML(c))
+
+"""
+    getAsXML(c::Union{CXComment, FullComment})
+Convert a comment into an XML document.
+"""
+getAsXML(c::Union{CXComment, FullComment}) = _cxstring_to_string(clang_FullComment_getAsXML(c))
+
+"""
+    kind(c::Union{CXComment, CXComment}) -> CXCommentKind
+Return the kind of a comment.
+"""
 kind(c::Union{CXComment, CXComment}) = clang_Comment_getKind(c)
 
-getNumChildren(c::Union{CXComment, CLComment}) = clang_Comment_getNumChildren(c)
-
-getChild(c::CXComment, i) = clang_Comment_getChild(c, i)
-getChild(c::CLComment, i)::CLComment = getChild(c.comment, i)
-
+"""
+    isWhiteSpace(c::Union{CXComment, CLComment}) -> Bool
+Return whether a CXParagraph or CXText is contains only white space. Return false for other kinds of comment.
+"""
 isWhiteSpace(c::Union{CXComment, CLComment}) = !iszero(clang_Comment_isWhitespace(c))
 hasTrailingNewline(c::Union{CXComment, CLComment}) = !iszero(clang_InlineContentComment_hasTrailingNewline(c))
 
+"""
+    getText(c::Text) -> String
+    getText(c::VerbatimBlockLine) -> String
+    getText(c::VerbatimLine) -> String
+Get the text content assiciated with the node.
+"""
 getText(c::Text) = _cxstring_to_string(clang_TextComment_getText(c))
 getText(c::VerbatimBlockLine) = _cxstring_to_string(clang_VerbatimBlockLineComment_getText(c))
 getText(c::VerbatimLine) = _cxstring_to_string(clang_VerbatimLineComment_getText(c))
 
+"""
+    getCommandName(c::InlineCommand) -> String
+    getCommandName(c::BlockCommand) -> String
+Return the command name of a command, e.g. "brief" for `\\brief blah`.
+"""
 getCommandName(c::InlineCommand) = _cxstring_to_string(clang_InlineCommandComment_getCommandName(c))
 getCommandName(c::BlockCommand) = _cxstring_to_string(clang_BlockCommandComment_getCommandName(c))
 
+"""
+    getParamName(c::ParamCommand) -> String
+Return the name of a parameter.
+"""
 getParamName(c::ParamCommand) = _cxstring_to_string(clang_ParamCommandComment_getParamName(c))
 getParamName(c::TParamCommand) = _cxstring_to_string(clang_TParamCommandComment_getParamName(c))
 
+# See getArguments
 getNumArgs(c::InlineCommand) = clang_InlineCommandComment_getNumArgs(c)
 getNumArgs(c::BlockCommand) = clang_BlockCommandComment_getNumArgs(c)
 
+# See getArguments
 getArgText(c::InlineCommand, i) = _cxstring_to_string(clang_InlineCommandComment_getArgText(c, i))
 getArgText(c::BlockCommand, i) = _cxstring_to_string(clang_BlockCommandComment_getArgText(c, i))
 
+"""
+    getParagraph(c::CXComment)
+    getParagraph(c::BlockCommand)
+Return the paragraph argument of a given command.
+"""
 getParagraph(c::CXComment) = clang_BlockCommandComment_getParagraph(c)
-getParagraph(c::BlockCommand)::CLComment = clang_BlockCommandComment_getParagraph(c)
+getParagraph(c::BlockCommand)::CLComment = getParagraph(c.comment)
 
+"""
+    getRenderKind(c::Union{CXComment, InlineCommand}) -> CXCommentInlineCommandRenderKind
+Return the most appropriate rendering mode, chosen on command semantics in Doxygen.
+"""
 getRenderKind(c::Union{CXComment, InlineCommand}) = clang_InlineCommandComment_getRenderKind(c)
-getTagName(c::Union{CXComment, HTMLStartTag, HTMLEndTag}) = _cxstring_to_string(clang_HTMLTagComment_getTagName(c))
-isSelfClosing(c::Union{CXComment, HTMLStartTag}) = !iszero(clang_HTMLStartTagComment_isSelfClosing(c))
-getNumAttrs(c::Union{CXComment, HTMLStartTag}) = clang_HTMLStartTag_getNumAttrs(c)
-getAttrName(c::Union{CXComment, HTMLStartTag}, i) = _cxstring_to_string(clang_HTMLStartTag_getAttrName(c, i))
-getAttrValue(c::Union{CXComment, HTMLStartTag}, i) = _cxstring_to_string(clang_HTMLStartTag_getAttrName(c, i))
-getAsString(c::Union{CXComment, HTMLStartTag, HTMLEndTag}) = _cxstring_to_string(clang_HTMLTagComment_getAsString(c))
-getAsHTML(c::Union{CXComment, FullComment}) = _cxstring_to_string(clang_FullComment_getAsHTML(c))
-getAsXML(c::Union{CXComment, FullComment}) = _cxstring_to_string(clang_FullComment_getAsXML(c))
 
+"""
+    getTagName(c::Union{CXComment, HTMLStartTag, HTMLEndTag})
+Return the tag name of a HTML tag.
+"""
+getTagName(c::Union{CXComment, HTMLStartTag, HTMLEndTag}) = _cxstring_to_string(clang_HTMLTagComment_getTagName(c))
+"""
+    isSelfClosing(c::Union{CXComment, HTMLStartTag})
+Return whether a tag is self-closing (for example, `<br />`).
+"""
+isSelfClosing(c::Union{CXComment, HTMLStartTag}) = !iszero(clang_HTMLStartTagComment_isSelfClosing(c))
+
+# See getAttributes
+getNumAttrs(c::Union{CXComment, HTMLStartTag}) = clang_HTMLStartTag_getNumAttrs(c)
+
+# See getAttributes
+getAttrName(c::Union{CXComment, HTMLStartTag}, i) = _cxstring_to_string(clang_HTMLStartTag_getAttrName(c, i))
+
+# See getAttributes
+getAttrValue(c::Union{CXComment, HTMLStartTag}, i) = _cxstring_to_string(clang_HTMLStartTag_getAttrName(c, i))
+
+"""
+    getAsString(c::Union{CXComment, HTMLStartTag, HTMLEndTag})
+Convert an HTML tag to its string representation.
+"""
+getAsString(c::Union{CXComment, HTMLStartTag, HTMLEndTag}) = _cxstring_to_string(clang_HTMLTagComment_getAsString(c))
+
+"""
+    getIndex(c::Union{CXComment, ParamCommand})
+Return zero-based parameter index in function prototype or `missing` if the parameter is invalid.
+"""
 function getIndex(c::Union{CXComment, ParamCommand})
     if iszero(clang_ParamCommandComment_isParamIndexValid(c))
         return missing
@@ -601,6 +669,10 @@ function getIndex(c::Union{CXComment, ParamCommand})
     end
 end
 
+"""
+    getDirection(c::Union{CXComment, ParamCommand})
+Return the parameter passing direction (`[in]`, `[out]`, `[in,out]`) or `missing` if the direction is not specified.
+"""
 function getDirection(c::Union{CXComment, ParamCommand})
     if iszero(clang_ParamCommandComment_isDirectionExplicit(c))
         return missing
@@ -608,6 +680,11 @@ function getDirection(c::Union{CXComment, ParamCommand})
         return clang_ParamCommandComment_getDirection(c)
     end
 end
+
+getNumChildren(c::Union{CXComment, CLComment}) = clang_Comment_getNumChildren(c)
+
+getChild(c::CXComment, i) = clang_Comment_getChild(c, i)
+getChild(c::CLComment, i)::CLComment = getChild(c.comment, i)
 
 function children(c::CXComment)
     num = getNumChildren(c)
@@ -627,6 +704,10 @@ function children(c::CLComment)
     result
 end
 
+"""
+    getArguments(c::Union{BlockCommand, InlineCommand}) -> Vector{String}
+Return the arguments of a command.
+"""
 function getArguments(c::Union{BlockCommand, InlineCommand})
     num = getNumArgs(c)
     result = Vector{String}(undef, num)
@@ -636,11 +717,15 @@ function getArguments(c::Union{BlockCommand, InlineCommand})
     return result
 end
 
+"""
+    getAttributes(c::Union{CXComment, HTMLStartTag}) -> Vector{Pair{String, String}}
+Return the attributes of an HTML tag.
+"""
 function getAttributes(c::Union{CXComment, HTMLStartTag})
     num = getNumAttrs(c)
-    result = Vector{Tuple{String, String}}(undef, num)
+    result = Vector{Pair{String, String}}(undef, num)
     for i in 1:num
-        result[i] = (getAttrName(c, i-1), getAttrValue(c, i-1))
+        result[i] = (getAttrName(c, i-1) => getAttrValue(c, i-1))
     end
     return result
 end

@@ -1,8 +1,9 @@
 
-print_documentation(io::IO, node::ExprNode, indent, options) = print_documentation(io, node.cursor, indent, options)
-function print_documentation(io::IO, cursor::Union{CLCursor, CXCursor}, indent, options)
+print_documentation(io::IO, node::ExprNode, indent, options; kwargs...) = print_documentation(io, node.cursor, indent, options; kwargs...)
+function print_documentation(io::IO, cursor::Union{CLCursor, CXCursor}, indent, options; prologue::Vector{String}=String[], epilogue::Vector{String}=String[])
     fold_single_line_comment = get(options, "fold_single_line_comment", false)
     extract_c_comment_style = get(options, "extract_c_comment_style", missing)
+
     if ismissing(extract_c_comment_style)
         return
     elseif extract_c_comment_style == "doxygen"
@@ -15,6 +16,7 @@ function print_documentation(io::IO, cursor::Union{CLCursor, CXCursor}, indent, 
     
     # Do not print """ if no doc
     all(isempty, doc) && return
+    doc = [prologue; doc; epilogue]
     doc = replace.(doc, r"([\\$\"])"=>s"\\\1")
     last(doc) == "" && pop!(doc)
     if length(doc) == 1 && fold_single_line_comment
@@ -133,6 +135,7 @@ Format block elements, return a collection of lines.
 function format_block end
 
 function format_block(t::Clang.VerbatimLine)
+    # this command is usually a result of parse error
     ["`" * Clang.getText(t) * "`"]
 end
 

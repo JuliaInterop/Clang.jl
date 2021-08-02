@@ -43,4 +43,5 @@ end
     @test strip_comment_markers("    /// line1\n    /// line2") == ["line1", "line2"]
     @test strip_comment_markers("//! line1\n//! line2") == ["line1", "line2"]
     @test strip_comment_markers("//! line1") == ["line1"]
+    @test strip_comment_markers("//< line1") == ["line1"]
 end

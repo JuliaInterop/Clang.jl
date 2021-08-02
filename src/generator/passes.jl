@@ -905,14 +905,13 @@ function (x::GeneralPrinter)(dag::ExprDAG, options::Dict)
         for node in dag.nodes
             string(node.id) ∈ blacklist && continue
             node.type isa AbstractMacroNodeType && continue
-            isempty(node.exprs) || print_documentation(io, node, "", general_options)
             pretty_print(io, node, general_options)
         end
         # print macros in the bottom of the file
         for node in dag.nodes
             string(node.id) ∈ blacklist && continue
             node.type isa AbstractMacroNodeType || continue
-            isempty(node.exprs) || print_documentation(io, node, "", general_options)
+            isempty(node.exprs)
             pretty_print(io, node, options)
         end
     end

@@ -95,19 +95,22 @@ end
 
 function pretty_print(io, node::ExprNode{<:AbstractStructNodeType}, options::Dict)
     @assert !isempty(node.exprs)
+    struct_field_comment_style = get(options, "struct_field_comment_style", "disable")
+    outofline = struct_field_comment_style == "outofline"
+    inline = struct_field_comment_style == "inline"
     struct_def = node.exprs[1]
     mutable, name, members = struct_def.args
-    print_documentation(io, node, "", options; prologue=["    $name", ""])
-
+    
     # `chldren(node.cursor)` may also return forward declaration of struct type for example, so we filter these out.
     child_nodes = filter(x->x isa CLFieldDecl, children(node.cursor))
     fields = filter(x->Meta.isexpr(x, :(::)), members.args)
     others = filter(x->!Meta.isexpr(x, :(::)), members.args)
     @assert length(child_nodes) == length(fields)
+    print_documentation(io, node, "", options; prologue=["    $name", ""], members=outofline)
     mutable && print(io, "mutable ")
     println(io, "struct ", name)
     for (expr, child) in zip(members.args, child_nodes)
-        print_documentation(io, child, "    ", options)
+        inline && print_documentation(io, child, "    ", options)
         println(io, "    ", string(expr))
     end
     for expr in others
@@ -124,9 +127,12 @@ end
 
 function pretty_print(io, node::ExprNode{StructMutualRef}, options::Dict)
     @assert !isempty(node.exprs)
+    struct_field_comment_style = get(options, "struct_field_comment_style", "disable")
+    outofline = struct_field_comment_style == "outofline"
+    inline = struct_field_comment_style == "inline"
     expr = node.exprs[1]
     prologue = ["    $(expr.args[2])", ""]
-    print_documentation(io, node, "", options; prologue)
+    print_documentation(io, node, "", options; prologue, members=outofline)
 
     @assert Meta.isexpr(expr, :struct)
     mutability = expr.args[1] ? "mutable struct" : "struct"
@@ -141,7 +147,7 @@ function pretty_print(io, node::ExprNode{StructMutualRef}, options::Dict)
 
     # A StructDecl is inserted before the FieldDecl with forward decl
     for (ex, child) in zip(block.args, child_nodes)
-        print_documentation(io, child, "    ", options)
+        inline && print_documentation(io, child, "    ", options)
         if Meta.isexpr(ex, :block)
             println(io, "    ", string(ex.args[2]), " # ", string(ex.args[1]))
         else
@@ -162,13 +168,15 @@ end
 function pretty_print(io, node::ExprNode{<:AbstractEnumNodeType}, options::Dict)
     @assert !isempty(node.exprs)
     use_native_enum = get(options, "use_julia_native_enum_type", false)
+    enumerator_comment_style = get(options, "enumerator_comment_style", "disable")
+    members = enumerator_comment_style == "outofline"
     enum_values = Dict()
 
     head = node.exprs[1]
     head_expr = head.args[3]
 
     prologue = ["    $(head_expr.args[1])", ""]
-    print_documentation(io, node, "", options; prologue)
+    print_documentation(io, node, "", options; prologue, members)
 
     if length(node.exprs) ≥ 2
         enum_macro = use_native_enum ? "@enum" : "@cenum"
@@ -176,7 +184,6 @@ function pretty_print(io, node::ExprNode{<:AbstractEnumNodeType}, options::Dict)
         child_nodes = filter(x->x isa CLEnumConstantDecl, children(node.cursor))
         @assert length(child_nodes) == length(node.exprs) - 1
         for (i, child) = zip(2:length(node.exprs), child_nodes)
-            print_documentation(io, child, "    ", options)
             expr = node.exprs[i]
             if use_native_enum
                 n, v = expr.args
@@ -201,8 +208,11 @@ end
 
 function pretty_print(io, node::ExprNode{<:RecordLayouts}, options::Dict)
     @assert !isempty(node.exprs)
+    struct_field_comment_style = get(options, "struct_field_comment_style", "disable")
+    outofline = struct_field_comment_style == "outofline"
+
     prologue = ["    $(node.exprs[1].args[2])", ""]
-    print_documentation(io, node, "", options; prologue)
+    print_documentation(io, node, "", options; prologue, members=outofline)
     for expr in node.exprs
         println(io, expr)
         println(io)

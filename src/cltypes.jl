@@ -90,7 +90,7 @@ for (sym, val) in name_value_pairs(CXCommentKind)
 end
 
 CLComment(c::CXComment) = CLCommentMap[kind(c)](c)
-Base.convert(::Type{T}, x::CXComment) where {T<:CLComment} = CLComment(x)
+Base.convert(::Type{T}, x::CXComment) where {T<:CLComment} = T(x)
 Base.cconvert(::Type{CXComment}, x::CLComment) = x
 Base.unsafe_convert(::Type{CXComment}, x::CLComment) = x.comment
 

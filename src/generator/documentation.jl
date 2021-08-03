@@ -1,17 +1,22 @@
 
-print_documentation(io::IO, node::ExprNode, indent, options; kwargs...) = print_documentation(io, node.cursor, indent, options; kwargs...)
-function print_documentation(io::IO, cursor::Union{CLCursor, CXCursor}, indent, options; prologue::Vector{String}=String[], epilogue::Vector{String}=String[])
-    fold_single_line_comment = get(options, "fold_single_line_comment", false)
-    extract_c_comment_style = get(options, "extract_c_comment_style", missing)
+function print_documentation(io::IO, node::ExprNode, indent, options; kwargs...)
+    print_documentation(io, node.cursor, indent, options; kwargs...)
+end
 
-    if ismissing(extract_c_comment_style)
-        return
-    elseif extract_c_comment_style == "doxygen"
-        comment = Clang.getParsedComment(cursor)
-        doc = format_doxygen(comment)
+
+function print_documentation(io::IO, cursor::Union{CLCursor, CXCursor}, indent, options; 
+        prologue::Vector{String}=String[], epilogue::Vector{String}=String[], 
+        members::Bool=false)
+
+    fold_single_line_comment = get(options, "fold_single_line_comment", false)
+    extract_c_comment_style = get(options, "extract_c_comment_style", "disable")
+
+    if extract_c_comment_style == "doxygen"
+        doc = format_doxygen(cursor, members)
     elseif extract_c_comment_style == "raw"
-        comment = Clang.getRawCommentText(cursor)
-        doc = strip_comment_markers(comment)
+        doc = format_raw(cursor, members)
+    else
+        return
     end
     
     # Do not print """ if no doc
@@ -30,6 +35,15 @@ function print_documentation(io::IO, cursor::Union{CLCursor, CXCursor}, indent, 
         println(io, indent * '"'^3)
     end
 end
+
+
+function format_raw(cursor, members=false)
+    comment = Clang.getRawCommentText(cursor)
+    doc = strip_comment_markers(comment)
+    member_docs = members ? get_member_doc(format_raw, cursor) : []
+    isempty(member_docs) ? doc : [doc; ""; member_docs]
+end
+
 
 function strip_comment_markers(s::AbstractString)::Vector
     # Assume the comments are either /**/ or //, 
@@ -84,20 +98,49 @@ function strip_comment_markers(s::AbstractString)::Vector
     end
 end
 
+get_member_doc(f, cursor::CLCursor) = []
 
-format_doxygen(c::Clang.Null) = []
+function get_member_doc(f, cursor::CLEnumDecl)
+    lines = ["### Enumerators", "| Enumerator | Note |", "| :--- | :--- |"]
+    for c in children(cursor)
+        c isa CLEnumConstantDecl || continue
+        name = spelling(c)
+        doc = join(f(c), ' ')
+        doc = replace(doc, '\n'=>' ')
+        isempty(doc) || push!(lines, "| `$name` | $doc |")
+    end
+    length(lines) == 3 ? [] : lines
+end
 
-function format_doxygen(comment::Clang.FullComment)
+function get_member_doc(f, cursor::CLStructDecl)
+    lines = ["### Fields", "| Field | Note |", "| :--- | :--- |"]
+    for c in children(cursor)
+        c isa CLFieldDecl || continue
+        name = spelling(c)
+        doc = join(f(c), ' ')
+        doc = replace(doc, '\n'=>' ')
+        isempty(doc) || push!(lines, "| `$name` | $doc |")
+    end
+    length(lines) == 3 ? [] : lines
+end
+
+
+function format_doxygen(cursor, members=false)
+    comment = Clang.getParsedComment(cursor)
     child_nodes = children(comment)
     # Collect parameters
     parameters, paragraphs = [], []
     returns = missing
+    seealso = []
     for c in child_nodes
         if c isa Clang.ParamCommand
             push!(parameters, c)
         elseif c isa Clang.BlockCommand
-            if Clang.getCommandName(c) == "returns"
+            name = Clang.getCommandName(c)
+            if name == "returns"
                 returns = c
+            elseif name in ["sa", "see"]
+                append!(seealso, format_block(Clang.getParagraph(c)))
             else
                 push!(paragraphs, c)
             end
@@ -107,6 +150,8 @@ function format_doxygen(comment::Clang.FullComment)
             @info "Unhandled toplevel element: $c $(children(c))"
         end
     end
+
+    member_docs = members ? get_member_doc(format_doxygen, cursor) : []
     lines = String[]
     for p in paragraphs
         Clang.isWhiteSpace(p) && continue
@@ -125,8 +170,26 @@ function format_doxygen(comment::Clang.FullComment)
         push!(lines, "### Returns")
         append!(lines, format_block(Clang.getParagraph(returns)))
     end
+    if !isempty(member_docs)
+        append!(lines, member_docs)
+    end
+    if !isempty(seealso)
+        push!(lines, "### See also")
+        push!(lines, join(strip.(seealso), ", "), "")
+    end
     lines
 end
+
+
+function format_parameter(p)
+    name = Clang.getParamName(p)
+    # TODO: escape all markdown symbols
+    # name = replace(name, "_"=>"\\_")
+    dir = parameter_pass_direction_name(Clang.getDirection(p))
+    content = format_inline.(children(p))
+    ["* `$name`:$dir$(content[1])"; @view content[2:end]]
+end
+
 
 """
     format_block(comment) -> Vector{String}
@@ -142,9 +205,7 @@ end
 function format_block(x::Clang.Paragraph)
     t = format_inline(x)
     # Remove leading space
-    if startswith(t, ' ')
-        t = t[2:end]
-    end
+    t = replace(t, r"(^|\s)\s+"=>s"\1")
     [t]
 end
 
@@ -160,21 +221,12 @@ end
 function format_block(x::Clang.BlockCommand)
     name = Clang.getCommandName(x)
     args = join(Clang.getArguments(x), ' ')
-    content = format_inline(Clang.getParagraph(x))
+    content = only(format_block(Clang.getParagraph(x)))
     name in ["li", "arg"] && return ["*$content"]
-    name in ["brief", "details"] && return [" $content"]
-    ["\\$name$args$content"]
+    name in ["brief", "details"] && return ["$content"]
+    ["\\$name$args $content"]
 end
 
-
-function format_parameter(p)
-    name = Clang.getParamName(p)
-    # TODO: escape all markdown symbols
-    # name = replace(name, "_"=>"\\_")
-    dir = parameter_pass_direction_name(Clang.getDirection(p))
-    content = format_inline.(children(p))
-    ["* `$name`:$dir$(content[1])"; @view content[2:end]]
-end
 
 """
     format_inline(comment) -> String
@@ -199,15 +251,15 @@ function format_inline(t::Clang.VerbatimBlockCommand)
 end
 
 """Render a "word" argument respecting C's identifier definition."""
-function render_argument(raw, marker)
-    # libclang thinks "(\c code)" is (`code)`
+function render_argument(raw, marker_begin, marker_end=marker_begin)
+    # libclang thinks "(\c code)" is (`code)` instead of (`code`)
     m = match(r"^([\w\d_ ]+)(.*)$", raw)
     if isnothing(m)
-        "$marker$raw$marker"
+        "$marker_begin$raw$marker_end"
     else
         code = m[1]
         text = m[2]
-        "$marker$code$marker$text"
+        "$marker_begin$code$marker_end$text"
     end
 end
 

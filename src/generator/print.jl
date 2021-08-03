@@ -42,7 +42,7 @@ function pretty_print(io, node::ExprNode{FunctionNoProto}, options::Dict)
     prototype = node.exprs[1].args[1]
     prologue = ["    " * string(prototype), ""]
     println(io, "# no prototype is found for this function at $(basename(file)):$line:$col, please use with caution")
-    print_documentation(io, node, "", options)
+    print_documentation(io, node, "", options; prologue)
     for expr in node.exprs
         println(io, expr)
         println(io)
@@ -51,7 +51,7 @@ function pretty_print(io, node::ExprNode{FunctionNoProto}, options::Dict)
 end
 
 function pretty_print(io, node::ExprNode{TypedefElaborated}, options::Dict)
-    print_documentation(io, node, "", options)
+    isempty(node.exprs) || print_documentation(io, node, "", options)
     for expr in node.exprs
         println(io, expr)
         println(io)
@@ -60,7 +60,7 @@ function pretty_print(io, node::ExprNode{TypedefElaborated}, options::Dict)
 end
 
 function pretty_print(io, node::ExprNode{TypedefMutualRef}, options::Dict)
-    print_documentation(io, node, "", options)
+    isempty(node.exprs) || print_documentation(io, node, "", options)
     for expr in node.exprs
         println(io, expr)
         println(io)
@@ -95,7 +95,7 @@ function pretty_print(io, node::ExprNode{TypedefToAnonymous}, options::Dict)
 end
 
 function pretty_print(io, node::ExprNode{TypedefDefault}, options::Dict)
-    print_documentation(io, node, "", options)
+    isempty(node.exprs) || print_documentation(io, node, "", options)
     for expr in node.exprs
         println(io, expr)
         println(io)

@@ -17,7 +17,7 @@ function print_documentation(io::IO, cursor::Union{CLCursor, CXCursor}, indent, 
     # Do not print """ if no doc
     all(isempty, doc) && return
     doc = [prologue; doc; epilogue]
-    doc = replace.(doc, r"([\\$\"])"=>s"\\\1")
+    doc = replace.(doc, r"""([\\$]|"(?=""))"""=>s"\\\1")
     last(doc) == "" && pop!(doc)
     if length(doc) == 1 && fold_single_line_comment
         line = only(doc)
@@ -123,7 +123,7 @@ function format_doxygen(comment::Clang.FullComment)
     end
     if !ismissing(returns)
         push!(lines, "### Returns")
-        push!(lines, format_inline(Clang.getParagraph(returns)))
+        append!(lines, format_block(Clang.getParagraph(returns)))
     end
     lines
 end
@@ -139,7 +139,14 @@ function format_block(t::Clang.VerbatimLine)
     ["`" * Clang.getText(t) * "`"]
 end
 
-format_block(x::Clang.Paragraph) = [format_inline(x)]
+function format_block(x::Clang.Paragraph)
+    t = format_inline(x)
+    # Remove leading space
+    if startswith(t, ' ')
+        t = t[2:end]
+    end
+    [t]
+end
 
 function format_block(t::Clang.VerbatimBlockCommand)
     lines = Clang.getText.(children(t))
@@ -155,7 +162,7 @@ function format_block(x::Clang.BlockCommand)
     args = join(Clang.getArguments(x), ' ')
     content = format_inline(Clang.getParagraph(x))
     name in ["li", "arg"] && return ["*$content"]
-    name == "brief" && return [" $content"]
+    name in ["brief", "details"] && return [" $content"]
     ["\\$name$args$content"]
 end
 
@@ -163,10 +170,10 @@ end
 function format_parameter(p)
     name = Clang.getParamName(p)
     # TODO: escape all markdown symbols
-    name = replace(name, "_"=>"\\_")
+    # name = replace(name, "_"=>"\\_")
     dir = parameter_pass_direction_name(Clang.getDirection(p))
     content = format_inline.(children(p))
-    ["* **$name**:$dir$(content[1])"; @view content[2:end]]
+    ["* `$name`:$dir$(content[1])"; @view content[2:end]]
 end
 
 """
@@ -175,7 +182,9 @@ Format inline elements, return a string.
 """
 function format_inline end
 
-format_inline(t::Clang.Text) = Clang.getText(t)
+function format_inline(t::Clang.Text)
+    Clang.getText(t)
+end
 
 function format_inline(t::Clang.VerbatimLine)
     "`" * Clang.getText(t) * "`"
@@ -189,17 +198,30 @@ function format_inline(t::Clang.VerbatimBlockCommand)
     ["```c++"; lines; "```"]
 end
 
+"""Render a "word" argument respecting C's identifier definition."""
+function render_argument(raw, marker)
+    # libclang thinks "(\c code)" is (`code)`
+    m = match(r"^([\w\d_ ]+)(.*)$", raw)
+    if isnothing(m)
+        "$marker$raw$marker"
+    else
+        code = m[1]
+        text = m[2]
+        "$marker$code$marker$text"
+    end
+end
+
 function format_inline(c::Clang.InlineCommand)
     k = Clang.getRenderKind(c)
     args = join(Clang.getArguments(c), ' ')
     if k == Clang.CXCommentInlineCommandRenderKind_Normal
         return args
     elseif k == Clang.CXCommentInlineCommandRenderKind_Bold
-        return "**" * args * "**"
+        return render_argument(args, "**")
     elseif k == Clang.CXCommentInlineCommandRenderKind_Monospaced
-        return "`" * args * "`"
+        return render_argument(args, "`")
     elseif k == Clang.CXCommentInlineCommandRenderKind_Emphasized
-        return "*" * args * "*"
+        return render_argument(args, "*")
     elseif k == Clang.CXCommentInlineCommandRenderKind_Anchor
         return ""
     end

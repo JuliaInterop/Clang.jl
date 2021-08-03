@@ -1,18 +1,19 @@
 
-function print_documentation(io::IO, node::ExprNode, indent, options; kwargs...)
-    print_documentation(io, node.cursor, indent, options; kwargs...)
+function print_documentation(io::IO, node::ExprNode, indent, options, members::Bool=false; kwargs...)
+    print_documentation(io, node.cursor, indent, options, members; kwargs...)
 end
 
 
-function print_documentation(io::IO, cursor::Union{CLCursor, CXCursor}, indent, options; 
-        prologue::Vector{String}=String[], epilogue::Vector{String}=String[], 
-        members::Bool=false)
+function print_documentation(io::IO, cursor::Union{CLCursor, CXCursor}, indent, options, members::Bool=false; 
+        prologue::Vector{String}=String[], epilogue::Vector{String}=String[])
 
     fold_single_line_comment = get(options, "fold_single_line_comment", false)
     extract_c_comment_style = get(options, "extract_c_comment_style", "disable")
+    ids = get(options, "DAG_ids", Dict())
 
     if extract_c_comment_style == "doxygen"
         doc = format_doxygen(cursor, members)
+        doc = gen_automatic_links.(doc, Ref(ids))
     elseif extract_c_comment_style == "raw"
         doc = format_raw(cursor, members)
     else
@@ -34,6 +35,28 @@ function print_documentation(io::IO, cursor::Union{CLCursor, CXCursor}, indent, 
         end
         println(io, indent * '"'^3)
     end
+end
+
+"Replace identifiers with @ref"
+function gen_automatic_links(text, ids)
+    result = []
+    # ...`id`(...)
+    pat = r"^(.*?)(%)?(\*{1,2}|`?)([\w_][\w\d_]*)\3((?:\(.*?\))?.*)$"
+    while true
+        m = match(pat, text)
+
+        isnothing(m) && break
+        prev, escape, marker, word, text = m[1], m[2], m[3], m[4], m[5]
+
+        if isnothing(escape) && Symbol(word) in keys(ids)
+            ref = "[`$word`](@ref)"
+        else
+            ref = word
+        end
+        push!(result, prev, ref)
+    end
+    push!(result, text)
+    return join(result)
 end
 
 

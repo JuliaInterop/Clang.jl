@@ -116,7 +116,7 @@ function pretty_print(io, node::ExprNode{<:AbstractStructNodeType}, options::Dic
     fields = filter(x->Meta.isexpr(x, :(::)), members.args)
     others = filter(x->!Meta.isexpr(x, :(::)), members.args)
     @assert length(child_nodes) == length(fields)
-    print_documentation(io, node, "", options; prologue=["    $name", ""], members=outofline)
+    print_documentation(io, node, "", options, outofline; prologue=["    $name", ""])
     mutable && print(io, "mutable ")
     println(io, "struct ", name)
     for (expr, child) in zip(members.args, child_nodes)
@@ -142,7 +142,7 @@ function pretty_print(io, node::ExprNode{StructMutualRef}, options::Dict)
     inline = struct_field_comment_style == "inline"
     expr = node.exprs[1]
     prologue = ["    $(expr.args[2])", ""]
-    print_documentation(io, node, "", options; prologue, members=outofline)
+    print_documentation(io, node, "", options, outofline; prologue)
 
     @assert Meta.isexpr(expr, :struct)
     mutability = expr.args[1] ? "mutable struct" : "struct"
@@ -186,7 +186,7 @@ function pretty_print(io, node::ExprNode{<:AbstractEnumNodeType}, options::Dict)
     head_expr = head.args[3]
 
     prologue = ["    $(head_expr.args[1])", ""]
-    print_documentation(io, node, "", options; prologue, members)
+    print_documentation(io, node, "", options, members; prologue)
 
     if length(node.exprs) ≥ 2
         enum_macro = use_native_enum ? "@enum" : "@cenum"
@@ -222,7 +222,7 @@ function pretty_print(io, node::ExprNode{<:RecordLayouts}, options::Dict)
     outofline = struct_field_comment_style == "outofline"
 
     prologue = ["    $(node.exprs[1].args[2])", ""]
-    print_documentation(io, node, "", options; prologue, members=outofline)
+    print_documentation(io, node, "", options, outofline; prologue)
     for expr in node.exprs
         println(io, expr)
         println(io)

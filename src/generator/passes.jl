@@ -899,6 +899,7 @@ function (x::GeneralPrinter)(dag::ExprDAG, options::Dict)
     log_options = get(general_options, "log", Dict())
     show_info = get(log_options, "GeneralPrinter_log", x.show_info)
     blacklist = get(general_options, "printer_blacklist", [])
+    general_options["DAG_ids"] = merge(dag.ids, dag.tags)
 
     show_info && @info "[GeneralPrinter]: print to $(x.file)"
     open(x.file, "a") do io
@@ -915,6 +916,8 @@ function (x::GeneralPrinter)(dag::ExprDAG, options::Dict)
             pretty_print(io, node, options)
         end
     end
+
+    delete!(general_options, "DAG_ids")
     return dag
 end
 

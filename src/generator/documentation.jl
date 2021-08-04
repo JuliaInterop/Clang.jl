@@ -37,6 +37,8 @@ function print_documentation(io::IO, cursor::Union{CLCursor, CXCursor}, indent, 
     end
 end
 
+escape_underscore(word) = replace(word, "_"=>raw"\\_")
+
 "Replace identifiers with @ref"
 function gen_automatic_links(text, ids)
     result = []
@@ -52,7 +54,7 @@ function gen_automatic_links(text, ids)
         if isnothing(escape) && Symbol(word) in keys(ids)
             ref = "[`$word`](@ref)"
         else
-            word = marker == "`" ? word : replace(word, "_"=>raw"\\_")
+            word = marker == "`" ? word : escape_underscore(word)
             ref = marker * word * marker
         end
 
@@ -142,7 +144,15 @@ function render_table(table::AbstractMatrix{<:AbstractString})
     push!(lines, join_row(titles))
     length_row = rpad.(":", widths, '-')
     push!(lines, join_row(length_row))
+    last_col = fill("", size(table, 1))
     for col in eachcol(@view table[:, 2:end])
+        for i in eachindex(col)
+            if col[i] == last_col[i]
+                col[i] = ""
+            else
+                last_col[i] = col[i]
+            end
+        end
         row = rpad.(col, widths)
         push!(lines, join_row(row))
     end
@@ -153,32 +163,26 @@ get_member_doc(f, cursor::CLCursor) = String[]
 
 function get_member_doc(f, cursor::CLEnumDecl)
     table = ["Enumerator", "Note"]
-    lines = ["| Enumerator | Note |", "| :--- | :--- |"]
     for c in children(cursor)
         c isa CLEnumConstantDecl || continue
-        name = spelling(c)
+        name = escape_underscore(spelling(c))
         doc = join(f(c), ' ')
         doc = replace(doc, '\n'=>' ')
-        isempty(doc) || push!(lines, "| $name | $doc |")
         isempty(doc) || push!(table, name, doc)
     end
     return render_table(reshape(table, 2, :))
-    length(lines) == 2 ? [] : lines
 end
 
 function get_member_doc(f, cursor::CLStructDecl)
     table = ["Field", "Note"]
-    lines = ["| Field | Note |", "| :--- | :--- |"]
     for c in children(cursor)
         c isa CLFieldDecl || continue
-        name = spelling(c)
+        name = escape_underscore(spelling(c))
         doc = join(f(c), ' ')
         doc = replace(doc, '\n'=>' ')
-        isempty(doc) || push!(lines, "| $name | $doc |")
         isempty(doc) || push!(table, name, doc)
     end
     return render_table(reshape(table, 2, :))
-    length(lines) == 2 ? [] : lines
 end
 
 
@@ -194,7 +198,7 @@ function format_doxygen(cursor, options, members=false)
             push!(parameters, c)
         elseif c isa Clang.BlockCommand
             name = Clang.getCommandName(c)
-            if name == "returns"
+            if name in ["returns", "return"]
                 returns = c
             elseif name in ["sa", "see"]
                 append!(seealso, format_block(Clang.getParagraph(c), options))
@@ -260,7 +264,7 @@ end
 function format_block(x::Clang.Paragraph, options)
     t = format_inline(x, options)
     # Remove leading space
-    t = replace(t, r"(^|\s)\s+"=>s"\1")
+    t = replace(t, r"^\s+"=>"")
     [t]
 end
 
@@ -278,7 +282,8 @@ function format_block(x::Clang.BlockCommand, options)
     args = join(Clang.getArguments(x), ' ')
     content = only(format_block(Clang.getParagraph(x), options))
     name in ["li", "arg"] && return ["* $content"]
-    name in ["brief", "details"] && return ["$content"]
+    name in ["brief", "details"] && return [content]
+    name in ["note", "warning"] && return ["!!! $name", "", "    $content"]
     ["\\$name$args $content"]
 end
 
@@ -291,6 +296,8 @@ function format_inline end
 
 function format_inline(t::Clang.Text, options)
     text = Clang.getText(t)
+    # Fold consecutive space
+    text = replace(text, r"(\s)\s+"=>s"\1")
     gen_automatic_links(text, get(options, "DAG_ids", Dict()))
 end
 
@@ -354,7 +361,7 @@ end
 
 function format_inline(p::Clang.ParamCommand, options)
     name = Clang.getParamName(p)
-    name = replace(name, "_"=>raw"\\_")
+    name = escape_underscore(name)
     dir = parameter_pass_direction_name(Clang.getDirection(p))
     content = join(format_inline.(children(p), Ref(options)))
     "\\param$dir $name$content"

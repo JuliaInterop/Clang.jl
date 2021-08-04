@@ -12,8 +12,7 @@ function print_documentation(io::IO, cursor::Union{CLCursor, CXCursor}, indent, 
     ids = get(options, "DAG_ids", Dict())
 
     if extract_c_comment_style == "doxygen"
-        doc = format_doxygen(cursor, members)
-        doc = gen_automatic_links.(doc, Ref(ids))
+        doc = format_doxygen(cursor, options, members)
     elseif extract_c_comment_style == "raw"
         doc = format_raw(cursor, members)
     else
@@ -23,7 +22,8 @@ function print_documentation(io::IO, cursor::Union{CLCursor, CXCursor}, indent, 
     # Do not print """ if no doc
     all(isempty, doc) && return
     doc = [prologue; doc; epilogue]
-    doc = replace.(doc, r"""([\\$]|"(?=""))"""=>s"\\\1")
+    # _ is already escaped
+    doc = replace.(doc, r"""(\$|\\(?!\\?_)|"(?=""))"""=>s"\\\1")
     last(doc) == "" && pop!(doc)
     if length(doc) == 1 && fold_single_line_comment
         line = only(doc)
@@ -46,13 +46,16 @@ function gen_automatic_links(text, ids)
         m = match(pat, text)
 
         isnothing(m) && break
-        prev, escape, marker, word, text = m[1], m[2], m[3], m[4], m[5]
+        prev, escape, marker, word, next = m[1], m[2], m[3], m[4], m[5]
+        text = next
 
         if isnothing(escape) && Symbol(word) in keys(ids)
             ref = "[`$word`](@ref)"
         else
-            ref = word
+            word = marker == "`" ? word : replace(word, "_"=>raw"\\_")
+            ref = marker * word * marker
         end
+
         push!(result, prev, ref)
     end
     push!(result, text)
@@ -63,7 +66,7 @@ end
 function format_raw(cursor, members=false)
     comment = Clang.getRawCommentText(cursor)
     doc = strip_comment_markers(comment)
-    member_docs = members ? get_member_doc(format_raw, cursor) : []
+    member_docs = members ? get_member_doc(format_raw, cursor) : String[]
     isempty(member_docs) ? doc : [doc; ""; member_docs]
 end
 
@@ -83,7 +86,7 @@ function strip_comment_markers(s::AbstractString)::Vector
 
     lines = split(s, '\n')
     if length(lines) == 0
-        return []
+        return String[]
     elseif length(lines) == 1
         m = match(single_line_pattern, only(lines))
         if isnothing(m)
@@ -121,40 +124,71 @@ function strip_comment_markers(s::AbstractString)::Vector
     end
 end
 
-get_member_doc(f, cursor::CLCursor) = []
+function join_row(row)
+    parts = ["|"]
+    for i in row
+        push!(parts, " ", i, " |")
+    end
+    join(parts)
+end
+
+function render_table(table::AbstractMatrix{<:AbstractString})
+    size(table, 2) <= 1 && return String[]
+    widths = maximum(textwidth, table, dims=2)
+    widths = max.(widths, 4)
+    lines = String[]
+    titles = rpad.(table[:, 1], widths)
+
+    push!(lines, join_row(titles))
+    length_row = rpad.(":", widths, '-')
+    push!(lines, join_row(length_row))
+    for col in eachcol(@view table[:, 2:end])
+        row = rpad.(col, widths)
+        push!(lines, join_row(row))
+    end
+    lines
+end
+
+get_member_doc(f, cursor::CLCursor) = String[]
 
 function get_member_doc(f, cursor::CLEnumDecl)
-    lines = ["### Enumerators", "| Enumerator | Note |", "| :--- | :--- |"]
+    table = ["Enumerator", "Note"]
+    lines = ["| Enumerator | Note |", "| :--- | :--- |"]
     for c in children(cursor)
         c isa CLEnumConstantDecl || continue
         name = spelling(c)
         doc = join(f(c), ' ')
         doc = replace(doc, '\n'=>' ')
-        isempty(doc) || push!(lines, "| `$name` | $doc |")
+        isempty(doc) || push!(lines, "| $name | $doc |")
+        isempty(doc) || push!(table, name, doc)
     end
-    length(lines) == 3 ? [] : lines
+    return render_table(reshape(table, 2, :))
+    length(lines) == 2 ? [] : lines
 end
 
 function get_member_doc(f, cursor::CLStructDecl)
-    lines = ["### Fields", "| Field | Note |", "| :--- | :--- |"]
+    table = ["Field", "Note"]
+    lines = ["| Field | Note |", "| :--- | :--- |"]
     for c in children(cursor)
         c isa CLFieldDecl || continue
         name = spelling(c)
         doc = join(f(c), ' ')
         doc = replace(doc, '\n'=>' ')
-        isempty(doc) || push!(lines, "| `$name` | $doc |")
+        isempty(doc) || push!(lines, "| $name | $doc |")
+        isempty(doc) || push!(table, name, doc)
     end
-    length(lines) == 3 ? [] : lines
+    return render_table(reshape(table, 2, :))
+    length(lines) == 2 ? [] : lines
 end
 
 
-function format_doxygen(cursor, members=false)
+function format_doxygen(cursor, options, members=false)
     comment = Clang.getParsedComment(cursor)
     child_nodes = children(comment)
     # Collect parameters
     parameters, paragraphs = [], []
     returns = missing
-    seealso = []
+    seealso = String[]
     for c in child_nodes
         if c isa Clang.ParamCommand
             push!(parameters, c)
@@ -163,7 +197,7 @@ function format_doxygen(cursor, members=false)
             if name == "returns"
                 returns = c
             elseif name in ["sa", "see"]
-                append!(seealso, format_block(Clang.getParagraph(c)))
+                append!(seealso, format_block(Clang.getParagraph(c), options))
             else
                 push!(paragraphs, c)
             end
@@ -174,24 +208,24 @@ function format_doxygen(cursor, members=false)
         end
     end
 
-    member_docs = members ? get_member_doc(format_doxygen, cursor) : []
+    member_docs = members ? get_member_doc(x->format_doxygen(x, options, false), cursor) : String[]
     lines = String[]
     for p in paragraphs
         Clang.isWhiteSpace(p) && continue
-        t = format_block(p)
+        t = format_block(p, options)
         append!(lines, t)
         push!(lines, "")
     end
     if !isempty(parameters)
         push!(lines, "### Parameters")
         for p in parameters
-            append!(lines, format_parameter(p))
+            append!(lines, format_parameter(p, options))
             push!(lines, "")
         end
     end
     if !ismissing(returns)
         push!(lines, "### Returns")
-        append!(lines, format_block(Clang.getParagraph(returns)))
+        append!(lines, format_block(Clang.getParagraph(returns), options))
     end
     if !isempty(member_docs)
         append!(lines, member_docs)
@@ -204,12 +238,10 @@ function format_doxygen(cursor, members=false)
 end
 
 
-function format_parameter(p)
+function format_parameter(p, options)
     name = Clang.getParamName(p)
-    # TODO: escape all markdown symbols
-    # name = replace(name, "_"=>"\\_")
     dir = parameter_pass_direction_name(Clang.getDirection(p))
-    content = format_inline.(children(p))
+    content = format_inline.(children(p), Ref(options))
     ["* `$name`:$dir$(content[1])"; @view content[2:end]]
 end
 
@@ -220,19 +252,19 @@ Format block elements, return a collection of lines.
 """
 function format_block end
 
-function format_block(t::Clang.VerbatimLine)
+function format_block(t::Clang.VerbatimLine, options)
     # this command is usually a result of parse error
     ["`" * Clang.getText(t) * "`"]
 end
 
-function format_block(x::Clang.Paragraph)
-    t = format_inline(x)
+function format_block(x::Clang.Paragraph, options)
+    t = format_inline(x, options)
     # Remove leading space
     t = replace(t, r"(^|\s)\s+"=>s"\1")
     [t]
 end
 
-function format_block(t::Clang.VerbatimBlockCommand)
+function format_block(t::Clang.VerbatimBlockCommand, options)
     lines = Clang.getText.(children(t))
     # Clang does not parse its own documentation right
     # This is a quick fix for it
@@ -241,11 +273,11 @@ function format_block(t::Clang.VerbatimBlockCommand)
 end
 
 
-function format_block(x::Clang.BlockCommand)
+function format_block(x::Clang.BlockCommand, options)
     name = Clang.getCommandName(x)
     args = join(Clang.getArguments(x), ' ')
-    content = only(format_block(Clang.getParagraph(x)))
-    name in ["li", "arg"] && return ["*$content"]
+    content = only(format_block(Clang.getParagraph(x), options))
+    name in ["li", "arg"] && return ["* $content"]
     name in ["brief", "details"] && return ["$content"]
     ["\\$name$args $content"]
 end
@@ -257,15 +289,16 @@ Format inline elements, return a string.
 """
 function format_inline end
 
-function format_inline(t::Clang.Text)
-    Clang.getText(t)
+function format_inline(t::Clang.Text, options)
+    text = Clang.getText(t)
+    gen_automatic_links(text, get(options, "DAG_ids", Dict()))
 end
 
-function format_inline(t::Clang.VerbatimLine)
+function format_inline(t::Clang.VerbatimLine, options)
     "`" * Clang.getText(t) * "`"
 end
 
-function format_inline(t::Clang.VerbatimBlockCommand)
+function format_inline(t::Clang.VerbatimBlockCommand, options)
     lines = Clang.getText.(children(t))
     # Clang does not parse its own documentation right
     # This is a quick fix for it
@@ -274,35 +307,43 @@ function format_inline(t::Clang.VerbatimBlockCommand)
 end
 
 """Render a "word" argument respecting C's identifier definition."""
-function render_argument(raw, marker_begin, marker_end=marker_begin)
+function render_argument(raw, options, marker_begin, marker_end=marker_begin)
     # libclang thinks "(\c code)" is (`code)` instead of (`code`)
     m = match(r"^([\w\d_ ]+)(.*)$", raw)
+    ids = get(options, "DAG_ids", Dict())
     if isnothing(m)
         "$marker_begin$raw$marker_end"
     else
         code = m[1]
         text = m[2]
-        "$marker_begin$code$marker_end$text"
+        # Replace code with a link
+        if Symbol(code) in keys(ids)
+            "[`$code`](@ref)$text"
+        else
+            "$marker_begin$code$marker_end$text"
+        end
     end
 end
 
-function format_inline(c::Clang.InlineCommand)
+function format_inline(c::Clang.InlineCommand, options)
     k = Clang.getRenderKind(c)
     args = join(Clang.getArguments(c), ' ')
     if k == Clang.CXCommentInlineCommandRenderKind_Normal
         return args
     elseif k == Clang.CXCommentInlineCommandRenderKind_Bold
-        return render_argument(args, "**")
+        return render_argument(args, options, "**")
     elseif k == Clang.CXCommentInlineCommandRenderKind_Monospaced
-        return render_argument(args, "`")
+        return render_argument(args, options, "`")
     elseif k == Clang.CXCommentInlineCommandRenderKind_Emphasized
-        return render_argument(args, "*")
+        return render_argument(args, options, "*")
     elseif k == Clang.CXCommentInlineCommandRenderKind_Anchor
         return ""
     end
 end
 
-format_inline(p::Clang.Paragraph) = join(format_inline.(children(p)))
+function format_inline(p::Clang.Paragraph, options)
+    join(format_inline.(children(p), Ref(options)))
+end
 
 function parameter_pass_direction_name(d)
     ismissing(d) && return ""
@@ -311,21 +352,21 @@ function parameter_pass_direction_name(d)
     d == Clang.CXCommentParamPassDirection_InOut && return raw"\[in,out\]"
 end
 
-function format_inline(p::Clang.ParamCommand)
+function format_inline(p::Clang.ParamCommand, options)
     name = Clang.getParamName(p)
-    name = replace(name, "_"=>"\\_")
+    name = replace(name, "_"=>raw"\\_")
     dir = parameter_pass_direction_name(Clang.getDirection(p))
-    content = join(format_inline.(children(p)))
+    content = join(format_inline.(children(p), Ref(options)))
     "\\param$dir $name$content"
 end
 
-function format_inline(c::Clang.BlockCommand)
+function format_inline(c::Clang.BlockCommand, options)
     name = Clang.getCommandName(c)
     args = join(Clang.getArguments(c), ' ')
-    content = format_inline(Clang.getParagraph(c))
+    content = format_inline(Clang.getParagraph(c), options)
     "\\$name$args$content"
 end
 
-format_inline(t::Clang.HTMLStartTag) = Clang.getAsString(t)
-
-format_inline(t::Clang.HTMLEndTag) = Clang.getAsString(t)
+function format_inline(t::Union{Clang.HTMLStartTag, Clang.HTMLEndTag}, options)
+    Clang.getAsString(t)
+end

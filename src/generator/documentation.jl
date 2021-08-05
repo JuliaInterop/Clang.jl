@@ -23,7 +23,7 @@ function print_documentation(io::IO, cursor::Union{CLCursor, CXCursor}, indent, 
     all(isempty, doc) && return
     doc = [prologue; doc; epilogue]
     # _ is already escaped
-    doc = replace.(doc, r"""(\$|\\(?!\\?_)|"(?=""))"""=>s"\\\1")
+    doc = replace.(doc, r"""(\$|\\|"(?=""))"""=>s"\\\1")
     last(doc) == "" && pop!(doc)
     if length(doc) == 1 && fold_single_line_comment
         line = only(doc)
@@ -37,7 +37,7 @@ function print_documentation(io::IO, cursor::Union{CLCursor, CXCursor}, indent, 
     end
 end
 
-escape_underscore(word) = replace(word, "_"=>raw"\\_")
+escape_underscore(word) = replace(word, "_"=>"\\_")
 
 "Replace identifiers with @ref"
 function gen_automatic_links(text, ids)
@@ -136,24 +136,27 @@ end
 
 function render_table(table::AbstractMatrix{<:AbstractString})
     size(table, 2) <= 1 && return String[]
-    widths = maximum(textwidth, table, dims=2)
-    widths = max.(widths, 4)
+    slash_width = count.("\\", table) .* textwidth('\\')
+    raw_width = textwidth.(table)
+    widths = maximum(raw_width .+ slash_width, dims=2)
+    cell_widths = max.(widths, 4)
     lines = String[]
-    titles = rpad.(table[:, 1], widths)
+    titles = rpad.(table[:, 1], cell_widths  .- slash_width[:, 1])
 
     push!(lines, join_row(titles))
-    length_row = rpad.(":", widths, '-')
+    length_row = rpad.(":", cell_widths, '-')
     push!(lines, join_row(length_row))
     last_col = fill("", size(table, 1))
-    for col in eachcol(@view table[:, 2:end])
+    for (col,slash_col) in Iterators.drop(zip(eachcol(table), eachcol(slash_width)), 1)
         for i in eachindex(col)
             if col[i] == last_col[i]
                 col[i] = ""
+                slash_col[i] = 0
             else
                 last_col[i] = col[i]
             end
         end
-        row = rpad.(col, widths)
+        row = rpad.(col, cell_widths .- slash_col)
         push!(lines, join_row(row))
     end
     lines

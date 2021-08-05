@@ -734,3 +734,25 @@ end
 # clang_TParamCommandComment_getDepth
 # clang_TParamCommandComment_getIndex
 
+
+"""
+    getSourceCode(cursor::Union{CXCursor, CLCursor}) -> String
+Get source code for the cursor.
+"""
+function getSourceCode(cursor::Union{CXCursor, CLCursor})
+    ext = getCursorExtent(cursor)
+    range_begin = clang_getRangeStart(ext)
+    range_end = clang_getRangeEnd(ext)
+    file_begin = Ref{CXFile}(C_NULL)
+    file_end = Ref{CXFile}(C_NULL)
+    offset_begin = Ref{Cuint}(0)
+    offset_end = Ref{Cuint}(0)
+    clang_getExpansionLocation(range_begin, file_begin, C_NULL, C_NULL, offset_begin)
+    clang_getExpansionLocation(range_end, file_end, C_NULL, C_NULL, offset_end)
+    @assert !iszero(clang_File_isEqual(file_begin[], file_end[]))
+    tu = getTranslationUnit(cursor)
+    size = Ref{Csize_t}(0)
+    buf = clang_getFileContents(tu, file_begin[], size)
+    @assert offset_begin[] <= offset_end[] <= size[]
+    unsafe_string(pointer(buf) + offset_begin[], offset_end[] - offset_begin[])
+end

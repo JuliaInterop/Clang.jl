@@ -3,12 +3,14 @@ function print_documentation(io::IO, node::ExprNode, indent, options, members::B
     print_documentation(io, node.cursor, indent, options, members; kwargs...)
 end
 
+const ESCAPE_PATTERN = r"""(\$|\\|"(?=""))"""
 
-function print_documentation(io::IO, cursor::Union{CLCursor, CXCursor}, indent, options, members::Bool=false; 
+function print_documentation(io::IO, cursor::CLCursor, indent, options, members::Bool=false; 
         prologue::Vector{String}=String[], epilogue::Vector{String}=String[])
 
     fold_single_line_comment = get(options, "fold_single_line_comment", false)
     extract_c_comment_style = get(options, "extract_c_comment_style", "disable")
+    show_c_function_prototype = get(options, "show_c_function_prototype", false)
     ids = get(options, "DAG_ids", Dict())
 
     if extract_c_comment_style == "doxygen"
@@ -19,11 +21,17 @@ function print_documentation(io::IO, cursor::Union{CLCursor, CXCursor}, indent, 
         return
     end
     
+    if show_c_function_prototype && cursor isa Clang.CLFunctionDecl
+        prototype = ["### Prototype", "```c", get_prototype(cursor), "```"]
+    else
+        prototype = String[]
+    end
+    
     # Do not print """ if no doc
-    all(isempty, doc) && return
-    doc = [prologue; doc; epilogue]
-    # _ is already escaped
-    doc = replace.(doc, r"""(\$|\\|"(?=""))"""=>s"\\\1")
+    all(isempty, doc) && isempty(prototype) && return
+    doc = [prologue; doc; prototype; epilogue]
+    # _ is already escaped with one slash, here we add one more
+    doc = replace.(doc, ESCAPE_PATTERN=>s"\\\1")
     last(doc) == "" && pop!(doc)
     if length(doc) == 1 && fold_single_line_comment
         line = only(doc)
@@ -37,15 +45,22 @@ function print_documentation(io::IO, cursor::Union{CLCursor, CXCursor}, indent, 
     end
 end
 
+function get_prototype(node)
+    code = Clang.getSourceCode(node.cursor)
+    code = replace(code, r"/\*.*?\*/|//.*?$"m=>"")
+    code = replace(code, r"\s+"m=>" ")
+    "$code;"
+end
+
 escape_underscore(word) = replace(word, "_"=>"\\_")
 
 "Replace identifiers with @ref"
 function gen_automatic_links(text, ids)
     result = []
     # ...`id`(...)
-    pat = r"^(.*?)(%)?(\*{1,2}|`?)([\w_][\w\d_]*)\3((?:\(.*?\))?.*)$"
+    ESCAPE_PATTERN = r"^(.*?)(%)?(\*{1,2}|`?)([\w_][\w\d_]*)\3((?:\(.*?\))?.*)$"
     while true
-        m = match(pat, text)
+        m = match(ESCAPE_PATTERN, text)
 
         isnothing(m) && break
         prev, escape, marker, word, next = m[1], m[2], m[3], m[4], m[5]
@@ -136,7 +151,7 @@ end
 
 function render_table(table::AbstractMatrix{<:AbstractString})
     size(table, 2) <= 1 && return String[]
-    slash_width = count.("\\", table) .* textwidth('\\')
+    slash_width = count.(ESCAPE_PATTERN, table) .* textwidth('\\')
     raw_width = textwidth.(table)
     widths = maximum(raw_width .+ slash_width, dims=2)
     cell_widths = max.(widths, 4)
@@ -216,6 +231,7 @@ function format_doxygen(cursor, options, members=false)
     end
 
     member_docs = members ? get_member_doc(x->format_doxygen(x, options, false), cursor) : String[]
+
     lines = String[]
     for p in paragraphs
         Clang.isWhiteSpace(p) && continue
@@ -233,6 +249,7 @@ function format_doxygen(cursor, options, members=false)
     if !ismissing(returns)
         push!(lines, "### Returns")
         append!(lines, format_block(Clang.getParagraph(returns), options))
+        push!(lines, "")
     end
     if !isempty(member_docs)
         append!(lines, member_docs)

@@ -127,6 +127,9 @@ struct_field_comment_style = "disable"
 # if set to "outofline", documentation of enumerators will be collected at the "Enumerators" section of the enum
 enumerator_comment_style = "disable"
 
+# if set to true, C function prototype will be included in documentation
+show_c_function_prototype = false
+
 [codegen]
 # map C's bool to Julia's Bool instead of `Cuchar` a.k.a `UInt8`.
 use_julia_bool = true

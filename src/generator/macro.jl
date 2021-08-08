@@ -285,10 +285,9 @@ end
 "Parse a string potentially as a pointer type (`type *``). Issue #311"
 function parse_as_pointer(str)
     m = match(r"^(.+?)((?:\s(:?\*|const|volatile))+)$", str)
-    isnothing(m) && return nothing
 
-    base_type = m[1]
-    ptr_postfix = m[2]
+    base_type = isnothing(m) ? str : m[1]
+    ptr_postfix = isnothing(m) ? "" : m[2]
     ex = try_parse(base_type)
     isnothing(ex) && return nothing
 

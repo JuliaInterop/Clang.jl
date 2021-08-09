@@ -3,7 +3,7 @@ module Clang
 include("shards/JLLEnvs.jl")
 using .JLLEnvs
 
-include("LibClang.jl")
+include("../lib/LibClang.jl")
 using .LibClang
 
 include("cltypes.jl")

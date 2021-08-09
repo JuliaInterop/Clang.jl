@@ -12,7 +12,7 @@ library_name = "libclang"
 library_names = {}
 
 # output file path relative to the working directory
-output_file_path = "../src/LibClang.jl"
+output_file_path = "../lib/LibClang.jl"
 
 # if this entry is not empty, the generator will print the code below to the `output_file_path`.
 # module module_name

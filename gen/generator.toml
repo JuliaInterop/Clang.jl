@@ -95,7 +95,7 @@ smart_de_anonymize = true
 # if this option is set to true, those structs that are not necessary to be an 
 # immutable struct will be generated as a mutable struct. 
 # this option is default to false, do read the paragraph below before using this feature.
-auto_mutability = true
+auto_mutability = false
 
 # add inner constructor `Foo() = new()`
 auto_mutability_with_new = true

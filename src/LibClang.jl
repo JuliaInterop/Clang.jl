@@ -16,12 +16,12 @@ const Ctime_t = Int
     CXError_ASTReadError = 4
 end
 
-mutable struct CXString
+struct CXString
     data::Ptr{Cvoid}
     private_flags::Cuint
 end
 
-mutable struct CXStringSet
+struct CXStringSet
     Strings::Ptr{CXString}
     Count::Cuint
 end
@@ -175,7 +175,7 @@ function clang_getFileTime(SFile)
     @ccall libclang.clang_getFileTime(SFile::CXFile)::Ctime_t
 end
 
-mutable struct CXFileUniqueID
+struct CXFileUniqueID
     data::NTuple{3, Culonglong}
 end
 
@@ -203,12 +203,12 @@ function clang_File_tryGetRealPathName(file)
     @ccall libclang.clang_File_tryGetRealPathName(file::CXFile)::CXString
 end
 
-mutable struct CXSourceLocation
+struct CXSourceLocation
     ptr_data::NTuple{2, Ptr{Cvoid}}
     int_data::Cuint
 end
 
-mutable struct CXSourceRange
+struct CXSourceRange
     ptr_data::NTuple{2, Ptr{Cvoid}}
     begin_int_data::Cuint
     end_int_data::Cuint
@@ -282,7 +282,7 @@ function clang_getRangeEnd(range)
     @ccall libclang.clang_getRangeEnd(range::CXSourceRange)::CXSourceLocation
 end
 
-mutable struct CXSourceRangeList
+struct CXSourceRangeList
     count::Cuint
     ranges::Ptr{CXSourceRange}
 end
@@ -536,7 +536,7 @@ struct CXTUResourceUsageEntry
     amount::Culong
 end
 
-mutable struct CXTUResourceUsage
+struct CXTUResourceUsage
     data::Ptr{Cvoid}
     numEntries::Cuint
     entries::Ptr{CXTUResourceUsageEntry}
@@ -834,7 +834,7 @@ end
     CXCursor_OverloadCandidate = 700
 end
 
-mutable struct CXCursor
+struct CXCursor
     kind::CXCursorKind
     xdata::Cint
     data::NTuple{3, Ptr{Cvoid}}
@@ -1175,7 +1175,7 @@ end
     CXCallingConv_Unexposed = 200
 end
 
-mutable struct CXType
+struct CXType
     kind::CXTypeKind
     data::NTuple{2, Ptr{Cvoid}}
 end
@@ -1837,7 +1837,7 @@ end
     CXToken_Comment = 4
 end
 
-mutable struct CXToken
+struct CXToken
     int_data::NTuple{4, Cuint}
     ptr_data::Ptr{Cvoid}
 end
@@ -1892,7 +1892,7 @@ end
 
 const CXCompletionString = Ptr{Cvoid}
 
-mutable struct CXCompletionResult
+struct CXCompletionResult
     CursorKind::CXCursorKind
     CompletionString::CXCompletionString
 end
@@ -1965,7 +1965,7 @@ function clang_getCursorCompletionString(cursor)
     @ccall libclang.clang_getCursorCompletionString(cursor::CXCursor)::CXCompletionString
 end
 
-mutable struct CXCodeCompleteResults
+struct CXCodeCompleteResults
     Results::Ptr{CXCompletionResult}
     NumResults::Cuint
 end
@@ -2144,7 +2144,7 @@ end
     CXVisit_Continue = 1
 end
 
-mutable struct CXCursorAndRangeVisitor
+struct CXCursorAndRangeVisitor
     context::Ptr{Cvoid}
     visit::Ptr{Cvoid}
 end
@@ -2171,12 +2171,12 @@ const CXIdxClientContainer = Ptr{Cvoid}
 
 const CXIdxClientASTFile = Ptr{Cvoid}
 
-mutable struct CXIdxLoc
+struct CXIdxLoc
     ptr_data::NTuple{2, Ptr{Cvoid}}
     int_data::Cuint
 end
 
-mutable struct CXIdxIncludedFileInfo
+struct CXIdxIncludedFileInfo
     hashLoc::CXIdxLoc
     filename::Cstring
     file::CXFile
@@ -2185,7 +2185,7 @@ mutable struct CXIdxIncludedFileInfo
     isModuleImport::Cint
 end
 
-mutable struct CXIdxImportedASTFileInfo
+struct CXIdxImportedASTFileInfo
     file::CXFile
     _module::CXModule
     loc::CXIdxLoc
@@ -2244,13 +2244,13 @@ end
     CXIdxAttr_IBOutletCollection = 3
 end
 
-mutable struct CXIdxAttrInfo
+struct CXIdxAttrInfo
     kind::CXIdxAttrKind
     cursor::CXCursor
     loc::CXIdxLoc
 end
 
-mutable struct CXIdxEntityInfo
+struct CXIdxEntityInfo
     kind::CXIdxEntityKind
     templateKind::CXIdxEntityCXXTemplateKind
     lang::CXIdxEntityLanguage
@@ -2261,11 +2261,11 @@ mutable struct CXIdxEntityInfo
     numAttributes::Cuint
 end
 
-mutable struct CXIdxContainerInfo
+struct CXIdxContainerInfo
     cursor::CXCursor
 end
 
-mutable struct CXIdxIBOutletCollectionAttrInfo
+struct CXIdxIBOutletCollectionAttrInfo
     attrInfo::Ptr{CXIdxAttrInfo}
     objcClass::Ptr{CXIdxEntityInfo}
     classCursor::CXCursor
@@ -2276,7 +2276,7 @@ end
     CXIdxDeclFlag_Skipped = 1
 end
 
-mutable struct CXIdxDeclInfo
+struct CXIdxDeclInfo
     entityInfo::Ptr{CXIdxEntityInfo}
     cursor::CXCursor
     loc::CXIdxLoc
@@ -2298,35 +2298,35 @@ end
     CXIdxObjCContainer_Implementation = 2
 end
 
-mutable struct CXIdxObjCContainerDeclInfo
+struct CXIdxObjCContainerDeclInfo
     declInfo::Ptr{CXIdxDeclInfo}
     kind::CXIdxObjCContainerKind
 end
 
-mutable struct CXIdxBaseClassInfo
+struct CXIdxBaseClassInfo
     base::Ptr{CXIdxEntityInfo}
     cursor::CXCursor
     loc::CXIdxLoc
 end
 
-mutable struct CXIdxObjCProtocolRefInfo
+struct CXIdxObjCProtocolRefInfo
     protocol::Ptr{CXIdxEntityInfo}
     cursor::CXCursor
     loc::CXIdxLoc
 end
 
-mutable struct CXIdxObjCProtocolRefListInfo
+struct CXIdxObjCProtocolRefListInfo
     protocols::Ptr{Ptr{CXIdxObjCProtocolRefInfo}}
     numProtocols::Cuint
 end
 
-mutable struct CXIdxObjCInterfaceDeclInfo
+struct CXIdxObjCInterfaceDeclInfo
     containerInfo::Ptr{CXIdxObjCContainerDeclInfo}
     superInfo::Ptr{CXIdxBaseClassInfo}
     protocols::Ptr{CXIdxObjCProtocolRefListInfo}
 end
 
-mutable struct CXIdxObjCCategoryDeclInfo
+struct CXIdxObjCCategoryDeclInfo
     containerInfo::Ptr{CXIdxObjCContainerDeclInfo}
     objcClass::Ptr{CXIdxEntityInfo}
     classCursor::CXCursor
@@ -2334,13 +2334,13 @@ mutable struct CXIdxObjCCategoryDeclInfo
     protocols::Ptr{CXIdxObjCProtocolRefListInfo}
 end
 
-mutable struct CXIdxObjCPropertyDeclInfo
+struct CXIdxObjCPropertyDeclInfo
     declInfo::Ptr{CXIdxDeclInfo}
     getter::Ptr{CXIdxEntityInfo}
     setter::Ptr{CXIdxEntityInfo}
 end
 
-mutable struct CXIdxCXXClassDeclInfo
+struct CXIdxCXXClassDeclInfo
     declInfo::Ptr{CXIdxDeclInfo}
     bases::Ptr{Ptr{CXIdxBaseClassInfo}}
     numBases::Cuint
@@ -2364,7 +2364,7 @@ end
     CXSymbolRole_Implicit = 256
 end
 
-mutable struct CXIdxEntityRefInfo
+struct CXIdxEntityRefInfo
     kind::CXIdxEntityRefKind
     cursor::CXCursor
     loc::CXIdxLoc
@@ -2374,7 +2374,7 @@ mutable struct CXIdxEntityRefInfo
     role::CXSymbolRole
 end
 
-mutable struct IndexerCallbacks
+struct IndexerCallbacks
     abortQuery::Ptr{Cvoid}
     diagnostic::Ptr{Cvoid}
     enteredMainFile::Ptr{Cvoid}
@@ -2479,7 +2479,7 @@ function clang_Type_visitFields(T, visitor, client_data)
     @ccall libclang.clang_Type_visitFields(T::CXType, visitor::CXFieldVisitor, client_data::CXClientData)::Cuint
 end
 
-mutable struct CXComment
+struct CXComment
     ASTNode::Ptr{Cvoid}
     TranslationUnit::CXTranslationUnit
 end

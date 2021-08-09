@@ -118,7 +118,7 @@ auto_mutability_whitelist = []
 extract_c_comment_style = "disable"
 
 # if set to true, single line comment will be printed as """comment""" instead of """\ncomment\n"""
-fold_single_line_comment = true
+fold_single_line_comment = false
 
 # if set to "outofline", documentation of struct fields will be collected at the "Fields" section of the struct
 # if set to "inline", documentation of struct fields will go right above struct definition
@@ -181,4 +181,3 @@ ignore_header_guards_with_suffixes = []
 
 # if true, ignore those pure definition macros in the C code
 ignore_pure_definition = true
-

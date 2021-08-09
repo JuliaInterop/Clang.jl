@@ -87,6 +87,8 @@ function resolve_dependency!(dag::ExprDAG, node::ExprNode{TypedefElaborated})
 
     if haskey(dag.tags, leaf_ty.sym)
         push!(node.adj, dag.tags[leaf_ty.sym])
+    elseif haskey(dag.ids_extra, leaf_ty.sym)
+        # pass
     else
         tycu = getTypeDeclaration(ty)
         file, line, col = get_file_line_column(cursor)

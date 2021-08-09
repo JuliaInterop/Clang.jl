@@ -71,7 +71,7 @@ function collect_dependent_system_nodes!(dag::ExprDAG, node::ExprNode{TypedefEla
 
     is_jl_basic(leaf_ty) && return system_nodes
 
-    if !haskey(dag.tags, leaf_ty.sym)
+    if !(haskey(dag.tags, leaf_ty.sym) || haskey(dag.ids_extra, leaf_ty.sym))
         # add all sys nodes with the same id
         for (i, n) in enumerate(dag.sys)
             if n.id == leaf_ty.sym

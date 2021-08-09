@@ -144,7 +144,8 @@ end
 function emit!(dag::ExprDAG, node::ExprNode{FunctionVariadic}, options::Dict; args...)
     # @ccall is needed to support variadic argument
     use_ccall_macro = get(options, "use_ccall_macro", true)
-    if use_ccall_macro
+    wrap_variadic_function = get(options, "wrap_variadic_function", false)
+    if use_ccall_macro && wrap_variadic_function
         cursor = node.cursor
         is_strict_typed = get(options, "is_function_strictly_typed", false)
         arg_names, args = _get_func_arg(cursor, options, dag)

@@ -115,17 +115,17 @@ auto_mutability_whitelist = []
 # if set to "raw", extract and dump raw c comment;
 # if set to "doxygen", parse and format doxygen comment.
 # note: by default, Clang only parses doxygen comment, pass `-fparse-all-comments` to Clang in order to parse non-doxygen comments.
-extract_c_comment_style = "disable"
+extract_c_comment_style = "doxygen"
 
 # if set to true, single line comment will be printed as """comment""" instead of """\ncomment\n"""
 fold_single_line_comment = false
 
 # if set to "outofline", documentation of struct fields will be collected at the "Fields" section of the struct
 # if set to "inline", documentation of struct fields will go right above struct definition
-struct_field_comment_style = "disable"
+struct_field_comment_style = "outofline"
 
 # if set to "outofline", documentation of enumerators will be collected at the "Enumerators" section of the enum
-enumerator_comment_style = "disable"
+enumerator_comment_style = "outofline"
 
 # if set to true, C function prototype will be included in documentation
 show_c_function_prototype = false

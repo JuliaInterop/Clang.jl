@@ -41,7 +41,7 @@ const JLL_ENV_TRIPLES = String[
     "x86_64-apple-darwin14",       # Tier 1
     "x86_64-linux-gnu",            # Tier 1
     "x86_64-linux-musl",
-    "x86_64-unknown-freebsd11.1",  # Tier 1
+    "x86_64-unknown-freebsd12.2",  # Tier 1
     "x86_64-w64-mingw32",          # Tier 1
 ]
 
@@ -58,7 +58,7 @@ const JLL_ENV_CLANG_TARGETS_MAPPING = Dict(
     "x86_64-apple-darwin14"=>"x86_64-apple-darwin14",
     "x86_64-linux-gnu"=>"x86_64-unknown-linux-gnu",
     "x86_64-linux-musl"=>"x86_64-unknown-linux-musl",
-    "x86_64-unknown-freebsd11.1"=>"x86_64-unknown-freebsd11.1",
+    "x86_64-unknown-freebsd12.2"=>"x86_64-unknown-freebsd12.2",
     "x86_64-w64-mingw32"=>"x86_64-w64-windows-gnu",
 )
 
@@ -135,7 +135,7 @@ function get_system_dirs(triple::String, version::VersionNumber=v"4.8.5")
         push!(isys, joinpath(gcc_triple_path, triple, "sys-root", "include"))
     elseif triple == "i686-linux-gnu" || triple == "x86_64-linux-gnu" ||
             triple == "aarch64-linux-gnu" || triple == "powerpc64le-linux-gnu" ||
-            triple == "x86_64-unknown-freebsd11.1"
+            triple == "x86_64-unknown-freebsd12.2"
         # compiler
         push!(isys, joinpath(gcc_triple_path, "lib", "gcc", triple, string(version), "include"))
         push!(isys, joinpath(gcc_triple_path, "lib", "gcc", triple, string(version), "include-fixed"))

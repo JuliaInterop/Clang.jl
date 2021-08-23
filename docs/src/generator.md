@@ -44,16 +44,6 @@ headers = detect_headers(header_dir, args)
 ```
 You also need an options file `generator.toml` that to make this script work, you can refer to [this toml file](https://github.com/JuliaInterop/Clang.jl/blob/master/gen/generator.toml) for a reference.
 
-
-### Finding standard library
-On some systems Clang.jl may complain about missing standard library, e.g. `fatal error: 'time.h' file not found`, in that case you can fix it by adding the standard library path to clang arguments.
-```julia
-# on macOS
-for header in Clang.find_std_headers()
-    push!(clang_args, "-I"*header)
-end
-```
-
 ### Skipping specific symbols
 The C header may contain some symbols that are not correctly handled by Clang.jl, or need manual wrapping. For example, julia provides `tm` as `Libc.TmStruct`, so you may not want to map it to a new struct. As a workaround, you can skip these symbols. After that, if this symbol is needed, you can add it back in prologue. Prologue is handled by the `prologue_file_path` option.
 
@@ -83,6 +73,9 @@ rewrite!(ctx.dag)
 # print
 build!(ctx, BUILDSTAGE_PRINTING_ONLY)
 ```
+
+### Multi-platform configuration
+Some headers may contain system-dependent symbols such as `long` or `char`, or system-indenpendent symbols may be resolved to system depent ones, for example, `int64_t` may be defined as `long`. You can skip these symbols and add them back manually as in [Skipping specific symbols](@ref). If the differences are two large to be manually fixed, you can generate wrappers for each platform as in [CImGUI.jl](https://github.com/JuliaImGui/LibCImGui.jl/blob/9af63ee69dc109000dabdb30ef86073d546738c3/gen/generator.jl).
 
 ## Variadic Function
 With the help of `@ccall` macro, variadic C functions can be from Julia, for example, `@ccall printf("%d\n"::Cstring; 123::Cint)::Cint` can be used to call the C function `printf`. Note that those arguments after the semicolon `;` are variadic arguments.

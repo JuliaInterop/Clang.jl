@@ -102,8 +102,17 @@ However, variadic C functions must be called with the correct argument types. Th
 | Pointer (`T*`)                      | `Ref{T}` or `Ptr{T}`                             | `Ref{T}` or `Ptr{T}` or any array type |
 | String (`char*`)                    | `Cstring` or `Ptr{Cchar}`                        | `String`                               |
 
+!!! note
+    `Ref` is not a concrete type but an abstract type in Julia. For example, `Ref(1)` is `Base.RefValue(1)`, which cannot be directly passed to C.
+
 As observed from the table, if you want to pass strings or arrays to C, you need to annotate the type as `Ptr{T}` or `Ref{T}` (or `Cstring`), otherwise the struct that represents the `String` or `Array`type instead of the buffer itself will be passed. There are two methods to pass arguments of these types:
 * directly use @ccall macro: `@ccall printf("%s\n"; "hello"::Cstring)::Cint`. You can also create wrappers for common use cases of this.
 * overload `to_c_type` to map Julia type to correct ccall signature type: add `to_c_type(::Type{String}) = Cstring` to prologue (prologue can be added by setting `prologue_file_path` in options). Then all arguments of String will be annotated as `Cstring`.
+
+The above type correspondence can be implemented by including the following lines in prologue
+```julia
+to_c_type(::Type{<:AbstractString}) = Cstring # or Ptr{Cchar}
+to_c_type(t::Type{<:Union{AbstractArray,Ref}}) = Ptr{eltype(t)}
+```
 
 For a complete tutorial on calling C functions, refer to [Calling C and Fortran Code](https://docs.julialang.org/en/v1/manual/calling-c-and-fortran-code/#Calling-C-and-Fortran-Code) in the Julia manual.

@@ -12,7 +12,7 @@ function collect_nested_record!(dag::ExprDAG, node::ExprNode, new_tags, isdeterm
         n_cursor = get_elaborated_cursor(field_ty)
         if isempty(string(leaf_jlty.sym))
             @assert isCursorDefinition(n_cursor)
-            n_id = isdeterministic ? gensym_deterministic("Ctag") : gensym("Ctag")
+            n_id = gensym_recorded(n_cursor, isdeterministic, dag.gensym_map)
             ty = n_cursor isa CLStructDecl ? StructAnonymous() : UnionAnonymous()
             n_node = ExprNode(n_id, ty, n_cursor, Expr[], Int[])
             push!(dag.nodes, n_node)

@@ -24,6 +24,7 @@ function (x::CollectTopLevelNode)(dag::ExprDAG, options::Dict)
     log_options = get(general_options, "log", Dict())
     is_local_only = get(general_options, "is_local_header_only", true)
     show_info = get(log_options, "CollectTopLevelNode_log", x.show_info)
+    general_options["gensym_map"] = dag.gensym_map
 
     empty!(dag.nodes)
     empty!(dag.sys)
@@ -43,6 +44,7 @@ function (x::CollectTopLevelNode)(dag::ExprDAG, options::Dict)
         end
     end
 
+    delete!(general_options, "gensym_map")
     return dag
 end
 

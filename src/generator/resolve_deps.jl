@@ -109,10 +109,10 @@ function resolve_dependency!(dag::ExprDAG, node::ExprNode{TypedefDefault})
 
     # do nothing for unknowns since we just skip them in the downstream passes
     is_jl_unknown(leaf_ty) && return dag
-
-    if haskey(dag.ids, leaf_ty.sym)
-        push!(node.adj, dag.ids[leaf_ty.sym])
-    elseif haskey(dag.ids_extra, leaf_ty.sym)
+    sym = leaf_ty.sym == Symbol("") ? dag.gensym_map[c] : leaf_ty.sym
+    if haskey(dag.ids, sym)
+        push!(node.adj, dag.ids[sym])
+    elseif haskey(dag.ids_extra, sym)
         # pass
     else
         tycu = getTypeDeclaration(ty)
@@ -144,15 +144,16 @@ function resolve_dependency!(dag::ExprDAG, node::ExprNode{<:AbstractStructNodeTy
         is_jl_basic(leaf_ty) && continue
 
         hasref = has_elaborated_reference(ty)
-        if hasref && haskey(dag.tags, leaf_ty.sym)
-            push!(node.adj, dag.tags[leaf_ty.sym])
-        elseif !hasref && haskey(dag.ids, leaf_ty.sym)
-            push!(node.adj, dag.ids[leaf_ty.sym])
-        elseif haskey(dag.ids_extra, leaf_ty.sym)
+        sym = leaf_ty.sym == Symbol("") ? get(dag.gensym_map, leaf_ty.cursor, Symbol("")) : leaf_ty.sym
+        if hasref && haskey(dag.tags, sym)
+            push!(node.adj, dag.tags[sym])
+        elseif !hasref && haskey(dag.ids, sym)
+            push!(node.adj, dag.ids[sym])
+        elseif haskey(dag.ids_extra, sym)
             # pass
-        elseif !hasref && haskey(dag.tags, leaf_ty.sym)
+        elseif !hasref && haskey(dag.tags, sym)
             # FIXME: in some cases, this system-header symbol is in dag.tags
-            push!(node.adj, dag.tags[leaf_ty.sym])
+            push!(node.adj, dag.tags[sym])
         elseif occursin("anonymous", spelling(ty))
             # it could be a nested anonymous tag-type.
             # pass

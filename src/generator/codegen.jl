@@ -261,7 +261,8 @@ function emit!(dag::ExprDAG, node::ExprNode{TypedefDefault}, options::Dict; args
 end
 
 function emit!(dag::ExprDAG, node::ExprNode{TypedefToAnonymous}, options::Dict; args...)
-    typedefee = node.type.sym
+    ty = getTypedefDeclUnderlyingType(node.cursor)
+    typedefee = translate(tojulia(ty), options)
     typedef_sym = make_symbol_safe(node.id)
     push!(node.exprs, :(const $typedef_sym = $typedefee))
     return dag

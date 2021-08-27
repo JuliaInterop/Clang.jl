@@ -175,5 +175,23 @@ resolve_dependency!(dag::ExprDAG, node::ExprNode{<:AbstractEnumNodeType}) = dag
 # a single `data::NTuple` field for union nodes, so no need to add any dependencies here.
 resolve_dependency!(dag::ExprDAG, node::ExprNode{<:AbstractUnionNodeType}) = dag
 
-# for now, do nothing for macros, just assume they are written in a correct order
-resolve_dependency!(dag::ExprDAG, node::ExprNode{<:AbstractMacroNodeType}) = dag
+# at least sort macros according to identifiers, otherwise the order is terribly wrong
+function resolve_dependency!(dag::ExprDAG, node::ExprNode{<:AbstractMacroNodeType})
+    # check whether the macro is function-line by inspecting the source code
+    args = Set{Symbol}()
+    if node.type isa MacroFunctionLike
+        for tok in Iterators.drop(tokenize(node.cursor), 2)
+            if is_identifier(tok)
+                push!(args, Symbol(tok.text))
+            elseif is_punctuation(tok) && tok.text == ")"
+                break
+            end
+        end
+    end
+    for tok in Iterators.drop(tokenize(node.cursor), 1)
+        sym = Symbol(tok.text)
+        if is_identifier(tok) && haskey(dag.ids, sym) && !(tok in args)
+            push!(node.adj, dag.ids[sym])
+        end
+    end
+end

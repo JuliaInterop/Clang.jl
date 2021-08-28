@@ -75,7 +75,7 @@ build!(ctx, BUILDSTAGE_PRINTING_ONLY)
 ```
 
 ### Multi-platform configuration
-Some headers may contain system-dependent symbols such as `long` or `char`, or system-indenpendent symbols may be resolved to system depent ones, for example, `int64_t` may be defined as `long`. You can skip these symbols and add them back manually as in [Skipping specific symbols](@ref). If the differences are two large to be manually fixed, you can generate wrappers for each platform as in [CImGUI.jl](https://github.com/JuliaImGui/LibCImGui.jl/blob/9af63ee69dc109000dabdb30ef86073d546738c3/gen/generator.jl).
+Some headers may contain system-dependent symbols such as `long` or `char`, or system-indenpendent symbols may be resolved to system depent ones, for example, `time_t` is usually just a 64-bit unsigned integer, but implementations may conditionally implement it as `long` or `long long`, which is not portable. You can skip these symbols and add them back manually as in [Skipping specific symbols](@ref). If the differences are two large to be manually fixed, you can generate wrappers for each platform as in [LibClang.jl](https://github.com/Gnimuc/LibClang.jl/blob/v0.61.0/gen/generator.jl).
 
 ## Variadic Function
 With the help of `@ccall` macro, variadic C functions can be from Julia, for example, `@ccall printf("%d\n"::Cstring; 123::Cint)::Cint` can be used to call the C function `printf`. Note that those arguments after the semicolon `;` are variadic arguments.

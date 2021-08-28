@@ -1,12 +1,12 @@
 """
-    resolve_dependency!(dag::ExprDAG, node::ExprNode)
+    resolve_dependency!(dag::ExprDAG, node::ExprNode, options)
 Build the DAG, resolve dependency.
 """
 function resolve_dependency! end
 
-resolve_dependency!(dag::ExprDAG, node::ExprNode) = dag
+resolve_dependency!(dag::ExprDAG, node::ExprNode, options) = dag
 
-function resolve_dependency!(dag::ExprDAG, node::ExprNode{FunctionProto})
+function resolve_dependency!(dag::ExprDAG, node::ExprNode{FunctionProto}, options)
     cursor = node.cursor
     args = get_function_args(cursor)
     types = CLType[getArgType(getCursorType(cursor), i - 1) for i in 1:length(args)]
@@ -48,7 +48,7 @@ function resolve_dependency!(dag::ExprDAG, node::ExprNode{FunctionProto})
     return dag
 end
 
-function resolve_dependency!(dag::ExprDAG, node::ExprNode{FunctionNoProto})
+function resolve_dependency!(dag::ExprDAG, node::ExprNode{FunctionNoProto}, options)
     cursor = node.cursor
     @assert isempty(get_function_args(cursor))
     ty = getCursorResultType(cursor)
@@ -77,7 +77,7 @@ function resolve_dependency!(dag::ExprDAG, node::ExprNode{FunctionNoProto})
     return dag
 end
 
-function resolve_dependency!(dag::ExprDAG, node::ExprNode{TypedefElaborated})
+function resolve_dependency!(dag::ExprDAG, node::ExprNode{TypedefElaborated}, options)
     cursor = node.cursor
     ty = getTypedefDeclUnderlyingType(cursor)
     jlty = tojulia(ty)
@@ -99,7 +99,7 @@ function resolve_dependency!(dag::ExprDAG, node::ExprNode{TypedefElaborated})
     return dag
 end
 
-function resolve_dependency!(dag::ExprDAG, node::ExprNode{TypedefDefault})
+function resolve_dependency!(dag::ExprDAG, node::ExprNode{TypedefDefault}, options)
     cursor = node.cursor
     ty = getTypedefDeclUnderlyingType(cursor)
     jlty = tojulia(ty)
@@ -109,10 +109,10 @@ function resolve_dependency!(dag::ExprDAG, node::ExprNode{TypedefDefault})
 
     # do nothing for unknowns since we just skip them in the downstream passes
     is_jl_unknown(leaf_ty) && return dag
-    sym = leaf_ty.sym == Symbol("") ? dag.gensym_map[c] : leaf_ty.sym
-    if haskey(dag.ids, sym)
-        push!(node.adj, dag.ids[sym])
-    elseif haskey(dag.ids_extra, sym)
+
+    if haskey(dag.ids, leaf_ty.sym)
+        push!(node.adj, dag.ids[leaf_ty.sym])
+    elseif haskey(dag.ids_extra, leaf_ty.sym)
         # pass
     else
         tycu = getTypeDeclaration(ty)
@@ -124,7 +124,7 @@ function resolve_dependency!(dag::ExprDAG, node::ExprNode{TypedefDefault})
     return dag
 end
 
-function resolve_dependency!(dag::ExprDAG, node::ExprNode{TypedefToAnonymous})
+function resolve_dependency!(dag::ExprDAG, node::ExprNode{TypedefToAnonymous}, options)
     s = node.type.sym
     @assert haskey(dag.tags, s)
     push!(node.adj, dag.tags[s])
@@ -132,9 +132,9 @@ function resolve_dependency!(dag::ExprDAG, node::ExprNode{TypedefToAnonymous})
 end
 
 # ignore non-opaque forward decls, that's our purpose
-resolve_dependency!(dag::ExprDAG, node::ExprNode{StructForwardDecl}) = dag
+resolve_dependency!(dag::ExprDAG, node::ExprNode{StructForwardDecl}, options) = dag
 
-function resolve_dependency!(dag::ExprDAG, node::ExprNode{<:AbstractStructNodeType})
+function resolve_dependency!(dag::ExprDAG, node::ExprNode{<:AbstractStructNodeType}, options)
     cursor = node.cursor
     for c in fields(getCursorType(cursor))
         ty = getCursorType(c)
@@ -144,19 +144,28 @@ function resolve_dependency!(dag::ExprDAG, node::ExprNode{<:AbstractStructNodeTy
         is_jl_basic(leaf_ty) && continue
 
         hasref = has_elaborated_reference(ty)
-        sym = leaf_ty.sym == Symbol("") ? get(dag.gensym_map, leaf_ty.cursor, Symbol("")) : leaf_ty.sym
-        if hasref && haskey(dag.tags, sym)
-            push!(node.adj, dag.tags[sym])
-        elseif !hasref && haskey(dag.ids, sym)
-            push!(node.adj, dag.ids[sym])
-        elseif haskey(dag.ids_extra, sym)
+        if hasref && haskey(dag.tags, leaf_ty.sym)
+            push!(node.adj, dag.tags[leaf_ty.sym])
+        elseif !hasref && haskey(dag.ids, leaf_ty.sym)
+            push!(node.adj, dag.ids[leaf_ty.sym])
+        elseif haskey(dag.ids_extra, leaf_ty.sym)
             # pass
-        elseif !hasref && haskey(dag.tags, sym)
+        elseif !hasref && haskey(dag.tags, leaf_ty.sym)
             # FIXME: in some cases, this system-header symbol is in dag.tags
-            push!(node.adj, dag.tags[sym])
+            push!(node.adj, dag.tags[leaf_ty.sym])
         elseif occursin("anonymous", spelling(ty))
-            # it could be a nested anonymous tag-type.
-            # pass
+            nested_tags = get(options, "nested_tags", Dict())
+            tag = nothing
+            for (id, cursor) in nested_tags
+                if is_same(leaf_ty.cursor, cursor)
+                    @assert isempty(string(jlty.sym))
+                    tag = id
+                    break
+                end
+            end
+            if !isnothing(tag)
+                push!(node.adj, dag.tags[tag])
+            end
         else
             file, line, col = get_file_line_column(cursor)
             cspell = spelling(cursor)
@@ -169,14 +178,14 @@ function resolve_dependency!(dag::ExprDAG, node::ExprNode{<:AbstractStructNodeTy
 end
 
 # enums are just "named integers", no dependency needs to be resolved.
-resolve_dependency!(dag::ExprDAG, node::ExprNode{<:AbstractEnumNodeType}) = dag
+resolve_dependency!(dag::ExprDAG, node::ExprNode{<:AbstractEnumNodeType}, options) = dag
 
 # to workaround some nasty field alignment problems, we simply generate Julia structs with
 # a single `data::NTuple` field for union nodes, so no need to add any dependencies here.
-resolve_dependency!(dag::ExprDAG, node::ExprNode{<:AbstractUnionNodeType}) = dag
+resolve_dependency!(dag::ExprDAG, node::ExprNode{<:AbstractUnionNodeType}, options) = dag
 
 # at least sort macros according to identifiers, otherwise the order is terribly wrong
-function resolve_dependency!(dag::ExprDAG, node::ExprNode{<:AbstractMacroNodeType})
+function resolve_dependency!(dag::ExprDAG, node::ExprNode{<:AbstractMacroNodeType}, options)
     # check whether the macro is function-line by inspecting the source code
     args = Set{Symbol}()
     if node.type isa MacroFunctionLike

@@ -24,7 +24,6 @@ function (x::CollectTopLevelNode)(dag::ExprDAG, options::Dict)
     log_options = get(general_options, "log", Dict())
     is_local_only = get(general_options, "is_local_header_only", true)
     show_info = get(log_options, "CollectTopLevelNode_log", x.show_info)
-    general_options["gensym_map"] = dag.gensym_map
 
     empty!(dag.nodes)
     empty!(dag.sys)
@@ -44,7 +43,6 @@ function (x::CollectTopLevelNode)(dag::ExprDAG, options::Dict)
         end
     end
 
-    delete!(general_options, "gensym_map")
     return dag
 end
 
@@ -271,14 +269,17 @@ function (x::ResolveDependency)(dag::ExprDAG, options::Dict)
     log_options = get(general_options, "log", Dict())
     show_info = get(log_options, "ResolveDependency_log", x.show_info)
 
+    general_options["nested_tags"] = collect_nested_tags(dag)
     for node in dag.nodes
-        resolve_dependency!(dag, node)
+        resolve_dependency!(dag, node, general_options)
         unique!(node.adj)  # FIXME: check this
         if show_info
             deps = Dict(n => dag.nodes[n] for n in node.adj)
             @info "[ResolveDependency]: resolved dependency for $(node.cursor)" deps
         end
     end
+    delete!(general_options, "nested_tags")
+
     return dag
 end
 
@@ -641,16 +642,7 @@ function (x::Codegen)(dag::ExprDAG, options::Dict)
     codegen_options["DAG_ids"] = dag.ids
     codegen_options["DAG_ids_extra"] = dag.ids_extra
     # collect and map nested anonymous tags
-    nested_tags = Dict{Symbol,CLCursor}()
-    for (id, i) in dag.tags
-        node = dag.nodes[i]
-        startswith(string(node.id), "##Ctag") ||
-        startswith(string(node.id), "__JL_Ctag") || continue
-        if node.type isa NestedRecords
-            nested_tags[id] = node.cursor
-        end
-    end
-    codegen_options["nested_tags"] = nested_tags
+    codegen_options["nested_tags"] = collect_nested_tags(dag)
 
     for (i, node) in enumerate(dag.nodes)
         !isempty(node.exprs) && empty!(node.exprs)
@@ -1095,4 +1087,18 @@ function (x::CodegenMacro)(dag::ExprDAG, options::Dict)
     end
 
     return dag
+end
+
+
+function collect_nested_tags(dag::ExprDAG)
+    nested_tags = Dict{Symbol,CLCursor}()
+    for (id, i) in dag.tags
+        node = dag.nodes[i]
+        startswith(string(node.id), "##Ctag") ||
+        startswith(string(node.id), "__JL_Ctag") || continue
+        if node.type isa NestedRecords
+            nested_tags[id] = node.cursor
+        end
+    end
+    nested_tags
 end

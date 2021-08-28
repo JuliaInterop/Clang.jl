@@ -30,9 +30,3 @@ function gensym_deterministic(x::AbstractString)
     str = "__JL_" * x * "_" * string(get_counter())
     return Symbol(str)
 end
-
-function gensym_recorded(cursor::CLCursor, isdeterministic::Bool, record::Dict{CLCursor, Symbol})
-    get!(record, cursor) do 
-        isdeterministic ? gensym_deterministic("Ctag") : gensym("Ctag")
-    end
-end

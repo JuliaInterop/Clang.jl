@@ -61,15 +61,7 @@ ctx = create_context(headers, args, options)
 # run generator
 build!(ctx)
 ```
-Note that it might complain about missing some std headers, e.g. `fatal error: 'time.h' file not found`,
-which could be fixed by adding `-Istdlib/include/on/your/specific/platform` to `clang_args`, for example,
-```
-# on macOS
-using Clang: find_std_headers
-for header in find_std_headers()
-    push!(clang_args, "-I"*header)
-end
-```
+
 
 
 !!! note "Compatibility"

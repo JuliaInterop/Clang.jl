@@ -14,6 +14,11 @@ library_names = {}
 # output file path relative to the working directory
 output_file_path = "../lib/LibClang.jl"
 
+# if these are set, common file (types and constants) and API file (functions) will be seperated
+# this is for compatibility, so prologue and epilogue are not supported.
+# output_api_file_path = "api.jl"
+# output_common_file_path = "common.jl"
+
 # if this entry is not empty, the generator will print the code below to the `output_file_path`.
 # module module_name
 # 

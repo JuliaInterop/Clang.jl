@@ -873,7 +873,7 @@ function (x::CommonPrinter)(dag::ExprDAG, options::Dict)
     open(x.file, "w") do io
         for node in dag.nodes
             string(node.id) ∈ blacklist && continue
-            node.type isa AbstractMacroNodeType && continue
+            (node.type isa AbstractMacroNodeType || node.type isa AbstractFunctionNodeType) && continue
             pretty_print(io, node, general_options)
         end
         # print macros in the bottom of the file

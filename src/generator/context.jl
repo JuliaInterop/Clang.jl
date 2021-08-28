@@ -136,7 +136,9 @@ function create_context(headers::Vector, args::Vector=String[], options::Dict=Di
             push!(ctx.passes, StdPrinter())
         end
     else
-        # TODO: impl
+        # let the user handle prologue and epilogue on their own
+        push!(ctx.passes, FunctionPrinter(api_file))
+        push!(ctx.passes, CommonPrinter(common_file))
     end
 
     return ctx

@@ -155,14 +155,7 @@ function resolve_dependency!(dag::ExprDAG, node::ExprNode{<:AbstractStructNodeTy
             push!(node.adj, dag.tags[leaf_ty.sym])
         elseif occursin("anonymous", spelling(ty))
             nested_tags = get(options, "nested_tags", Dict())
-            tag = nothing
-            for (id, cursor) in nested_tags
-                if is_same(leaf_ty.cursor, cursor)
-                    @assert isempty(string(jlty.sym))
-                    tag = id
-                    break
-                end
-            end
+            tag = get_nested_tag(nested_tags, leaf_ty)
             if !isnothing(tag)
                 push!(node.adj, dag.tags[tag])
             end

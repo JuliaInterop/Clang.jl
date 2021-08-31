@@ -137,11 +137,9 @@ function translate(jlty::JuliaCrecord, options=Dict())
     if haskey(tags, jlty.sym) || haskey(ids_extra, jlty.sym)
         return make_symbol_safe(jlty.sym)
     else
-        for (id, cursor) in nested_tags
-            if is_same(jlty.cursor, cursor)
-                @assert isempty(string(jlty.sym))
-                return id
-            end
+        tag = get_nested_tag(nested_tags, jlty)
+        if !isnothing(tag)
+            return tag
         end
         # then it could be a local opaque tag-type
         return translate(JuliaCvoid(), options)
@@ -149,3 +147,13 @@ function translate(jlty::JuliaCrecord, options=Dict())
 end
 
 translate(jlty::JuliaCfunction, options=Dict()) = translate(JuliaCvoid(), options)
+
+function get_nested_tag(nested_tags, jlty)
+    for (id, cursor) in nested_tags
+        if is_same(jlty.cursor, cursor)
+            @assert isempty(string(jlty.sym))
+            return id
+        end
+    end
+    return nothing
+end

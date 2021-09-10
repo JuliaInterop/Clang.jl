@@ -38,6 +38,9 @@ export TokenList, tokenize
 include("dump.jl")
 export dumpobj
 
+include("compiledb.jl")
+export CLCompilationDatabase
+
 include("generator/Generators.jl")
 using .Generators
 

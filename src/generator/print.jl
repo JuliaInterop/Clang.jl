@@ -210,7 +210,7 @@ function pretty_print(io, node::ExprNode{<:AbstractEnumNodeType}, options::Dict)
     else
         # for empty enums, we make it an alias of the corresponding integer type
         enum_name, int_ty = head_expr.args
-        println(io, "const $enum_name = $int_ty")
+        println(io, :(const $enum_name = $int_ty))
         for ex in Iterators.drop(node.exprs, 1)
             @assert Meta.isexpr(ex, :(=))
             lhs, rhs = ex.args

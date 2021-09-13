@@ -45,3 +45,13 @@ end
     @test strip_comment_markers("//! line1") == ["line1"]
     @test strip_comment_markers("//< line1") == ["line1"]
 end
+
+@testset "Resolve dependency" begin
+    args = get_default_args()
+    headers = joinpath(@__DIR__, "include", "dependency.h")
+    options = Dict("general" => Dict{String,Any}(
+            "output_file_path" => joinpath(@__DIR__, "LibDependency.jl")))
+    ctx = create_context(headers, args, options)
+    build!(ctx)
+    @test include("LibDependency.jl") isa Any
+end

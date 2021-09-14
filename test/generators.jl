@@ -65,3 +65,13 @@ end
     @add_def stat
     @test build!(ctx, BUILDSTAGE_NO_PRINTING) isa Any
 end
+
+@testset "Escape anonymous name with var\"\"" begin
+    args = get_default_args()
+    headers = joinpath(@__DIR__, "include", "escape-with-var.h")
+    options = Dict("general" => Dict{String,Any}(
+            "output_file_path" => joinpath(@__DIR__, "LibEscapeWithVar.jl")))
+    ctx = create_context(headers, args, options)
+    build!(ctx)
+    @test include("LibEscapeWithVar.jl") isa Any
+end

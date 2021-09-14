@@ -56,6 +56,16 @@ end
     @test include("LibDependency.jl") isa Any
 end
 
+@testset "Issue 320" begin
+    args = get_default_args()
+    dir = joinpath(@__DIR__, "sys")
+    push!(args, "-isystem$dir")
+    headers = [joinpath(@__DIR__, "include", "test.h")]
+    ctx = create_context(headers, args)
+    @add_def stat
+    @test build!(ctx, BUILDSTAGE_NO_PRINTING) isa Any
+end
+
 @testset "Escape anonymous name with var\"\"" begin
     args = get_default_args()
     headers = joinpath(@__DIR__, "include", "escape-with-var.h")

@@ -110,6 +110,7 @@ function pretty_print(io, node::ExprNode{<:AbstractStructNodeType}, options::Dic
     inline = struct_field_comment_style == "inline"
     struct_def = node.exprs[1]
     mutable, name, members = struct_def.args
+    name = Base.sym_to_string(name)
     
     # `chldren(node.cursor)` may also return forward declaration of struct type for example, so we filter these out.
     child_nodes = filter(x->x isa CLFieldDecl, children(node.cursor))

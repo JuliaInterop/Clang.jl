@@ -123,6 +123,7 @@ function efunsig(name::Symbol, args::Vector{Symbol}, types)
 end
 
 function emit!(dag::ExprDAG, node::ExprNode{FunctionNoProto}, options::Dict; args...)
+    use_ccall_macro = get(options, "use_ccall_macro", false)
     cursor = node.cursor
     @warn "No Prototype for $cursor - assuming no arguments"
     @assert isempty(get_function_args(cursor))
@@ -134,7 +135,12 @@ function emit!(dag::ExprDAG, node::ExprNode{FunctionNoProto}, options::Dict; arg
     ret_type = translate(tojulia(getCursorResultType(cursor)), options)
 
     signature = Expr(:call, func_name)
-    body = :(ccall(($(QuoteNode(func_name)), $library_expr), $ret_type, $(Expr(:tuple))))
+    if use_ccall_macro
+        call = :($library_expr.$func_name()::$ret_type)
+        body = Expr(:macrocall, Symbol("@ccall"), nothing, call)
+    else
+        body = :(ccall(($(QuoteNode(func_name)), $library_expr), $ret_type, $(Expr(:tuple))))
+    end
 
     push!(node.exprs, Expr(:function, signature, Expr(:block, body)))
 

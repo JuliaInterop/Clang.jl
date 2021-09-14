@@ -180,6 +180,7 @@ function pretty_print(io, node::ExprNode{<:AbstractEnumNodeType}, options::Dict)
     @assert !isempty(node.exprs)
     use_native_enum = get(options, "use_julia_native_enum_type", false)
     enumerator_comment_style = get(options, "enumerator_comment_style", "disable")
+    enum_as_integer = get(options, "print_enum_as_integer", false)
     members = enumerator_comment_style == "outofline"
     enum_values = Dict()
 
@@ -189,7 +190,7 @@ function pretty_print(io, node::ExprNode{<:AbstractEnumNodeType}, options::Dict)
     prologue = ["    $(head_expr.args[1])", ""]
     print_documentation(io, node, "", options, members; prologue)
 
-    if length(node.exprs) ≥ 2
+    if length(node.exprs) ≥ 2 && !enum_as_integer
         enum_macro = use_native_enum ? "@enum" : "@cenum"
         println(io, "$enum_macro $head_expr begin")
         child_nodes = filter(x->x isa CLEnumConstantDecl, children(node.cursor))
@@ -210,7 +211,12 @@ function pretty_print(io, node::ExprNode{<:AbstractEnumNodeType}, options::Dict)
     else
         # for empty enums, we make it an alias of the corresponding integer type
         enum_name, int_ty = head_expr.args
-        println(io, "const $enum_name = $int_ty")
+        println(io, :(const $enum_name = $int_ty))
+        for ex in Iterators.drop(node.exprs, 1)
+            @assert Meta.isexpr(ex, :(=))
+            lhs, rhs = ex.args
+            println(io, :(const $lhs = $rhs % $int_ty))
+        end
     end
     println(io)
 

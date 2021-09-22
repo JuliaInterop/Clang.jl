@@ -3,6 +3,13 @@ using .LibClang.CEnum: name_value_pairs
 cxname2clname(x::AbstractString) = "CL" * last(split(x, '_'; limit=2))
 cxname2clname(x::Symbol) = cxname2clname(string(x))
 
+"Remove FirstXX and LastXX from enumerations."
+function remove_ranges(pairs)
+    filter(pairs) do (sym, val)
+        !occursin(r"first|last"i, string(sym))
+    end
+end
+
 # each CXCursorKind enum gets a specific Julia type wrapping
 # so that we can dispatch directly on node kinds.
 abstract type CLCursor end
@@ -15,8 +22,12 @@ for (sym, val) in name_value_pairs(CXCursorKind)
         struct $clsym <: CLCursor
             cursor::CXCursor
         end
-        CXCursorMap[$sym] = $clsym
     end
+end
+
+for (sym, val) in remove_ranges(name_value_pairs(CXCursorKind))
+    clsym = Symbol(cxname2clname(sym))
+    @eval CXCursorMap[$sym] = $clsym
 end
 
 CLCursor(c::CXCursor) = CXCursorMap[c.kind](c)
@@ -39,8 +50,12 @@ for (sym, val) in name_value_pairs(CXTypeKind)
         struct $clsym <: CLType
             type::CXType
         end
-        CLTypeMap[$sym] = $clsym
     end
+end
+
+for (sym, val) in remove_ranges(name_value_pairs(CXTypeKind))
+    clsym = Symbol(cxname2clname(sym))
+    @eval CLTypeMap[$sym] = $clsym
 end
 
 CLType(c::CXType) = CLTypeMap[c.kind](c)
@@ -68,6 +83,12 @@ for (sym, val) in name_value_pairs(CXTokenKind)
     end
 end
 
+for (sym, val) in remove_ranges(name_value_pairs(CXTokenKind))
+    clsym = Symbol(last(split(string(sym), '_'; limit=2)))
+    @eval CLTokenMap[$sym] = $clsym
+end
+
+
 Base.cconvert(::Type{CXToken}, x::CLToken) = x
 Base.unsafe_convert(::Type{CXToken}, x::CLToken) = x.token
 
@@ -85,8 +106,12 @@ for (sym, val) in name_value_pairs(CXCommentKind)
         struct $clsym <: CLComment
             comment::CXComment
         end
-        CLCommentMap[$sym] = $clsym
     end
+end
+
+for (sym, val) in remove_ranges(name_value_pairs(CXCommentKind))
+    clsym = Symbol(last(split(string(sym), '_'; limit=2)))
+    @eval CLCommentMap[$sym] = $clsym
 end
 
 CLComment(c::CXComment) = CLCommentMap[kind(c)](c)

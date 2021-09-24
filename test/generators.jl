@@ -87,4 +87,13 @@ end
     headers = joinpath(@__DIR__, "include", "nested-struct.h")
     ctx = create_context(headers, args)
     @test build!(ctx, BUILDSTAGE_NO_PRINTING) isa Any
+
+    headers = joinpath(@__DIR__, "include", "nested-declaration.h")
+    ctx = create_context(headers, args)
+    @test_broken try
+        build!(ctx, BUILDSTAGE_NO_PRINTING) isa Any
+        true
+    catch
+        false
+    end
 end

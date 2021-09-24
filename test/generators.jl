@@ -75,3 +75,21 @@ end
     build!(ctx)
     @test include("LibEscapeWithVar.jl") isa Any
 end
+
+@testset "Issue 307" begin
+    args = get_default_args()
+    dir = joinpath(@__DIR__, "sys")
+    push!(args, "-isystem$dir")
+    headers = joinpath(@__DIR__, "include", "struct-in-union.h")
+    ctx = create_context(headers, args)
+    @test build!(ctx, BUILDSTAGE_NO_PRINTING) isa Any
+
+    headers = joinpath(@__DIR__, "include", "nested-struct.h")
+    ctx = create_context(headers, args)
+    @test_broken try
+        build!(ctx, BUILDSTAGE_NO_PRINTING)
+        true
+    catch
+        false
+    end
+end

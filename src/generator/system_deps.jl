@@ -133,7 +133,8 @@ function collect_dependent_system_nodes!(dag::ExprDAG, type::CLType, system_node
             (!hasref && haskey(dag.ids, leaf_ty.sym)) ||
             haskey(dag.ids_extra, leaf_ty.sym) ||
             occursin("anonymous", spelling(ty))
-            # pass
+            # nested tags may also be from system headers
+            collect_dependent_system_nodes!(dag, ty, system_nodes)
         else
             # add all sys nodes with the same id
             for (i, n) in enumerate(dag.sys)

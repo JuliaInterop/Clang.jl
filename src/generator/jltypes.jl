@@ -115,7 +115,6 @@ function tojulia end
 
 tojulia(x::CLType) = JuliaUnknown(x)
 tojulia(x::CLVoid) = JuliaCvoid()
-tojulia(x::CLFirstBuiltin) = JuliaCvoid()  # FIXME: fix cltype.jl
 tojulia(x::CLBool) = JuliaCbool()
 tojulia(x::CLChar_U) = JuliaCchar()
 tojulia(x::CLUChar) = JuliaCuchar()

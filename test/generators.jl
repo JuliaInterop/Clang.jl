@@ -97,3 +97,11 @@ end
         false
     end
 end
+
+@testset "Issue 327" begin
+    tu = parse_header(Index(), "include/void-type.h")
+    root = Clang.getTranslationUnitCursor(tu)
+    func = children(root)[]
+    ret_type = Clang.getCursorResultType(func)
+    @test ret_type isa CLVoid
+end

@@ -335,13 +335,13 @@ end
 function macro_emit!(dag::ExprDAG, node::ExprNode{MacroFunctionLike}, options::Dict)
     print_comment = get(options, "add_comment_for_skipped_macro", true)
     mode = get(options, "macro_mode", "basic")
-    allowlist = get(options, "functionlike_macro_allowlist", String[])
+    includelist = get(options, "functionlike_macro_includelist", String[])
 
     cursor = node.cursor
     toks = collect(tokenize(cursor))
     tokens = tweak_exprs(dag, toks)
     id = tokens[1].text
-    mode != "aggressive" && id ∉ allowlist && return dag
+    mode != "aggressive" && id ∉ includelist && return dag
 
     lhs_sym = make_symbol_safe(id)
 

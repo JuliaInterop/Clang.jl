@@ -678,7 +678,7 @@ In this pass, the mutability of those structs which are not necessary to be immu
 will be reset to `true` according to the following rules:
 
 if this type is not used as a field type in any other types
-    if this type is in the allowlist
+    if this type is in the includelist
         then reset
 
     if this type is in the ignore list
@@ -705,7 +705,7 @@ function (x::TweakMutability)(dag::ExprDAG, options::Dict)
     log_options = get(general_options, "log", Dict())
     show_info = get(log_options, "TweakMutability_log", x.show_info)
     ignorelist = get(general_options, "auto_mutability_ignorelist", get(general_options, "auto_mutability_blacklist", []))
-    allowlist = get(general_options, "auto_mutability_allowlist", get(general_options, "auto_mutability_whitelist", []))
+    includelist = get(general_options, "auto_mutability_includelist", get(general_options, "auto_mutability_whitelist", []))
     add_new = get(general_options, "auto_mutability_with_new", true)
 
     # collect referenced node ids
@@ -731,7 +731,7 @@ function (x::TweakMutability)(dag::ExprDAG, options::Dict)
         type_name = string(expr.args[2])
 
         apply_reset = false
-        if type_name ∈ allowlist
+        if type_name ∈ includelist
             apply_reset = true
         elseif type_name ∈ ignorelist
             apply_reset = false

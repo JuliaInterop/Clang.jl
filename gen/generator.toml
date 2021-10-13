@@ -119,7 +119,7 @@ auto_mutability_with_new = true
 auto_mutability_ignorelist = []
 
 # opposite to `auto_mutability_ignorelist` and has a higher priority
-auto_mutability_allowlist = []
+auto_mutability_includelist = []
 
 # if set to "raw", extract and dump raw c comment;
 # if set to "doxygen", parse and format doxygen comment.
@@ -176,7 +176,7 @@ function_argument_conflict_symbols = []
 macro_mode = "basic"
 
 # function-like macros in the following list will always be translated.
-functionlike_macro_allowlist = [
+functionlike_macro_includelist = [
     "CINDEX_VERSION_ENCODE",
 ]
 

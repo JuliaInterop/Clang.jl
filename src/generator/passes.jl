@@ -681,7 +681,7 @@ if this type is not used as a field type in any other types
     if this type is in the allowlist
         then reset
 
-    if this type is in the denylist
+    if this type is in the ignore list
         then skip
 
     if this type is used as the argument type in some function protos
@@ -704,7 +704,7 @@ function (x::TweakMutability)(dag::ExprDAG, options::Dict)
     general_options = get(options, "general", Dict())
     log_options = get(general_options, "log", Dict())
     show_info = get(log_options, "TweakMutability_log", x.show_info)
-    denylist = get(general_options, "auto_mutability_denylist", get(general_options, "auto_mutability_blacklist", []))
+    ignorelist = get(general_options, "auto_mutability_ignorelist", get(general_options, "auto_mutability_blacklist", []))
     allowlist = get(general_options, "auto_mutability_allowlist", get(general_options, "auto_mutability_whitelist", []))
     add_new = get(general_options, "auto_mutability_with_new", true)
 
@@ -733,7 +733,7 @@ function (x::TweakMutability)(dag::ExprDAG, options::Dict)
         apply_reset = false
         if type_name ∈ allowlist
             apply_reset = true
-        elseif type_name ∈ denylist
+        elseif type_name ∈ ignorelist
             apply_reset = false
         else
             apply_reset = should_tweak(dag.nodes, i)
@@ -832,12 +832,12 @@ function (x::FunctionPrinter)(dag::ExprDAG, options::Dict)
     general_options = get(options, "general", Dict())
     log_options = get(general_options, "log", Dict())
     show_info = get(log_options, "FunctionPrinter_log", x.show_info)
-    denylist = get(general_options, "printer_denylist", get(general_options, "printer_blacklist", []))
+    ignorelist = get(general_options, "output_ignorelist", get(general_options, "printer_blacklist", []))
 
     show_info && @info "[FunctionPrinter]: print to $(x.file)"
     open(x.file, "w") do io
         for node in dag.nodes
-            string(node.id) ∈ denylist && continue
+            string(node.id) ∈ ignorelist && continue
             node.type isa AbstractFunctionNodeType || continue
             pretty_print(io, node, general_options)
         end
@@ -859,18 +859,18 @@ function (x::CommonPrinter)(dag::ExprDAG, options::Dict)
     general_options = get(options, "general", Dict())
     log_options = get(general_options, "log", Dict())
     show_info = get(log_options, "CommonPrinter_log", x.show_info)
-    denylist = get(general_options, "printer_denylist", get(general_options, "printer_blacklist", []))
+    ignorelist = get(general_options, "output_ignorelist", get(general_options, "printer_blacklist", []))
 
     show_info && @info "[CommonPrinter]: print to $(x.file)"
     open(x.file, "w") do io
         for node in dag.nodes
-            string(node.id) ∈ denylist && continue
+            string(node.id) ∈ ignorelist && continue
             node.type isa AbstractMacroNodeType && continue
             pretty_print(io, node, general_options)
         end
         # print macros in the bottom of the file
         for node in dag.nodes
-            string(node.id) ∈ denylist && continue
+            string(node.id) ∈ ignorelist && continue
             node.type isa AbstractMacroNodeType || continue
             pretty_print(io, node, options)
         end
@@ -892,19 +892,19 @@ function (x::GeneralPrinter)(dag::ExprDAG, options::Dict)
     general_options = get(options, "general", Dict())
     log_options = get(general_options, "log", Dict())
     show_info = get(log_options, "GeneralPrinter_log", x.show_info)
-    denylist = get(general_options, "printer_denylist", get(general_options, "printer_blacklist", []))
+    ignorelist = get(general_options, "output_ignorelist", get(general_options, "printer_blacklist", []))
     general_options["DAG_ids"] = merge(dag.ids, dag.tags)
 
     show_info && @info "[GeneralPrinter]: print to $(x.file)"
     open(x.file, "a") do io
         for node in dag.nodes
-            string(node.id) ∈ denylist && continue
+            string(node.id) ∈ ignorelist && continue
             node.type isa AbstractMacroNodeType && continue
             pretty_print(io, node, general_options)
         end
         # print macros in the bottom of the file
         for node in dag.nodes
-            string(node.id) ∈ denylist && continue
+            string(node.id) ∈ ignorelist && continue
             node.type isa AbstractMacroNodeType || continue
             isempty(node.exprs)
             pretty_print(io, node, options)
@@ -928,16 +928,16 @@ function (x::StdPrinter)(dag::ExprDAG, options::Dict)
     general_options = get(options, "general", Dict())
     log_options = get(general_options, "log", Dict())
     show_info = get(log_options, "StdPrinter_log", x.show_info)
-    denylist = get(general_options, "printer_denylist", get(general_options, "auto_mutability_blacklist", []))
+    ignorelist = get(general_options, "output_ignorelist", get(general_options, "auto_mutability_blacklist", []))
 
     for node in dag.nodes
-        string(node.id) ∈ denylist && continue
+        string(node.id) ∈ ignorelist && continue
         node.type isa AbstractMacroNodeType && continue
         pretty_print(stdout, node, general_options)
     end
     # print macros
     for node in dag.nodes
-        string(node.id) ∈ denylist && continue
+        string(node.id) ∈ ignorelist && continue
         node.type isa AbstractMacroNodeType || continue
         pretty_print(stdout, node, options)
     end

@@ -44,9 +44,9 @@ prologue_file_path = "./prologue.jl"
 # this is often used for applying custom patches.
 epilogue_file_path = ""
 
-# node with an id in the `printer_denylist` will be ignored in the printing passes. 
+# node with an id in the `printer_blacklist` will be ignored in the printing passes. 
 # this is very useful for custom editing. 
-printer_denylist = [
+printer_blacklist = [
     "CINDEX_EXPORTS",
     "CINDEX_VERSION",
     "CINDEX_VERSION_STRING",
@@ -115,11 +115,11 @@ auto_mutability_with_new = true
 # when calling this function via `ccall`, passing a `Vector{mutable_type}(undef, n)` to the first
 # argument will trigger a crash, the reason is mutable structs are not stored inline within a `Vector`,
 # one should use `Ref{NTuple{n,mutable_type}}()` instead.
-# this is not convenient and that's where the `auto_mutability_denylist` comes in.
-auto_mutability_denylist = []
+# this is not convenient and that's where the `auto_mutability_blacklist` comes in.
+auto_mutability_blacklist = []
 
-# opposite to `auto_mutability_denylist` and has a higher priority
-auto_mutability_allowlist = []
+# opposite to `auto_mutability_blacklist` and has a higher priority
+auto_mutability_whitelist = []
 
 # if set to "raw", extract and dump raw c comment;
 # if set to "doxygen", parse and format doxygen comment.
@@ -176,7 +176,7 @@ function_argument_conflict_symbols = []
 macro_mode = "basic"
 
 # function-like macros in the following list will always be translated.
-functionlike_macro_allowlist = [
+functionlike_macro_whitelist = [
     "CINDEX_VERSION_ENCODE",
 ]
 

@@ -195,8 +195,8 @@ is_macro_definition_only(toks::Vector) = length(toks) == 1 && is_identifier(toks
 is_macro_definition_only(toks::TokenList) = toks.size == 1 && is_identifier(toks[1])
 is_macro_definition_only(cursor::CLCursor) = is_macro_definition_only(tokenize(cursor))
 
-# identifier and keyword denylist
-const MACRO_IDK_DENYLIST = [
+# identifier and keyword blacklist
+const MACRO_IDK_BLACKLIST = [
     C_KEYWORDS_UNSUPPORTED...,
     "_Pragma",
     "__attribute__",
@@ -214,9 +214,9 @@ Return true if the macro should be ignored.
 """
 function is_macro_unsupported(cursor::CLCursor)
     for tok in tokenize(cursor)
-        is_identifier(tok) && tok.text ∈ MACRO_IDK_DENYLIST && return true
-        is_keyword(tok) && tok.text ∈ MACRO_IDK_DENYLIST && return true
-        is_punctuation(tok) && tok.text ∈ MACRO_IDK_DENYLIST && return true
+        is_identifier(tok) && tok.text ∈ MACRO_IDK_BLACKLIST && return true
+        is_keyword(tok) && tok.text ∈ MACRO_IDK_BLACKLIST && return true
+        is_punctuation(tok) && tok.text ∈ MACRO_IDK_BLACKLIST && return true
     end
     return false
 end
@@ -335,13 +335,13 @@ end
 function macro_emit!(dag::ExprDAG, node::ExprNode{MacroFunctionLike}, options::Dict)
     print_comment = get(options, "add_comment_for_skipped_macro", true)
     mode = get(options, "macro_mode", "basic")
-    allowlist = get(options, "functionlike_macro_allowlist", String[])
+    whitelist = get(options, "functionlike_macro_whitelist", String[])
 
     cursor = node.cursor
     toks = collect(tokenize(cursor))
     tokens = tweak_exprs(dag, toks)
     id = tokens[1].text
-    mode != "aggressive" && id ∉ allowlist && return dag
+    mode != "aggressive" && id ∉ whitelist && return dag
 
     lhs_sym = make_symbol_safe(id)
 

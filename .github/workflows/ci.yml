@@ -51,7 +51,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: julia-actions/setup-julia@v1
         with:
-          version: '1.7'
+          version: '1.7-nightly'
       - run: |
           julia --project=docs -e '
             using Pkg

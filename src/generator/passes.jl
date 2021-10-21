@@ -928,7 +928,7 @@ function (x::StdPrinter)(dag::ExprDAG, options::Dict)
     general_options = get(options, "general", Dict())
     log_options = get(general_options, "log", Dict())
     show_info = get(log_options, "StdPrinter_log", x.show_info)
-    ignorelist = get(general_options, "output_ignorelist", get(general_options, "auto_mutability_blacklist", []))
+    ignorelist = get(general_options, "output_ignorelist", get(general_options, "printer_blacklist", []))
 
     for node in dag.nodes
         string(node.id) ∈ ignorelist && continue

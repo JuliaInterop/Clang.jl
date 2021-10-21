@@ -136,7 +136,9 @@ function create_context(headers::Vector, args::Vector=String[], options::Dict=Di
             push!(ctx.passes, StdPrinter())
         end
     else
-        # TODO: impl
+        # let the user handle prologue and epilogue on their own
+        push!(ctx.passes, FunctionPrinter(api_file))
+        push!(ctx.passes, CommonPrinter(common_file))
     end
 
     return ctx
@@ -221,7 +223,7 @@ function get_triple()
     elseif Sys.islinux() && Sys.ARCH === :x86_64 && is_libc_musl
         return "x86_64-linux-musl"
     elseif Sys.isbsd() && !Sys.isapple()
-        return "x86_64-unknown-freebsd11.1"
+        return "x86_64-unknown-freebsd"
     elseif Sys.iswindows() && Sys.ARCH === :x86_64
         return "x86_64-w64-mingw32"
     end

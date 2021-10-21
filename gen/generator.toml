@@ -14,6 +14,11 @@ library_names = {}
 # output file path relative to the working directory
 output_file_path = "../lib/LibClang.jl"
 
+# if these are set, common file (types and constants) and API file (functions) will be seperated
+# this is for compatibility, so prologue and epilogue are not supported.
+# output_api_file_path = "api.jl"
+# output_common_file_path = "common.jl"
+
 # if this entry is not empty, the generator will print the code below to the `output_file_path`.
 # module module_name
 # 
@@ -39,9 +44,9 @@ prologue_file_path = "./prologue.jl"
 # this is often used for applying custom patches.
 epilogue_file_path = ""
 
-# node with an id in the `printer_blacklist` will be ignored in the printing passes. 
+# node with an id in the `output_ignorelist` will be ignored in the printing passes. 
 # this is very useful for custom editing. 
-printer_blacklist = [
+output_ignorelist = [
     "CINDEX_EXPORTS",
     "CINDEX_VERSION",
     "CINDEX_VERSION_STRING",
@@ -61,6 +66,10 @@ use_julia_native_enum_type = false
 # use `@cenum` but do not print `using CEnum`.
 # this is useful in the case of using `CEnum` directly in the source tree instead of using `CEnum` as a dependency
 print_using_CEnum = true
+
+# Print enums directly as integers without @(c)enum wrapper
+# Override above two options
+print_enum_as_integer = false
 
 # use deterministic symbol instead of `gensym`-generated `var"##XXX"`
 use_deterministic_symbol = true
@@ -106,11 +115,11 @@ auto_mutability_with_new = true
 # when calling this function via `ccall`, passing a `Vector{mutable_type}(undef, n)` to the first
 # argument will trigger a crash, the reason is mutable structs are not stored inline within a `Vector`,
 # one should use `Ref{NTuple{n,mutable_type}}()` instead.
-# this is not convenient and that's where the `auto_mutability_blacklist` comes in.
-auto_mutability_blacklist = []
+# this is not convenient and that's where the `auto_mutability_ignorelist` comes in.
+auto_mutability_ignorelist = []
 
-# opposite to `auto_mutability_blacklist` and has a higher priority
-auto_mutability_whitelist = []
+# opposite to `auto_mutability_ignorelist` and has a higher priority
+auto_mutability_includelist = []
 
 # if set to "raw", extract and dump raw c comment;
 # if set to "doxygen", parse and format doxygen comment.
@@ -167,7 +176,7 @@ function_argument_conflict_symbols = []
 macro_mode = "basic"
 
 # function-like macros in the following list will always be translated.
-functionlike_macro_whitelist = [
+functionlike_macro_includelist = [
     "CINDEX_VERSION_ENCODE",
 ]
 

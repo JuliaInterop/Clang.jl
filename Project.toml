@@ -1,6 +1,5 @@
 name = "Clang"
 uuid = "40e3b903-d033-50b4-a0cc-940c62c95e31"
-authors = ["Isaiah Norton", "Yupei Qi <qiyupei@gmail.com>"]
 version = "0.14.0"
 
 [deps]

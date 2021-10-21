@@ -26,11 +26,12 @@ end
 JuliaCrecord() = JuliaCrecord(Symbol())
 JuliaCrecord(x::AbstractString) = JuliaCrecord(Symbol(x), getNullCursor())
 
-struct JuliaCenum <: AbstractJuliaType
+struct JuliaCenum{T<:CLCursor} <: AbstractJuliaType
     sym::Symbol
+    cursor::T
 end
 JuliaCenum() = JuliaCenum(Symbol())
-JuliaCenum(x::AbstractString) = JuliaCenum(Symbol(x))
+JuliaCenum(x::AbstractString) = JuliaCenum(Symbol(x), getNullCursor())
 
 struct JuliaCtypedef <: AbstractJuliaType
     sym::Symbol
@@ -114,7 +115,6 @@ function tojulia end
 
 tojulia(x::CLType) = JuliaUnknown(x)
 tojulia(x::CLVoid) = JuliaCvoid()
-tojulia(x::CLFirstBuiltin) = JuliaCvoid()  # FIXME: fix cltype.jl
 tojulia(x::CLBool) = JuliaCbool()
 tojulia(x::CLChar_U) = JuliaCchar()
 tojulia(x::CLUChar) = JuliaCuchar()
@@ -151,7 +151,10 @@ end
 tojulia(x::CLInvalid) = JuliaUnknown(x)
 tojulia(x::CLFunctionProto) = JuliaCfunction(spelling(getTypeDeclaration(x)))
 tojulia(x::CLFunctionNoProto) = JuliaCfunction(spelling(getTypeDeclaration(x)))
-tojulia(x::CLEnum) = JuliaCenum(spelling(getTypeDeclaration(x)))
+function tojulia(x::CLEnum)
+    c = getTypeDeclaration(x)
+    JuliaCenum(Symbol(spelling(c)), c)
+end
 function tojulia(x::CLRecord)
     c = getTypeDeclaration(x)
     JuliaCrecord(Symbol(spelling(c)), c)

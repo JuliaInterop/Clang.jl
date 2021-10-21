@@ -3,9 +3,9 @@
 [![CI](https://github.com/JuliaInterop/Clang.jl/actions/workflows/ci.yml/badge.svg)](https://github.com/JuliaInterop/Clang.jl/actions/workflows/ci.yml)
 [![TagBot](https://github.com/JuliaInterop/Clang.jl/actions/workflows/TagBot.yml/badge.svg)](https://github.com/JuliaInterop/Clang.jl/actions/workflows/TagBot.yml)
 [![codecov](https://codecov.io/gh/JuliaInterop/Clang.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/JuliaInterop/Clang.jl)
-[![](https://img.shields.io/badge/docs-stable-blue.svg)](https://JuliaInterop.github.io/Clang.jl/stable)
-[![](https://img.shields.io/badge/docs-dev-blue.svg)](https://JuliaInterop.github.io/Clang.jl/dev)
-![GitHub Discussions](https://img.shields.io/github/discussions/JuliaInterop/Clang.jl)
+[![docs-stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://JuliaInterop.github.io/Clang.jl/stable)
+[![docs-dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://JuliaInterop.github.io/Clang.jl/dev)
+[![GitHub Discussions](https://img.shields.io/github/discussions/JuliaInterop/Clang.jl)](https://github.com/JuliaInterop/Clang.jl/discussions)
 
 This package provides a Julia language wrapper for libclang: the stable, C-exported
 interface to the LLVM Clang compiler. The [libclang API documentation](http://clang.llvm.org/doxygen/group__CINDEX.html)
@@ -14,13 +14,12 @@ through the Julia wrapper. The repository also hosts related tools built
 on top of libclang functionality.
 
 ## Installation
-This package is under an overhaul. It's highly recommended to use the master branch and the new generator API. 
-
-If you'd like to use the old version, please checkout [this branch](https://github.com/JuliaInterop/Clang.jl/tree/old-generator) for the documentation. Should you have any questions on how to upgrade the generator script, feel free to submit a post/request in the [Discussions](https://github.com/JuliaInterop/Clang.jl/discussions) area.
 
 ```
-pkg> dev Clang
+pkg> add Clang
 ```
+
+If you'd like to use the old generator(Clang.jl v0.13), please checkout [this branch](https://github.com/JuliaInterop/Clang.jl/tree/old-generator) for the documentation. Should you have any questions on how to upgrade the generator script, feel free to submit a post/request in the [Discussions](https://github.com/JuliaInterop/Clang.jl/discussions) area.
 
 ## Binding Generator
 
@@ -41,7 +40,7 @@ export_symbol_prefixes = ["CX", "clang_"]
 and a Julia script `generator.jl`:
 ```julia
 using Clang.Generators
-using Clang.LibClang.Clang_jll
+using Clang.LibClang.Clang_jll  # replace this with your jll package
 
 cd(@__DIR__)
 
@@ -75,7 +74,7 @@ The generator is currently used by several projects and you can take them as exa
 - [JuliaMultimedia/CSFML.jl](https://github.com/JuliaMultimedia/CSFML.jl): config multiple library names
 - [JuliaGraphics/FreeType.jl](https://github.com/JuliaGraphics/FreeType.jl): select function-like macros
 - [maleadt/LLVM.jl](https://github.com/maleadt/LLVM.jl): cross-platform support with patches
-- [JuliaWeb/LibCURL.jl](https://github.com/JuliaWeb/LibCURL.jl): cross-platform build
+<!-- - [JuliaWeb/LibCURL.jl](https://github.com/JuliaWeb/LibCURL.jl): cross-platform build -->
 - [scipopt/SCIP.jl](https://github.com/scipopt/SCIP.jl): applying custom patches by using `prologue.jl`&`epilogue.jl`
 - [JuliaLang/SuiteSparse.jl](https://github.com/JuliaLang/SuiteSparse.jl): config compiler definitions for cross-platform
 - [JuliaGPU/VulkanCore.jl](https://github.com/JuliaGPU/VulkanCore.jl): cross-platform build with third-party JLL dependencies

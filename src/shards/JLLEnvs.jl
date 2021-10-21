@@ -28,6 +28,8 @@ const JLL_ENV_GCC_VERSIONS = VersionNumber[
     v"11.0.0-iains",
 ]
 
+# External API.
+# The triples used for cross-platform configuration
 const JLL_ENV_TRIPLES = String[
     "aarch64-apple-darwin20",
     "aarch64-linux-gnu",           # Tier 1
@@ -41,7 +43,7 @@ const JLL_ENV_TRIPLES = String[
     "x86_64-apple-darwin14",       # Tier 1
     "x86_64-linux-gnu",            # Tier 1
     "x86_64-linux-musl",
-    "x86_64-unknown-freebsd12.2",  # Tier 1
+    "x86_64-unknown-freebsd",      # Tier 1
     "x86_64-w64-mingw32",          # Tier 1
 ]
 
@@ -58,15 +60,25 @@ const JLL_ENV_CLANG_TARGETS_MAPPING = Dict(
     "x86_64-apple-darwin14"=>"x86_64-apple-darwin14",
     "x86_64-linux-gnu"=>"x86_64-unknown-linux-gnu",
     "x86_64-linux-musl"=>"x86_64-unknown-linux-musl",
-    "x86_64-unknown-freebsd12.2"=>"x86_64-unknown-freebsd12.2",
+    "x86_64-unknown-freebsd"=>"x86_64-unknown-freebsd12.2",
     "x86_64-w64-mingw32"=>"x86_64-w64-windows-gnu",
 )
 
 triple2target(triple::String) = get(JLL_ENV_CLANG_TARGETS_MAPPING, triple, "unknown")
 
+const JLL_ENV_CLANG_TRIPLE_ABBREVATION_MAPPING = Dict(
+    "x86_64-unknown-freebsd"=>"x86_64-unknown-freebsd12.2"
+)
+
+# expand freebsd to freebsd12.2
+expand_triple(triple::AbstractString) = get(JLL_ENV_CLANG_TRIPLE_ABBREVATION_MAPPING, triple, triple)
+
+# Internal use, triples used in artifacts
+const JLL_ENV_ARTIFACT_TRIPLES = expand_triple.(JLL_ENV_TRIPLES)
+
 function get_gcc_shard_key(triple::String, version::VersionNumber=v"4.8.5")
     @assert version ∈ JLL_ENV_GCC_VERSIONS "Wrong JLL gcc version: $version. Please choose a version listed in `JLL_ENV_GCC_VERSIONS`."
-    @assert triple ∈ JLL_ENV_TRIPLES "Wrong JLL target triple: $triple. Please choose a triple listed in `JLL_ENV_TRIPLES`."
+    @assert triple ∈ JLL_ENV_ARTIFACT_TRIPLES "Wrong JLL target triple: $triple. Please choose a triple listed in `JLL_ENV_ARTIFACT_TRIPLES`."
     # ignore gcc version for Apple Silicon
     if triple == "aarch64-apple-darwin20"
         return "$JLL_ENV_GCC_SHARD_NAME-aarch64-apple-darwin20.v11.0.0-iains.$JLL_ENV_HOST_TRIPLE.unpacked"
@@ -76,7 +88,7 @@ function get_gcc_shard_key(triple::String, version::VersionNumber=v"4.8.5")
 end
 
 function get_system_shard_key(triple::String)
-    @assert triple ∈ JLL_ENV_TRIPLES "Wrong JLL target triple: $triple. Please choose a triple listed in `JLL_ENV_TRIPLES`."
+    @assert triple ∈ JLL_ENV_ARTIFACT_TRIPLES "Wrong JLL target triple: $triple. Please choose a triple listed in `JLL_ENV_ARTIFACT_TRIPLES`."
     platform_keys = filter(collect(keys(JLL_ENV_SHARDS))) do key
         startswith(key, "$JLL_ENV_SYSTEM_SHARD_NAME-$triple.") &&
         endswith(key, "$JLL_ENV_HOST_TRIPLE.unpacked")
@@ -85,7 +97,7 @@ function get_system_shard_key(triple::String)
 end
 
 function get_environment_info(triple::String, version::VersionNumber=v"4.8.5")
-    @assert triple ∈ JLL_ENV_TRIPLES "Wrong JLL target triple: $triple. Please choose a triple listed in `JLL_ENV_TRIPLES`."
+    @assert triple ∈ JLL_ENV_ARTIFACT_TRIPLES "Wrong JLL target triple: $triple. Please choose a triple listed in `JLL_ENV_ARTIFACT_TRIPLES`."
     gcc = JLL_ENV_SHARDS[get_gcc_shard_key(triple, version)][]
     sys = JLL_ENV_SHARDS[get_system_shard_key(triple)][]
     gcc_download = gcc["download"][]
@@ -98,6 +110,7 @@ function get_environment_info(triple::String, version::VersionNumber=v"4.8.5")
 end
 
 function get_system_dirs(triple::String, version::VersionNumber=v"4.8.5")
+    triple = expand_triple(triple)
     info = get_environment_info(triple, version)
     gcc_info = info[1]
     sys_info = info[2]

@@ -269,14 +269,17 @@ function (x::ResolveDependency)(dag::ExprDAG, options::Dict)
     log_options = get(general_options, "log", Dict())
     show_info = get(log_options, "ResolveDependency_log", x.show_info)
 
+    general_options["nested_tags"] = collect_nested_tags(dag)
     for node in dag.nodes
-        resolve_dependency!(dag, node)
+        resolve_dependency!(dag, node, general_options)
         unique!(node.adj)  # FIXME: check this
         if show_info
             deps = Dict(n => dag.nodes[n] for n in node.adj)
             @info "[ResolveDependency]: resolved dependency for $(node.cursor)" deps
         end
     end
+    delete!(general_options, "nested_tags")
+
     return dag
 end
 
@@ -639,16 +642,7 @@ function (x::Codegen)(dag::ExprDAG, options::Dict)
     codegen_options["DAG_ids"] = dag.ids
     codegen_options["DAG_ids_extra"] = dag.ids_extra
     # collect and map nested anonymous tags
-    nested_tags = Dict{Symbol,CLCursor}()
-    for (id, i) in dag.tags
-        node = dag.nodes[i]
-        startswith(string(node.id), "##Ctag") ||
-        startswith(string(node.id), "__JL_Ctag") || continue
-        if node.type isa NestedRecords
-            nested_tags[id] = node.cursor
-        end
-    end
-    codegen_options["nested_tags"] = nested_tags
+    codegen_options["nested_tags"] = collect_nested_tags(dag)
 
     for (i, node) in enumerate(dag.nodes)
         !isempty(node.exprs) && empty!(node.exprs)
@@ -684,10 +678,10 @@ In this pass, the mutability of those structs which are not necessary to be immu
 will be reset to `true` according to the following rules:
 
 if this type is not used as a field type in any other types
-    if this type is in the whitelist
+    if this type is in the includelist
         then reset
 
-    if this type is in the blacklist
+    if this type is in the ignore list
         then skip
 
     if this type is used as the argument type in some function protos
@@ -710,8 +704,8 @@ function (x::TweakMutability)(dag::ExprDAG, options::Dict)
     general_options = get(options, "general", Dict())
     log_options = get(general_options, "log", Dict())
     show_info = get(log_options, "TweakMutability_log", x.show_info)
-    blacklist = get(general_options, "auto_mutability_blacklist", [])
-    whitelist = get(general_options, "auto_mutability_whitelist", [])
+    ignorelist = get(general_options, "auto_mutability_ignorelist", get(general_options, "auto_mutability_blacklist", []))
+    includelist = get(general_options, "auto_mutability_includelist", get(general_options, "auto_mutability_whitelist", []))
     add_new = get(general_options, "auto_mutability_with_new", true)
 
     # collect referenced node ids
@@ -737,9 +731,9 @@ function (x::TweakMutability)(dag::ExprDAG, options::Dict)
         type_name = string(expr.args[2])
 
         apply_reset = false
-        if type_name ∈ whitelist
+        if type_name ∈ includelist
             apply_reset = true
-        elseif type_name ∈ blacklist
+        elseif type_name ∈ ignorelist
             apply_reset = false
         else
             apply_reset = should_tweak(dag.nodes, i)
@@ -838,12 +832,12 @@ function (x::FunctionPrinter)(dag::ExprDAG, options::Dict)
     general_options = get(options, "general", Dict())
     log_options = get(general_options, "log", Dict())
     show_info = get(log_options, "FunctionPrinter_log", x.show_info)
-    blacklist = get(general_options, "printer_blacklist", [])
+    ignorelist = get(general_options, "output_ignorelist", get(general_options, "printer_blacklist", []))
 
     show_info && @info "[FunctionPrinter]: print to $(x.file)"
     open(x.file, "w") do io
         for node in dag.nodes
-            string(node.id) ∈ blacklist && continue
+            string(node.id) ∈ ignorelist && continue
             node.type isa AbstractFunctionNodeType || continue
             pretty_print(io, node, general_options)
         end
@@ -865,18 +859,18 @@ function (x::CommonPrinter)(dag::ExprDAG, options::Dict)
     general_options = get(options, "general", Dict())
     log_options = get(general_options, "log", Dict())
     show_info = get(log_options, "CommonPrinter_log", x.show_info)
-    blacklist = get(general_options, "printer_blacklist", [])
+    ignorelist = get(general_options, "output_ignorelist", get(general_options, "printer_blacklist", []))
 
     show_info && @info "[CommonPrinter]: print to $(x.file)"
     open(x.file, "w") do io
         for node in dag.nodes
-            string(node.id) ∈ blacklist && continue
+            string(node.id) ∈ ignorelist && continue
             node.type isa AbstractMacroNodeType && continue
             pretty_print(io, node, general_options)
         end
         # print macros in the bottom of the file
         for node in dag.nodes
-            string(node.id) ∈ blacklist && continue
+            string(node.id) ∈ ignorelist && continue
             node.type isa AbstractMacroNodeType || continue
             pretty_print(io, node, options)
         end
@@ -898,19 +892,19 @@ function (x::GeneralPrinter)(dag::ExprDAG, options::Dict)
     general_options = get(options, "general", Dict())
     log_options = get(general_options, "log", Dict())
     show_info = get(log_options, "GeneralPrinter_log", x.show_info)
-    blacklist = get(general_options, "printer_blacklist", [])
+    ignorelist = get(general_options, "output_ignorelist", get(general_options, "printer_blacklist", []))
     general_options["DAG_ids"] = merge(dag.ids, dag.tags)
 
     show_info && @info "[GeneralPrinter]: print to $(x.file)"
     open(x.file, "a") do io
         for node in dag.nodes
-            string(node.id) ∈ blacklist && continue
+            string(node.id) ∈ ignorelist && continue
             node.type isa AbstractMacroNodeType && continue
             pretty_print(io, node, general_options)
         end
         # print macros in the bottom of the file
         for node in dag.nodes
-            string(node.id) ∈ blacklist && continue
+            string(node.id) ∈ ignorelist && continue
             node.type isa AbstractMacroNodeType || continue
             isempty(node.exprs)
             pretty_print(io, node, options)
@@ -934,16 +928,16 @@ function (x::StdPrinter)(dag::ExprDAG, options::Dict)
     general_options = get(options, "general", Dict())
     log_options = get(general_options, "log", Dict())
     show_info = get(log_options, "StdPrinter_log", x.show_info)
-    blacklist = get(general_options, "printer_blacklist", [])
+    ignorelist = get(general_options, "output_ignorelist", get(general_options, "printer_blacklist", []))
 
     for node in dag.nodes
-        string(node.id) ∈ blacklist && continue
+        string(node.id) ∈ ignorelist && continue
         node.type isa AbstractMacroNodeType && continue
         pretty_print(stdout, node, general_options)
     end
     # print macros
     for node in dag.nodes
-        string(node.id) ∈ blacklist && continue
+        string(node.id) ∈ ignorelist && continue
         node.type isa AbstractMacroNodeType || continue
         pretty_print(stdout, node, options)
     end
@@ -1093,4 +1087,18 @@ function (x::CodegenMacro)(dag::ExprDAG, options::Dict)
     end
 
     return dag
+end
+
+
+function collect_nested_tags(dag::ExprDAG)
+    nested_tags = Dict{Symbol,CLCursor}()
+    for (id, i) in dag.tags
+        node = dag.nodes[i]
+        startswith(string(node.id), "##Ctag") ||
+        startswith(string(node.id), "__JL_Ctag") || continue
+        if node.type isa NestedRecords
+            nested_tags[id] = node.cursor
+        end
+    end
+    nested_tags
 end

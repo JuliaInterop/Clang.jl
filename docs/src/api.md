@@ -1,4 +1,4 @@
-# API Reference
+# Clang API Reference
 
 ```@autodocs
 Modules = [Clang]

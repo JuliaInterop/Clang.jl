@@ -5,4 +5,4 @@
 /Manifest.toml
 
 Manifest.toml
-test/LibClang.jl
+test/Lib*.jl

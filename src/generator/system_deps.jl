@@ -71,7 +71,7 @@ function collect_dependent_system_nodes!(dag::ExprDAG, node::ExprNode{TypedefEla
 
     is_jl_basic(leaf_ty) && return system_nodes
 
-    if !haskey(dag.tags, leaf_ty.sym)
+    if !(haskey(dag.tags, leaf_ty.sym) || haskey(dag.ids_extra, leaf_ty.sym))
         # add all sys nodes with the same id
         for (i, n) in enumerate(dag.sys)
             if n.id == leaf_ty.sym
@@ -116,9 +116,12 @@ function collect_dependent_system_nodes!(dag::ExprDAG, node::ExprNode{TypedefToA
     return system_nodes
 end
 
-function collect_dependent_system_nodes!(dag::ExprDAG, node::ExprNode{<:AbstractStructNodeType}, system_nodes)
-    cursor = node.cursor
-    for c in fields(getCursorType(cursor))
+function collect_dependent_system_nodes!(dag::ExprDAG, node::ExprNode{<:Union{AbstractStructNodeType, <:AbstractUnionNodeType}}, system_nodes)
+    collect_dependent_system_nodes!(dag, getCursorType(node.cursor), system_nodes)
+end
+
+function collect_dependent_system_nodes!(dag::ExprDAG, type::CLType, system_nodes)
+    for c in fields(type)
         ty = getCursorType(c)
         jlty = tojulia(ty)
         leaf_ty = get_jl_leaf_type(jlty)
@@ -130,13 +133,17 @@ function collect_dependent_system_nodes!(dag::ExprDAG, node::ExprNode{<:Abstract
             (!hasref && haskey(dag.ids, leaf_ty.sym)) ||
             haskey(dag.ids_extra, leaf_ty.sym) ||
             occursin("anonymous", spelling(ty))
-            # pass
+            # nested tags may also be from system headers
+            collect_dependent_system_nodes!(dag, ty, system_nodes)
         else
             # add all sys nodes with the same id
             for (i, n) in enumerate(dag.sys)
                 if n.id == leaf_ty.sym
                     system_nodes[n] = i
                 end
+            end
+            if Clang.is_elaborated(ty)
+                collect_dependent_system_nodes!(dag, ty, system_nodes)
             end
         end
     end

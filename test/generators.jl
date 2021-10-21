@@ -45,3 +45,63 @@ end
     @test strip_comment_markers("//! line1") == ["line1"]
     @test strip_comment_markers("//< line1") == ["line1"]
 end
+
+@testset "Resolve dependency" begin
+    args = get_default_args()
+    headers = joinpath(@__DIR__, "include", "dependency.h")
+    options = Dict("general" => Dict{String,Any}(
+            "output_file_path" => joinpath(@__DIR__, "LibDependency.jl")))
+    ctx = create_context(headers, args, options)
+    build!(ctx)
+    @test include("LibDependency.jl") isa Any
+end
+
+@testset "Issue 320" begin
+    args = get_default_args()
+    dir = joinpath(@__DIR__, "sys")
+    push!(args, "-isystem$dir")
+    headers = [joinpath(@__DIR__, "include", "test.h")]
+    ctx = create_context(headers, args)
+    @add_def stat
+    @test build!(ctx, BUILDSTAGE_NO_PRINTING) isa Any
+end
+
+@testset "Escape anonymous name with var\"\"" begin
+    args = get_default_args()
+    headers = joinpath(@__DIR__, "include", "escape-with-var.h")
+    options = Dict("general" => Dict{String,Any}(
+            "output_file_path" => joinpath(@__DIR__, "LibEscapeWithVar.jl")))
+    ctx = create_context(headers, args, options)
+    build!(ctx)
+    @test include("LibEscapeWithVar.jl") isa Any
+end
+
+@testset "Issue 307" begin
+    args = get_default_args()
+    dir = joinpath(@__DIR__, "sys")
+    push!(args, "-isystem$dir")
+    headers = joinpath(@__DIR__, "include", "struct-in-union.h")
+    ctx = create_context(headers, args)
+    @test build!(ctx, BUILDSTAGE_NO_PRINTING) isa Any
+
+    headers = joinpath(@__DIR__, "include", "nested-struct.h")
+    ctx = create_context(headers, args)
+    @test build!(ctx, BUILDSTAGE_NO_PRINTING) isa Any
+
+    headers = joinpath(@__DIR__, "include", "nested-declaration.h")
+    ctx = create_context(headers, args)
+    @test_broken try
+        build!(ctx, BUILDSTAGE_NO_PRINTING) isa Any
+        true
+    catch
+        false
+    end
+end
+
+@testset "Issue 327" begin
+    tu = parse_header(Index(), "include/void-type.h")
+    root = Clang.getTranslationUnitCursor(tu)
+    func = children(root)[]
+    ret_type = Clang.getCursorResultType(func)
+    @test ret_type isa CLVoid
+end

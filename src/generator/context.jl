@@ -223,7 +223,7 @@ function get_triple()
     elseif Sys.islinux() && Sys.ARCH === :x86_64 && is_libc_musl
         return "x86_64-linux-musl"
     elseif Sys.isbsd() && !Sys.isapple()
-        return "x86_64-unknown-freebsd"
+        return "x86_64-unknown-freebsd11.1"
     elseif Sys.iswindows() && Sys.ARCH === :x86_64
         return "x86_64-w64-mingw32"
     end

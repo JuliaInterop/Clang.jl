@@ -9,6 +9,24 @@ const Ctime_t = Int
 
 
 """
+    clang_install_aborting_llvm_fatal_error_handler()
+
+Installs error handler that prints error message to stderr and calls abort(). Replaces currently installed error handler (if any).
+"""
+function clang_install_aborting_llvm_fatal_error_handler()
+    @ccall libclang.clang_install_aborting_llvm_fatal_error_handler()::Cvoid
+end
+
+"""
+    clang_uninstall_llvm_fatal_error_handler()
+
+Removes currently installed error handler (if any). If no error handler is intalled, the default strategy is to print error message to stderr and call exit(1).
+"""
+function clang_uninstall_llvm_fatal_error_handler()
+    @ccall libclang.clang_uninstall_llvm_fatal_error_handler()::Cvoid
+end
+
+"""
     CXErrorCode
 
 Error codes returned by libclang routines.
@@ -1742,7 +1760,6 @@ Describes the kind of entity that a cursor refers to.
 | CXCursor\\_CXXReinterpretCastExpr                           | C++'s reinterpret\\_cast<> expression.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | CXCursor\\_CXXConstCastExpr                                 | C++'s const\\_cast<> expression.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | CXCursor\\_CXXFunctionalCastExpr                            | Represents an explicit C++ type conversion that uses "functional" notion (C++ [expr.type.conv]).  Example:   ```c++    x = int(0.5); ```                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| CXCursor\\_CXXAddrspaceCastExpr                             | OpenCL's addrspace\\_cast<> expression.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | CXCursor\\_CXXTypeidExpr                                    | A C++ typeid expression (C++ [expr.typeid]).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | CXCursor\\_CXXBoolLiteralExpr                               | [C++ 2.13.5] C++ Boolean Literal.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | CXCursor\\_CXXNullPtrLiteralExpr                            | [C++0x 2.14.7] C++ Pointer Literal.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
@@ -1765,6 +1782,7 @@ Describes the kind of entity that a cursor refers to.
 | CXCursor\\_FixedPointLiteral                                | Fixed point literal                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | CXCursor\\_OMPArrayShapingExpr                              | OpenMP 5.0 [2.1.4, Array Shaping].                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | CXCursor\\_OMPIteratorExpr                                  | OpenMP 5.0 [2.1.6 Iterators]                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| CXCursor\\_CXXAddrspaceCastExpr                             | OpenCL's addrspace\\_cast<> expression.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | CXCursor\\_LastExpr                                         |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | CXCursor\\_FirstStmt                                        |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | CXCursor\\_UnexposedStmt                                    | A statement whose specific kind is not exposed via this interface.  Unexposed statements have the same operations as any other kind of statement; one can extract their location information, spelling, children, etc. However, the specific kind of the statement is not reported.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
@@ -2008,30 +2026,30 @@ Describes the kind of entity that a cursor refers to.
     CXCursor_CXXReinterpretCastExpr = 126
     CXCursor_CXXConstCastExpr = 127
     CXCursor_CXXFunctionalCastExpr = 128
-    CXCursor_CXXAddrspaceCastExpr = 129
-    CXCursor_CXXTypeidExpr = 130
-    CXCursor_CXXBoolLiteralExpr = 131
-    CXCursor_CXXNullPtrLiteralExpr = 132
-    CXCursor_CXXThisExpr = 133
-    CXCursor_CXXThrowExpr = 134
-    CXCursor_CXXNewExpr = 135
-    CXCursor_CXXDeleteExpr = 136
-    CXCursor_UnaryExpr = 137
-    CXCursor_ObjCStringLiteral = 138
-    CXCursor_ObjCEncodeExpr = 139
-    CXCursor_ObjCSelectorExpr = 140
-    CXCursor_ObjCProtocolExpr = 141
-    CXCursor_ObjCBridgedCastExpr = 142
-    CXCursor_PackExpansionExpr = 143
-    CXCursor_SizeOfPackExpr = 144
-    CXCursor_LambdaExpr = 145
-    CXCursor_ObjCBoolLiteralExpr = 146
-    CXCursor_ObjCSelfExpr = 147
-    CXCursor_OMPArraySectionExpr = 148
-    CXCursor_ObjCAvailabilityCheckExpr = 149
-    CXCursor_FixedPointLiteral = 150
-    CXCursor_OMPArrayShapingExpr = 151
-    CXCursor_OMPIteratorExpr = 152
+    CXCursor_CXXTypeidExpr = 129
+    CXCursor_CXXBoolLiteralExpr = 130
+    CXCursor_CXXNullPtrLiteralExpr = 131
+    CXCursor_CXXThisExpr = 132
+    CXCursor_CXXThrowExpr = 133
+    CXCursor_CXXNewExpr = 134
+    CXCursor_CXXDeleteExpr = 135
+    CXCursor_UnaryExpr = 136
+    CXCursor_ObjCStringLiteral = 137
+    CXCursor_ObjCEncodeExpr = 138
+    CXCursor_ObjCSelectorExpr = 139
+    CXCursor_ObjCProtocolExpr = 140
+    CXCursor_ObjCBridgedCastExpr = 141
+    CXCursor_PackExpansionExpr = 142
+    CXCursor_SizeOfPackExpr = 143
+    CXCursor_LambdaExpr = 144
+    CXCursor_ObjCBoolLiteralExpr = 145
+    CXCursor_ObjCSelfExpr = 146
+    CXCursor_OMPArraySectionExpr = 147
+    CXCursor_ObjCAvailabilityCheckExpr = 148
+    CXCursor_FixedPointLiteral = 149
+    CXCursor_OMPArrayShapingExpr = 150
+    CXCursor_OMPIteratorExpr = 151
+    CXCursor_CXXAddrspaceCastExpr = 152
     CXCursor_LastExpr = 152
     CXCursor_FirstStmt = 200
     CXCursor_UnexposedStmt = 200
@@ -2500,6 +2518,33 @@ Free the memory associated with a [`CXPlatformAvailability`](@ref) structure.
 """
 function clang_disposeCXPlatformAvailability(availability)
     @ccall libclang.clang_disposeCXPlatformAvailability(availability::Ptr{CXPlatformAvailability})::Cvoid
+end
+
+"""
+    clang_Cursor_getVarDeclInitializer(cursor)
+
+If cursor refers to a variable declaration and it has initializer returns cursor referring to the initializer otherwise return null cursor.
+"""
+function clang_Cursor_getVarDeclInitializer(cursor)
+    @ccall libclang.clang_Cursor_getVarDeclInitializer(cursor::CXCursor)::CXCursor
+end
+
+"""
+    clang_Cursor_hasVarDeclGlobalStorage(cursor)
+
+If cursor refers to a variable declaration that has global storage returns 1. If cursor refers to a variable declaration that doesn't have global storage returns 0. Otherwise returns -1.
+"""
+function clang_Cursor_hasVarDeclGlobalStorage(cursor)
+    @ccall libclang.clang_Cursor_hasVarDeclGlobalStorage(cursor::CXCursor)::Cint
+end
+
+"""
+    clang_Cursor_hasVarDeclExternalStorage(cursor)
+
+If cursor refers to a variable declaration that has external storage returns 1. If cursor refers to a variable declaration that doesn't have external storage returns 0. Otherwise returns -1.
+"""
+function clang_Cursor_hasVarDeclExternalStorage(cursor)
+    @ccall libclang.clang_Cursor_hasVarDeclExternalStorage(cursor::CXCursor)::Cint
 end
 
 """
@@ -3578,18 +3623,20 @@ end
 """
     CXTypeNullabilityKind
 
-| Enumerator                      | Note                                                                                                                                                                                                            |
-| :------------------------------ | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| CXTypeNullability\\_NonNull     | Values of this type can never be null.                                                                                                                                                                          |
-| CXTypeNullability\\_Nullable    | Values of this type can be null.                                                                                                                                                                                |
-| CXTypeNullability\\_Unspecified | Whether values of this type can be null is (explicitly) unspecified. This captures a (fairly rare) case where we can't conclude anything about the nullability of the type even though it has been considered.  |
-| CXTypeNullability\\_Invalid     | Nullability is not applicable to this type.                                                                                                                                                                     |
+| Enumerator                         | Note                                                                                                                                                                                                                                                                  |
+| :--------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CXTypeNullability\\_NonNull        | Values of this type can never be null.                                                                                                                                                                                                                                |
+| CXTypeNullability\\_Nullable       | Values of this type can be null.                                                                                                                                                                                                                                      |
+| CXTypeNullability\\_Unspecified    | Whether values of this type can be null is (explicitly) unspecified. This captures a (fairly rare) case where we can't conclude anything about the nullability of the type even though it has been considered.                                                        |
+| CXTypeNullability\\_Invalid        | Nullability is not applicable to this type.                                                                                                                                                                                                                           |
+| CXTypeNullability\\_NullableResult | Generally behaves like Nullable, except when used in a block parameter that was imported into a swift async method. There, swift will assume that the parameter can get null even if no error occured. \\_Nullable parameters are assumed to only get null on error.  |
 """
 @cenum CXTypeNullabilityKind::UInt32 begin
     CXTypeNullability_NonNull = 0
     CXTypeNullability_Nullable = 1
     CXTypeNullability_Unspecified = 2
     CXTypeNullability_Invalid = 3
+    CXTypeNullability_NullableResult = 4
 end
 
 """
@@ -6974,27 +7021,74 @@ function clang_CompileCommand_getMappedSourceContent(arg1, I)
     @ccall libclang.clang_CompileCommand_getMappedSourceContent(arg1::CXCompileCommand, I::Cuint)::CXString
 end
 
-"""
-    clang_install_aborting_llvm_fatal_error_handler()
+const CXRewriter = Ptr{Cvoid}
 
-Installs error handler that prints error message to stderr and calls abort(). Replaces currently installed error handler (if any).
 """
-function clang_install_aborting_llvm_fatal_error_handler()
-    @ccall libclang.clang_install_aborting_llvm_fatal_error_handler()::Cvoid
+    clang_CXRewriter_create(TU)
+
+Create [`CXRewriter`](@ref).
+"""
+function clang_CXRewriter_create(TU)
+    @ccall libclang.clang_CXRewriter_create(TU::CXTranslationUnit)::CXRewriter
 end
 
 """
-    clang_uninstall_llvm_fatal_error_handler()
+    clang_CXRewriter_insertTextBefore(Rew, Loc, Insert)
 
-Removes currently installed error handler (if any). If no error handler is intalled, the default strategy is to print error message to stderr and call exit(1).
+Insert the specified string at the specified location in the original buffer.
 """
-function clang_uninstall_llvm_fatal_error_handler()
-    @ccall libclang.clang_uninstall_llvm_fatal_error_handler()::Cvoid
+function clang_CXRewriter_insertTextBefore(Rew, Loc, Insert)
+    @ccall libclang.clang_CXRewriter_insertTextBefore(Rew::CXRewriter, Loc::CXSourceLocation, Insert::Cstring)::Cvoid
+end
+
+"""
+    clang_CXRewriter_replaceText(Rew, ToBeReplaced, Replacement)
+
+Replace the specified range of characters in the input with the specified replacement.
+"""
+function clang_CXRewriter_replaceText(Rew, ToBeReplaced, Replacement)
+    @ccall libclang.clang_CXRewriter_replaceText(Rew::CXRewriter, ToBeReplaced::CXSourceRange, Replacement::Cstring)::Cvoid
+end
+
+"""
+    clang_CXRewriter_removeText(Rew, ToBeRemoved)
+
+Remove the specified range.
+"""
+function clang_CXRewriter_removeText(Rew, ToBeRemoved)
+    @ccall libclang.clang_CXRewriter_removeText(Rew::CXRewriter, ToBeRemoved::CXSourceRange)::Cvoid
+end
+
+"""
+    clang_CXRewriter_overwriteChangedFiles(Rew)
+
+Save all changed files to disk. Returns 1 if any files were not saved successfully, returns 0 otherwise.
+"""
+function clang_CXRewriter_overwriteChangedFiles(Rew)
+    @ccall libclang.clang_CXRewriter_overwriteChangedFiles(Rew::CXRewriter)::Cint
+end
+
+"""
+    clang_CXRewriter_writeMainFileToStdOut(Rew)
+
+Write out rewritten version of the main file to stdout.
+"""
+function clang_CXRewriter_writeMainFileToStdOut(Rew)
+    @ccall libclang.clang_CXRewriter_writeMainFileToStdOut(Rew::CXRewriter)::Cvoid
+end
+
+"""
+    clang_CXRewriter_dispose(Rew)
+
+Free the given [`CXRewriter`](@ref).
+"""
+function clang_CXRewriter_dispose(Rew)
+    @ccall libclang.clang_CXRewriter_dispose(Rew::CXRewriter)::Cvoid
 end
 
 const CINDEX_VERSION_MAJOR = 0
 
-const CINDEX_VERSION_MINOR = 60
+const CINDEX_VERSION_MINOR = 61
 
 CINDEX_VERSION_ENCODE(major, minor) = major * 10000 + minor * 1
 

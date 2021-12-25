@@ -512,7 +512,7 @@ children(c::CLCursor)::Vector{CLCursor} = children(c.cursor)
     get_function_args(cursor::CLCursor) -> Vector{CLCursor}
 Return function arguments for a given cursor.
 """
-get_function_args(cursor::CLCursor) = search(cursor, CXCursor_ParmDecl)
+get_function_args(cursor::CLCursor) = [getArgument(cursor, i - 1) for i = 1:getNumArguments(cursor)]
 
 """
     is_typedef_anon(current::CLCursor, next::CLCursor) -> Bool

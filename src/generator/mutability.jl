@@ -49,8 +49,7 @@ function should_tweak(nodes, idx)
         if is_dep
             is_orphan && (is_orphan = false;)
             cursor = node.cursor
-            args = get_function_args(cursor)
-            types = [getArgType(getCursorType(cursor), i - 1) for i in 1:length(args)]
+            types = [getArgType(getCursorType(cursor), i - 1) for i in 1:getNumArguments(cursor)]
             has_integer_args = false
             has_a_pointer_dep = false
 

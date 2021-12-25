@@ -159,3 +159,6 @@ collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLLastPreprocessing, o
 # skip unexposed decl
 collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLUnexposedDecl, options) = nodes
 collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLFirstDecl, options) = nodes  # FIXME: fix cltype.jl
+
+# skip C11's `_Static_assert`
+collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLStaticAssert, options) = nodes

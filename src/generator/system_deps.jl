@@ -8,8 +8,7 @@ collect_dependent_system_nodes!(dag::ExprDAG, node::ExprNode, system_nodes) = da
 
 function collect_dependent_system_nodes!(dag::ExprDAG, node::ExprNode{FunctionProto}, system_nodes)
     cursor = node.cursor
-    args = get_function_args(cursor)
-    types = CLType[getArgType(getCursorType(cursor), i - 1) for i in 1:length(args)]
+    types = CLType[getArgType(getCursorType(cursor), i - 1) for i in 1:getNumArguments(cursor)]
     push!(types, getCursorResultType(cursor))
     for ty in types
         # for arrays and pointers, meaningful types need to be recursively retrieved
@@ -39,7 +38,7 @@ end
 
 function collect_dependent_system_nodes!(dag::ExprDAG, node::ExprNode{FunctionNoProto}, system_nodes)
     cursor = node.cursor
-    @assert isempty(get_function_args(cursor))
+    @assert getNumArguments(cursor) == 0
     ty = getCursorResultType(cursor)
     jlty = tojulia(ty)
     leaf_ty = get_jl_leaf_type(jlty)

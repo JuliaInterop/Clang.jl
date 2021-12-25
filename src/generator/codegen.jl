@@ -73,7 +73,7 @@ function emit!(dag::ExprDAG, node::ExprNode{FunctionProto}, options::Dict; args.
     library_expr = Meta.parse(library_name)
 
     func_name = Symbol(spelling(cursor))
-    
+
     arg_names, args = _get_func_arg(cursor, options, dag)
     ret_type = _get_func_return_type(cursor, options)
 
@@ -126,7 +126,7 @@ function emit!(dag::ExprDAG, node::ExprNode{FunctionNoProto}, options::Dict; arg
     use_ccall_macro = get(options, "use_ccall_macro", false)
     cursor = node.cursor
     @warn "No Prototype for $cursor - assuming no arguments"
-    @assert isempty(get_function_args(cursor))
+    @assert getNumArguments(cursor) == 0
 
     library_name = _get_func_name(cursor, options)
     library_expr = Meta.parse(library_name)
@@ -159,16 +159,16 @@ function emit!(dag::ExprDAG, node::ExprNode{FunctionVariadic}, options::Dict; ar
         library_name = _get_func_name(cursor, options)
         library_expr = Meta.parse(library_name)
         func_name = Symbol(spelling(cursor))
-        
+
         signature = is_strict_typed ? efunsig(func_name, arg_names, args) : Expr(:call, func_name, arg_names...)
         push!(signature.args, :(va_list...))
-        
+
         fixed_args = map(arg_names, args) do name, type
             :($name::$type)
         end
         va_list_expr = Expr(:$, :(to_c_type_pairs(va_list)...))
         ccall_body = :($library_expr.$func_name($(fixed_args...); $va_list_expr)::$ret_type)
-        ccall_expr = Expr(:macrocall, Symbol("@ccall"), nothing, ccall_body) 
+        ccall_expr = Expr(:macrocall, Symbol("@ccall"), nothing, ccall_body)
         body = quote
             $(Meta.quot(ccall_expr))
         end

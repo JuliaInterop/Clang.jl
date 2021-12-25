@@ -105,3 +105,10 @@ end
     ret_type = Clang.getCursorResultType(func)
     @test ret_type isa CLVoid
 end
+
+@testset "Issue 355" begin
+    tu = parse_header(Index(), "include/return-funcptr.h")
+    root = Clang.getTranslationUnitCursor(tu)
+    func = children(root)[3]
+    @test length(get_function_args(func)) == 1
+end

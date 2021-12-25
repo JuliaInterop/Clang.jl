@@ -24,8 +24,7 @@ skip_check(dag::ExprDAG, node::ExprNode{EnumDuplicated}) = true
 
 function skip_check(dag::ExprDAG, node::ExprNode{FunctionProto})
     cursor = node.cursor
-    args = get_function_args(cursor)
-    types = CLType[getArgType(getCursorType(cursor), i - 1) for i in 1:length(args)]
+    types = CLType[getArgType(getCursorType(cursor), i - 1) for i in 1:getNumArguments(cursor)]
     push!(types, getCursorResultType(cursor))
     for ty in types
         jlty = tojulia(ty)

@@ -58,9 +58,6 @@ output_ignorelist = [
     "LLVM_CLANG_C_EXTERN_C_END"
 ]
 
-# Only output id in the `output_exclusivelist"
-# output_output_exclusivelist = []
-
 # Julia's `@enum` do not allow duplicated values, so by default, C enums are translated to 
 # CEnum.jl's `@cenum`. 
 # if this entry is true, `@enum` is used and those duplicated enum constants are just commented. 

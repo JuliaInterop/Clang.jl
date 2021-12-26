@@ -116,6 +116,13 @@ function normalize_literal(text)
     else
         strs = text
     end
+
+    # issue #357
+    rm = match(r"L\"*\"", strs)
+    if rm !== nothing
+        strs = replace(strs, rm.match => "\"")
+    end
+
     if occursin('\$', strs)
         return "($(replace(strs, "\$"=>"\\\$")))"
     else

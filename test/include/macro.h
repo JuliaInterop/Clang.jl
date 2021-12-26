@@ -8,3 +8,5 @@
 #define S "abc"\
           "def"
 
+// issue #357
+#define SL L"string"

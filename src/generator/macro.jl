@@ -111,8 +111,10 @@ function normalize_literal(text)
     m = match(r"^0[0-9]*\d$", text)
     if m !== nothing && m.match !== "0"
         strs = "0o"*normalize_literal_type(text)
-    else
+    elseif match(r"^[0-9]*\d$", text) !== nothing
         strs = normalize_literal_type(text)
+    else
+        strs = text
     end
     if occursin('\$', strs)
         return "($(replace(strs, "\$"=>"\\\$")))"
@@ -139,6 +141,20 @@ function tweak_exprs(dag::ExprDAG, toks::Vector)
     while i ≤ length(toks)
         tok = toks[i]
         if is_literal(tok)
+            # issue #356
+            #  Identifier("S")
+            #  Literal(""abc"")
+            #  Literal(""def"")
+            expr = try_parse(tok.text)
+            if expr isa String && i < length(toks)
+                next_expr = try_parse(toks[i+1].text)
+                if next_expr isa String
+                    str = expr * next_expr
+                    push!(new_toks, Literal(DUMMY_TOKEN, CXToken_Literal, normalize_literal("\"$str\"")))
+                    i += 2
+                    continue
+                end
+            end
             push!(new_toks, Literal(DUMMY_TOKEN, CXToken_Literal, normalize_literal(tok.text)))
             i += 1
         elseif is_punctuation(tok)

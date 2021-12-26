@@ -214,10 +214,16 @@ const MACRO_IDK_IGNORELIST = [
 Return true if the macro should be ignored.
 """
 function is_macro_unsupported(cursor::CLCursor)
-    for tok in tokenize(cursor)
+    toks = collect(tokenize(cursor))
+    for (i, tok) in enumerate(toks)
         is_identifier(tok) && tok.text ∈ MACRO_IDK_IGNORELIST && return true
         is_keyword(tok) && tok.text ∈ MACRO_IDK_IGNORELIST && return true
         is_punctuation(tok) && tok.text ∈ MACRO_IDK_IGNORELIST && return true
+        # issue #353
+        if is_punctuation(tok) && tok.text == "{" && i != length(toks)
+            next_tok = toks[i+1]
+            is_punctuation(next_tok) && next_tok.text == "}" && return true
+        end
     end
     return false
 end

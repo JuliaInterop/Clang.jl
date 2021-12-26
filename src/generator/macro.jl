@@ -111,9 +111,18 @@ function normalize_literal(text)
     m = match(r"^0[0-9]*\d$", text)
     if m !== nothing && m.match !== "0"
         strs = "0o"*normalize_literal_type(text)
-    else
+    elseif match(r"^[0-9]*\d$", text) !== nothing
         strs = normalize_literal_type(text)
+    else
+        strs = text
     end
+
+    # issue #357
+    rm = match(r"L\"*\"", strs)
+    if rm !== nothing
+        strs = replace(strs, rm.match => "\"")
+    end
+
     if occursin('\$', strs)
         return "($(replace(strs, "\$"=>"\\\$")))"
     else
@@ -139,6 +148,20 @@ function tweak_exprs(dag::ExprDAG, toks::Vector)
     while i ≤ length(toks)
         tok = toks[i]
         if is_literal(tok)
+            # issue #356
+            #  Identifier("S")
+            #  Literal(""abc"")
+            #  Literal(""def"")
+            expr = try_parse(tok.text)
+            if expr isa String && i < length(toks)
+                next_expr = try_parse(toks[i+1].text)
+                if next_expr isa String
+                    str = expr * next_expr
+                    push!(new_toks, Literal(DUMMY_TOKEN, CXToken_Literal, normalize_literal("\"$str\"")))
+                    i += 2
+                    continue
+                end
+            end
             push!(new_toks, Literal(DUMMY_TOKEN, CXToken_Literal, normalize_literal(tok.text)))
             i += 1
         elseif is_punctuation(tok)
@@ -206,6 +229,7 @@ const MACRO_IDK_IGNORELIST = [
     "noexcept",
     "##",
     "#",
+    "__cdecl",
 ]
 
 """
@@ -213,10 +237,16 @@ const MACRO_IDK_IGNORELIST = [
 Return true if the macro should be ignored.
 """
 function is_macro_unsupported(cursor::CLCursor)
-    for tok in tokenize(cursor)
+    toks = collect(tokenize(cursor))
+    for (i, tok) in enumerate(toks)
         is_identifier(tok) && tok.text ∈ MACRO_IDK_IGNORELIST && return true
         is_keyword(tok) && tok.text ∈ MACRO_IDK_IGNORELIST && return true
         is_punctuation(tok) && tok.text ∈ MACRO_IDK_IGNORELIST && return true
+        # issue #353
+        if is_punctuation(tok) && tok.text == "{" && i != length(toks)
+            next_tok = toks[i+1]
+            is_punctuation(next_tok) && next_tok.text == "}" && return true
+        end
     end
     return false
 end

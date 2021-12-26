@@ -206,6 +206,7 @@ const MACRO_IDK_IGNORELIST = [
     "noexcept",
     "##",
     "#",
+    "__cdecl",
 ]
 
 """

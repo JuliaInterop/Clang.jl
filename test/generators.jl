@@ -1,3 +1,4 @@
+using Clang
 using Clang.Generators
 using Clang.LibClang.Clang_jll
 using Test
@@ -99,7 +100,7 @@ end
 end
 
 @testset "Issue 327" begin
-    tu = parse_header(Index(), "include/void-type.h")
+    tu = parse_header(Index(), joinpath(@__DIR__, "include/void-type.h"))
     root = Clang.getTranslationUnitCursor(tu)
     func = children(root)[]
     ret_type = Clang.getCursorResultType(func)
@@ -107,8 +108,13 @@ end
 end
 
 @testset "Issue 355" begin
-    tu = parse_header(Index(), "include/return-funcptr.h")
+    tu = parse_header(Index(), joinpath(@__DIR__, "include/return-funcptr.h"))
     root = Clang.getTranslationUnitCursor(tu)
     func = children(root)[3]
     @test length(get_function_args(func)) == 1
+end
+
+@testset "macros" begin
+    ctx = create_context(joinpath(@__DIR__, "include/macro.h"), get_default_args())
+    @test_logs (:info, "Done!") match_mode=:any build!(ctx)
 end

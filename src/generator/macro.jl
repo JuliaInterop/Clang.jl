@@ -94,7 +94,7 @@ function normalize_literal_type(text::AbstractString)
         end
     end
     for sfx in LITERAL_FLOAT_SUFFIXES
-        if !occursin("0x", lowercase(txt)) && endswith(txt, sfx)
+        if match(Regex("^[+-]?([0-9]+([.][0-9]*)?|[.][0-9]+)"*sfx*"\$"), txt) != nothing
             txt_no_sfx = replace(txt, Regex(sfx*"\$")=>"")
             type = c_float_literal_to_julia(txt_no_sfx, sfx)
             return "$(type)($txt_no_sfx)"
@@ -111,16 +111,14 @@ function normalize_literal(text)
     m = match(r"^0[0-9]*\d$", text)
     if m !== nothing && m.match !== "0"
         strs = "0o"*normalize_literal_type(text)
-    elseif match(r"^[0-9]*\d$", text) !== nothing
-        strs = normalize_literal_type(text)
     else
-        strs = text
+        strs = normalize_literal_type(text)
     end
 
     # issue #357
     rm = match(r"L\"*\"", strs)
-    if rm !== nothing
-        strs = replace(strs, rm.match => "\"")
+    if rm !== nothing && startswith(strs, rm.match)
+        strs = replace(strs, rm.match => "\""; count = 1)
     end
 
     if occursin('\$', strs)

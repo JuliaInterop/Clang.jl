@@ -243,13 +243,11 @@ function format_doxygen(cursor, options, members=false)
         push!(lines, "### Parameters")
         for p in parameters
             append!(lines, format_parameter(p, options))
-            push!(lines, "")
         end
     end
     if !ismissing(returns)
         push!(lines, "### Returns")
         append!(lines, format_block(Clang.getParagraph(returns), options))
-        push!(lines, "")
     end
     if !isempty(member_docs)
         append!(lines, member_docs)

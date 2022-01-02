@@ -264,6 +264,7 @@ function format_parameter(p, options)
     name = Clang.getParamName(p)
     dir = parameter_pass_direction_name(Clang.getDirection(p))
     content = format_inline.(children(p), Ref(options))
+    content[end] = rstrip(content[end])
     ["* `$name`:$dir$(content[1])"; @view content[2:end]]
 end
 

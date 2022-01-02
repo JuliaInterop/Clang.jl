@@ -19,7 +19,7 @@ using Clang.LibClang.Clang_jll
 
 cd(@__DIR__)
 
-include_dir = joinpath(Clang_jll.artifact_dir, "include") |> normpath
+include_dir = normpath(Clang_jll.artifact_dir, "include")
 
 # wrapper generator options
 options = load_options(joinpath(@__DIR__, "generator.toml"))

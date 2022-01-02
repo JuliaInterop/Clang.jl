@@ -3,7 +3,7 @@ using Clang.LibClang.Clang_jll
 
 cd(@__DIR__)
 
-const INCLUDE_DIR = joinpath(Clang_jll.artifact_dir, "include") |> normpath
+const INCLUDE_DIR = normpath(Clang_jll.artifact_dir, "include")
 const CLANG_C_DIR = joinpath(INCLUDE_DIR, "clang-c")
 
 options = load_options(joinpath(@__DIR__, "generator.toml"))

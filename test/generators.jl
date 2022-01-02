@@ -7,7 +7,7 @@ using Clang.Generators: strip_comment_markers
 include("rewriter.jl")
 
 @testset "Generators" begin
-    INCLUDE_DIR = joinpath(Clang_jll.artifact_dir, "include") |> normpath
+    INCLUDE_DIR = normpath(Clang_jll.artifact_dir, "include")
     CLANG_C_DIR = joinpath(INCLUDE_DIR, "clang-c")
 
     options = load_options(joinpath(@__DIR__, "test.toml"))

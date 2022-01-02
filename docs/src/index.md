@@ -41,7 +41,7 @@ using Clang.LibClang.Clang_jll
 
 cd(@__DIR__)
 
-include_dir = joinpath(Clang_jll.artifact_dir, "include") |> normpath
+include_dir = normpath(Clang_jll.artifact_dir, "include")
 clang_dir = joinpath(include_dir, "clang-c")
 
 # wrapper generator options

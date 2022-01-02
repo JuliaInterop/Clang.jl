@@ -283,8 +283,8 @@ end
 
 function format_block(x::Clang.Paragraph, options)
     t = format_inline(x, options)
-    # Remove leading space
-    t = replace(t, r"^\s+"=>"")
+    # Remove leading and trailing whitespace
+    t = strip(t)
     [t]
 end
 

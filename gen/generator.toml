@@ -21,7 +21,7 @@ output_file_path = "../lib/LibClang.jl"
 
 # if this entry is not empty, the generator will print the code below to the `output_file_path`.
 # module module_name
-# 
+#
 # end # module
 module_name = "LibClang"
 
@@ -44,8 +44,8 @@ prologue_file_path = "./prologue.jl"
 # this is often used for applying custom patches.
 epilogue_file_path = ""
 
-# node with an id in the `output_ignorelist` will be ignored in the printing passes. 
-# this is very useful for custom editing. 
+# node with an id in the `output_ignorelist` will be ignored in the printing passes.
+# this is very useful for custom editing.
 output_ignorelist = [
     "CINDEX_EXPORTS",
     "CINDEX_VERSION",
@@ -58,9 +58,9 @@ output_ignorelist = [
     "LLVM_CLANG_C_EXTERN_C_END"
 ]
 
-# Julia's `@enum` do not allow duplicated values, so by default, C enums are translated to 
-# CEnum.jl's `@cenum`. 
-# if this entry is true, `@enum` is used and those duplicated enum constants are just commented. 
+# Julia's `@enum` do not allow duplicated values, so by default, C enums are translated to
+# CEnum.jl's `@cenum`.
+# if this entry is true, `@enum` is used and those duplicated enum constants are just commented.
 use_julia_native_enum_type = false
 
 # use `@cenum` but do not print `using CEnum`.
@@ -74,8 +74,8 @@ print_enum_as_integer = false
 # use deterministic symbol instead of `gensym`-generated `var"##XXX"`
 use_deterministic_symbol = true
 
-# by default, only those declarations in the local header file are processed. 
-# those declarations in the system headers will be treated sepcially and will be generated if necessary. 
+# by default, only those declarations in the local header file are processed.
+# those declarations in the system headers will be treated sepcially and will be generated if necessary.
 # if you'd like to generate all of the symbols in the system headers, please set this option to false.
 is_local_header_only = true
 
@@ -101,15 +101,15 @@ is_local_header_only = true
 smart_de_anonymize = true
 
 # EXPERIMENTAL
-# if this option is set to true, those structs that are not necessary to be an 
-# immutable struct will be generated as a mutable struct. 
+# if this option is set to true, those structs that are not necessary to be an
+# immutable struct will be generated as a mutable struct.
 # this option is default to false, do read the paragraph below before using this feature.
 auto_mutability = false
 
 # add inner constructor `Foo() = new()`
 auto_mutability_with_new = true
 
-# if you feel like certain structs should not be generated as mutable struct, please add them in the following list. 
+# if you feel like certain structs should not be generated as mutable struct, please add them in the following list.
 # for example, if a C function accepts a `Vector` of some type as its argument like:
 #     void foo(mutable_type *list, int n);
 # when calling this function via `ccall`, passing a `Vector{mutable_type}(undef, n)` to the first
@@ -156,7 +156,7 @@ opaque_func_arg_as_PtrCvoid = false
 # if true, opaque types are translated to `mutable struct` instead of `Cvoid`.
 opaque_as_mutable_struct = true
 
-# if true, use Julia 1.5's new `@ccall` macro 
+# if true, use Julia 1.5's new `@ccall` macro
 use_ccall_macro = true
 
 # if true, variadic functions are wrapped with `@ccall` macro. Otherwise variadic functions are ignored.
@@ -165,7 +165,7 @@ wrap_variadic_function = false
 # generate getproperty/setproperty! methods for the types in the following list
 field_access_method_list = []
 
-# the generator will prefix the function argument names in the following list with a "_" to 
+# the generator will prefix the function argument names in the following list with a "_" to
 # prevent the generated symbols from conflicting with the symbols defined and exported in Base.
 function_argument_conflict_symbols = []
 

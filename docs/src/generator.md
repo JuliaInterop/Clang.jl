@@ -19,7 +19,7 @@ using Clang.LibClang.Clang_jll
 
 cd(@__DIR__)
 
-include_dir = joinpath(Clang_jll.artifact_dir, "include") |> normpath
+include_dir = normpath(Clang_jll.artifact_dir, "include")
 
 # wrapper generator options
 options = load_options(joinpath(@__DIR__, "generator.toml"))
@@ -47,7 +47,7 @@ You also need an options file `generator.toml` that to make this script work, yo
 ### Skipping specific symbols
 The C header may contain some symbols that are not correctly handled by Clang.jl or may need manual wrapping. For example, julia provides `tm` as `Libc.TmStruct`, so you may not want to map it to a new struct. As a workaround, you can skip these symbols. After that, if this symbol is needed, you can add it back in the prologue. Prologue is specified by the `prologue_file_path` option.
 
-* Add the symbol to `printer_blacklist` to avoid it from being wrapped.
+* Add the symbol to `output_ignorelist` to avoid it from being wrapped.
 * If the symbol is in system headers and causes Clang.jl to error before printing, apart from posting an issue, write `@add_def symbol_name` before generating to suppress it from being wrapped.
 
 ### Rewrite expressions before printing

@@ -1,0 +1,4 @@
+[general]
+library_name = "libbitfield"
+output_file_path = "LibBitField.jl"
+module_name = "LibBitField"

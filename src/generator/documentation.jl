@@ -243,13 +243,11 @@ function format_doxygen(cursor, options, members=false)
         push!(lines, "### Parameters")
         for p in parameters
             append!(lines, format_parameter(p, options))
-            push!(lines, "")
         end
     end
     if !ismissing(returns)
         push!(lines, "### Returns")
         append!(lines, format_block(Clang.getParagraph(returns), options))
-        push!(lines, "")
     end
     if !isempty(member_docs)
         append!(lines, member_docs)
@@ -266,6 +264,7 @@ function format_parameter(p, options)
     name = Clang.getParamName(p)
     dir = parameter_pass_direction_name(Clang.getDirection(p))
     content = format_inline.(children(p), Ref(options))
+    content[end] = rstrip(content[end])
     ["* `$name`:$dir$(content[1])"; @view content[2:end]]
 end
 
@@ -283,8 +282,8 @@ end
 
 function format_block(x::Clang.Paragraph, options)
     t = format_inline(x, options)
-    # Remove leading space
-    t = replace(t, r"^\s+"=>"")
+    # Remove leading and trailing whitespace
+    t = strip(t)
     [t]
 end
 

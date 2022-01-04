@@ -2,11 +2,21 @@
 #define BITFIELD
 
 struct BitField {
-    int a : 5;
+  char a;
+  double b;
+  int c;
+  int d : 3;
+  int e : 4;
+  unsigned int f : 2;
 };
 
 struct Mirror {
-    int a;
+  char a;
+  double b;
+  int c;
+  int d;
+  int e;
+  unsigned int f;
 };
 
 struct BitField toBitfield(const struct Mirror *mirror);

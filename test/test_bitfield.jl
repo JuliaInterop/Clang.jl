@@ -30,6 +30,7 @@ function build_libbitfield()
     options = load_options(joinpath(src_dir, "generate.toml"))
     lib_path = joinpath(build_dir, "bin", Sys.iswindows() ? "bitfield.dll" : "libbitfield")
     options["general"]["library_name"] = "\"$(escape_string(lib_path))\""
+    options["general"]["output_file_path"] = joinpath(@__DIR__, "LibBitField.jl")
     ctx = create_context(headers, args, options)
     build!(ctx)
 end
@@ -46,10 +47,24 @@ end
     end
     if !failed_to_build_bitfield
         include("LibBitField.jl")
-        # Not constructible
-        @test_broken bf = LibBitField.BitField()
-        mirror = LibBitField.Mirror(10)
-        bf = LibBitField.toBitfield(Ref(mirror))
-        @test bf.a == 10
+        bf = Ref(LibBitField.BitField(NTuple{24,UInt8}(repeat([0], 24))))
+        m = Ref(LibBitField.Mirror(10, 1.5, 1e6, -4, 7, 3))
+        GC.@preserve bf m begin
+            pbf = Ptr{LibBitField.BitField}(pointer_from_objref(bf))
+            pm = Ptr{LibBitField.Mirror}(pointer_from_objref(m))
+            pbf.a = 10
+            pbf.b = 1.5
+            pbf.c = 1e6
+            pbf.d = -4
+            pbf.e = 7
+            pbf.f = 3
+            @test LibBitField.toMirror(bf) == m[]
+            @test LibBitField.toBitfield(m).a == bf[].a
+            @test LibBitField.toBitfield(m).b == bf[].b
+            @test LibBitField.toBitfield(m).c == bf[].c
+            @test LibBitField.toBitfield(m).d == bf[].d
+            @test LibBitField.toBitfield(m).e == bf[].e
+            @test LibBitField.toBitfield(m).f == bf[].f
+        end
     end
 end

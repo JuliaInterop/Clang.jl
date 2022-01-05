@@ -11,10 +11,7 @@ function build_libbitfield()
         if Sys.iswindows()
             config_cmd = `$config_cmd -A win32`
         elseif Sys.islinux()
-            config_cmd = `$config_cmd -D CMAKE_C_FLAGS=-m32 -D CMAKE_CXX_FLAGS=-m32`
-            # Not actually working, so fail fast
-            @info "Can not build libbitfield on 32-bit linux"
-            error()
+            config_cmd = `$config_cmd -D CMAKE_C_FLAGS=-march=native -D CMAKE_CXX_FLAGS=-march=native`
         end
     end
     build_cmd = `$cmake --build $build_dir --config Debug`

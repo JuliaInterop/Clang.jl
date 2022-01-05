@@ -44,17 +44,11 @@ end
     end
     if !failed_to_build_bitfield
         include("LibBitField.jl")
-        bf = Ref(LibBitField.BitField(NTuple{24,UInt8}(repeat([0], 24))))
+        bf = Ref(LibBitField.BitField(Int8(10), 1.5, Int32(1e6), Int32(-4), Int32(7), UInt32(3)))
         m = Ref(LibBitField.Mirror(10, 1.5, 1e6, -4, 7, 3))
         GC.@preserve bf m begin
             pbf = Ptr{LibBitField.BitField}(pointer_from_objref(bf))
             pm = Ptr{LibBitField.Mirror}(pointer_from_objref(m))
-            pbf.a = 10
-            pbf.b = 1.5
-            pbf.c = 1e6
-            pbf.d = -4
-            pbf.e = 7
-            pbf.f = 3
             @test LibBitField.toMirror(bf) == m[]
             @test LibBitField.toBitfield(m).a == bf[].a
             @test LibBitField.toBitfield(m).b == bf[].b

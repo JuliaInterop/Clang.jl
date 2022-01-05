@@ -2,3 +2,5 @@
 library_name = "libbitfield"
 output_file_path = "LibBitField.jl"
 module_name = "LibBitField"
+[codegen]
+add_record_constructors = true

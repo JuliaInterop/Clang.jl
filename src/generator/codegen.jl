@@ -482,11 +482,44 @@ function emit!(dag::ExprDAG, node::ExprNode{<:AbstractStructNodeType}, options::
     expr = Expr(:struct, false, struct_sym, block)
     field_cursors = fields(getCursorType(node.cursor))
     field_cursors = isempty(field_cursors) ? children(node.cursor) : field_cursors
-    for field_cursor in field_cursors
+
+    current_offset = 0
+    pads = []
+    for (i, field_cursor) in enumerate(field_cursors)
         field_sym = make_symbol_safe(name(field_cursor))
         field_ty = getCursorType(field_cursor)
+        field_offset = getOffsetOfField(field_cursor) ÷ 8
+        field_size = getSizeOf(field_ty)
+        @assert field_offset >= current_offset
+
+        if field_offset != current_offset
+            pad_size = field_offset - current_offset
+            pad_name = Symbol("pad", length(pads)) |> gensym
+            push!(block.args, Expr(:(::), pad_name, :(NTuple{$pad_size, UInt8})))
+            push!(pads, (;narg = i + length(pads), size = pad_size))
+        end
+
+        current_offset += field_size
         push!(block.args, Expr(:(::), field_sym, translate(tojulia(field_ty), options)))
     end
+
+    if length(pads) != 0 # build custom constructor with padding fields set to 0
+        lhs = Expr(:call, struct_sym)
+        rhs = Expr(:call, :new)
+        pads = reverse(pads)
+        for (i, ex) in enumerate(block.args)
+            maybe_pad = length(pads) > 0 && pads[end].narg == i ? pop!(pads) : nothing
+            if maybe_pad === nothing
+                field_name = first(ex.args)
+                push!(lhs.args, field_name)
+                push!(rhs.args, field_name)
+            else
+                push!(rhs.args, :(Tuple(zero(UInt8) for _ in 1:$(maybe_pad.size))))
+            end
+        end
+        push!(block.args, Expr(:(=), lhs, rhs))
+    end
+
     push!(node.exprs, expr)
 
     if startswith(string(node.id), "##Ctag") || startswith(string(node.id), "__JL_Ctag")

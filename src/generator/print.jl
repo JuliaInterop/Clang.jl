@@ -109,19 +109,27 @@ function pretty_print(io, node::ExprNode{<:AbstractStructNodeType}, options::Dic
     outofline = struct_field_comment_style == "outofline"
     inline = struct_field_comment_style == "inline"
     struct_def = node.exprs[1]
-    mutable, name, members = struct_def.args
-    name = Base.sym_to_string(name)
-    
-    # `chldren(node.cursor)` may also return forward declaration of struct type for example, so we filter these out.
+    mutable, struct_name, members = struct_def.args
+    struct_name = Base.sym_to_string(struct_name)
+
+    # `children(node.cursor)` may also return forward declaration of struct type for example, so we filter these out.
     child_nodes = filter(x->x isa CLFieldDecl, children(node.cursor))
     fields = filter(x->Meta.isexpr(x, :(::)), members.args)
     others = filter(x->!Meta.isexpr(x, :(::)), members.args)
-    @assert length(child_nodes) == length(fields)
-    print_documentation(io, node, "", options, outofline; prologue=["    $name", ""])
+    print_documentation(io, node, "", options, outofline; prologue=["    $struct_name", ""])
     mutable && print(io, "mutable ")
-    println(io, "struct ", name)
-    for (expr, child) in zip(members.args, child_nodes)
-        inline && print_documentation(io, child, "    ", options)
+    println(io, "struct ", struct_name)
+
+    npads = 0
+    for (i, expr) in enumerate(fields)
+        field_name = first(expr.args)
+        child = child_nodes[i - npads]
+        cursor_name = make_symbol_safe(name(child))
+        if field_name != cursor_name # this is a padding field
+            npads += 1
+        elseif inline
+            print_documentation(io, child, "    ", options)
+        end
         println(io, "    ", string(expr))
     end
     for expr in others

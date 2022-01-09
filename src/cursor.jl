@@ -304,8 +304,17 @@ getCursorResultType(c::Union{CLFunctionDecl,CLCXXMethod})::CLType = clang_getCur
 
 ## TODO:
 # clang_getCursorExceptionSpecificationType
-# clang_Cursor_getOffsetOfField
 #
+
+"""
+    getOffsetOfField(c::Union{CXCursor,CLCursor}) -> Int
+Return the offset of the field represented by the cursor in bits as it
+would be returned by __offsetof__ as per C++11[18.2p4].
+
+It returns a minus number for layout errors, please convert the result to
+a [`CXTypeLayoutError`](@ref) to see what the error is.
+"""
+getOffsetOfField(c::Union{CXCursor,CLCursor})::Int = clang_Cursor_getOffsetOfField(c)
 
 """
     isAnonymous(c::Union{CXCursor,CLCursor}) -> Bool

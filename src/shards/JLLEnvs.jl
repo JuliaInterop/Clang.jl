@@ -10,7 +10,11 @@ const JLL_ENV_SHARDS_URL = "https://raw.githubusercontent.com/JuliaPackaging/Bin
 const JLL_ENV_SHARDS = Dict{String,Any}()
 
 function __init__()
-    merge!(JLL_ENV_SHARDS, Artifacts.load_artifacts_toml(Downloads.download(JLL_ENV_SHARDS_URL)))
+    if haskey(ENV, "JULIA_CLANG_SHARDS_URL") && !isempty(get(ENV, "JULIA_CLANG_SHARDS_URL", ""))
+        merge!(JLL_ENV_SHARDS, Artifacts.load_artifacts_toml(ENV["JULIA_CLANG_SHARDS_URL"]))
+    else
+        merge!(JLL_ENV_SHARDS, Artifacts.load_artifacts_toml(Downloads.download(JLL_ENV_SHARDS_URL)))
+    end
 end
 
 const JLL_ENV_HOST_TRIPLE = "x86_64-linux-musl"
@@ -116,6 +120,9 @@ function get_system_dirs(triple::String, version::VersionNumber=v"4.8.5")
     sys_info = info[2]
 
     # download shards
+    if haskey(ENV, "JULIA_CLANG_SHARDS_URL") && !isempty(get(ENV, "JULIA_CLANG_SHARDS_URL", ""))
+        @info "Downloading artifact($(gcc_info.id)) from $(gcc_info.url) ..."
+    end
     Artifacts.download_artifact(Base.SHA1(gcc_info.id), gcc_info.url, gcc_info.chk)
     # Artifacts.download_artifact(Base.SHA1(sys_info.id), sys_info.url, sys_info.chk)
 

@@ -29,12 +29,12 @@ function (x::CollectTopLevelNode)(dag::ExprDAG, options::Dict)
     empty!(dag.sys)
     for tu in x.trans_units
         tu_cursor = getTranslationUnitCursor(tu)
-        header_name = spelling(tu_cursor) |> normpath
+        header_name = normpath(spelling(tu_cursor))
         @info "Processing header: $header_name"
         for cursor in children(tu_cursor)
-            file_name = get_filename(cursor) |> normpath
+            file_name = normpath(get_filename(cursor))
             if is_local_only && header_name != file_name && file_name ∉ x.dependent_headers
-                if any(sysdir->startswith(file_name, sysdir), x.system_dirs)
+                if any(sysdir -> startswith(file_name, sysdir), x.system_dirs)
                     collect_top_level_nodes!(dag.sys, cursor, general_options)
                 end
                 continue
@@ -543,8 +543,7 @@ function (x::DeAnonymize)(dag::ExprDAG, options::Dict)
         dn = dep_node
         dag.nodes[dep_idx] = ExprNode(node.id, dn.type, dn.cursor, dn.exprs, dn.adj)
         dag.nodes[i] = ExprNode(node.id, SoftSkip(), node.cursor, node.exprs, node.adj)
-        show_info &&
-            @info "[DeAnonymize]: adding name $(node.id) to $dep_node"
+        show_info && @info "[DeAnonymize]: adding name $(node.id) to $dep_node"
     end
 
     return dag
@@ -591,6 +590,12 @@ function (x::CodegenPreprocessing)(dag::ExprDAG, options::Dict)
             dag.nodes[i] = ExprNode(node.id, ty, node.cursor, node.exprs, node.adj)
             show_info &&
                 @info "[CodegenPreprocessing]: mark a bitfield $(node.type) node named $(node.id)"
+        end
+        if padding_check(dag, node) # TODO: add alternative codegen pass
+            ty = nested_anonymous_type(node.type)
+            dag.nodes[i] = ExprNode(node.id, ty, node.cursor, node.exprs, node.adj)
+            show_info &&
+                @info "[CodegenPreprocessing]: mark a non-trivial padding $(node.type) node named $(node.id)"
         end
     end
 
@@ -646,7 +651,7 @@ function (x::Codegen)(dag::ExprDAG, options::Dict)
 
     for (i, node) in enumerate(dag.nodes)
         !isempty(node.exprs) && empty!(node.exprs)
-        emit!(dag, node, codegen_options, idx=i)
+        emit!(dag, node, codegen_options; idx=i)
         show_info && @info "[Codegen]: emit Julia expression for $(node.id)"
     end
 
@@ -725,7 +730,7 @@ function (x::TweakMutability)(dag::ExprDAG, options::Dict)
         i ∈ x.idxs && continue
         isempty(node.exprs) && continue
 
-        exprs = filter(x->Meta.isexpr(x, :struct), node.exprs)
+        exprs = filter(x -> Meta.isexpr(x, :struct), node.exprs)
         @assert length(exprs) == 1
         expr = first(exprs)
         type_name = string(expr.args[2])
@@ -1102,7 +1107,6 @@ function (x::CodegenMacro)(dag::ExprDAG, options::Dict)
     return dag
 end
 
-
 function collect_nested_tags(dag::ExprDAG)
     nested_tags = Dict{Symbol,CLCursor}()
     for (id, i) in dag.tags
@@ -1113,5 +1117,5 @@ function collect_nested_tags(dag::ExprDAG)
             nested_tags[id] = node.cursor
         end
     end
-    nested_tags
+    return nested_tags
 end

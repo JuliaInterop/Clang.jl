@@ -236,11 +236,14 @@ Return the integer value of an enum constant declaration.
 """
 function value(c::CLEnumConstantDecl)::Integer
     typeKind = kind(getCursorType(c))
-    if typeKind == CXType_Int || typeKind == CXType_Long || typeKind == CXType_LongLong
+    if typeKind == CXType_Int ||
+        typeKind == CXType_Long ||
+        typeKind == CXType_LongLong
         return clang_getEnumConstantDeclValue(c)
     elseif typeKind == CXType_UInt ||
            typeKind == CXType_ULong ||
-           typeKind == CXType_ULongLong
+           typeKind == CXType_ULongLong ||
+           typeKind == CXType_UChar
         return clang_getEnumConstantDeclUnsignedValue(c)
     end
     return error("Unknown EnumConstantDecl type: ", typeKind, " cursor: ", kind(c))

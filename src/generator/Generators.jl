@@ -24,6 +24,7 @@ using ..Clang:
     getNumArguments,
     getNumElements,
     getOffsetOf,
+    getOffsetOfField,
     getPointeeType,
     getSizeOf,
     getTranslationUnit,

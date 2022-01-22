@@ -116,5 +116,13 @@ end
 
 @testset "macros" begin
     ctx = create_context(joinpath(@__DIR__, "include/macro.h"), get_default_args())
-    @test_logs (:info, "Done!") match_mode=:any build!(ctx)
+    @test_logs (:info, "Done!") match_mode = :any build!(ctx)
+end
+
+@testset "#368" begin
+    ctx = create_context(joinpath(@__DIR__, "include/union-in-struct.h"),
+                         get_default_args())
+    @test_logs (:info, "Done!") match_mode = :any build!(ctx)
+    @test ctx.dag.nodes[end].id == :A
+    @test ctx.dag.nodes[end].type isa Generators.StructLayout
 end

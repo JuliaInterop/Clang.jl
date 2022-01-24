@@ -157,11 +157,11 @@ function get_system_dirs(triple::String, version::VersionNumber=v"4.8.5")
             triple == "aarch64-linux-gnu" || triple == "powerpc64le-linux-gnu" ||
             triple == "x86_64-unknown-freebsd12.2"
         # compiler
-        push!(isys, joinpath(gcc_triple_path, "lib", "gcc", triple, string(version), "include"))
-        push!(isys, joinpath(gcc_triple_path, "lib", "gcc", triple, string(version), "include-fixed"))
-        push!(isys, joinpath(gcc_triple_path, triple, "include"))
-        # sys-root
         push!(isys, joinpath(gcc_triple_path, triple, "sys-root", "usr", "include"))
+        push!(isys, joinpath(gcc_triple_path, triple, "include", "c++", string(version)))
+        push!(isys, joinpath(gcc_triple_path, triple, "include", "c++", string(version), triple))
+        push!(isys, joinpath(gcc_triple_path, triple, "include", "c++", string(version), "backward"))
+        push!(isys, joinpath(gcc_triple_path, triple, "include"))
     elseif triple == "i686-linux-musl" || triple == "x86_64-linux-musl" ||
             triple == "aarch64-linux-musl"
         # compiler

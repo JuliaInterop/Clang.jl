@@ -39,6 +39,7 @@ jobs:
             ${{ runner.os }}-test-
             ${{ runner.os }}-
       - uses: julia-actions/julia-buildpkg@v1
+      - run: julia --project --color=yes --check-bounds=yes -e 'using Pkg; Pkg.add(PackageSpec(url="https://github.com/Gnimuc/ClangCompiler.jl.git"));'
       - uses: julia-actions/julia-runtest@v1
       - uses: julia-actions/julia-processcoverage@v1
       - uses: codecov/codecov-action@v1

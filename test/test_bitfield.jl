@@ -1,13 +1,12 @@
-using CMake
+using CMake, p7zip_jll, Tar
 using Clang.Generators
 
-function build_libbitfield()
+function build_libbitfield_native()
+    @info "Building libbitfield binary with native tools. This will break if CMake fails to find a C compiler"
     success = true
     try
-        # Compile binary
-        @info "Building libbitfield binary. This will break if CMake fails to find a C compiler"
         src_dir = joinpath(@__DIR__, "bitfield")
-        build_dir = joinpath(@__DIR__, "build", "bitfield")
+        build_dir = joinpath(@__DIR__, "build")
 
         config_cmd = `$cmake -B $build_dir -S $src_dir`
         if Sys.WORD_SIZE == 32
@@ -23,13 +22,47 @@ function build_libbitfield()
         run(config_cmd)
         run(build_cmd)
         run(install_cmd)
+    catch e
+        @warn "Building libbitfield with native tools failed: $e"
+        success = false
+    end
+    return success
+end
+
+
+function build_libbitfield_binarybuilder()
+    @info "Building libbitfield binary with BinaryBuilder."
+    success = true
+    try
+        cd(@__DIR__) do
+            run(`$(Base.julia_cmd()) --project bitfield/build_tarballs.jl`)
+            # from Pkg.download_verify_unpack
+            tarball_path = only(readdir("products"))
+            dest = "build"
+            rm(dest; recursive = true)
+            Tar.extract(`$(p7zip_jll.p7zip()) x products/$tarball_path -so`, dest)
+        end
+    catch e
+        @warn "Building libbitfield with BinaryBuilder failed: $e"
+        success = false
+    end
+    return success
+end
+
+function build_libbitfield()
+    success = true
+    try
+        # Compile binary
+        if !build_libbitfield_binarybuilder() && !build_libbitfield_native()
+            error("Could not build libbitfield binary")
+        end
 
         # Generate wrappers
         @info "Building libbitfield wrapper"
         args = get_default_args()
-        headers = joinpath(build_dir, "include", "bitfield.h")
-        options = load_options(joinpath(src_dir, "generate.toml"))
-        lib_path = joinpath(build_dir, "bin", Sys.iswindows() ? "bitfield.dll" : "libbitfield")
+        headers = joinpath(@__DIR__, "build", "include", "bitfield.h")
+        options = load_options(joinpath(@__DIR__, "bitfield", "generate.toml"))
+        lib_path = joinpath(@__DIR__, "build", "lib", Sys.iswindows() ? "bitfield.dll" : "libbitfield")
         options["general"]["library_name"] = "\"$(escape_string(lib_path))\""
         options["general"]["output_file_path"] = joinpath(@__DIR__, "LibBitField.jl")
         ctx = create_context(headers, args, options)

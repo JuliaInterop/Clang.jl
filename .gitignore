@@ -8,3 +8,4 @@
 Manifest.toml
 /test/Lib*.jl
 /test/build
+/test/products

@@ -8,6 +8,7 @@ Clang_jll = "0ee61d77-7f21-5576-8119-9fcc46b10100"
 Downloads = "f43a241f-c20a-4ad4-852c-f6b1247861c6"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
+UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
 
 [compat]
 CEnum = "0.4"

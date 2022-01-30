@@ -3,18 +3,41 @@ module JLLEnvs
 using Pkg
 using Pkg.Artifacts
 using Downloads
+using UUIDs
 
 include("utils.jl")
 
 const JLL_ENV_SHARDS_URL = "https://raw.githubusercontent.com/JuliaPackaging/BinaryBuilderBase.jl/master/Artifacts.toml"
 const JLL_ENV_SHARDS = Dict{String,Any}()
 
+function _checked_import(pkgid)
+    Base.root_module_exists(pkgid) && return Base.root_module(pkgid)
+    Base.require(pkgid)
+end
+
 function __init__()
     if haskey(ENV, "JULIA_CLANG_SHARDS_URL") && !isempty(get(ENV, "JULIA_CLANG_SHARDS_URL", ""))
         merge!(JLL_ENV_SHARDS, Artifacts.load_artifacts_toml(ENV["JULIA_CLANG_SHARDS_URL"]))
-    else
-        merge!(JLL_ENV_SHARDS, Artifacts.load_artifacts_toml(Downloads.download(JLL_ENV_SHARDS_URL)))
+        return
     end
+
+    # If possible, try to load stable version of Artifacts.toml from local disk cache and thus
+    # makes `using Clang` faster. This requires `BinaryBuilderBase` available in `DEPOT_PATH`,
+    # e.g., via `(@v1.7) pkg> add BinaryBuilderBase`.
+    id_BinaryBuilderBase = Base.PkgId(UUID("7f725544-6523-48cd-82d1-3fa08ff4056e"), "BinaryBuilderBase")
+    artifact_file = ""
+    try
+        artifact_file = joinpath(pkgdir(_checked_import(id_BinaryBuilderBase)), "Artifacts.toml")
+    catch e
+        @debug e
+    end
+    if isfile(artifact_file)
+        merge!(JLL_ENV_SHARDS, Artifacts.load_artifacts_toml(artifact_file))
+    end
+    isempty(JLL_ENV_SHARDS) || return
+
+    @debug "Failed to load package `BinaryBuilderBase`, fetching from remote resources..."
+    merge!(JLL_ENV_SHARDS, Artifacts.load_artifacts_toml(Downloads.download(JLL_ENV_SHARDS_URL)))
 end
 
 const JLL_ENV_HOST_TRIPLE = "x86_64-linux-musl"

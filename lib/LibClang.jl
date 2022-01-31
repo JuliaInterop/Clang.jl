@@ -124,7 +124,7 @@ end
 """
     clang_VirtualFileOverlay_addFileMapping(arg1, virtualPath, realPath)
 
-Map an absolute virtual file path to an absolute real one. The virtual path must be canonicalized (not contain "."/".."). 
+Map an absolute virtual file path to an absolute real one. The virtual path must be canonicalized (not contain "."/"..").
 
 ### Returns
 0 for success, non-zero to indicate an error.
@@ -136,7 +136,7 @@ end
 """
     clang_VirtualFileOverlay_setCaseSensitivity(arg1, caseSensitive)
 
-Set the case sensitivity for the [`CXVirtualFileOverlay`](@ref) object. The [`CXVirtualFileOverlay`](@ref) object is case-sensitive by default, this option can be used to override the default. 
+Set the case sensitivity for the [`CXVirtualFileOverlay`](@ref) object. The [`CXVirtualFileOverlay`](@ref) object is case-sensitive by default, this option can be used to override the default.
 
 ### Returns
 0 for success, non-zero to indicate an error.
@@ -151,12 +151,9 @@ end
 Write out the [`CXVirtualFileOverlay`](@ref) object to a char buffer.
 
 ### Parameters
-* `options`: is reserved, always pass 0. 
-
-* `out_buffer_ptr`: pointer to receive the buffer pointer, which should be disposed using [`clang_free`](@ref)(). 
-
-* `out_buffer_size`: pointer to receive the buffer size. 
-
+* `options`: is reserved, always pass 0.
+* `out_buffer_ptr`: pointer to receive the buffer pointer, which should be disposed using [`clang_free`](@ref)().
+* `out_buffer_size`: pointer to receive the buffer size.
 ### Returns
 0 for success, non-zero to indicate an error.
 """
@@ -207,7 +204,7 @@ end
 """
     clang_ModuleMapDescriptor_setFrameworkModuleName(arg1, name)
 
-Sets the framework module name that the module.map describes. 
+Sets the framework module name that the module.map describes.
 
 ### Returns
 0 for success, non-zero to indicate an error.
@@ -219,7 +216,7 @@ end
 """
     clang_ModuleMapDescriptor_setUmbrellaHeader(arg1, name)
 
-Sets the umbrella header name that the module.map describes. 
+Sets the umbrella header name that the module.map describes.
 
 ### Returns
 0 for success, non-zero to indicate an error.
@@ -234,12 +231,9 @@ end
 Write out the [`CXModuleMapDescriptor`](@ref) object to a char buffer.
 
 ### Parameters
-* `options`: is reserved, always pass 0. 
-
-* `out_buffer_ptr`: pointer to receive the buffer pointer, which should be disposed using [`clang_free`](@ref)(). 
-
-* `out_buffer_size`: pointer to receive the buffer size. 
-
+* `options`: is reserved, always pass 0.
+* `out_buffer_ptr`: pointer to receive the buffer pointer, which should be disposed using [`clang_free`](@ref)().
+* `out_buffer_size`: pointer to receive the buffer size.
 ### Returns
 0 for success, non-zero to indicate an error.
 """
@@ -438,7 +432,7 @@ end
 
 Sets general options associated with a [`CXIndex`](@ref).
 
-For example: 
+For example:
 
 ```c++
  CXIndex idx = ...;
@@ -515,10 +509,8 @@ end
 Retrieve the unique ID for the given `file`.
 
 ### Parameters
-* `file`: the file to get the ID for. 
-
-* `outID`: stores the returned [`CXFileUniqueID`](@ref). 
-
+* `file`: the file to get the ID for.
+* `outID`: stores the returned [`CXFileUniqueID`](@ref).
 ### Returns
 If there was a failure getting the unique ID, returns non-zero, otherwise returns 0.
 """
@@ -542,9 +534,7 @@ Retrieve a file handle within the given translation unit.
 
 ### Parameters
 * `tu`: the translation unit
-
 * `file_name`: the name of the file.
-
 ### Returns
 the file handle for the named file in the translation unit `tu`, or a NULL file handle if the file was not a part of this translation unit.
 """
@@ -559,11 +549,8 @@ Retrieve the buffer associated with the given file.
 
 ### Parameters
 * `tu`: the translation unit
-
 * `file`: the file for which to retrieve the buffer.
-
 * `size`: [out] if non-NULL, will be set to the size of the buffer.
-
 ### Returns
 a pointer to the buffer in memory that holds the contents of `file`, or a NULL pointer when the file is not loaded.
 """
@@ -721,13 +708,9 @@ If the location refers into a macro expansion, retrieves the location of the mac
 
 ### Parameters
 * `location`: the location within a source file that will be decomposed into its parts.
-
 * `file`: [out] if non-NULL, will be set to the file to which the given source location points.
-
 * `line`: [out] if non-NULL, will be set to the line to which the given source location points.
-
 * `column`: [out] if non-NULL, will be set to the column to which the given source location points.
-
 * `offset`: [out] if non-NULL, will be set to the offset into the buffer to which the given source location points.
 """
 function clang_getExpansionLocation(location, file, line, column, offset)
@@ -759,11 +742,8 @@ File: somefile.c Line: 3 Column: 12
 
 ### Parameters
 * `location`: the location within a source file that will be decomposed into its parts.
-
 * `filename`: [out] if non-NULL, will be set to the filename of the source location. Note that filenames returned will be for "virtual" files, which don't necessarily exist on the machine running clang - e.g. when parsing preprocessed output obtained from a different environment. If a non-NULL value is passed in, remember to dispose of the returned value using [`clang_disposeString`](@ref)() once you've finished with it. For an invalid source location, an empty string is returned.
-
 * `line`: [out] if non-NULL, will be set to the line number of the source location. For an invalid source location, zero is returned.
-
 * `column`: [out] if non-NULL, will be set to the column number of the source location. For an invalid source location, zero is returned.
 """
 function clang_getPresumedLocation(location, filename, line, column)
@@ -790,13 +770,9 @@ If the location refers into a macro instantiation, return where the location was
 
 ### Parameters
 * `location`: the location within a source file that will be decomposed into its parts.
-
 * `file`: [out] if non-NULL, will be set to the file to which the given source location points.
-
 * `line`: [out] if non-NULL, will be set to the line to which the given source location points.
-
 * `column`: [out] if non-NULL, will be set to the column to which the given source location points.
-
 * `offset`: [out] if non-NULL, will be set to the offset into the buffer to which the given source location points.
 """
 function clang_getSpellingLocation(location, file, line, column, offset)
@@ -812,13 +788,9 @@ If the location refers into a macro expansion, return where the macro was expand
 
 ### Parameters
 * `location`: the location within a source file that will be decomposed into its parts.
-
 * `file`: [out] if non-NULL, will be set to the file to which the given source location points.
-
 * `line`: [out] if non-NULL, will be set to the line to which the given source location points.
-
 * `column`: [out] if non-NULL, will be set to the column to which the given source location points.
-
 * `offset`: [out] if non-NULL, will be set to the offset into the buffer to which the given source location points.
 """
 function clang_getFileLocation(location, file, line, column, offset)
@@ -848,10 +820,10 @@ end
 
 Identifies an array of ranges.
 
-| Field  | Note                                          |
-| :----- | :-------------------------------------------- |
-| count  | The number of ranges in the `ranges` array.   |
-| ranges | An array of `CXSourceRanges`.                 |
+| Field  | Note                                         |
+| :----- | :------------------------------------------- |
+| count  | The number of ranges in the `ranges` array.  |
+| ranges | An array of `CXSourceRanges`.                |
 """
 struct CXSourceRangeList
     count::Cuint
@@ -883,7 +855,7 @@ end
 """
     clang_disposeSourceRangeList(ranges)
 
-Destroy the given [`CXSourceRangeList`](@ref). 
+Destroy the given [`CXSourceRangeList`](@ref).
 """
 function clang_disposeSourceRangeList(ranges)
     @ccall libclang.clang_disposeSourceRangeList(ranges::Ptr{CXSourceRangeList})::Cvoid
@@ -935,12 +907,10 @@ end
 Retrieve a diagnostic associated with the given [`CXDiagnosticSet`](@ref).
 
 ### Parameters
-* `Diags`: the [`CXDiagnosticSet`](@ref) to query. 
-
+* `Diags`: the [`CXDiagnosticSet`](@ref) to query.
 * `Index`: the zero-based diagnostic number to retrieve.
-
 ### Returns
-the requested diagnostic. This diagnostic must be freed via a call to [`clang_disposeDiagnostic`](@ref)(). 
+the requested diagnostic. This diagnostic must be freed via a call to [`clang_disposeDiagnostic`](@ref)().
 """
 function clang_getDiagnosticInSet(Diags, Index)
     @ccall libclang.clang_getDiagnosticInSet(Diags::CXDiagnosticSet, Index::Cuint)::CXDiagnostic
@@ -949,7 +919,7 @@ end
 """
     CXLoadDiag_Error
 
-Describes the kind of error that occurred (if any) in a call to [`clang_loadDiagnostics`](@ref). 
+Describes the kind of error that occurred (if any) in a call to [`clang_loadDiagnostics`](@ref).
 
 | Enumerator               | Note                                                                                   |
 | :----------------------- | :------------------------------------------------------------------------------------- |
@@ -971,12 +941,9 @@ end
 Deserialize a set of diagnostics from a Clang diagnostics bitcode file.
 
 ### Parameters
-* `file`: The name of the file to deserialize. 
-
-* `error`: A pointer to a enum value recording if there was a problem deserializing the diagnostics. 
-
+* `file`: The name of the file to deserialize.
+* `error`: A pointer to a enum value recording if there was a problem deserializing the diagnostics.
 * `errorString`: A pointer to a [`CXString`](@ref) for recording the error string if the file was not successfully loaded.
-
 ### Returns
 A loaded [`CXDiagnosticSet`](@ref) if successful, and NULL otherwise. These diagnostics should be released using [`clang_disposeDiagnosticSet`](@ref)().
 """
@@ -1019,12 +986,10 @@ end
 Retrieve a diagnostic associated with the given translation unit.
 
 ### Parameters
-* `Unit`: the translation unit to query. 
-
+* `Unit`: the translation unit to query.
 * `Index`: the zero-based diagnostic number to retrieve.
-
 ### Returns
-the requested diagnostic. This diagnostic must be freed via a call to [`clang_disposeDiagnostic`](@ref)(). 
+the requested diagnostic. This diagnostic must be freed via a call to [`clang_disposeDiagnostic`](@ref)().
 """
 function clang_getDiagnostic(Unit, Index)
     @ccall libclang.clang_getDiagnostic(Unit::CXTranslationUnit, Index::Cuint)::CXDiagnostic
@@ -1056,16 +1021,16 @@ end
 
 Options to control the display of diagnostics.
 
-The values in this enum are meant to be combined to customize the behavior of [`clang_formatDiagnostic`](@ref)(). 
+The values in this enum are meant to be combined to customize the behavior of [`clang_formatDiagnostic`](@ref)().
 
-| Enumerator                           | Note                                                                                                                                                                                                                                                                                                                                                      |
-| :----------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| CXDiagnostic\\_DisplaySourceLocation | Display the source-location information where the diagnostic was located.  When set, diagnostics will be prefixed by the file, line, and (optionally) column to which the diagnostic refers. For example,  ```c++  test.c:28: warning: extra tokens at end of #endif directive ```  This option corresponds to the clang flag `-fshow-source-location.`   |
-| CXDiagnostic\\_DisplayColumn         | If displaying the source-location information of the diagnostic, also include the column number.  This option corresponds to the clang flag `-fshow-column.`                                                                                                                                                                                              |
-| CXDiagnostic\\_DisplaySourceRanges   | If displaying the source-location information of the diagnostic, also include information about source ranges in a machine-parsable format.  This option corresponds to the clang flag `-fdiagnostics-print-source-range-info.`                                                                                                                           |
-| CXDiagnostic\\_DisplayOption         | Display the option name associated with this diagnostic, if any.  The option name displayed (e.g., -Wconversion) will be placed in brackets after the diagnostic text. This option corresponds to the clang flag `-fdiagnostics-show-option.`                                                                                                             |
-| CXDiagnostic\\_DisplayCategoryId     | Display the category number associated with this diagnostic, if any.  The category number is displayed within brackets after the diagnostic text. This option corresponds to the clang flag `-fdiagnostics-show-category=id.`                                                                                                                             |
-| CXDiagnostic\\_DisplayCategoryName   | Display the category name associated with this diagnostic, if any.  The category name is displayed within brackets after the diagnostic text. This option corresponds to the clang flag `-fdiagnostics-show-category=name.`                                                                                                                               |
+| Enumerator                           | Note                                                                                                                                                                                                                                                                                                                                                     |
+| :----------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CXDiagnostic\\_DisplaySourceLocation | Display the source-location information where the diagnostic was located.  When set, diagnostics will be prefixed by the file, line, and (optionally) column to which the diagnostic refers. For example,  ```c++  test.c:28: warning: extra tokens at end of #endif directive ```  This option corresponds to the clang flag `-fshow-source-location.`  |
+| CXDiagnostic\\_DisplayColumn         | If displaying the source-location information of the diagnostic, also include the column number.  This option corresponds to the clang flag `-fshow-column.`                                                                                                                                                                                             |
+| CXDiagnostic\\_DisplaySourceRanges   | If displaying the source-location information of the diagnostic, also include information about source ranges in a machine-parsable format.  This option corresponds to the clang flag `-fdiagnostics-print-source-range-info.`                                                                                                                          |
+| CXDiagnostic\\_DisplayOption         | Display the option name associated with this diagnostic, if any.  The option name displayed (e.g., -Wconversion) will be placed in brackets after the diagnostic text. This option corresponds to the clang flag `-fdiagnostics-show-option.`                                                                                                            |
+| CXDiagnostic\\_DisplayCategoryId     | Display the category number associated with this diagnostic, if any.  The category number is displayed within brackets after the diagnostic text. This option corresponds to the clang flag `-fdiagnostics-show-category=id.`                                                                                                                            |
+| CXDiagnostic\\_DisplayCategoryName   | Display the category name associated with this diagnostic, if any.  The category name is displayed within brackets after the diagnostic text. This option corresponds to the clang flag `-fdiagnostics-show-category=name.`                                                                                                                              |
 """
 @cenum CXDiagnosticDisplayOptions::UInt32 begin
     CXDiagnostic_DisplaySourceLocation = 1
@@ -1085,9 +1050,7 @@ This routine will format the given diagnostic to a string, rendering the diagnos
 
 ### Parameters
 * `Diagnostic`: The diagnostic to print.
-
 * `Options`: A set of options that control the diagnostic display, created by combining [`CXDiagnosticDisplayOptions`](@ref) values.
-
 ### Returns
 A new string containing for formatted diagnostic.
 """
@@ -1101,7 +1064,7 @@ end
 Retrieve the set of display options most similar to the default behavior of the clang compiler.
 
 ### Returns
-A set of display options suitable for use with [`clang_formatDiagnostic`](@ref)(). 
+A set of display options suitable for use with [`clang_formatDiagnostic`](@ref)().
 """
 function clang_defaultDiagnosticDisplayOptions()
     @ccall libclang.clang_defaultDiagnosticDisplayOptions()::Cuint
@@ -1143,9 +1106,7 @@ Retrieve the name of the command-line option that enabled this diagnostic.
 
 ### Parameters
 * `Diag`: The diagnostic to be queried.
-
 * `Disable`: If non-NULL, will be set to the option that disables this diagnostic (if any).
-
 ### Returns
 A string that contains the command-line option used to enable this warning, such as "-Wconversion" or "-pedantic".
 """
@@ -1174,7 +1135,6 @@ Retrieve the name of a particular diagnostic category. This is now deprecated. U
 
 ### Parameters
 * `Category`: A diagnostic category number, as returned by [`clang_getDiagnosticCategory`](@ref)().
-
 ### Returns
 The name of the given diagnostic category.
 """
@@ -1212,9 +1172,7 @@ A diagnostic's source ranges highlight important elements in the source code. On
 
 ### Parameters
 * `Diagnostic`: the diagnostic whose range is being extracted.
-
 * `Range`: the zero-based index specifying which range to
-
 ### Returns
 the requested source range.
 """
@@ -1240,13 +1198,10 @@ Fix-its are described in terms of a source range whose contents should be replac
 
 ### Parameters
 * `Diagnostic`: The diagnostic whose fix-its are being queried.
-
 * `FixIt`: The zero-based index of the fix-it.
-
 * `ReplacementRange`: The source range whose contents will be replaced with the returned replacement string. Note that source ranges are half-open ranges [a, b), so the source code should be replaced from a and up to (but not including) b.
-
 ### Returns
-A string containing text that should be replace the source code indicated by the `ReplacementRange`. 
+A string containing text that should be replace the source code indicated by the `ReplacementRange`.
 """
 function clang_getDiagnosticFixIt(Diagnostic, FixIt, ReplacementRange)
     @ccall libclang.clang_getDiagnosticFixIt(Diagnostic::CXDiagnostic, FixIt::Cuint, ReplacementRange::Ptr{CXSourceRange})::CXString
@@ -1274,15 +1229,10 @@ Note: When encountered in 'clang\\_command\\_line\\_args', the following options
 
 ### Parameters
 * `CIdx`: The index object with which the translation unit will be associated.
-
 * `source_filename`: The name of the source file to load, or NULL if the source file is included in `clang_command_line_args`.
-
 * `num_clang_command_line_args`: The number of command-line arguments in `clang_command_line_args`.
-
 * `clang_command_line_args`: The command-line arguments that would be passed to the `clang` executable if it were being invoked out-of-process. These command-line options will be parsed and will affect how the translation unit is parsed. Note that the following options are ignored: '-c', '-emit-ast', '-fsyntax-only' (which is the default), and '-o <output file>'.
-
 * `num_unsaved_files`: the number of unsaved file entries in `unsaved_files`.
-
 * `unsaved_files`: the files that have not yet been saved to disk but may be required for code completion, including the contents of those files. The contents and name of these files (as specified by [`CXUnsavedFile`](@ref)) are copied when necessary, so the client only needs to guarantee their validity until the call to this function returns.
 """
 function clang_createTranslationUnitFromSourceFile(CIdx, source_filename, num_clang_command_line_args, clang_command_line_args, num_unsaved_files, unsaved_files)
@@ -1305,7 +1255,6 @@ Create a translation unit from an AST file (`-emit-ast).`
 
 ### Parameters
 * `out_TU`:\\[out\\] A non-NULL pointer to store the created [`CXTranslationUnit`](@ref).
-
 ### Returns
 Zero on success, otherwise returns an error code.
 """
@@ -1389,21 +1338,13 @@ This routine is the main entry point for the Clang C API, providing the ability 
 
 ### Parameters
 * `CIdx`: The index object with which the translation unit will be associated.
-
 * `source_filename`: The name of the source file to load, or NULL if the source file is included in `command_line_args`.
-
 * `command_line_args`: The command-line arguments that would be passed to the `clang` executable if it were being invoked out-of-process. These command-line options will be parsed and will affect how the translation unit is parsed. Note that the following options are ignored: '-c', '-emit-ast', '-fsyntax-only' (which is the default), and '-o <output file>'.
-
 * `num_command_line_args`: The number of command-line arguments in `command_line_args`.
-
 * `unsaved_files`: the files that have not yet been saved to disk but may be required for parsing, including the contents of those files. The contents and name of these files (as specified by [`CXUnsavedFile`](@ref)) are copied when necessary, so the client only needs to guarantee their validity until the call to this function returns.
-
 * `num_unsaved_files`: the number of unsaved file entries in `unsaved_files`.
-
 * `options`: A bitmask of options that affects how the translation unit is managed but not its compilation. This should be a bitwise OR of the CXTranslationUnit\\_XXX flags.
-
 * `out_TU`:\\[out\\] A non-NULL pointer to store the created [`CXTranslationUnit`](@ref), describing the parsed code and containing any diagnostics produced by the compiler.
-
 ### Returns
 Zero on success, otherwise returns an error code.
 """
@@ -1449,14 +1390,14 @@ end
 """
     CXSaveError
 
-Describes the kind of error that occurred (if any) in a call to [`clang_saveTranslationUnit`](@ref)(). 
+Describes the kind of error that occurred (if any) in a call to [`clang_saveTranslationUnit`](@ref)().
 
-| Enumerator                      | Note                                                                                                                                                                                                                                                       |
-| :------------------------------ | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| CXSaveError\\_None              | Indicates that no error occurred while saving a translation unit.                                                                                                                                                                                          |
-| CXSaveError\\_Unknown           | Indicates that an unknown error occurred while attempting to save the file.  This error typically indicates that file I/O failed when attempting to write the file.                                                                                        |
-| CXSaveError\\_TranslationErrors | Indicates that errors during translation prevented this attempt to save the translation unit.  Errors that prevent the translation unit from being saved can be extracted using [`clang_getNumDiagnostics`](@ref)() and [`clang_getDiagnostic`](@ref)().   |
-| CXSaveError\\_InvalidTU         | Indicates that the translation unit to be saved was somehow invalid (e.g., NULL).                                                                                                                                                                          |
+| Enumerator                      | Note                                                                                                                                                                                                                                                      |
+| :------------------------------ | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CXSaveError\\_None              | Indicates that no error occurred while saving a translation unit.                                                                                                                                                                                         |
+| CXSaveError\\_Unknown           | Indicates that an unknown error occurred while attempting to save the file.  This error typically indicates that file I/O failed when attempting to write the file.                                                                                       |
+| CXSaveError\\_TranslationErrors | Indicates that errors during translation prevented this attempt to save the translation unit.  Errors that prevent the translation unit from being saved can be extracted using [`clang_getNumDiagnostics`](@ref)() and [`clang_getDiagnostic`](@ref)().  |
+| CXSaveError\\_InvalidTU         | Indicates that the translation unit to be saved was somehow invalid (e.g., NULL).                                                                                                                                                                         |
 """
 @cenum CXSaveError::UInt32 begin
     CXSaveError_None = 0
@@ -1474,11 +1415,8 @@ Any translation unit that was parsed without error can be saved into a file. The
 
 ### Parameters
 * `TU`: The translation unit to save.
-
 * `FileName`: The file to which the translation unit will be saved.
-
 * `options`: A bitmask of options that affects how the translation unit is saved. This should be a bitwise OR of the CXSaveTranslationUnit\\_XXX flags.
-
 ### Returns
 A value that will match one of the enumerators of the [`CXSaveError`](@ref) enumeration. Zero (CXSaveError\\_None) indicates that the translation unit was saved successfully, while a non-zero value indicates that a problem occurred.
 """
@@ -1543,13 +1481,9 @@ Reparsing a translation unit invalidates all cursors and source locations that r
 
 ### Parameters
 * `TU`: The translation unit whose contents will be re-parsed. The translation unit must originally have been built with [`clang_createTranslationUnitFromSourceFile`](@ref)().
-
 * `num_unsaved_files`: The number of unsaved file entries in `unsaved_files`.
-
 * `unsaved_files`: The files that have not yet been saved to disk but may be required for parsing, including the contents of those files. The contents and name of these files (as specified by [`CXUnsavedFile`](@ref)) are copied when necessary, so the client only needs to guarantee their validity until the call to this function returns.
-
 * `options`: A bitset of options composed of the flags in [`CXReparse_Flags`](@ref). The function [`clang_defaultReparseOptions`](@ref)() produces a default set of options recommended for most uses, based on the translation unit.
-
 ### Returns
 0 if the sources could be reparsed. A non-zero error code will be returned if reparsing was impossible, such that the translation unit is invalid. In such cases, the only valid call for `TU` is [`clang_disposeTranslationUnit`](@ref)(TU). The error codes returned by this routine are described by the [`CXErrorCode`](@ref) enum.
 """
@@ -1593,8 +1527,24 @@ function clang_getTUResourceUsageName(kind)
 end
 
 struct CXTUResourceUsageEntry
-    kind::CXTUResourceUsageKind
-    amount::Culong
+    data::NTuple{16, UInt8}
+end
+
+function Base.getproperty(x::Ptr{CXTUResourceUsageEntry}, f::Symbol)
+    f === :kind && return Ptr{CXTUResourceUsageKind}(x + 0)
+    f === :amount && return Ptr{Culong}(x + 8)
+    return getfield(x, f)
+end
+
+function Base.getproperty(x::CXTUResourceUsageEntry, f::Symbol)
+    r = Ref{CXTUResourceUsageEntry}(x)
+    ptr = Base.unsafe_convert(Ptr{CXTUResourceUsageEntry}, r)
+    fptr = getproperty(ptr, f)
+    GC.@preserve r unsafe_load(fptr)
+end
+
+function Base.setproperty!(x::Ptr{CXTUResourceUsageEntry}, f::Symbol, v)
+    unsafe_store!(getproperty(x, f), v)
 end
 
 """
@@ -1603,9 +1553,25 @@ end
 The memory usage of a [`CXTranslationUnit`](@ref), broken into categories.
 """
 struct CXTUResourceUsage
-    data::Ptr{Cvoid}
-    numEntries::Cuint
-    entries::Ptr{CXTUResourceUsageEntry}
+    data::NTuple{24, UInt8}
+end
+
+function Base.getproperty(x::Ptr{CXTUResourceUsage}, f::Symbol)
+    f === :data && return Ptr{Ptr{Cvoid}}(x + 0)
+    f === :numEntries && return Ptr{Cuint}(x + 8)
+    f === :entries && return Ptr{Ptr{CXTUResourceUsageEntry}}(x + 16)
+    return getfield(x, f)
+end
+
+function Base.getproperty(x::CXTUResourceUsage, f::Symbol)
+    r = Ref{CXTUResourceUsage}(x)
+    ptr = Base.unsafe_convert(Ptr{CXTUResourceUsage}, r)
+    fptr = getproperty(ptr, f)
+    GC.@preserve r unsafe_load(fptr)
+end
+
+function Base.setproperty!(x::Ptr{CXTUResourceUsage}, f::Symbol, v)
+    unsafe_store!(getproperty(x, f), v)
 end
 
 """
@@ -1759,7 +1725,7 @@ Describes the kind of entity that a cursor refers to.
 | CXCursor\\_CXXDynamicCastExpr                               | C++'s dynamic\\_cast<> expression.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | CXCursor\\_CXXReinterpretCastExpr                           | C++'s reinterpret\\_cast<> expression.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | CXCursor\\_CXXConstCastExpr                                 | C++'s const\\_cast<> expression.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| CXCursor\\_CXXFunctionalCastExpr                            | Represents an explicit C++ type conversion that uses "functional" notion (C++ [expr.type.conv]).  Example:   ```c++    x = int(0.5); ```                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| CXCursor\\_CXXFunctionalCastExpr                            | Represents an explicit C++ type conversion that uses "functional" notion (C++ [expr.type.conv]).  Example:  ```c++    x = int(0.5); ```                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | CXCursor\\_CXXTypeidExpr                                    | A C++ typeid expression (C++ [expr.typeid]).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | CXCursor\\_CXXBoolLiteralExpr                               | [C++ 2.13.5] C++ Boolean Literal.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | CXCursor\\_CXXNullPtrLiteralExpr                            | [C++0x 2.14.7] C++ Pointer Literal.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
@@ -2413,12 +2379,12 @@ end
 """
     CXVisibilityKind
 
-| Enumerator               | Note                                                                                                  |
-| :----------------------- | :---------------------------------------------------------------------------------------------------- |
-| CXVisibility\\_Invalid   | This value indicates that no visibility information is available for a provided [`CXCursor`](@ref).   |
-| CXVisibility\\_Hidden    | Symbol not seen by the linker.                                                                        |
-| CXVisibility\\_Protected | Symbol seen by the linker but resolves to a symbol inside this object.                                |
-| CXVisibility\\_Default   | Symbol seen by the linker and acts like a normal symbol.                                              |
+| Enumerator               | Note                                                                                                 |
+| :----------------------- | :--------------------------------------------------------------------------------------------------- |
+| CXVisibility\\_Invalid   | This value indicates that no visibility information is available for a provided [`CXCursor`](@ref).  |
+| CXVisibility\\_Hidden    | Symbol not seen by the linker.                                                                       |
+| CXVisibility\\_Protected | Symbol seen by the linker but resolves to a symbol inside this object.                               |
+| CXVisibility\\_Default   | Symbol seen by the linker and acts like a normal symbol.                                             |
 """
 @cenum CXVisibilityKind::UInt32 begin
     CXVisibility_Invalid = 0
@@ -2436,7 +2402,6 @@ This returns the default visibility if not explicitly specified by a visibility 
 
 ### Parameters
 * `cursor`: The cursor to query.
-
 ### Returns
 The visibility of the cursor.
 """
@@ -2451,7 +2416,6 @@ Determine the availability of the entity that this cursor refers to, taking the 
 
 ### Parameters
 * `cursor`: The cursor to query.
-
 ### Returns
 The availability of the cursor.
 """
@@ -2491,19 +2455,12 @@ Note that the client is responsible for calling [`clang_disposeCXPlatformAvailab
 
 ### Parameters
 * `cursor`: The cursor to query.
-
 * `always_deprecated`: If non-NULL, will be set to indicate whether the entity is deprecated on all platforms.
-
 * `deprecated_message`: If non-NULL, will be set to the message text provided along with the unconditional deprecation of this entity. The client is responsible for deallocating this string.
-
 * `always_unavailable`: If non-NULL, will be set to indicate whether the entity is unavailable on all platforms.
-
 * `unavailable_message`: If non-NULL, will be set to the message text provided along with the unconditional unavailability of this entity. The client is responsible for deallocating this string.
-
 * `availability`: If non-NULL, an array of [`CXPlatformAvailability`](@ref) instances that will be populated with platform availability information, up to either the number of platforms for which availability information is available (as returned by this function) or `availability_size`, whichever is smaller.
-
 * `availability_size`: The number of elements available in the `availability` array.
-
 ### Returns
 The number of platforms (N) for which availability information is available (which is unrelated to `availability_size`).
 """
@@ -2707,10 +2664,8 @@ In all cases, this function determines the immediate overridden method, rather t
 
 ### Parameters
 * `cursor`: A cursor representing an Objective-C or C++ method. This routine will compute the set of methods that this method overrides.
-
 * `overridden`: A pointer whose pointee will be replaced with a pointer to an array of cursors, representing the set of overridden methods. If there are no overridden methods, the pointee will be set to NULL. The pointee must be freed via a call to [`clang_disposeOverriddenCursors`](@ref)().
-
-* `num_overridden`: A pointer to the number of overridden functions, will be set to the number of overridden functions in the array pointed to by `overridden`. 
+* `num_overridden`: A pointer to the number of overridden functions, will be set to the number of overridden functions in the array pointed to by `overridden`.
 """
 function clang_getOverriddenCursors(cursor, overridden, num_overridden)
     @ccall libclang.clang_getOverriddenCursors(cursor::CXCursor, overridden::Ptr{Ptr{CXCursor}}, num_overridden::Ptr{Cuint})::Cvoid
@@ -2719,7 +2674,7 @@ end
 """
     clang_disposeOverriddenCursors(overridden)
 
-Free the set of overridden cursors returned by [`clang_getOverriddenCursors`](@ref)(). 
+Free the set of overridden cursors returned by [`clang_getOverriddenCursors`](@ref)().
 """
 function clang_disposeOverriddenCursors(overridden)
     @ccall libclang.clang_disposeOverriddenCursors(overridden::Ptr{CXCursor})::Cvoid
@@ -3780,11 +3735,11 @@ end
 """
     CXRefQualifierKind
 
-| Enumerator              | Note                                           |
-| :---------------------- | :--------------------------------------------- |
-| CXRefQualifier\\_None   | No ref-qualifier was provided.                 |
-| CXRefQualifier\\_LValue | An lvalue ref-qualifier was provided (`&).`    |
-| CXRefQualifier\\_RValue | An rvalue ref-qualifier was provided (`&&).`   |
+| Enumerator              | Note                                          |
+| :---------------------- | :-------------------------------------------- |
+| CXRefQualifier\\_None   | No ref-qualifier was provided.                |
+| CXRefQualifier\\_LValue | An lvalue ref-qualifier was provided (`&).`   |
+| CXRefQualifier\\_RValue | An rvalue ref-qualifier was provided (`&&).`  |
 """
 @cenum CXRefQualifierKind::UInt32 begin
     CXRefQualifier_None = 0
@@ -3898,7 +3853,6 @@ Determine the number of overloaded declarations referenced by a `CXCursor_Overlo
 
 ### Parameters
 * `cursor`: The cursor whose overloaded declarations are being queried.
-
 ### Returns
 The number of overloaded declarations referenced by `cursor`. If it is not a `CXCursor_OverloadedDeclRef` cursor, returns 0.
 """
@@ -3913,11 +3867,9 @@ Retrieve a cursor for one of the overloaded declarations referenced by a `CXCurs
 
 ### Parameters
 * `cursor`: The cursor whose overloaded declarations are being queried.
-
 * `index`: The zero-based index into the set of overloaded declarations in the cursor.
-
 ### Returns
-A cursor representing the declaration referenced by the given `cursor` at the specified `index`. If the cursor does not have an associated set of overloaded declarations, or if the index is out of bounds, returns [`clang_getNullCursor`](@ref)(); 
+A cursor representing the declaration referenced by the given `cursor` at the specified `index`. If the cursor does not have an associated set of overloaded declarations, or if the index is out of bounds, returns [`clang_getNullCursor`](@ref)();
 """
 function clang_getOverloadedDecl(cursor, index)
     @ccall libclang.clang_getOverloadedDecl(cursor::CXCursor, index::Cuint)::CXCursor
@@ -3970,13 +3922,10 @@ This function visits all the direct children of the given cursor, invoking the g
 
 ### Parameters
 * `parent`: the cursor whose child may be visited. All kinds of cursors can be visited, including invalid cursors (which, by definition, have no children).
-
 * `visitor`: the visitor function that will be invoked for each child of `parent`.
-
 * `client_data`: pointer data supplied by the client, which will be passed to the visitor each time it is invoked.
-
 ### Returns
-a non-zero value if the traversal was terminated prematurely by the visitor returning `CXChildVisit_Break`. 
+a non-zero value if the traversal was terminated prematurely by the visitor returning `CXChildVisit_Break`.
 """
 function clang_visitChildren(parent, visitor, client_data)
     @ccall libclang.clang_visitChildren(parent::CXCursor, visitor::CXCursorVisitor, client_data::CXClientData)::Cuint
@@ -4063,7 +4012,6 @@ Retrieve a range for a piece that forms the cursors spelling name. Most of the t
 
 ### Parameters
 * `pieceIndex`: the index of the spelling name piece. If this is greater than the actual number of pieces, it will return a NULL (invalid) range.
-
 * `options`: Reserved.
 """
 function clang_Cursor_getSpellingNameRange(arg1, pieceIndex, options)
@@ -4071,7 +4019,7 @@ function clang_Cursor_getSpellingNameRange(arg1, pieceIndex, options)
 end
 
 """
-Opaque pointer representing a policy that controls pretty printing for [`clang_getCursorPrettyPrinted`](@ref). 
+Opaque pointer representing a policy that controls pretty printing for [`clang_getCursorPrettyPrinted`](@ref).
 """
 const CXPrintingPolicy = Ptr{Cvoid}
 
@@ -4135,7 +4083,7 @@ end
 
 Retrieve the default policy for the cursor.
 
-The policy should be released after use with [`clang_PrintingPolicy_dispose`](@ref). 
+The policy should be released after use with [`clang_PrintingPolicy_dispose`](@ref).
 """
 function clang_getCursorPrintingPolicy(arg1)
     @ccall libclang.clang_getCursorPrintingPolicy(arg1::CXCursor)::CXPrintingPolicy
@@ -4157,9 +4105,7 @@ Pretty print declarations.
 
 ### Parameters
 * `Cursor`: The cursor representing a declaration.
-
 * `Policy`: The policy to control the entities being printed. If NULL, a default policy is used.
-
 ### Returns
 The pretty printed declaration or the empty string for other cursors.
 """
@@ -4283,7 +4229,7 @@ end
 """
     CXObjCPropertyAttrKind
 
-Property attributes for a `CXCursor_ObjCPropertyDecl`. 
+Property attributes for a `CXCursor_ObjCPropertyDecl`.
 """
 @cenum CXObjCPropertyAttrKind::UInt32 begin
     CXObjCPropertyAttr_noattr = 0
@@ -4381,9 +4327,7 @@ Returns non-zero if the given cursor points to a symbol marked with external\\_s
 
 ### Parameters
 * `language`: If non-NULL, and the attribute is present, will be set to the 'language' string from the attribute.
-
 * `definedIn`: If non-NULL, and the attribute is present, will be set to the 'definedIn' string from the attribute.
-
 * `isGenerated`: If non-NULL, and the attribute is present, will be set to non-zero if the 'generated\\_declaration' is set in the attribute.
 """
 function clang_Cursor_isExternalSymbol(C, language, definedIn, isGenerated)
@@ -4411,7 +4355,7 @@ end
 """
     clang_Cursor_getBriefCommentText(C)
 
-Given a cursor that represents a documentable entity (e.g., declaration), return the associated 
+Given a cursor that represents a documentable entity (e.g., declaration), return the associated
 
 `; otherwise return the`
 
@@ -4480,7 +4424,6 @@ end
 
 ### Parameters
 * `Module`: a module object.
-
 ### Returns
 the module file where the provided module object came from.
 """
@@ -4493,7 +4436,6 @@ end
 
 ### Parameters
 * `Module`: a module object.
-
 ### Returns
 the parent of a sub-module or NULL if the given module is top-level, e.g. for 'std.vector' it will return the 'std' module.
 """
@@ -4506,7 +4448,6 @@ end
 
 ### Parameters
 * `Module`: a module object.
-
 ### Returns
 the name of the module, e.g. for the 'std.vector' sub-module it will return "vector".
 """
@@ -4519,7 +4460,6 @@ end
 
 ### Parameters
 * `Module`: a module object.
-
 ### Returns
 the full name of the module, e.g. "std.vector".
 """
@@ -4532,7 +4472,6 @@ end
 
 ### Parameters
 * `Module`: a module object.
-
 ### Returns
 non-zero if the module is a system one.
 """
@@ -4545,7 +4484,6 @@ end
 
 ### Parameters
 * `Module`: a module object.
-
 ### Returns
 the number of top level headers associated with this module.
 """
@@ -4558,9 +4496,7 @@ end
 
 ### Parameters
 * `Module`: a module object.
-
 * `Index`: top level header index (zero-based).
-
 ### Returns
 the specified top level header associated with the module.
 """
@@ -4685,9 +4621,8 @@ This routine can be used to determine what flavor of function template, class te
 
 ### Parameters
 * `C`: The cursor to query. This cursor should represent a template declaration.
-
 ### Returns
-The cursor kind of the specializations that would be generated by instantiating the template `C`. If `C` is not a template, returns `CXCursor_NoDeclFound`. 
+The cursor kind of the specializations that would be generated by instantiating the template `C`. If `C` is not a template, returns `CXCursor_NoDeclFound`.
 """
 function clang_getTemplateCursorKind(C)
     @ccall libclang.clang_getTemplateCursorKind(C::CXCursor)::CXCursorKind
@@ -4704,7 +4639,6 @@ For members of a class template (e.g., member functions, member classes, or stat
 
 ### Parameters
 * `C`: A cursor that may be a specialization of a template or a member of a template.
-
 ### Returns
 If the given cursor is a specialization or instantiation of a template or a member thereof, the template or member that it specializes or from which it was instantiated. Otherwise, returns a NULL cursor.
 """
@@ -4718,12 +4652,9 @@ end
 Given a cursor that references something else, return the source range covering that reference.
 
 ### Parameters
-* `C`: A cursor pointing to a member reference, a declaration reference, or an operator call. 
-
-* `NameFlags`: A bitset with three independent flags: CXNameRange\\_WantQualifier, CXNameRange\\_WantTemplateArgs, and CXNameRange\\_WantSinglePiece. 
-
+* `C`: A cursor pointing to a member reference, a declaration reference, or an operator call.
+* `NameFlags`: A bitset with three independent flags: CXNameRange\\_WantQualifier, CXNameRange\\_WantTemplateArgs, and CXNameRange\\_WantSinglePiece.
 * `PieceIndex`: For contiguous names or when passing the flag CXNameRange\\_WantSinglePiece, only one piece with index 0 is available. When the CXNameRange\\_WantSinglePiece flag is not passed for a non-contiguous names, this index can be used to retrieve the individual pieces of the name. See also CXNameRange\\_WantSinglePiece.
-
 ### Returns
 The piece of the name pointed to by the given cursor. If there is no name, or if the PieceIndex is out-of-range, a null-cursor will be returned.
 """
@@ -4734,11 +4665,11 @@ end
 """
     CXNameRefFlags
 
-| Enumerator                     | Note                                                                                                                                                                                                                                                                                                     |
-| :----------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| CXNameRange\\_WantQualifier    | Include the nested-name-specifier, e.g. Foo:: in x.Foo::y, in the range.                                                                                                                                                                                                                                 |
-| CXNameRange\\_WantTemplateArgs | Include the explicit template arguments, e.g. <int> in x.f<int>, in the range.                                                                                                                                                                                                                           |
-| CXNameRange\\_WantSinglePiece  | If the name is non-contiguous, return the full spanning range.  Non-contiguous names occur in Objective-C when a selector with two or more parameters is used, or in C++ when using an operator:   ```c++  [object doSomething:here withValue:there]; // Objective-C  return some_vector[1]; // C++ ```  |
+| Enumerator                     | Note                                                                                                                                                                                                                                                                                                    |
+| :----------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| CXNameRange\\_WantQualifier    | Include the nested-name-specifier, e.g. Foo:: in x.Foo::y, in the range.                                                                                                                                                                                                                                |
+| CXNameRange\\_WantTemplateArgs | Include the explicit template arguments, e.g. <int> in x.f<int>, in the range.                                                                                                                                                                                                                          |
+| CXNameRange\\_WantSinglePiece  | If the name is non-contiguous, return the full spanning range.  Non-contiguous names occur in Objective-C when a selector with two or more parameters is used, or in C++ when using an operator:  ```c++  [object doSomething:here withValue:there]; // Objective-C  return some_vector[1]; // C++ ```  |
 """
 @cenum CXNameRefFlags::UInt32 begin
     CXNameRange_WantQualifier = 1
@@ -4784,9 +4715,7 @@ Get the raw lexical token starting with the given location.
 
 ### Parameters
 * `TU`: the translation unit whose text is being tokenized.
-
 * `Location`: the source location with which the token starts.
-
 ### Returns
 The token starting with the given location or NULL if no such token exist. The returned pointer must be freed with [`clang_disposeTokens`](@ref) before the translation unit is destroyed.
 """
@@ -4839,11 +4768,8 @@ Tokenize the source code described by the given range into raw lexical tokens.
 
 ### Parameters
 * `TU`: the translation unit whose text is being tokenized.
-
 * `Range`: the source range in which text should be tokenized. All of the tokens produced by tokenization will fall within this source range,
-
 * `Tokens`: this pointer will be set to point to the array of tokens that occur within the given source range. The returned pointer must be freed with [`clang_disposeTokens`](@ref)() before the translation unit is destroyed.
-
 * `NumTokens`: will be set to the number of tokens in the `*Tokens` array.
 """
 function clang_tokenize(TU, Range, Tokens, NumTokens)
@@ -4863,11 +4789,8 @@ Only the first and last of these cursors will occur within the annotate, since t
 
 ### Parameters
 * `TU`: the translation unit that owns the given tokens.
-
 * `Tokens`: the set of tokens to annotate.
-
 * `NumTokens`: the number of tokens in `Tokens`.
-
 * `Cursors`: an array of `NumTokens` cursors, whose contents will be replaced with the cursors corresponding to each token.
 """
 function clang_annotateTokens(TU, Tokens, NumTokens, Cursors)
@@ -4992,11 +4915,9 @@ Determine the kind of a particular chunk within a completion string.
 
 ### Parameters
 * `completion_string`: the completion string to query.
-
 * `chunk_number`: the 0-based index of the chunk in the completion string.
-
 ### Returns
-the kind of the chunk at the index `chunk_number`. 
+the kind of the chunk at the index `chunk_number`.
 """
 function clang_getCompletionChunkKind(completion_string, chunk_number)
     @ccall libclang.clang_getCompletionChunkKind(completion_string::CXCompletionString, chunk_number::Cuint)::CXCompletionChunkKind
@@ -5009,11 +4930,9 @@ Retrieve the text associated with a particular chunk within a completion string.
 
 ### Parameters
 * `completion_string`: the completion string to query.
-
 * `chunk_number`: the 0-based index of the chunk in the completion string.
-
 ### Returns
-the text associated with the chunk at index `chunk_number`. 
+the text associated with the chunk at index `chunk_number`.
 """
 function clang_getCompletionChunkText(completion_string, chunk_number)
     @ccall libclang.clang_getCompletionChunkText(completion_string::CXCompletionString, chunk_number::Cuint)::CXString
@@ -5026,11 +4945,9 @@ Retrieve the completion string associated with a particular chunk within a compl
 
 ### Parameters
 * `completion_string`: the completion string to query.
-
 * `chunk_number`: the 0-based index of the chunk in the completion string.
-
 ### Returns
-the completion string associated with the chunk at index `chunk_number`. 
+the completion string associated with the chunk at index `chunk_number`.
 """
 function clang_getCompletionChunkCompletionString(completion_string, chunk_number)
     @ccall libclang.clang_getCompletionChunkCompletionString(completion_string::CXCompletionString, chunk_number::Cuint)::CXCompletionString
@@ -5054,7 +4971,6 @@ The priority of a code completion indicates how likely it is that this particula
 
 ### Parameters
 * `completion_string`: The completion string to query.
-
 ### Returns
 The priority of this completion string. Smaller values indicate higher-priority (more likely) completions.
 """
@@ -5069,7 +4985,6 @@ Determine the availability of the entity that this code-completion string refers
 
 ### Parameters
 * `completion_string`: The completion string to query.
-
 ### Returns
 The availability of the completion string.
 """
@@ -5084,7 +4999,6 @@ Retrieve the number of annotations associated with the given completion string.
 
 ### Parameters
 * `completion_string`: the completion string to query.
-
 ### Returns
 the number of annotations associated with the given completion string.
 """
@@ -5099,9 +5013,7 @@ Retrieve the annotation associated with the given completion string.
 
 ### Parameters
 * `completion_string`: the completion string to query.
-
 * `annotation_number`: the 0-based index of the annotation of the completion string.
-
 ### Returns
 annotation string associated with the completion at index `annotation_number`, or a NULL string if that annotation is not available.
 """
@@ -5118,9 +5030,7 @@ The parent context of a completion string is the semantic parent of the declarat
 
 ### Parameters
 * `completion_string`: The code completion string whose parent is being queried.
-
 * `kind`: DEPRECATED: always set to CXCursor\\_NotImplemented if non-NULL.
-
 ### Returns
 The name of the completion parent, e.g., "NSObject" if the completion string represents a method in the NSObject class.
 """
@@ -5144,7 +5054,6 @@ Retrieve a completion string for an arbitrary declaration or macro definition cu
 
 ### Parameters
 * `cursor`: The cursor to query.
-
 ### Returns
 A non-context-sensitive completion string for declaration and macro definition cursors, or NULL for other kinds of cursors.
 """
@@ -5157,7 +5066,7 @@ end
 
 Contains the results of code-completion.
 
-This data structure contains the results of code completion, as produced by [`clang_codeCompleteAt`](@ref)(). Its contents must be freed by [`clang_disposeCodeCompleteResults`](@ref). 
+This data structure contains the results of code completion, as produced by [`clang_codeCompleteAt`](@ref)(). Its contents must be freed by [`clang_disposeCodeCompleteResults`](@ref).
 
 | Field      | Note                                                                  |
 | :--------- | :-------------------------------------------------------------------- |
@@ -5178,9 +5087,7 @@ Calling this makes sense only if CXCodeComplete\\_IncludeCompletionsWithFixIts o
 
 ### Parameters
 * `results`: The structure keeping all completion results
-
 * `completion_index`: The index of the completion
-
 ### Returns
 The number of fix-its which must be applied before the completion at completion\\_index can be applied
 """
@@ -5203,13 +5110,9 @@ std::unique\\_ptr<std::vector<int>> vec\\_ptr; In 'vec\\_ptr.^', one of the comp
 
 ### Parameters
 * `results`: The structure keeping all completion results
-
 * `completion_index`: The index of the completion
-
 * `fixit_index`: The index of the fix-it for the completion at completion\\_index
-
 * `replacement_range`: The fix-it range that must be replaced before the completion at completion\\_index can be applied
-
 ### Returns
 The fix-it string that must replace the code at replacement\\_range before the completion at completion\\_index can be applied
 """
@@ -5222,7 +5125,7 @@ end
 
 Flags that can be passed to [`clang_codeCompleteAt`](@ref)() to modify its behavior.
 
-The enumerators in this enumeration can be bitwise-OR'd together to provide multiple options to [`clang_codeCompleteAt`](@ref)(). 
+The enumerators in this enumeration can be bitwise-OR'd together to provide multiple options to [`clang_codeCompleteAt`](@ref)().
 
 | Enumerator                                    | Note                                                                                                                                                                                                                   |
 | :-------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -5306,7 +5209,7 @@ end
 """
     clang_defaultCodeCompleteOptions()
 
-Returns a default set of code-completion options that can be passed to[`clang_codeCompleteAt`](@ref)(). 
+Returns a default set of code-completion options that can be passed to[`clang_codeCompleteAt`](@ref)().
 """
 function clang_defaultCodeCompleteOptions()
     @ccall libclang.clang_defaultCodeCompleteOptions()::Cuint
@@ -5323,19 +5226,12 @@ Code completion itself is meant to be triggered by the client when the user type
 
 ### Parameters
 * `TU`: The translation unit in which code-completion should occur. The source files for this translation unit need not be completely up-to-date (and the contents of those source files may be overridden via `unsaved_files`). Cursors referring into the translation unit may be invalidated by this invocation.
-
 * `complete_filename`: The name of the source file where code completion should be performed. This filename may be any file included in the translation unit.
-
 * `complete_line`: The line at which code-completion should occur.
-
 * `complete_column`: The column at which code-completion should occur. Note that the column should point just after the syntactic construct that initiated code completion, and not in the middle of a lexical token.
-
 * `unsaved_files`: the Files that have not yet been saved to disk but may be required for parsing or code completion, including the contents of those files. The contents and name of these files (as specified by [`CXUnsavedFile`](@ref)) are copied when necessary, so the client only needs to guarantee their validity until the call to this function returns.
-
 * `num_unsaved_files`: The number of unsaved file entries in `unsaved_files`.
-
 * `options`: Extra options that control the behavior of code completion, expressed as a bitwise OR of the enumerators of the [`CXCodeComplete_Flags`](@ref) enumeration. The [`clang_defaultCodeCompleteOptions`](@ref)() function returns a default set of code-completion options.
-
 ### Returns
 If successful, a new [`CXCodeCompleteResults`](@ref) structure containing code-completion results, which should eventually be freed with [`clang_disposeCodeCompleteResults`](@ref)(). If code completion fails, returns NULL.
 """
@@ -5349,9 +5245,8 @@ end
 Sort the code-completion results in case-insensitive alphabetical order.
 
 ### Parameters
-* `Results`: The set of results to sort. 
-
-* `NumResults`: The number of results in `Results`. 
+* `Results`: The set of results to sort.
+* `NumResults`: The number of results in `Results`.
 """
 function clang_sortCodeCompletionResults(Results, NumResults)
     @ccall libclang.clang_sortCodeCompletionResults(Results::Ptr{CXCompletionResult}, NumResults::Cuint)::Cvoid
@@ -5381,12 +5276,10 @@ end
 Retrieve a diagnostic associated with the given code completion.
 
 ### Parameters
-* `Results`: the code completion results to query. 
-
+* `Results`: the code completion results to query.
 * `Index`: the zero-based diagnostic number to retrieve.
-
 ### Returns
-the requested diagnostic. This diagnostic must be freed via a call to [`clang_disposeDiagnostic`](@ref)(). 
+the requested diagnostic. This diagnostic must be freed via a call to [`clang_disposeDiagnostic`](@ref)().
 """
 function clang_codeCompleteGetDiagnostic(Results, Index)
     @ccall libclang.clang_codeCompleteGetDiagnostic(Results::Ptr{CXCodeCompleteResults}, Index::Cuint)::CXDiagnostic
@@ -5399,7 +5292,6 @@ Determines what completions are appropriate for the context the given code compl
 
 ### Parameters
 * `Results`: the code completion results to query
-
 ### Returns
 the kinds of completions that are appropriate for use along with the given code completion results.
 """
@@ -5414,9 +5306,7 @@ Returns the cursor kind for the container for the current code completion contex
 
 ### Parameters
 * `Results`: the code completion results to query
-
 * `IsIncomplete`: on return, this value will be false if Clang has complete information about the container. If Clang does not have complete information, this value will be true.
-
 ### Returns
 the container kind, or CXCursor\\_InvalidCode if there is not a container
 """
@@ -5431,7 +5321,6 @@ Returns the USR for the container for the current code completion context. If th
 
 ### Parameters
 * `Results`: the code completion results to query
-
 ### Returns
 the USR for the container
 """
@@ -5446,7 +5335,6 @@ Returns the currently-entered selector for an Objective-C message send, formatte
 
 ### Parameters
 * `Results`: the code completion results to query
-
 ### Returns
 the selector (or partial selector) that has been entered thus far for an Objective-C message send.
 """
@@ -5600,7 +5488,6 @@ Retrieve a remapping.
 
 ### Parameters
 * `path`: the path that contains metadata about remappings.
-
 ### Returns
 the requested remapping. This remapping must be freed via a call to [`clang_remap_dispose`](@ref)(). Can return NULL if an error occurred.
 """
@@ -5615,9 +5502,7 @@ Retrieve a remapping.
 
 ### Parameters
 * `filePaths`: pointer to an array of file paths containing remapping info.
-
 * `numFiles`: number of file paths.
-
 ### Returns
 the requested remapping. This remapping must be freed via a call to [`clang_remap_dispose`](@ref)(). Can return NULL if an error occurred.
 """
@@ -5641,7 +5526,6 @@ Get the original and the associated filename from the remapping.
 
 ### Parameters
 * `original`: If non-NULL, will be set to the original filename.
-
 * `transformed`: If non-NULL, will be set to the filename that the original is associated with.
 """
 function clang_remap_getFilenames(arg1, index, original, transformed)
@@ -5696,11 +5580,8 @@ Find references of a declaration in a specific file.
 
 ### Parameters
 * `cursor`: pointing to a declaration or a reference of one.
-
 * `file`: to search for references.
-
 * `visitor`: callback that will receive pairs of [`CXCursor`](@ref)/[`CXSourceRange`](@ref) for each reference found. The [`CXSourceRange`](@ref) will point inside the file; if the reference is inside a macro (and not a macro argument) the [`CXSourceRange`](@ref) will be invalid.
-
 ### Returns
 one of the [`CXResult`](@ref) enumerators.
 """
@@ -5715,11 +5596,8 @@ Find #import/#include directives in a specific file.
 
 ### Parameters
 * `TU`: translation unit containing the file to query.
-
 * `file`: to search for #import/#include directives.
-
 * `visitor`: callback that will receive pairs of [`CXCursor`](@ref)/[`CXSourceRange`](@ref) for each directive found.
-
 ### Returns
 one of the [`CXResult`](@ref) enumerators.
 """
@@ -5969,7 +5847,7 @@ end
 
 Data for [`IndexerCallbacks`](@ref)#indexEntityReference.
 
-This may be deprecated in a future version as this duplicates the `CXSymbolRole_Implicit` bit in [`CXSymbolRole`](@ref). 
+This may be deprecated in a future version as this duplicates the `CXSymbolRole_Implicit` bit in [`CXSymbolRole`](@ref).
 
 | Enumerator                | Note                                                                                  |
 | :------------------------ | :------------------------------------------------------------------------------------ |
@@ -6175,15 +6053,10 @@ The rest of the parameters are the same as #[`clang_parseTranslationUnit`](@ref)
 
 ### Parameters
 * `client_data`: pointer data supplied by the client, which will be passed to the invoked callbacks.
-
 * `index_callbacks`: Pointer to indexing callbacks that the client implements.
-
 * `index_callbacks_size`: Size of #[`IndexerCallbacks`](@ref) structure that gets passed in index\\_callbacks.
-
 * `index_options`: A bitmask of options that affects how indexing is performed. This should be a bitwise OR of the CXIndexOpt\\_XXX flags.
-
 * `out_TU`:\\[out\\] pointer to store a [`CXTranslationUnit`](@ref) that can be reused after indexing is finished. Set to `NULL` if you do not require it.
-
 ### Returns
 0 on success or if there were errors from which the compiler could recover. If there is a failure from which there is no recovery, returns a non-zero [`CXErrorCode`](@ref).
 """
@@ -6244,7 +6117,7 @@ Visitor invoked for each field found by a traversal.
 
 This visitor function will be invoked for each field found by [`clang_Type_visitFields`](@ref). Its first argument is the cursor being visited, its second argument is the client data provided to [`clang_Type_visitFields`](@ref).
 
-The visitor should return one of the [`CXVisitorResult`](@ref) values to direct [`clang_Type_visitFields`](@ref). 
+The visitor should return one of the [`CXVisitorResult`](@ref) values to direct [`clang_Type_visitFields`](@ref).
 """
 const CXFieldVisitor = Ptr{Cvoid}
 
@@ -6257,13 +6130,10 @@ This function visits all the direct fields of the given cursor, invoking the giv
 
 ### Parameters
 * `T`: the record type whose field may be visited.
-
 * `visitor`: the visitor function that will be invoked for each field of `T`.
-
 * `client_data`: pointer data supplied by the client, which will be passed to the visitor each time it is invoked.
-
 ### Returns
-a non-zero value if the traversal was terminated prematurely by the visitor returning `CXFieldVisit_Break`. 
+a non-zero value if the traversal was terminated prematurely by the visitor returning `CXFieldVisit_Break`.
 """
 function clang_Type_visitFields(T, visitor, client_data)
     @ccall libclang.clang_Type_visitFields(T::CXType, visitor::CXFieldVisitor, client_data::CXClientData)::Cuint
@@ -6298,8 +6168,8 @@ Describes the type of the comment AST node ([`CXComment`](@ref)). A comment node
 | CXComment\\_Null                 | Null comment. No AST node is constructed at the requested location because there is no text or a syntax error.                                                                                                                                                                                                                                                                                                |
 | CXComment\\_Text                 | Plain text. Inline content.                                                                                                                                                                                                                                                                                                                                                                                   |
 | CXComment\\_InlineCommand        | A command with word-like arguments that is considered inline content.  For example: \\c command.                                                                                                                                                                                                                                                                                                              |
-| CXComment\\_HTMLStartTag         | HTML start tag with attributes (name-value pairs). Considered inline content.  For example:   ```c++  <br> <br /> <a href="http://example.org/"> ```                                                                                                                                                                                                                                                          |
-| CXComment\\_HTMLEndTag           | HTML end tag. Considered inline content.  For example:   ```c++  </a> ```                                                                                                                                                                                                                                                                                                                                     |
+| CXComment\\_HTMLStartTag         | HTML start tag with attributes (name-value pairs). Considered inline content.  For example:  ```c++  <br> <br /> <a href="http://example.org/"> ```                                                                                                                                                                                                                                                           |
+| CXComment\\_HTMLEndTag           | HTML end tag. Considered inline content.  For example:  ```c++  </a> ```                                                                                                                                                                                                                                                                                                                                      |
 | CXComment\\_Paragraph            | A paragraph, contains inline comment. The paragraph itself is block content.                                                                                                                                                                                                                                                                                                                                  |
 | CXComment\\_BlockCommand         | A command that has zero or more word-like arguments (number of word-like arguments depends on command name) and a paragraph as an argument. Block command is block content.  Paragraph argument is also a child of the block command.  For example:  0 word-like arguments and a paragraph argument.  AST nodes of special kinds that parser knows about (e. g., \\param command) have their own node kinds.  |
 | CXComment\\_ParamCommand         | A \\param or \\arg command that describes the function parameter (name, passing direction, description).  For example: \\param [in] ParamName description.                                                                                                                                                                                                                                                    |
@@ -6368,7 +6238,6 @@ end
 
 ### Parameters
 * `Comment`: AST node of any kind.
-
 ### Returns
 the type of the AST node.
 """
@@ -6381,7 +6250,6 @@ end
 
 ### Parameters
 * `Comment`: AST node of any kind.
-
 ### Returns
 number of children of the AST node.
 """
@@ -6394,9 +6262,7 @@ end
 
 ### Parameters
 * `Comment`: AST node of any kind.
-
 * `ChildIdx`: child index (zero-based).
-
 ### Returns
 the specified child of the AST node.
 """
@@ -6433,7 +6299,6 @@ end
 
 ### Parameters
 * `Comment`: a `CXComment_Text` AST node.
-
 ### Returns
 text contained in the AST node.
 """
@@ -6446,7 +6311,6 @@ end
 
 ### Parameters
 * `Comment`: a `CXComment_InlineCommand` AST node.
-
 ### Returns
 name of the inline command.
 """
@@ -6459,7 +6323,6 @@ end
 
 ### Parameters
 * `Comment`: a `CXComment_InlineCommand` AST node.
-
 ### Returns
 the most appropriate rendering mode, chosen on command semantics in Doxygen.
 """
@@ -6472,7 +6335,6 @@ end
 
 ### Parameters
 * `Comment`: a `CXComment_InlineCommand` AST node.
-
 ### Returns
 number of command arguments.
 """
@@ -6485,9 +6347,7 @@ end
 
 ### Parameters
 * `Comment`: a `CXComment_InlineCommand` AST node.
-
 * `ArgIdx`: argument index (zero-based).
-
 ### Returns
 text of the specified argument.
 """
@@ -6500,7 +6360,6 @@ end
 
 ### Parameters
 * `Comment`: a `CXComment_HTMLStartTag` or `CXComment_HTMLEndTag` AST node.
-
 ### Returns
 HTML tag name.
 """
@@ -6513,7 +6372,6 @@ end
 
 ### Parameters
 * `Comment`: a `CXComment_HTMLStartTag` AST node.
-
 ### Returns
 non-zero if tag is self-closing (for example, <br />).
 """
@@ -6526,7 +6384,6 @@ end
 
 ### Parameters
 * `Comment`: a `CXComment_HTMLStartTag` AST node.
-
 ### Returns
 number of attributes (name-value pairs) attached to the start tag.
 """
@@ -6539,9 +6396,7 @@ end
 
 ### Parameters
 * `Comment`: a `CXComment_HTMLStartTag` AST node.
-
 * `AttrIdx`: attribute index (zero-based).
-
 ### Returns
 name of the specified attribute.
 """
@@ -6554,9 +6409,7 @@ end
 
 ### Parameters
 * `Comment`: a `CXComment_HTMLStartTag` AST node.
-
 * `AttrIdx`: attribute index (zero-based).
-
 ### Returns
 value of the specified attribute.
 """
@@ -6569,7 +6422,6 @@ end
 
 ### Parameters
 * `Comment`: a `CXComment_BlockCommand` AST node.
-
 ### Returns
 name of the block command.
 """
@@ -6582,7 +6434,6 @@ end
 
 ### Parameters
 * `Comment`: a `CXComment_BlockCommand` AST node.
-
 ### Returns
 number of word-like arguments.
 """
@@ -6595,9 +6446,7 @@ end
 
 ### Parameters
 * `Comment`: a `CXComment_BlockCommand` AST node.
-
 * `ArgIdx`: argument index (zero-based).
-
 ### Returns
 text of the specified word-like argument.
 """
@@ -6610,7 +6459,6 @@ end
 
 ### Parameters
 * `Comment`: a `CXComment_BlockCommand` or `CXComment_VerbatimBlockCommand` AST node.
-
 ### Returns
 paragraph argument of the block command.
 """
@@ -6623,7 +6471,6 @@ end
 
 ### Parameters
 * `Comment`: a `CXComment_ParamCommand` AST node.
-
 ### Returns
 parameter name.
 """
@@ -6636,7 +6483,6 @@ end
 
 ### Parameters
 * `Comment`: a `CXComment_ParamCommand` AST node.
-
 ### Returns
 non-zero if the parameter that this AST node represents was found in the function prototype and [`clang_ParamCommandComment_getParamIndex`](@ref) function will return a meaningful value.
 """
@@ -6649,7 +6495,6 @@ end
 
 ### Parameters
 * `Comment`: a `CXComment_ParamCommand` AST node.
-
 ### Returns
 zero-based parameter index in function prototype.
 """
@@ -6662,7 +6507,6 @@ end
 
 ### Parameters
 * `Comment`: a `CXComment_ParamCommand` AST node.
-
 ### Returns
 non-zero if parameter passing direction was specified explicitly in the comment.
 """
@@ -6675,7 +6519,6 @@ end
 
 ### Parameters
 * `Comment`: a `CXComment_ParamCommand` AST node.
-
 ### Returns
 parameter passing direction.
 """
@@ -6688,7 +6531,6 @@ end
 
 ### Parameters
 * `Comment`: a `CXComment_TParamCommand` AST node.
-
 ### Returns
 template parameter name.
 """
@@ -6701,7 +6543,6 @@ end
 
 ### Parameters
 * `Comment`: a `CXComment_TParamCommand` AST node.
-
 ### Returns
 non-zero if the parameter that this AST node represents was found in the template parameter list and [`clang_TParamCommandComment_getDepth`](@ref) and [`clang_TParamCommandComment_getIndex`](@ref) functions will return a meaningful value.
 """
@@ -6712,7 +6553,7 @@ end
 """
     clang_TParamCommandComment_getDepth(Comment)
 
-For example, 
+For example,
 
 ```c++
      template<typename C, template<typename T> class TT>
@@ -6723,7 +6564,6 @@ for C and TT nesting depth is 0, for T nesting depth is 1.
 
 ### Parameters
 * `Comment`: a `CXComment_TParamCommand` AST node.
-
 ### Returns
 zero-based nesting depth of this parameter in the template parameter list.
 """
@@ -6734,7 +6574,7 @@ end
 """
     clang_TParamCommandComment_getIndex(Comment, Depth)
 
-For example, 
+For example,
 
 ```c++
      template<typename C, template<typename T> class TT>
@@ -6747,7 +6587,6 @@ For T nesting depth is 1, so we can ask for index at depth 0 and 1: at depth 0 T
 
 ### Parameters
 * `Comment`: a `CXComment_TParamCommand` AST node.
-
 ### Returns
 zero-based parameter index in the template parameter list at a given nesting depth.
 """
@@ -6760,7 +6599,6 @@ end
 
 ### Parameters
 * `Comment`: a `CXComment_VerbatimBlockLine` AST node.
-
 ### Returns
 text contained in the AST node.
 """
@@ -6773,7 +6611,6 @@ end
 
 ### Parameters
 * `Comment`: a `CXComment_VerbatimLine` AST node.
-
 ### Returns
 text contained in the AST node.
 """
@@ -6788,7 +6625,6 @@ Convert an HTML tag AST node to string.
 
 ### Parameters
 * `Comment`: a `CXComment_HTMLStartTag` or `CXComment_HTMLEndTag` AST node.
-
 ### Returns
 string containing an HTML tag.
 """
@@ -6803,37 +6639,36 @@ Convert a given full parsed comment to an HTML fragment.
 
 Specific details of HTML layout are subject to change. Don't try to parse this HTML back into an AST, use other APIs instead.
 
-Currently the following CSS classes are used: 
+Currently the following CSS classes are used:
 
-* "para-brief" for 
+* "para-brief" for
 
 ` and equivalent commands;`
 
-* "para-returns" for \\returns paragraph and equivalent commands; 
+* "para-returns" for \\returns paragraph and equivalent commands;
 
 * "word-returns" for the "Returns" word in \\returns paragraph.
 
-Function argument documentation is rendered as a <dl> list with arguments sorted in function prototype order. CSS classes used: 
+Function argument documentation is rendered as a <dl> list with arguments sorted in function prototype order. CSS classes used:
 
-* "param-name-index-NUMBER" for parameter name (<dt>); 
+* "param-name-index-NUMBER" for parameter name (<dt>);
 
-* "param-descr-index-NUMBER" for parameter description (<dd>); 
+* "param-descr-index-NUMBER" for parameter description (<dd>);
 
 * "param-name-index-invalid" and "param-descr-index-invalid" are used if parameter index is invalid.
 
-Template parameter documentation is rendered as a <dl> list with parameters sorted in template parameter list order. CSS classes used: 
+Template parameter documentation is rendered as a <dl> list with parameters sorted in template parameter list order. CSS classes used:
 
-* "tparam-name-index-NUMBER" for parameter name (<dt>); 
+* "tparam-name-index-NUMBER" for parameter name (<dt>);
 
-* "tparam-descr-index-NUMBER" for parameter description (<dd>); 
+* "tparam-descr-index-NUMBER" for parameter description (<dd>);
 
-* "tparam-name-index-other" and "tparam-descr-index-other" are used for names inside template template parameters; 
+* "tparam-name-index-other" and "tparam-descr-index-other" are used for names inside template template parameters;
 
 * "tparam-name-index-invalid" and "tparam-descr-index-invalid" are used if parameter position is invalid.
 
 ### Parameters
 * `Comment`: a `CXComment_FullComment` AST node.
-
 ### Returns
 string containing an HTML fragment.
 """
@@ -6850,7 +6685,6 @@ A Relax NG schema for the XML can be found in comment-xml-schema.rng file inside
 
 ### Parameters
 * `Comment`: a `CXComment_FullComment` AST node.
-
 ### Returns
 string containing an XML document.
 """
@@ -6861,14 +6695,14 @@ end
 """
 A compilation database holds all information used to compile files in a project. For each file in the database, it can be queried for the working directory or the command line used for the compiler invocation.
 
-Must be freed by [`clang_CompilationDatabase_dispose`](@ref) 
+Must be freed by [`clang_CompilationDatabase_dispose`](@ref)
 """
 const CXCompilationDatabase = Ptr{Cvoid}
 
 """
 Contains the results of a search in the compilation database
 
-When searching for the compile command for a file, the compilation db can return several commands, as the file may have been compiled with different options in different places of the project. This choice of compile commands is wrapped in this opaque data structure. It must be freed by [`clang_CompileCommands_dispose`](@ref). 
+When searching for the compile command for a file, the compilation db can return several commands, as the file may have been compiled with different options in different places of the project. This choice of compile commands is wrapped in this opaque data structure. It must be freed by [`clang_CompileCommands_dispose`](@ref).
 """
 const CXCompileCommands = Ptr{Cvoid}
 
@@ -6892,7 +6726,7 @@ end
 
 Creates a compilation database from the database found in directory buildDir. For example, CMake can output a compile\\_commands.json which can be used to build the database.
 
-It must be freed by [`clang_CompilationDatabase_dispose`](@ref). 
+It must be freed by [`clang_CompilationDatabase_dispose`](@ref).
 """
 function clang_CompilationDatabase_fromDirectory(BuildDir, ErrorCode)
     @ccall libclang.clang_CompilationDatabase_fromDirectory(BuildDir::Cstring, ErrorCode::Ptr{CXCompilationDatabase_Error})::CXCompilationDatabase
@@ -6910,7 +6744,7 @@ end
 """
     clang_CompilationDatabase_getCompileCommands(arg1, CompleteFileName)
 
-Find the compile commands used for a file. The compile commands must be freed by [`clang_CompileCommands_dispose`](@ref). 
+Find the compile commands used for a file. The compile commands must be freed by [`clang_CompileCommands_dispose`](@ref).
 """
 function clang_CompilationDatabase_getCompileCommands(arg1, CompleteFileName)
     @ccall libclang.clang_CompilationDatabase_getCompileCommands(arg1::CXCompilationDatabase, CompleteFileName::Cstring)::CXCompileCommands

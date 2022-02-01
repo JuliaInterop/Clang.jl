@@ -1527,24 +1527,8 @@ function clang_getTUResourceUsageName(kind)
 end
 
 struct CXTUResourceUsageEntry
-    data::NTuple{16, UInt8}
-end
-
-function Base.getproperty(x::Ptr{CXTUResourceUsageEntry}, f::Symbol)
-    f === :kind && return Ptr{CXTUResourceUsageKind}(x + 0)
-    f === :amount && return Ptr{Culong}(x + 8)
-    return getfield(x, f)
-end
-
-function Base.getproperty(x::CXTUResourceUsageEntry, f::Symbol)
-    r = Ref{CXTUResourceUsageEntry}(x)
-    ptr = Base.unsafe_convert(Ptr{CXTUResourceUsageEntry}, r)
-    fptr = getproperty(ptr, f)
-    GC.@preserve r unsafe_load(fptr)
-end
-
-function Base.setproperty!(x::Ptr{CXTUResourceUsageEntry}, f::Symbol, v)
-    unsafe_store!(getproperty(x, f), v)
+    kind::CXTUResourceUsageKind
+    amount::Culong
 end
 
 """
@@ -1553,25 +1537,9 @@ end
 The memory usage of a [`CXTranslationUnit`](@ref), broken into categories.
 """
 struct CXTUResourceUsage
-    data::NTuple{24, UInt8}
-end
-
-function Base.getproperty(x::Ptr{CXTUResourceUsage}, f::Symbol)
-    f === :data && return Ptr{Ptr{Cvoid}}(x + 0)
-    f === :numEntries && return Ptr{Cuint}(x + 8)
-    f === :entries && return Ptr{Ptr{CXTUResourceUsageEntry}}(x + 16)
-    return getfield(x, f)
-end
-
-function Base.getproperty(x::CXTUResourceUsage, f::Symbol)
-    r = Ref{CXTUResourceUsage}(x)
-    ptr = Base.unsafe_convert(Ptr{CXTUResourceUsage}, r)
-    fptr = getproperty(ptr, f)
-    GC.@preserve r unsafe_load(fptr)
-end
-
-function Base.setproperty!(x::Ptr{CXTUResourceUsage}, f::Symbol, v)
-    unsafe_store!(getproperty(x, f), v)
+    data::Ptr{Cvoid}
+    numEntries::Cuint
+    entries::Ptr{CXTUResourceUsageEntry}
 end
 
 """

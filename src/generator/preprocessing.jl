@@ -150,32 +150,6 @@ function nested_anonymous_check(dag::ExprDAG, node::ExprNode{<:Union{StructDefin
 end
 
 """
-    padding_check
-Return `true` if the node(record) has a non-trivial padding.
-"""
-function padding_check end
-
-padding_check(dag::ExprDAG, node::ExprNode) = false
-
-function padding_check(dag::ExprDAG,
-                       node::ExprNode{<:Union{StructDefinition,StructMutualRef}})
-    field_cursors = fields(getCursorType(node.cursor))
-    field_cursors = isempty(field_cursors) ? children(node.cursor) : field_cursors
-    current_offset = 0
-    for field_cursor in field_cursors
-        field_ty = getCursorType(field_cursor)
-        field_offset = getOffsetOfField(field_cursor) ÷ 8
-        field_size = getSizeOf(field_ty)
-        @assert field_offset >= current_offset
-
-        field_offset != current_offset && return true
-
-        current_offset += field_size
-    end
-    return false
-end
-
-"""
     bitfield_check
 Return `true` if the node is a bitfield struct.
 """

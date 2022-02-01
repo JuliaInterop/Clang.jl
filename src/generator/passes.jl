@@ -591,12 +591,6 @@ function (x::CodegenPreprocessing)(dag::ExprDAG, options::Dict)
             show_info &&
                 @info "[CodegenPreprocessing]: mark a bitfield $(node.type) node named $(node.id)"
         end
-        if padding_check(dag, node) # TODO: add alternative codegen pass
-            ty = nested_anonymous_type(node.type)
-            dag.nodes[i] = ExprNode(node.id, ty, node.cursor, node.exprs, node.adj)
-            show_info &&
-                @info "[CodegenPreprocessing]: mark a non-trivial padding $(node.type) node named $(node.id)"
-        end
     end
 
     has_new_skip_node = true
@@ -613,6 +607,34 @@ function (x::CodegenPreprocessing)(dag::ExprDAG, options::Dict)
                 show_info &&
                     @info "[CodegenPreprocessing]: skip a $(n.type) node named $(n.id)"
                 has_new_skip_node = true
+            end
+        end
+    end
+
+    has_new_layout_type = true
+    while has_new_layout_type
+        has_new_layout_type = false
+        for (i, n) in enumerate(dag.nodes)
+            if n.type isa StructDefinition || n.type isa StructMutualRef
+                # if any dependent node is a `RecordLayouts` node, mark this node as `StructLayout`
+                for j in n.adj
+                    dn = dag.nodes[j]
+                    dn.type isa RecordLayouts || continue
+                    # ignore pointer fields
+                    field_cursors = fields(getCursorType(n.cursor))
+                    field_cursors = isempty(field_cursors) ? children(n.cursor) : field_cursors
+                    for field_cursor in field_cursors
+                        can_type = getCanonicalType(getCursorType(field_cursor))
+                        def_cursor = getTypeDeclaration(can_type)
+                        if name(def_cursor) == name(dn.cursor)
+                            ty = nested_anonymous_type(n.type)
+                            dag.nodes[i] = ExprNode(n.id, ty, n.cursor, n.exprs, n.adj)
+                            show_info &&
+                                @info "[CodegenPreprocessing]: mark a special-padding struct $(n.type) node named $(n.id)"
+                            has_new_layout_type = true
+                        end
+                    end
+                end
             end
         end
     end

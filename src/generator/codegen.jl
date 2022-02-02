@@ -234,6 +234,10 @@ function emit!(dag::ExprDAG, node::ExprNode{TypedefMutualRef}, options::Dict; ar
         signature = Expr(:call, :(Base.setproperty!), :(x::Ptr{$fake_sym}), :(f::Symbol), :v)
         body = Expr(:block, :(setproperty!(Ptr{$real_sym}(x), f, v)))
         push!(node.exprs, Expr(:function, signature, body))
+        # `Base.unsafe_convert`
+        lhs = Expr(:call, :(Base.unsafe_convert), :(::Type{Ptr{$fake_sym}}), :(x::Ref))
+        rhs = :(Base.unsafe_convert(Ptr{$fake_sym}, Base.unsafe_convert(Ptr{$real_sym}, x)))
+        push!(node.exprs, :($lhs = $rhs))
 
         # generate typedef
         typedefee = translate(jlty, options)

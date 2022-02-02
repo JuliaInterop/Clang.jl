@@ -238,6 +238,10 @@ function emit!(dag::ExprDAG, node::ExprNode{TypedefMutualRef}, options::Dict; ar
         lhs = Expr(:call, :(Base.unsafe_convert), :(::Type{Ptr{$fake_sym}}), :(x::Ref))
         rhs = :(Base.unsafe_convert(Ptr{$fake_sym}, Base.unsafe_convert(Ptr{$real_sym}, x)))
         push!(node.exprs, :($lhs = $rhs))
+        # make sure the behavior remains the same for `Ptr`
+        lhs = Expr(:call, :(Base.unsafe_convert), :(::Type{Ptr{$fake_sym}}), :(x::Ptr))
+        rhs = :(Ptr{$fake_sym}(x))
+        push!(node.exprs, :($lhs = $rhs))
 
         # generate typedef
         typedefee = translate(jlty, options)

@@ -6,14 +6,13 @@ using Downloads
 
 include("utils.jl")
 
-const JLL_ENV_SHARDS_URL = "https://raw.githubusercontent.com/JuliaPackaging/BinaryBuilderBase.jl/master/Artifacts.toml"
 const JLL_ENV_SHARDS = Dict{String,Any}()
 
 function __init__()
     if haskey(ENV, "JULIA_CLANG_SHARDS_URL") && !isempty(get(ENV, "JULIA_CLANG_SHARDS_URL", ""))
         merge!(JLL_ENV_SHARDS, Artifacts.load_artifacts_toml(ENV["JULIA_CLANG_SHARDS_URL"]))
     else
-        merge!(JLL_ENV_SHARDS, Artifacts.load_artifacts_toml(Downloads.download(JLL_ENV_SHARDS_URL)))
+        merge!(JLL_ENV_SHARDS, Artifacts.load_artifacts_toml(joinpath(@__DIR__, "..", "..", "Artifacts.toml")))
     end
 end
 

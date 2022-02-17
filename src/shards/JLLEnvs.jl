@@ -10,9 +10,6 @@ const JLL_ENV_SHARDS = Dict{String,Any}()
 
 const ARTIFACT_TOML_PATH = Ref{String}()
 
-# The platform used in Artifacts.toml
-const BINARY_BUILDER_PLATFORM = Base.BinaryPlatforms.Platform("x86_64", "linux"; libc="musl")
-
 function __init__()
     if haskey(ENV, "JULIA_CLANG_SHARDS_URL") && !isempty(get(ENV, "JULIA_CLANG_SHARDS_URL", ""))
         ARTIFACT_TOML_PATH[] = ENV["JULIA_CLANG_SHARDS_URL"]
@@ -128,7 +125,8 @@ function get_system_dirs(triple::String, version::VersionNumber=v"4.8.5")
     if haskey(ENV, "JULIA_CLANG_SHARDS_URL") && !isempty(get(ENV, "JULIA_CLANG_SHARDS_URL", ""))
         @info "Downloading artifact($(gcc_info.id))"
     end
-    Artifacts.ensure_artifact_installed(get_gcc_shard_key(triple, version), ARTIFACT_TOML_PATH[]; platform=BINARY_BUILDER_PLATFORM)
+    name = get_gcc_shard_key(triple, version)
+    Artifacts.ensure_artifact_installed(name, JLL_ENV_SHARDS[name][], ARTIFACT_TOML_PATH[])
     # Artifacts.download_artifact(Base.SHA1(sys_info.id), sys_info.url, sys_info.chk)
 
     # -isystem paths

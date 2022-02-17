@@ -178,8 +178,8 @@ resolve_dependency!(dag::ExprDAG, node::ExprNode{<:AbstractUnionNodeType}, optio
 
 # at least sort macros according to identifiers, otherwise the order is terribly wrong
 function resolve_dependency!(dag::ExprDAG, node::ExprNode{<:AbstractMacroNodeType}, options)
-    # check whether the macro is function-line by inspecting the source code
-    args = Set{Symbol}()
+    # macro name and its arguments are not dependencies
+    args = Set{Symbol}((node.id,))
     if node.type isa MacroFunctionLike
         for tok in Iterators.drop(tokenize(node.cursor), 2)
             if is_identifier(tok)
@@ -191,7 +191,7 @@ function resolve_dependency!(dag::ExprDAG, node::ExprNode{<:AbstractMacroNodeTyp
     end
     for tok in Iterators.drop(tokenize(node.cursor), 1)
         sym = Symbol(tok.text)
-        if is_identifier(tok) && haskey(dag.ids, sym) && !(tok in args)
+        if is_identifier(tok) && haskey(dag.ids, sym) && !(sym in args)
             push!(node.adj, dag.ids[sym])
         end
     end

@@ -338,13 +338,16 @@ function is_non_pointer_ref(child, parent)
     return is_non_pointer_dep
 end
 
+const MAX_CIRCIR_DETECTION_COUNT = 100000
+
 function (x::RemoveCircularReference)(dag::ExprDAG, options::Dict)
     general_options = get(options, "general", Dict())
     log_options = get(general_options, "log", Dict())
     show_info = get(log_options, "RemoveCircularReference_log", x.show_info)
 
     marks = fill(UNMARKED, size(dag.nodes))
-    while any(x -> x != PERMANENT, marks)
+    count = 0
+    while any(x -> x != PERMANENT, marks) && (count += 1) < MAX_CIRCIR_DETECTION_COUNT
         fill!(marks, UNMARKED)
         for (i, node) in enumerate(dag.nodes)
             marks[i] == UNMARKED || continue
@@ -399,6 +402,14 @@ function (x::RemoveCircularReference)(dag::ExprDAG, options::Dict)
             # FIXME: optimize this
             break
         end
+    end
+    if count == MAX_CIRCIR_DETECTION_COUNT
+        culprits = map(node for (i, node) in enumerate(dag.nodes) if marks[i] != PERMANENT) do node
+            file, line, column = get_file_line_column(node.cursor)
+            "$(node.id) at $file:$line:$column"
+        end
+        @error "10 suggested culprits: $(culprits[1:min(end, 10)])"
+        error("Could not remove circular reference after $MAX_CIRCIR_DETECTION_COUNT trials.")
     end
     return dag
 end

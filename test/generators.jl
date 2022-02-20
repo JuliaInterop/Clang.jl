@@ -126,3 +126,8 @@ end
     @test ctx.dag.nodes[end].id == :A
     @test ctx.dag.nodes[end].type isa Generators.StructLayout
 end
+
+@testset "Issue 376" begin
+    ctx = create_context(joinpath(@__DIR__, "include/macro-dependency.h"), get_default_args())
+    @test build!(ctx) isa Any
+end

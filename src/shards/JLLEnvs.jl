@@ -8,12 +8,15 @@ include("utils.jl")
 
 const JLL_ENV_SHARDS = Dict{String,Any}()
 
+const ARTIFACT_TOML_PATH = Ref{String}()
+
 function __init__()
     if haskey(ENV, "JULIA_CLANG_SHARDS_URL") && !isempty(get(ENV, "JULIA_CLANG_SHARDS_URL", ""))
-        merge!(JLL_ENV_SHARDS, Artifacts.load_artifacts_toml(ENV["JULIA_CLANG_SHARDS_URL"]))
+        ARTIFACT_TOML_PATH[] = ENV["JULIA_CLANG_SHARDS_URL"]
     else
-        merge!(JLL_ENV_SHARDS, Artifacts.load_artifacts_toml(joinpath(@__DIR__, "..", "..", "Artifacts.toml")))
+        ARTIFACT_TOML_PATH[] = normpath(joinpath(@__DIR__, "..", "..", "Artifacts.toml"))
     end
+    merge!(JLL_ENV_SHARDS, Artifacts.load_artifacts_toml(ARTIFACT_TOML_PATH[]))
 end
 
 const JLL_ENV_HOST_TRIPLE = "x86_64-linux-musl"
@@ -120,9 +123,10 @@ function get_system_dirs(triple::String, version::VersionNumber=v"4.8.5")
 
     # download shards
     if haskey(ENV, "JULIA_CLANG_SHARDS_URL") && !isempty(get(ENV, "JULIA_CLANG_SHARDS_URL", ""))
-        @info "Downloading artifact($(gcc_info.id)) from $(gcc_info.url) ..."
+        @info "Downloading artifact($(gcc_info.id))"
     end
-    Artifacts.download_artifact(Base.SHA1(gcc_info.id), gcc_info.url, gcc_info.chk)
+    name = get_gcc_shard_key(triple, version)
+    Artifacts.ensure_artifact_installed(name, JLL_ENV_SHARDS[name][], ARTIFACT_TOML_PATH[])
     # Artifacts.download_artifact(Base.SHA1(sys_info.id), sys_info.url, sys_info.chk)
 
     # -isystem paths
@@ -192,10 +196,11 @@ function get_system_dirs(triple::String, version::VersionNumber=v"4.8.5")
 end
 
 function get_pkg_artifact_dir(pkg::Module, target::String)
-    afts = first(values(Artifacts.load_artifacts_toml(Artifacts.find_artifacts_toml(Pkg.pathof(pkg)))))
+    arftspath = Artifacts.find_artifacts_toml(Pkg.pathof(pkg))
+    arfts = first(values(Artifacts.load_artifacts_toml(arftspath)))
     target_arch, target_os, target_libc = get_arch_os_libc(target)
     candidates = Dict[]
-    for info in afts
+    for info in arfts
         if info isa Dict
             arch = get(info, "arch", "")
             os = get(info, "os", "")
@@ -205,17 +210,16 @@ function get_pkg_artifact_dir(pkg::Module, target::String)
             end
         else
             # this could be an "Any"-platform JLL package
-            push!(candidates, afts)
+            push!(candidates, arfts)
             break
         end
     end
     isempty(candidates) && return ""
     length(candidates) > 1 && @warn "found more than one candidate artifacts, only use the first one: $(first(candidates))"
     info = first(candidates)
-    download_info = info["download"][]
-    id, url, chk = info["git-tree-sha1"], download_info["url"], download_info["sha256"]
-    Artifacts.download_artifact(Base.SHA1(id), url, chk)
-    return normpath(Artifacts.artifact_path(Base.SHA1(id)))
+    name = info["git-tree-sha1"]  # this is not a real name but a hash
+    Artifacts.ensure_artifact_installed(name, info, arftspath)
+    return normpath(Artifacts.artifact_path(Base.SHA1(hash)))
 end
 
 function get_pkg_include_dir(pkg::Module, target::String)

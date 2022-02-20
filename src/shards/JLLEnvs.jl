@@ -196,10 +196,11 @@ function get_system_dirs(triple::String, version::VersionNumber=v"4.8.5")
 end
 
 function get_pkg_artifact_dir(pkg::Module, target::String)
-    afts = first(values(Artifacts.load_artifacts_toml(Artifacts.find_artifacts_toml(Pkg.pathof(pkg)))))
+    arftspath = Artifacts.find_artifacts_toml(Pkg.pathof(pkg))
+    arfts = first(values(Artifacts.load_artifacts_toml(arftspath)))
     target_arch, target_os, target_libc = get_arch_os_libc(target)
     candidates = Dict[]
-    for info in afts
+    for info in arfts
         if info isa Dict
             arch = get(info, "arch", "")
             os = get(info, "os", "")
@@ -209,17 +210,16 @@ function get_pkg_artifact_dir(pkg::Module, target::String)
             end
         else
             # this could be an "Any"-platform JLL package
-            push!(candidates, afts)
+            push!(candidates, arfts)
             break
         end
     end
     isempty(candidates) && return ""
     length(candidates) > 1 && @warn "found more than one candidate artifacts, only use the first one: $(first(candidates))"
     info = first(candidates)
-    download_info = info["download"][]
-    id, url, chk = info["git-tree-sha1"], download_info["url"], download_info["sha256"]
-    Artifacts.download_artifact(Base.SHA1(id), url, chk)
-    return normpath(Artifacts.artifact_path(Base.SHA1(id)))
+    name = info["git-tree-sha1"]  # this is not a real name but a hash
+    Artifacts.ensure_artifact_installed(name, info, arftspath)
+    return normpath(Artifacts.artifact_path(Base.SHA1(hash)))
 end
 
 function get_pkg_include_dir(pkg::Module, target::String)

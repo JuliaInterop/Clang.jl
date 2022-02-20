@@ -169,6 +169,10 @@ field_access_method_list = []
 # prevent the generated symbols from conflicting with the symbols defined and exported in Base.
 function_argument_conflict_symbols = []
 
+# emit constructors for all custom-layout structs like bitfield in the list,
+# or set to `true` to do so for all such structs
+add_record_constructors = []
+
 [codegen.macro]
 # it‘s highly recommended to set this entry to "basic".
 # if you'd like to skip all of the macros, please set this entry to "disable".

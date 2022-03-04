@@ -50,7 +50,7 @@ clang_dir = joinpath(include_dir, "clang-c")
 options = load_options(joinpath(@__DIR__, "generator.toml"))
 
 # add compiler flags, e.g. "-DXXXXXXXXX"
-args = get_default_args()
+args = get_default_args()  # Note you must call this function firstly and then append your own flags
 push!(args, "-I$include_dir")
 
 headers = [joinpath(clang_dir, header) for header in readdir(clang_dir) if endswith(header, ".h")]

@@ -131,7 +131,7 @@ function collect_dependent_system_nodes!(dag::ExprDAG, type::CLType, system_node
         if (hasref && haskey(dag.tags, leaf_ty.sym)) ||
             (!hasref && haskey(dag.ids, leaf_ty.sym)) ||
             haskey(dag.ids_extra, leaf_ty.sym) ||
-            occursin("anonymous", spelling(ty))
+            occursin("unnamed", spelling(ty))
             # nested tags may also be from system headers
             collect_dependent_system_nodes!(dag, ty, system_nodes)
         else

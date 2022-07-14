@@ -14,7 +14,7 @@ library_names = {}
 # output file path relative to the working directory
 output_file_path = "../lib/LibClang.jl"
 
-# if these are set, common file (types and constants) and API file (functions) will be seperated
+# if these are set, common file (types and constants) and API file (functions) will be separated
 # this is for compatibility, so prologue and epilogue are not supported.
 # output_api_file_path = "api.jl"
 # output_common_file_path = "common.jl"
@@ -75,7 +75,7 @@ print_enum_as_integer = false
 use_deterministic_symbol = true
 
 # by default, only those declarations in the local header file are processed.
-# those declarations in the system headers will be treated sepcially and will be generated if necessary.
+# those declarations in the system headers will be treated specially and will be generated if necessary.
 # if you'd like to generate all of the symbols in the system headers, please set this option to false.
 is_local_header_only = true
 

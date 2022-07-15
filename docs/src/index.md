@@ -23,7 +23,7 @@ The package includes a generator to create Julia wrappers for C libraries from a
 - macro: limited support
 - bitfield: experimental support
 
-Here is a minimalistic example that wrappes example.h and prints the wrapper to screen.
+The following example wraps `include/clang-c/*.h` from `Clang_jll` and prints the wrapper to `LibClang.jl`.
 
 First write a configuration script `generator.toml`.
 ```toml
@@ -72,5 +72,5 @@ build!(ctx)
 ## LibClang
 LibClang is a thin wrapper over libclang. It's one-to-one mapped to the libclang APIs.
 By `using Clang.LibClang`, all of the `CX`/`clang_`-prefixed libclang APIs are imported into the
-current namespace, with which you could build up your own tools from the scratch. If you are
+current namespace, with which you could build up your own tools from scratch. If you are
 unfamiliar with the Clang AST, a good starting point is the [Introduction to the Clang AST](http://clang.llvm.org/docs/IntroductionToTheClangAST.html).

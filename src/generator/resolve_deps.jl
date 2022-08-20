@@ -152,7 +152,7 @@ function resolve_dependency!(dag::ExprDAG, node::ExprNode{<:AbstractStructNodeTy
         elseif !hasref && haskey(dag.tags, leaf_ty.sym)
             # FIXME: in some cases, this system-header symbol is in dag.tags
             push!(node.adj, dag.tags[leaf_ty.sym])
-        elseif occursin("unnamed", spelling(ty))
+        elseif occursin(__ANONYMOUS_MARKER, spelling(ty))
             nested_tags = get(options, "nested_tags", Dict())
             tag = get_nested_tag(nested_tags, leaf_ty)
             if !isnothing(tag)

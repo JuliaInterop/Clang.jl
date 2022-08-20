@@ -8,7 +8,7 @@ function collect_nested_record!(dag::ExprDAG, node::ExprNode, new_tags, isdeterm
         field_jlty = tojulia(field_ty)
         leaf_jlty = get_jl_leaf_type(field_jlty)
         leaf_jlty isa JuliaCrecord || continue  # nested enums are not legal in C
-        # isempty(string(jlty.sym)) && @assert occursin("unnamed", spelling(named_ty))
+        # isempty(string(jlty.sym)) && @assert occursin(__ANONYMOUS_MARKER, spelling(named_ty))
         n_cursor = get_elaborated_cursor(field_ty)
         if isempty(string(leaf_jlty.sym))
             @assert isCursorDefinition(n_cursor)

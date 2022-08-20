@@ -65,12 +65,11 @@ for (llvm_version, julia_version) in (#=(v"12.0.1", v"1.7"),=#
             options["general"]["output_file_path"] = output_file_path
 
             include_dir = joinpath(destdir(prefix, platform), "include")
-            @show include_dir
-            libclang_include_dir = joinpath(include_dir, "clang-c")
+            libclang_header_dir = joinpath(include_dir, "clang-c")
             args = Generators.get_default_args()
-            push!(args, "-I$libclang_include_dir")
+            push!(args, "-I$include_dir")
 
-            headers = detect_headers(libclang_include_dir, args)
+            headers = detect_headers(libclang_header_dir, args)
             ctx = create_context(headers, args, options)
 
             # build without printing so we can do custom rewriting

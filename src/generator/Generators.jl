@@ -36,6 +36,8 @@ using ..Clang:
 using ..JLLEnvs
 using ..JLLEnvs: get_system_dirs, triple2target
 
+const __ANONYMOUS_MARKER = Base.libllvm_version < v"13" ? "anonymous" : "unnamed";
+
 include("utils.jl")
 
 include("jltypes.jl")

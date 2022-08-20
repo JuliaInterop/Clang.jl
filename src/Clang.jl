@@ -3,7 +3,16 @@ module Clang
 include("shards/JLLEnvs.jl")
 using .JLLEnvs
 
-include("../lib/LibClang.jl")
+llvm_version = if Base.libllvm_version < v"13"
+    "12"
+elseif Base.libllvm_version.major == 13
+    "13"
+else
+    "14"
+end
+libdir = joinpath(@__DIR__, "..", "lib")
+
+include(joinpath(libdir, llvm_version, "LibClang.jl"))
 using .LibClang
 
 include("cltypes.jl")

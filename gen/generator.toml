@@ -12,7 +12,7 @@ library_name = "libclang"
 library_names = {}
 
 # output file path relative to the working directory
-output_file_path = "../lib/LibClang.jl"
+output_file_path = "LibClang.jl"
 
 # if these are set, common file (types and constants) and API file (functions) will be seperated
 # this is for compatibility, so prologue and epilogue are not supported.

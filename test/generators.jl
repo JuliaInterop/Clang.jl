@@ -131,3 +131,8 @@ end
     ctx = create_context(joinpath(@__DIR__, "include/macro-dependency.h"), get_default_args())
     @test build!(ctx) isa Any
 end
+
+@testset "Issue 233" begin
+    ctx = create_context(joinpath(@__DIR__, "include/unnamed.h"), get_default_args())
+    @test build!(ctx) isa Any
+end

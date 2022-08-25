@@ -36,8 +36,8 @@ using ..Clang:
 using ..JLLEnvs
 using ..JLLEnvs: get_system_dirs, triple2target
 
-const __ANONYMOUS_MARKER = "anonymous at";
-const __UNNAMED_MARKER = "unnamed at";
+const __ANONYMOUS_MARKER = "(anonymous";
+const __UNNAMED_MARKER = "(unnamed";
 
 include("utils.jl")
 

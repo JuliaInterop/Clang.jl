@@ -133,6 +133,6 @@ end
 end
 
 @testset "Issue 233" begin
-    ctx = create_context(joinpath(@__DIR__, "include/test_unnamed.h"), get_default_args())
+    ctx = create_context(joinpath(@__DIR__, "include/test_u.h"), get_default_args())
     @test build!(ctx) isa Any
 end

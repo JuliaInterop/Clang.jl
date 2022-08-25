@@ -144,7 +144,9 @@ nested_anonymous_check(dag::ExprDAG, node::ExprNode) = false
 function nested_anonymous_check(dag::ExprDAG, node::ExprNode{<:Union{StructDefinition,StructMutualRef,UnionDefinition}})
     for c in fields(getCursorType(node.cursor))
         ty = getCursorType(c)
-        occursin(__ANONYMOUS_MARKER, spelling(ty)) && return true
+        if occursin(__ANONYMOUS_MARKER, spelling(ty)) || occursin(__UNNAMED_MARKER, spelling(ty))
+            return true
+        end
     end
     return false
 end

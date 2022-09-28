@@ -850,8 +850,11 @@ function (x::Audit)(dag::ExprDAG, options::Dict)
     return dag
 end
 
-function should_exclude_node(node, ignorelist, exclusivelist)
+function should_exclude_node(node, ignoreregex, ignorelist, exclusivelist)
     str_node = string(node.id)
+    for re in ignoreregex
+        match(re, str_node) === nothing || return true
+    end
     str_node ∈ ignorelist && return true
     if exclusivelist !== nothing && !(str_node in exclusivelist)
         return true
@@ -880,12 +883,13 @@ function (x::FunctionPrinter)(dag::ExprDAG, options::Dict)
     log_options = get(general_options, "log", Dict())
     show_info = get(log_options, "FunctionPrinter_log", x.show_info)
     ignorelist = get(general_options, "output_ignorelist", get(general_options, "printer_blacklist", []))
+    ignoreregex = Regex.(get(general_options, "output_ignoreregex", []))
     exclusivelist = get(general_options, "output_exclusivelist", nothing)
 
     show_info && @info "[FunctionPrinter]: print to $(x.file)"
     open(x.file, "w") do io
         for node in dag.nodes
-            should_exclude_node(node, ignorelist, exclusivelist) && continue
+            should_exclude_node(node, ignoreregex, ignorelist, exclusivelist) && continue
             node.type isa AbstractFunctionNodeType || continue
             pretty_print(io, node, general_options)
         end
@@ -908,18 +912,19 @@ function (x::CommonPrinter)(dag::ExprDAG, options::Dict)
     log_options = get(general_options, "log", Dict())
     show_info = get(log_options, "CommonPrinter_log", x.show_info)
     ignorelist = get(general_options, "output_ignorelist", get(general_options, "printer_blacklist", []))
+    ignoreregex = Regex.(get(general_options, "output_ignoreregex", []))
     exclusivelist = get(general_options, "output_exclusivelist", nothing)
 
     show_info && @info "[CommonPrinter]: print to $(x.file)"
     open(x.file, "w") do io
         for node in dag.nodes
-            should_exclude_node(node, ignorelist, exclusivelist) && continue
+            should_exclude_node(node, ignoreregex, ignorelist, exclusivelist) && continue
             (node.type isa AbstractMacroNodeType || node.type isa AbstractFunctionNodeType) && continue
             pretty_print(io, node, general_options)
         end
         # print macros in the bottom of the file
         for node in dag.nodes
-            should_exclude_node(node, ignorelist, exclusivelist) && continue
+            should_exclude_node(node, ignoreregex, ignorelist, exclusivelist) && continue
             node.type isa AbstractMacroNodeType || continue
             pretty_print(io, node, options)
         end
@@ -942,19 +947,20 @@ function (x::GeneralPrinter)(dag::ExprDAG, options::Dict)
     log_options = get(general_options, "log", Dict())
     show_info = get(log_options, "GeneralPrinter_log", x.show_info)
     ignorelist = get(general_options, "output_ignorelist", get(general_options, "printer_blacklist", []))
+    ignoreregex = Regex.(get(general_options, "output_ignoreregex", []))
     general_options["DAG_ids"] = merge(dag.ids, dag.tags)
     exclusivelist = get(general_options, "output_exclusivelist", nothing)
 
     show_info && @info "[GeneralPrinter]: print to $(x.file)"
     open(x.file, "a") do io
         for node in dag.nodes
-            should_exclude_node(node, ignorelist, exclusivelist) && continue
+            should_exclude_node(node, ignoreregex, ignorelist, exclusivelist) && continue
             node.type isa AbstractMacroNodeType && continue
             pretty_print(io, node, general_options)
         end
         # print macros in the bottom of the file
         for node in dag.nodes
-            should_exclude_node(node, ignorelist, exclusivelist) && continue
+            should_exclude_node(node, ignoreregex, ignorelist, exclusivelist) && continue
             node.type isa AbstractMacroNodeType || continue
             isempty(node.exprs)
             pretty_print(io, node, options)
@@ -979,16 +985,17 @@ function (x::StdPrinter)(dag::ExprDAG, options::Dict)
     log_options = get(general_options, "log", Dict())
     show_info = get(log_options, "StdPrinter_log", x.show_info)
     ignorelist = get(general_options, "output_ignorelist", get(general_options, "printer_blacklist", []))
+    ignoreregex = Regex.(get(general_options, "output_ignoreregex", []))
     exclusivelist = get(general_options, "output_exclusivelist", nothing)
 
     for node in dag.nodes
-        should_exclude_node(node, ignorelist, exclusivelist) && continue
+        should_exclude_node(node, ignoreregex, ignorelist, exclusivelist) && continue
         node.type isa AbstractMacroNodeType && continue
         pretty_print(stdout, node, general_options)
     end
     # print macros
     for node in dag.nodes
-        should_exclude_node(node, ignorelist, exclusivelist) && continue
+        should_exclude_node(node, ignoreregex, ignorelist, exclusivelist) && continue
         node.type isa AbstractMacroNodeType || continue
         pretty_print(stdout, node, options)
     end

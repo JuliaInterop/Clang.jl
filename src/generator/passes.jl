@@ -852,8 +852,8 @@ end
 
 function should_exclude_node(node, ignorelist, exclusivelist)
     str_node = string(node.id)
-    for re ∈ ignorelist
-        match(re, str_node) === nothing || return true
+    for item ∈ ignorelist
+        match(Regex(item), str_node) === nothing || return true
     end
     if exclusivelist !== nothing && str_node ∉ exclusivelist
         return true
@@ -881,7 +881,7 @@ function (x::FunctionPrinter)(dag::ExprDAG, options::Dict)
     general_options = get(options, "general", Dict())
     log_options = get(general_options, "log", Dict())
     show_info = get(log_options, "FunctionPrinter_log", x.show_info)
-    ignorelist = Regex.(get(general_options, "output_ignorelist", get(general_options, "printer_blacklist", [])))
+    ignorelist = get(general_options, "output_ignorelist", get(general_options, "printer_blacklist", []))
     exclusivelist = get(general_options, "output_exclusivelist", nothing)
 
     show_info && @info "[FunctionPrinter]: print to $(x.file)"
@@ -909,7 +909,7 @@ function (x::CommonPrinter)(dag::ExprDAG, options::Dict)
     general_options = get(options, "general", Dict())
     log_options = get(general_options, "log", Dict())
     show_info = get(log_options, "CommonPrinter_log", x.show_info)
-    ignorelist = Regex.(get(general_options, "output_ignorelist", get(general_options, "printer_blacklist", [])))
+    ignorelist = get(general_options, "output_ignorelist", get(general_options, "printer_blacklist", []))
     exclusivelist = get(general_options, "output_exclusivelist", nothing)
 
     show_info && @info "[CommonPrinter]: print to $(x.file)"
@@ -943,7 +943,7 @@ function (x::GeneralPrinter)(dag::ExprDAG, options::Dict)
     general_options = get(options, "general", Dict())
     log_options = get(general_options, "log", Dict())
     show_info = get(log_options, "GeneralPrinter_log", x.show_info)
-    ignorelist = Regex.(get(general_options, "output_ignorelist", get(general_options, "printer_blacklist", [])))
+    ignorelist = get(general_options, "output_ignorelist", get(general_options, "printer_blacklist", []))
     general_options["DAG_ids"] = merge(dag.ids, dag.tags)
     exclusivelist = get(general_options, "output_exclusivelist", nothing)
 
@@ -980,7 +980,7 @@ function (x::StdPrinter)(dag::ExprDAG, options::Dict)
     general_options = get(options, "general", Dict())
     log_options = get(general_options, "log", Dict())
     show_info = get(log_options, "StdPrinter_log", x.show_info)
-    ignorelist = Regex.(get(general_options, "output_ignorelist", get(general_options, "printer_blacklist", [])))
+    ignorelist = get(general_options, "output_ignorelist", get(general_options, "printer_blacklist", []))
     exclusivelist = get(general_options, "output_exclusivelist", nothing)
 
     for node in dag.nodes

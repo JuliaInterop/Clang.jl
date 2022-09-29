@@ -852,8 +852,10 @@ end
 
 function should_exclude_node(node, ignorelist, exclusivelist)
     str_node = string(node.id)
-    str_node ∈ ignorelist && return true
-    if exclusivelist !== nothing && !(str_node in exclusivelist)
+    for item ∈ ignorelist
+        match(Regex(item), str_node) === nothing || return true
+    end
+    if exclusivelist !== nothing && str_node ∉ exclusivelist
         return true
     end
     return false

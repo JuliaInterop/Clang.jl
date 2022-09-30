@@ -1,11 +1,6 @@
-
-function print_documentation(io::IO, node::ExprNode, indent, options, members::Bool=false; kwargs...)
-    print_documentation(io, node.cursor, indent, options, members; kwargs...)
-end
-
 const ESCAPE_PATTERN = r"""(\$|\\|"(?=""))"""
 
-function print_documentation(io::IO, cursor::CLCursor, indent, options, members::Bool=false; 
+function print_documentation(io::IO, node::ExprNode, indent, options, members::Bool=false; 
         prologue::Vector{String}=String[], epilogue::Vector{String}=String[])
 
     fold_single_line_comment = get(options, "fold_single_line_comment", false)
@@ -14,15 +9,19 @@ function print_documentation(io::IO, cursor::CLCursor, indent, options, members:
     ids = get(options, "DAG_ids", Dict())
 
     if extract_c_comment_style == "doxygen"
-        doc = format_doxygen(cursor, options, members)
+        doc = format_doxygen(node.cursor, options, members)
     elseif extract_c_comment_style == "raw"
-        doc = format_raw(cursor, members)
+        doc = format_raw(node.cursor, members)
     else
-        return
+        if (callback_documentation = get(options, "callback_documentation", nothing)) ≢ nothing
+            doc = callback_documentation(node)
+        else
+            return
+        end
     end
     
-    if show_c_function_prototype && cursor isa Clang.CLFunctionDecl
-        prototype = ["### Prototype", "```c", get_prototype(cursor), "```"]
+    if show_c_function_prototype && node.cursor isa Clang.CLFunctionDecl
+        prototype = ["### Prototype", "```c", get_prototype(node), "```"]
     else
         prototype = String[]
     end

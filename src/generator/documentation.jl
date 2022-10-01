@@ -21,7 +21,7 @@ function print_documentation(io::IO, node::ExprNode, indent, options, members::B
     end
     
     prototype = if show_c_function_prototype && node.cursor isa Clang.CLFunctionDecl
-        ["### Prototype", "```c", get_prototype(node.cursor), "```"]
+        ["### Prototype", "```c", get_prototype(node), "```"]
     else
         String[]
     end
@@ -44,8 +44,10 @@ function print_documentation(io::IO, node::ExprNode, indent, options, members::B
     end
 end
 
-function get_prototype(node)
-    code = Clang.getSourceCode(node.cursor)
+get_prototype(node::ExprNode) = get_prototype(node.cursor)
+
+function get_prototype(cursor::CLCursor)
+    code = Clang.getSourceCode(cursor)
     code = replace(code, r"/\*.*?\*/|//.*?$"m=>"")
     code = replace(code, r"\s+"m=>" ")
     "$code;"

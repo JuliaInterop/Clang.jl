@@ -20,10 +20,10 @@ function print_documentation(io::IO, node::ExprNode, indent, options, members::B
         end
     end
     
-    if show_c_function_prototype && node.cursor isa Clang.CLFunctionDecl
-        prototype = ["### Prototype", "```c", get_prototype(node), "```"]
+    prototype = if show_c_function_prototype && node.cursor isa Clang.CLFunctionDecl
+        ["### Prototype", "```c", get_prototype(node.cursor), "```"]
     else
-        prototype = String[]
+        String[]
     end
     
     # Do not print """ if no doc

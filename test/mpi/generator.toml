@@ -1,0 +1,5 @@
+[general]
+library_name = "libmpi"
+output_common_file_path = "./common.jl"
+output_api_file_path = "./api.jl"
+output_ignorelist = ["^PMPI_"]

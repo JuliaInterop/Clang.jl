@@ -2,6 +2,7 @@ using Clang.Generators
 
 @testset "MPI.jl" begin
     @info "Testing generator for JuliaParallel/MPI.jl"
+    mkpath("build_mpi")
     args = get_default_args()
     headers = joinpath(@__DIR__, "mpi", "mpi.h")
     options = load_options(joinpath(@__DIR__, "mpi", "generator.toml"))
@@ -10,7 +11,7 @@ using Clang.Generators
     build!(ctx)
 
     @info "Testing correctness of the generated files"
-    content = read("build/mpi_api.jl", String)
+    content = read("build_mpi/api.jl", String)
 
     # excluded by pattern in `output_ignorelist` of `generator.toml`
     @test !occursin("PMPI_Barrier", content)

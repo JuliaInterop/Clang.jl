@@ -7,5 +7,6 @@
 
 Manifest.toml
 /test/Lib*.jl
+/test/build_mpi
 /test/build
 /test/products

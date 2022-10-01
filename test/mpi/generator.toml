@@ -1,5 +1,5 @@
 [general]
 library_name = "libmpi"
-output_common_file_path = "./build/mpi_common.jl"
-output_api_file_path = "./build/mpi_api.jl"
+output_common_file_path = "./build_mpi/common.jl"
+output_api_file_path = "./build_mpi/api.jl"
 output_ignorelist = ["^PMPI_"]

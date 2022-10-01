@@ -10,7 +10,7 @@ using Clang.Generators
     build!(ctx)
 
     @info "Testing correctness of the generated files"
-    content = read("api.jl", String)
+    content = read("build/mpi_api.jl", String)
 
     # excluded by pattern in `output_ignorelist` of `generator.toml`
     @test !occursin("PMPI_Barrier", content)

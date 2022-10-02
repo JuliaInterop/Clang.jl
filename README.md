@@ -82,20 +82,16 @@ The binding generator is currently used by many projects in the Julia package ec
 - [SciML/Sundials.jl](https://github.com/SciML/Sundials.jl): generate bindings for Sundials with highly customized rewriter
 - [JuliaGPU/CUDA.jl](https://github.com/JuliaGPU/CUDA.jl): generate bindings for CUDA(old generator example)
 
-Other users:
-- [CEED/libCEED](https://github.com/CEED/libCEED)
-- [scipopt/SCIP.jl](https://github.com/scipopt/SCIP.jl)
-- [twadleigh/OpenEXR.jl](https://github.com/twadleigh/OpenEXR.jl)
-- [JuliaParallel/MPI.jl](https://github.com/JuliaParallel/MPI.jl)
-- [JuliaGPU/Metal.jl](https://github.com/JuliaGPU/Metal.jl)
-- [JuliaIO/VideoIO.jl](https://github.com/JuliaIO/VideoIO.jl)
-- [JuliaGPU/AMDGPU.jl](https://github.com/JuliaGPU/AMDGPU.jl)
-- [JuliaGeo/Proj.jl](https://github.com/JuliaGeo/Proj.jl)
-- [JuliaParallel/UCX.jl](https://github.com/JuliaParallel/UCX.jl)
-- [JuliaIO/PNGFiles.jl](https://github.com/JuliaIO/PNGFiles.jl)
-- [JuliaSparse/KLU.jl](https://github.com/JuliaSparse/KLU.jl)
-- [JuliaGraphics/FreeType.jl](https://github.com/JuliaGraphics/FreeType.jl)
-- [jump-dev/Clp.jl](https://github.com/jump-dev/Clp.jl)
-- [jump-dev/HiGHS.jl](https://github.com/jump-dev/HiGHS.jl)
+Other Users:
+- [CEED/libCEED](https://github.com/CEED/libCEED): libCEED's Julia binding
+- [scipopt/SCIP.jl](https://github.com/scipopt/SCIP.jl): Julia interface to the SCIP solver
+- [JuliaParallel/MPI.jl](https://github.com/JuliaParallel/MPI.jl): MPI interface for the Julia language
+- [JuliaGPU/Metal.jl](https://github.com/JuliaGPU/Metal.jl): Metal programming in Julia
+- [JuliaIO/VideoIO.jl](https://github.com/JuliaIO/VideoIO.jl): Reading and writing of video files in Julia
+- [JuliaGPU/AMDGPU.jl](https://github.com/JuliaGPU/AMDGPU.jl): AMD GPU (ROCm) programming in Julia
+- [JuliaGeo/Proj.jl](https://github.com/JuliaGeo/Proj.jl): Julia wrapper around the PROJ cartographic projections library
+- [JuliaIO/PNGFiles.jl](https://github.com/JuliaIO/PNGFiles.jl): Julia wrapper around libpng
+- [JuliaSparse/KLU.jl](https://github.com/JuliaSparse/KLU.jl): Julia wrapper around the SuiteSparse solver KLU
+- [JuliaGraphics/FreeType.jl](https://github.com/JuliaGraphics/FreeType.jl): FreeType bindings for Julia
 
 

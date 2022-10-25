@@ -50,6 +50,8 @@ function collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLTypedefDecl
 end
 
 function collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLMacroDefinition, options)
+    is_macro_insane(cursor) && return nodes
+
     if isMacroBuiltin(cursor)
         ty = MacroBuiltIn()
     elseif isMacroFunctionLike(cursor)

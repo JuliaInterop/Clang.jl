@@ -216,6 +216,11 @@ is_macro_definition_only(toks::Vector) = length(toks) == 1 && is_identifier(toks
 is_macro_definition_only(toks::TokenList) = toks.size == 1 && is_identifier(toks[1])
 is_macro_definition_only(cursor::CLCursor) = is_macro_definition_only(tokenize(cursor))
 
+# `#define X X`
+is_macro_insane(toks::Vector) = length(toks) == 2 && is_identifier(toks[1]) && is_identifier(toks[2]) && toks[1].text == toks[2].text
+is_macro_insane(toks::TokenList) = toks.size == 2 && is_identifier(toks[1]) && is_identifier(toks[2]) && toks[1].text == toks[2].text
+is_macro_insane(cursor::CLCursor) = is_macro_insane(tokenize(cursor))
+
 # identifier and keyword ignore list
 const MACRO_IDK_IGNORELIST = [
     C_KEYWORDS_UNSUPPORTED...,

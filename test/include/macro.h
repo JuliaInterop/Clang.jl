@@ -16,3 +16,7 @@
 
 #define GINTBIG_MAX     ( (CPL_STATIC_CAST(GIntBig, 0x7FFFFFFF) << 32) | 0xFFFFFFFFU )
 #define GUINTBIG_MAX    ( (CPL_STATIC_CAST(GUIntBig, 0xFFFFFFFFU) << 32) | 0xFFFFFFFFU )
+
+// #389
+#define foo foo
+int foo(void);

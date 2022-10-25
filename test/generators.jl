@@ -136,3 +136,9 @@ end
     ctx = create_context(joinpath(@__DIR__, "include/union-in-anon-struct.h"), get_default_args())
     @test build!(ctx) isa Any
 end
+
+@testset "Issue 389" begin
+    ctx = create_context(joinpath(@__DIR__, "include/macro.h"), get_default_args())
+    build!(ctx)
+    @test ctx.dag.nodes[ctx.dag.ids[:foo]].type isa AbstractFunctionNodeType
+end

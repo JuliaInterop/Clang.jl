@@ -212,9 +212,12 @@ function tweak_exprs(dag::ExprDAG, toks::Vector)
 end
 
 # `#define SOMETHING`
-is_macro_definition_only(toks::Vector) = length(toks) == 1 && is_identifier(toks[1])
-is_macro_definition_only(toks::TokenList) = toks.size == 1 && is_identifier(toks[1])
+is_macro_definition_only(toks::Union{Vector,TokenList}) = length(toks) == 1 && is_identifier(toks[1])
 is_macro_definition_only(cursor::CLCursor) = is_macro_definition_only(tokenize(cursor))
+
+# `#define X X`
+is_macro_no_op(toks::Union{Vector,TokenList}) = length(toks) == 2 && is_identifier(toks[1]) && is_identifier(toks[2]) && toks[1].text == toks[2].text
+is_macro_no_op(cursor::CLCursor) = is_macro_no_op(tokenize(cursor))
 
 # identifier and keyword ignore list
 const MACRO_IDK_IGNORELIST = [

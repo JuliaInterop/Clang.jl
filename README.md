@@ -80,10 +80,10 @@ The binding generator is currently used by many projects in the Julia package ec
 - [JuliaGeo/LibGEOS.jl](https://github.com/JuliaGeo/LibGEOS.jl): generate bindings for LibGEOS with customized rewriter
 - [JuliaMultimedia/CSFML.jl](https://github.com/JuliaMultimedia/CSFML.jl): generate bindings for CSFML with multiple library names
 - [SciML/Sundials.jl](https://github.com/SciML/Sundials.jl): generate bindings for Sundials with highly customized rewriter
-- [JuliaGPU/CUDA.jl](https://github.com/JuliaGPU/CUDA.jl): generate bindings for CUDA(old generator example)
 
 Other Users:
 - [CEED/libCEED](https://github.com/CEED/libCEED): libCEED's Julia binding
+- [JuliaGPU/CUDA.jl](https://github.com/JuliaGPU/CUDA.jl): CUDA programming in Julia
 - [scipopt/SCIP.jl](https://github.com/scipopt/SCIP.jl): Julia interface to the SCIP solver
 - [JuliaParallel/MPI.jl](https://github.com/JuliaParallel/MPI.jl): MPI interface for the Julia language
 - [JuliaGPU/Metal.jl](https://github.com/JuliaGPU/Metal.jl): Metal programming in Julia

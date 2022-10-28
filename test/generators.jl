@@ -142,3 +142,10 @@ end
     build!(ctx)
     @test ctx.dag.nodes[ctx.dag.ids[:foo]].type isa AbstractFunctionNodeType
 end
+
+@testset "Issue 392" begin
+    ctx = create_context([joinpath(@__DIR__, "include/a.h"),
+                          joinpath(@__DIR__, "include/dup_a.h")], get_default_args())
+    build!(ctx)
+    @test_logs (:info, "Done!") match_mode = :any build!(ctx)
+end

@@ -12,10 +12,14 @@ function is_same(cursor1, cursor2)
         # if not, compare code locations
         file1, line1, col1 = get_file_line_column(cursor1)
         file2, line2, col2 = get_file_line_column(cursor2)
-        return normpath(file1) == normpath(file2) && line1 == line2 && col1 == col2
+        is_same_loc = normpath(file1) == normpath(file2) && line1 == line2 && col1 == col2
+        is_same_loc && return true
+        # in other cases, the code might be just compatible with each other, where we
+        # need to compare the tokens.
+        toks1 = collect(x.text for x in tokenize(cursor1))
+        toks2 = collect(x.text for x in tokenize(cursor2))
+        return toks1 == toks2
     end
-    # FIXME: in other cases, the code might be just compatible with each other, where we
-    # need to compare the tokens.
 end
 
 # global counter for generating deterministic symbols

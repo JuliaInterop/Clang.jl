@@ -18,6 +18,9 @@ function resolve_dependency!(dag::ExprDAG, node::ExprNode{FunctionProto}, option
         # there is no dependency that needs to be recorded for those julia basic types
         is_jl_basic(leaf_ty) && continue
 
+        # do nothing for unknowns since we just skip them in the downstream passes
+        is_jl_unknown(leaf_ty) && return dag
+
         hasref = has_elaborated_reference(ty)
         if hasref && haskey(dag.tags, leaf_ty.sym)
             push!(node.adj, dag.tags[leaf_ty.sym])

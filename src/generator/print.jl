@@ -75,7 +75,7 @@ function pretty_print(io, node::ExprNode{TypedefFunction}, options::Dict)
     toks = tokenize(node.cursor)
     c_str = reduce((lhs, rhs) -> lhs * " " * rhs, [tok.text for tok in toks])
     println(io, "# " * replace(c_str, "\n" => "\n#"))
-    
+
     # print documentation
     print_documentation(io, node, "", options)
 
@@ -111,7 +111,7 @@ function pretty_print(io, node::ExprNode{<:AbstractStructNodeType}, options::Dic
     struct_def = node.exprs[1]
     mutable, name, members = struct_def.args
     name = Base.sym_to_string(name)
-    
+
     # `chldren(node.cursor)` may also return forward declaration of struct type for example, so we filter these out.
     child_nodes = filter(x->x isa CLFieldDecl, children(node.cursor))
     fields = filter(x->Meta.isexpr(x, :(::)), members.args)
@@ -121,7 +121,7 @@ function pretty_print(io, node::ExprNode{<:AbstractStructNodeType}, options::Dic
     mutable && print(io, "mutable ")
     println(io, "struct ", name)
     for (expr, child) in zip(members.args, child_nodes)
-        inline && print_documentation(io, child, "    ", options)
+        inline && print_documentation(io, ExprNode(:dummy, Skip(), child, Expr[], Int[]), "    ", options)
         println(io, "    ", string(expr))
     end
     for expr in others
@@ -158,7 +158,7 @@ function pretty_print(io, node::ExprNode{StructMutualRef}, options::Dict)
 
     # A StructDecl is inserted before the FieldDecl with forward decl
     for (ex, child) in zip(block.args, child_nodes)
-        inline && print_documentation(io, child, "    ", options)
+        inline && print_documentation(io, ExprNode(:dummy, Skip(), child, Expr[], Int[]), "    ", options)
         if Meta.isexpr(ex, :block)
             println(io, "    ", string(ex.args[2]), " # ", string(ex.args[1]))
         else
@@ -243,7 +243,7 @@ function pretty_print(io, node::ExprNode{<:OpaqueTags}, options::Dict)
     @assert length(node.exprs) == 1
     print_documentation(io, node, "", options)
     expr = node.exprs[1]
-    
+
     codegen_ops = get(options, "codegen", Dict())
     opaque_as_mutable = get(codegen_ops, "opaque_as_mutable_struct", true)
 

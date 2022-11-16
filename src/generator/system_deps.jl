@@ -18,6 +18,9 @@ function collect_dependent_system_nodes!(dag::ExprDAG, node::ExprNode{FunctionPr
         # skip julia basic types
         is_jl_basic(leaf_ty) && continue
 
+        # do nothing for unknowns since we just skip them in the downstream passes
+        is_jl_unknown(leaf_ty) && return system_nodes
+
         hasref = has_elaborated_reference(ty)
         if (hasref && haskey(dag.tags, leaf_ty.sym)) ||
             (!hasref && haskey(dag.ids, leaf_ty.sym)) ||
@@ -131,7 +134,7 @@ function collect_dependent_system_nodes!(dag::ExprDAG, type::CLType, system_node
         if (hasref && haskey(dag.tags, leaf_ty.sym)) ||
             (!hasref && haskey(dag.ids, leaf_ty.sym)) ||
             haskey(dag.ids_extra, leaf_ty.sym) ||
-            occursin(__ANONYMOUS_MARKER, spelling(ty)) || 
+            occursin(__ANONYMOUS_MARKER, spelling(ty)) ||
             occursin(__UNNAMED_MARKER, spelling(ty))
             # nested tags may also be from system headers
             collect_dependent_system_nodes!(dag, ty, system_nodes)

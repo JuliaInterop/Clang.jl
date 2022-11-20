@@ -32,7 +32,15 @@ function (x::CollectTopLevelNode)(dag::ExprDAG, options::Dict)
         header_name = normpath(spelling(tu_cursor))
         @info "Processing header: $header_name"
         for cursor in children(tu_cursor)
-            file_name = normpath(get_filename(cursor))
+            file_name = get_filename(cursor)
+
+            # Ignore items where no source file is available.
+            # e.g. built-in defines like `__llvm__` and `__clang__`.
+            if !is_local_only && isempty(file_name)
+                continue
+            end
+
+            file_name = normpath(file_name)
             if is_local_only && header_name != file_name && file_name ∉ x.dependent_headers
                 if any(sysdir -> startswith(file_name, sysdir), x.system_dirs)
                     collect_top_level_nodes!(dag.sys, cursor, general_options)

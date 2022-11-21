@@ -231,6 +231,7 @@ const MACRO_IDK_IGNORELIST = [
     "##",
     "#",
     "__cdecl",
+    "__restrict",
 ]
 
 """

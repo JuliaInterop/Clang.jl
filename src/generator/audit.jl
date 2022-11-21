@@ -73,7 +73,7 @@ function sanity_check(dag::ExprDAG, options::Dict)
         elseif is_function(idn)
             ifile, iline, icol = get_file_line_column(idn.cursor)
             tfile, tline, tcol = get_file_line_column(tn.cursor)
-            error("sanity check failed. [REASON]: use the same name $tk for struct $(tn.cursor) at $tfile:$tline:$tcol and function $(idn.cursor) at $ifile:$iline:$icol. The C code use the same name for structs and functions, which is not a good code-style, please fix it in the upstream.")
+            @warn "sanity check failed. [REASON]: use the same name $tk for struct $(tn.cursor) at $tfile:$tline:$tcol and function $(idn.cursor) at $ifile:$iline:$icol. The C code use the same name for structs and functions, which is not a good code-style, please fix it in the upstream."
         else
             error("sanity check failed. please file an issue to Clang.jl.")
         end

@@ -87,9 +87,10 @@ function emit!(dag::ExprDAG, node::ExprNode{FunctionProto}, options::Dict; args.
     use_ccall_macro = get(options, "use_ccall_macro", false)
     if use_ccall_macro
         name_type_pairs = [Expr(:(::), n, t) for (n, t) in zip(arg_names, args)]
+        library_func = library_expr == nothing ? func_name : :($library_expr.$func_name)
         body = Expr(:macrocall, Symbol("@ccall"), nothing,
                     Expr(:(::), Expr(:call,
-                                        :($library_expr.$func_name),
+                                        library_func,
                                         name_type_pairs...,
                                     ),
                          ret_type

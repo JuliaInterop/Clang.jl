@@ -124,7 +124,11 @@ function (x::IndexDefinition)(dag::ExprDAG, options::Dict)
         if is_tag_def(node)
             if haskey(dag.tags, node.id)
                 n = dag.nodes[dag.tags[node.id]]
-                @assert is_same(n.cursor, node.cursor) "duplicated definitions should be exactly the same!"
+                if !is_same(n.cursor, node.cursor)
+                    file1, line1, col1 = get_file_line_column(n.cursor)
+                    file2, line2, col2 = get_file_line_column(node.cursor)
+                    @error "duplicated definitions should be exactly the same! [DEBUG]: identifier $(n.cursor) at $(normpath(file1)):$line1:$col1 is different from identifier $(node.cursor) at $(normpath(file2)):$line2:$col2"
+                end
                 show_info && @info "[IndexDefinition]: marked an indexed tag $(node.id) at nodes[$i]"
                 ty = dup_type(node.type)
                 dag.nodes[i] = ExprNode(node.id, ty, node.cursor, node.exprs, node.adj)

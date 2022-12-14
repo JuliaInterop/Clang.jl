@@ -2,4 +2,4 @@
 library_name = "libmpi"
 output_common_file_path = "./mpi_common.jl"
 output_api_file_path = "./mpi_api.jl"
-output_ignorelist = ["^PMPI_"]
+output_ignorelist = ["^PMPI_.*"]

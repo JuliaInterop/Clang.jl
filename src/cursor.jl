@@ -257,10 +257,10 @@ getFieldDeclBitWidth(c::CXCursor)::Int = clang_getFieldDeclBitWidth(c)
 getFieldDeclBitWidth(c::CLFieldDecl) = clang_getFieldDeclBitWidth(c)
 
 """
-    getNumArguments(c::Union{CXCursor,CLFunctionDecl,CLCXXMethod,CLTypedefDecl}) -> Int
+    getNumArguments(c::Union{CXCursor,CLCursor}) -> Int
 Return the number of non-variadic arguments associated with a given cursor.
 """
-getNumArguments(c::Union{CXCursor,CLFunctionDecl,CLCXXMethod,CLTypedefDecl})::Int = clang_Cursor_getNumArguments(c)
+getNumArguments(c::Union{CXCursor,CLCursor})::Int = clang_Cursor_getNumArguments(c)
 
 """
     getArgument(c::CXCursor, i::Integer) -> CXCursor

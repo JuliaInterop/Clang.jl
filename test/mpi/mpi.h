@@ -2,7 +2,7 @@ typedef int MPI_Comm;
 typedef int MPI_Datatype;
 
 int MPI_Barrier(MPI_Comm comm);
-int PMPI_Barrier(MPI_Comm comm);
+int PMPI_Barrier(MPI_Comm comm);  // excluded by regex in `generator.toml`
 
 typedef int (MPI_Type_copy_attr_function)(MPI_Datatype, int, void *, void *, void *, int *);
 typedef int (MPI_Type_delete_attr_function)(MPI_Datatype, int, void *, void *);

@@ -254,9 +254,6 @@ function emit!(dag::ExprDAG, node::ExprNode{TypedefMutualRef}, options::Dict; ar
 end
 
 function emit!(dag::ExprDAG, node::ExprNode{TypedefFunction}, options::Dict; args...)
-    @show 100
-    @show name(node.cursor)
-    # dump(node)
     ty = getTypedefDeclUnderlyingType(node.cursor)
     typedefee = translate(tojulia(ty), options)
     typedef_sym = make_symbol_safe(node.id)

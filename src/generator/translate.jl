@@ -81,8 +81,12 @@ translate(jlty::JuliaCFILE, options=Dict()) = :(Libc.FILE)
 
 function translate(jlty::JuliaCpointer, options=Dict())
     jlptree = tojulia(getPointeeType(jlty.ref))
-    if is_jl_funcptr(jlty) && !(jlptree isa JuliaCtypedef)
-        return translate(JuliaPtrCvoid(), options)
+    if is_jl_funcptr(jlty)
+        if jlptree isa JuliaCtypedef
+            return translate(jlptree, options)  # already a function pointer
+        else
+            return translate(JuliaPtrCvoid(), options)
+        end
     end
     if get(options, "always_NUL_terminated_string", false)
         is_jl_char(jlptree) && return :Cstring

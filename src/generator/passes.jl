@@ -497,7 +497,7 @@ function (x::CatchDuplicatedAnonymousTags)(dag::ExprDAG, options::Dict)
             node == node2 && continue
             is_dup_tagtype(node2) && continue
             !(startswith(sid, "##Ctag") || startswith(sid, "__JL_Ctag")) && continue
-            !is_same(node.cursor, node2.cursor) && continue
+            !is_same_loc(node.cursor, node2.cursor) && continue
             show_info &&
                 @info "[CatchDuplicatedAnonymousTags]: found duplicated anonymous tag-type $(node2.id) at dag.nodes[$idx2]."
             ty = dup_type(node2.type)

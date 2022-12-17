@@ -80,8 +80,14 @@ translate(jlty::JuliaCwchar_t, options=Dict()) = :Cwchar_t
 translate(jlty::JuliaCFILE, options=Dict()) = :(Libc.FILE)
 
 function translate(jlty::JuliaCpointer, options=Dict())
-    is_jl_funcptr(jlty) && return translate(JuliaPtrCvoid(), options)
     jlptree = tojulia(getPointeeType(jlty.ref))
+    if is_jl_funcptr(jlty)
+        if jlptree isa JuliaCtypedef
+            return translate(jlptree, options)  # already a function pointer
+        else
+            return translate(JuliaPtrCvoid(), options)
+        end
+    end
     if get(options, "always_NUL_terminated_string", false)
         is_jl_char(jlptree) && return :Cstring
         is_jl_wchar(jlptree) && return :Cwstring
@@ -138,9 +144,7 @@ function translate(jlty::JuliaCrecord, options=Dict())
         return make_symbol_safe(jlty.sym)
     else
         tag = get_nested_tag(nested_tags, jlty)
-        if !isnothing(tag)
-            return tag
-        end
+        isnothing(tag) || return tag
         # then it could be a local opaque tag-type
         return translate(JuliaCvoid(), options)
     end

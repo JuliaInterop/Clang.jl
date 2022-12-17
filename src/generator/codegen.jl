@@ -639,7 +639,14 @@ const ENUM_SYMBOL2TYPE = Dict(
 
 function emit!(dag::ExprDAG, node::ExprNode{<:AbstractEnumNodeType}, options::Dict; args...)
     cursor = node.cursor
-    ty = translate(tojulia(getEnumDeclIntegerType(cursor)), options)
+    ty = getEnumDeclIntegerType(cursor)
+    if ty isa Clang.CLTypedef
+        ty = getTypeDeclaration(ty) |>
+             getTypedefDeclUnderlyingType |>
+             getCanonicalType
+    end
+    ty = translate(tojulia(ty), options)
+
     # there is no need to treat __attribute__ specially as we directly query the integer
     # type of the enum from Clang
     enum_type = ENUM_SYMBOL2TYPE[ty]

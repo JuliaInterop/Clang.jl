@@ -5,4 +5,9 @@ typedef enum AAA {
    B      = -1, 
    C     = -2
 } AAA;
+
+typedef struct {
+   int x;
+} BBB;
+
 #endif

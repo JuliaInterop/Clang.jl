@@ -83,7 +83,7 @@ function translate(jlty::JuliaCpointer, options=Dict())
     jlptree = tojulia(getPointeeType(jlty.ref))
     if is_jl_funcptr(jlty)
         if jlptree isa JuliaCtypedef
-            return translate(jlptree, options)  # already a function pointer
+            return Expr(:curly, :Ptr, translate(jlptree, options))
         else
             return translate(JuliaPtrCvoid(), options)
         end

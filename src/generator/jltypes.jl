@@ -197,8 +197,14 @@ is_jl_funcptr(x::JuliaCconstarray) = is_jl_funcptr(x.ref)
 is_jl_funcptr(x::JuliaCincompletearray) = is_jl_funcptr(x.ref)
 
 function get_jl_leaf_pointee_type(x::JuliaCpointer)
-    is_jl_funcptr(x) && return JuliaPtrCvoid()
     jlptree = tojulia(getPointeeType(x.ref))
+    if is_jl_funcptr(x)
+        if jlptree isa JuliaCtypedef
+            return get_jl_leaf_type(jlptree)
+        else
+            return JuliaPtrCvoid()
+        end
+    end
     return get_jl_leaf_type(jlptree)
 end
 

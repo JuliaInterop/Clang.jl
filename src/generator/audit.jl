@@ -65,6 +65,9 @@ function sanity_check(dag::ExprDAG, options::Dict)
 
         if is_typedef(idn)
             ty = getCanonicalType(getTypedefDeclUnderlyingType(idn.cursor))
+            if getTypeDeclaration(ty) isa CLNoDeclFound
+                ty = getTypedefDeclUnderlyingType(idn.cursor)
+            end
             if !is_same(getTypeDeclaration(ty), dag.nodes[tv].cursor)
                 ifile, iline, icol = get_file_line_column(idn.cursor)
                 tfile, tline, tcol = get_file_line_column(tn.cursor)

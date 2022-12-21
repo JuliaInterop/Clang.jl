@@ -149,3 +149,9 @@ end
     build!(ctx)
     @test_logs (:info, "Done!") match_mode = :any build!(ctx)
 end
+
+@testset "Issue 412" begin
+    ctx = create_context([joinpath(@__DIR__, "include/enum.h")], get_default_args())
+    build!(ctx)
+    @test_logs (:info, "Done!") match_mode = :any build!(ctx)
+end

@@ -108,7 +108,10 @@ function create_context(headers::Vector, args::Vector=String[], options::Dict=Di
     if get(general_options, "smart_de_anonymize", true)
         push!(ctx.passes, DeAnonymize())
     end
-    push!(ctx.passes, Audit())
+    if !get(general_options, "no_audit", false)
+        @error "The generator is running in `no_audit` mode. It could generate invalid Julia code. Please DO NOT submit issues only occur in this mode. You can remove the `no_audit` entry in the `.toml` file to exit this mode."
+        push!(ctx.passes, Audit())
+    end
     push!(ctx.passes, Codegen())
     push!(ctx.passes, CodegenMacro())
     # push!(ctx.passes, CodegenPostprocessing())

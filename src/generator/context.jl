@@ -108,8 +108,10 @@ function create_context(headers::Vector, args::Vector=String[], options::Dict=Di
     if get(general_options, "smart_de_anonymize", true)
         push!(ctx.passes, DeAnonymize())
     end
-    if !get(general_options, "no_audit", false)
-        @error "The generator is running in `no_audit` mode. It could generate invalid Julia code. Please DO NOT submit issues only occur in this mode. You can remove the `no_audit` entry in the `.toml` file to exit this mode."
+    if get(general_options, "no_audit", false)
+        @error "The generator is running in `no_audit` mode. It could generate invalid Julia code. You can remove the `no_audit` entry in the `.toml` file to exit this mode."
+        get(general_options, "link_enum_alias", true) && push!(ctx.passes, LinkEnumAlias())
+    else
         push!(ctx.passes, Audit())
     end
     push!(ctx.passes, Codegen())

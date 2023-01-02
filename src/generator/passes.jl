@@ -507,6 +507,41 @@ function (x::CatchDuplicatedAnonymousTags)(dag::ExprDAG, options::Dict)
 end
 
 """
+    LinkEnumAlias <: AbstractPass
+Link hard-coded enum types to the corresponding enums. This pass only works in `no_audit` mode.
+"""
+mutable struct LinkEnumAlias <: AbstractPass
+    show_info::Bool
+end
+LinkEnumAlias(; info=false) = LinkEnumAlias(info)
+
+function (x::LinkEnumAlias)(dag::ExprDAG, options::Dict)
+    general_options = get(options, "general", Dict())
+    log_options = get(general_options, "log", Dict())
+    show_info = get(log_options, "LinkEnumAlias_log", x.show_info)
+
+    for (id,i) in dag.ids
+        node = dag.nodes[i]
+        node.type isa AbstractTypedefNodeType || continue
+
+        ty = getTypedefDeclUnderlyingType(node.cursor) |> getCanonicalType
+        typeKind = kind(ty)
+        typeKind == CXType_Int || typeKind == CXType_Short || typeKind == CXType_Long || typeKind == CXType_LongLong ||
+        typeKind == CXType_UInt || typeKind == CXType_UShort || typeKind == CXType_ULong || typeKind == CXType_ULongLong ||
+        continue
+
+        for (tagid, j) in dag.tags
+            dag.nodes[j].type isa AbstractEnumNodeType || continue
+            tagid == id || continue
+
+            dag.nodes[i] = ExprNode(id, SoftSkip(), node.cursor, node.exprs, node.adj)
+            show_info &&
+                @info "[LinkEnumAlias]: skip $id at dag.nodes[$i]."
+        end
+    end
+end
+
+"""
     DeAnonymize <: AbstractPass
 In this pass, naive anonymous tag-types are de-anonymized and the correspoding typedefs
 are marked [`Skip`](@ref).

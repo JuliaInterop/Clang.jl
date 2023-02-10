@@ -219,7 +219,7 @@ function get_pkg_artifact_dir(pkg::Module, target::String)
     info = first(candidates)
     name = info["git-tree-sha1"]  # this is not a real name but a hash
     Artifacts.ensure_artifact_installed(name, info, arftspath)
-    return normpath(Artifacts.artifact_path(Base.SHA1(hash)))
+    return normpath(Artifacts.artifact_path(Base.SHA1(name)))
 end
 
 function get_pkg_include_dir(pkg::Module, target::String)

@@ -270,6 +270,14 @@ Return the number of non-variadic arguments associated with a given cursor.
 """
 getNumArguments(c::Union{CXCursor,CLCursor})::Int = clang_Cursor_getNumArguments(c)
 
+function getNumArguments(c::CLFunctionTemplate)::Int
+    baseDecl = children(c)[end]
+    if kind(baseDecl) == CXCursor_TypeRef
+        return getNumArguments(getCursorReferenced(baseDecl))
+    end
+    return getNumArguments(baseDecl)
+end
+
 """
     getArgument(c::CXCursor, i::Integer) -> CXCursor
     getArgument(c::Union{CLFunctionDecl,CLCXXMethod,CLConstructor}, i::Integer) -> CLCursor
@@ -384,6 +392,15 @@ For a cursor that is a reference, retrieve a cursor representing the entity that
 """
 getCursorReferenced(c::CXCursor) = clang_getCursorReferenced(c)
 getCursorReferenced(c::CLCursor)::CLCursor = clang_getCursorReferenced(c)
+
+"""
+    getCursorTypeRef(c::CLCursor)::CLCursor -> CLCursor
+Return the underlying cursor from a `TypeRef`.
+"""
+function getCursorTypeRef(c::CLCursor)::CLCursor
+    @assert kind(c) == CXCursor_TypeRef
+    return getCursorReferenced(c)
+end
 
 """
     getCursorDefinition(c::CXCursor) -> CXCursor

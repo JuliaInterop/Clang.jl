@@ -272,11 +272,11 @@ getNumArguments(c::Union{CXCursor,CLCursor})::Int = clang_Cursor_getNumArguments
 
 """
     getArgument(c::CXCursor, i::Integer) -> CXCursor
-    getArgument(c::Union{CLFunctionDecl,CLCXXMethod}, i::Integer) -> CLCursor
+    getArgument(c::Union{CLFunctionDecl,CLCXXMethod,CLConstructor}, i::Integer) -> CLCursor
 Return the argument cursor of a function or method.
 """
 getArgument(c::CXCursor, i::Integer) = clang_Cursor_getArgument(c, Unsigned(i))
-getArgument(c::Union{CLFunctionDecl,CLCXXMethod}, i::Integer)::CLCursor =
+getArgument(c::Union{CLFunctionDecl,CLCXXMethod,CLConstructor}, i::Integer)::CLCursor =
     clang_Cursor_getArgument(c, Unsigned(i))
 
 ## TODO:

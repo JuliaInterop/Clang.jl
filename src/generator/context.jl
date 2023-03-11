@@ -249,8 +249,8 @@ function detect_headers(include_dir, args, options::Dict=Dict())
     system_dirs = filter(x->startswith(x, "-isystem"), args)
     system_dirs = map(x->x[9:end], system_dirs)
 
-    candidates = OrderedSet{String}()
-    dependencies = OrderedSet{String}()
+    candidates = Set{String}()
+    dependencies = Set{String}()
     idx = Index(false)
     flags = CXTranslationUnit_DetailedPreprocessingRecord
     flags |= CXTranslationUnit_SkipFunctionBodies
@@ -283,5 +283,5 @@ function detect_headers(include_dir, args, options::Dict=Dict())
             end
         end
     end
-    return collect(setdiff(candidates, dependencies))
+    return sort!(collect(setdiff(candidates, dependencies)))
 end

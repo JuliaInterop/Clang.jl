@@ -249,8 +249,8 @@ function detect_headers(include_dir, args, options::Dict=Dict())
     system_dirs = filter(x->startswith(x, "-isystem"), args)
     system_dirs = map(x->x[9:end], system_dirs)
 
-    candidates = Set{String}()
-    dependencies = Set{String}()
+    candidates = OrderedSet{String}()
+    dependencies = OrderedSet{String}()
     idx = Index(false)
     flags = CXTranslationUnit_DetailedPreprocessingRecord
     flags |= CXTranslationUnit_SkipFunctionBodies

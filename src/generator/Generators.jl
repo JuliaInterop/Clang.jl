@@ -1,5 +1,6 @@
 module Generators
 
+import OrderedCollections: OrderedSet
 using TOML
 
 using ..Clang

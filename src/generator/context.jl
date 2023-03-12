@@ -283,5 +283,5 @@ function detect_headers(include_dir, args, options::Dict=Dict())
             end
         end
     end
-    return collect(setdiff(candidates, dependencies))
+    return sort!(collect(setdiff(candidates, dependencies)))
 end

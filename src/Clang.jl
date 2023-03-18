@@ -24,6 +24,8 @@ foreach(names(@__MODULE__; all=true)) do s
     end
 end
 
+include("string.jl")
+
 include("index.jl")
 export Index
 

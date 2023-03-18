@@ -434,17 +434,28 @@ function spelling(k::CXCursorKind)
     return s
 end
 
+
 """
-    get_filename(x::CXFile) -> String
-Return the complete file and path name of the given file
+    file_line_column(CLCursor) -> (CLFile, Int, Int)
+Return file, line and column number.
 """
-function get_filename(x::CXFile)
-    cxstr = clang_getFileName(x)
-    ptr = clang_getCString(cxstr)
-    ptr == C_NULL && return ""
-    s = unsafe_string(ptr)
-    clang_disposeString(cxstr)
-    return s
+function file_line_column(c::CLCursor)
+    file = Ref{CXFile}(C_NULL)
+    line = Ref{Cuint}(0)
+    column = Ref{Cuint}(0)
+    offset = Ref{Cuint}(0)
+    location = clang_getCursorLocation(c)
+    clang_getExpansionLocation(location, file, line, column, offset)
+    return CLFile(file[]), Int(line[]), Int(column[])
+end
+
+"""
+    file(c::CLCursor) -> CLFile
+Return the file referenced by the input cursor.
+"""
+function file(c::CLCursor)
+    f, _, _ = file_line_column(c)
+    return f
 end
 
 """
@@ -452,15 +463,8 @@ end
 Return the complete file and path name of the given file referenced by the input cursor.
 """
 function get_filename(c::Union{CXCursor,CLCursor})
-    file = Ref{CXFile}(C_NULL)
-    location = clang_getCursorLocation(c)
-    clang_getExpansionLocation(location, file, Ref{Cuint}(0), Ref{Cuint}(0), Ref{Cuint}(0))
-    if file[] != C_NULL
-        str = GC.@preserve file get_filename(file[])
-        return str
-    else
-        return ""
-    end
+    f, _, _ = get_file_line_column(c)
+    return f
 end
 
 """
@@ -468,21 +472,8 @@ end
 Return file name, line and column number.
 """
 function get_file_line_column(c::Union{CXCursor,CLCursor})
-    file = Ref{CXFile}(C_NULL)
-    line = Ref{Cuint}(0)
-    column = Ref{Cuint}(0)
-    offset = Ref{Cuint}(0)
-    location = clang_getCursorLocation(c)
-    clang_getExpansionLocation(location, file, line, column, offset)
-    if file[] != C_NULL
-        cxstr = clang_getFileName(file[])
-        ptr = clang_getCString(cxstr)
-        s = unsafe_string(ptr)
-        clang_disposeString(cxstr)
-        return s, Int(line[]), Int(column[])
-    else
-        return "", 0, 0
-    end
+    f, l, c = file_line_column(c)
+    return name(f), l, c
 end
 
 """

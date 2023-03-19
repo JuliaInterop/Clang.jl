@@ -15,7 +15,9 @@ end
         end
         index = Index()
         tu = parse_header(index, header)
-        @test tu |> Clang.getTranslationUnitCursor |> children |> only |> file |> name == header
+        fname = tu |> Clang.getTranslationUnitCursor |> children |> 
+                      only |> file |> name |> normpath
+        @test fname == header |> normpath
     end
 end
 

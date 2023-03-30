@@ -402,9 +402,6 @@ getCanonicalCursor(c::CLCursor)::CLCursor = clang_getCanonicalCursor(c)
 @deprecate getCanonicalType(c::CXCursor) getCanonicalCursor(c::CXCursor)
 @deprecate getCanonicalType(c::CLCursor) getCanonicalCursor(c::CLCursor)
 
-getCanonicalType(c::CXCursor) = clang_getCanonicalCursor(c)
-getCanonicalType(c::CLCursor)::CLCursor = clang_getCanonicalCursor(c)
-
 ## TODO:
 # clang_Cursor_getObjCSelectorIndex
 # clang_Cursor_isDynamicCall

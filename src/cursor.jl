@@ -403,9 +403,6 @@ getCanonicalCursor(c::CLCursor)::CLCursor = clang_getCanonicalCursor(c)
 getCanonicalType(c::CXCursor) = clang_getCanonicalCursor(c)
 getCanonicalType(c::CLCursor)::CLCursor = clang_getCanonicalCursor(c)
 
-"""
-    getCursorKind(c::Union{CXCursor,CLCursor}) -> CXCursorKind
-
 ## TODO:
 # clang_Cursor_getObjCSelectorIndex
 # clang_Cursor_isDynamicCall

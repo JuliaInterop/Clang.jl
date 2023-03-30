@@ -392,12 +392,15 @@ Return true if the declaration pointed to by this cursor is also a definition of
 isCursorDefinition(c::Union{CXCursor,CLCursor})::Bool = clang_isCursorDefinition(c)
 
 """
-    getCanonicalType(c::CXCursor) -> CXCursor
-    getCanonicalType(c::CLCursor) -> CLCursor
-Return the getCanonicalType cursor corresponding to the given cursor.
+    getCanonicalCursor(c::CXCursor) -> CXCursor
+    getCanonicalCursor(c::CLCursor) -> CLCursor
+Return the getCanonicalCursor cursor corresponding to the given cursor.
 """
-getCanonicalType(c::CXCursor) = clang_getCanonicalCursor(c)
-getCanonicalType(c::CLCursor)::CLCursor = clang_getCanonicalCursor(c)
+getCanonicalCursor(c::CXCursor) = clang_getCanonicalCursor(c)
+getCanonicalCursor(c::CLCursor)::CLCursor = clang_getCanonicalCursor(c)
+
+@deprecate getCanonicalType(c::CXCursor) getCanonicalCursor(c::CXCursor)
+@deprecate getCanonicalType(c::CLCursor) getCanonicalCursor(c::CLCursor)
 
 ## TODO:
 # clang_Cursor_getObjCSelectorIndex

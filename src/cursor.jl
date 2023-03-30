@@ -399,7 +399,9 @@ Return the getCanonicalCursor cursor corresponding to the given cursor.
 getCanonicalCursor(c::CXCursor) = clang_getCanonicalCursor(c)
 getCanonicalCursor(c::CLCursor)::CLCursor = clang_getCanonicalCursor(c)
 
-@deprecate getCanonicalType getCanonicalCursor
+@deprecate getCanonicalType(c::CXCursor) getCanonicalCursor(c::CXCursor)
+@deprecate getCanonicalType(c::CLCursor) getCanonicalCursor(c::CLCursor)
+
 getCanonicalType(c::CXCursor) = clang_getCanonicalCursor(c)
 getCanonicalType(c::CLCursor)::CLCursor = clang_getCanonicalCursor(c)
 

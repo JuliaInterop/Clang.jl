@@ -263,11 +263,11 @@ getNumArguments(c::Union{CXCursor,CLCursor})::Int = clang_Cursor_getNumArguments
 
 """
     getArgument(c::CXCursor, i::Integer) -> CXCursor
-    getArgument(c::Union{CLFunctionDecl,CLCXXMethod,CLConstructor}, i::Integer) -> CLCursor
+    getArgument(c::Union{CLFunctionDecl,CLCXXMethod,CLConstructor,CLFunctionTemplate}, i::Integer) -> CLCursor
 Return the argument cursor of a function or method.
 """
 getArgument(c::CXCursor, i::Integer) = clang_Cursor_getArgument(c, Unsigned(i))
-getArgument(c::Union{CLFunctionDecl,CLCXXMethod,CLConstructor}, i::Integer)::CLCursor =
+getArgument(c::Union{CLFunctionDecl,CLCXXMethod,CLConstructor,CLFunctionTemplate}, i::Integer)::CLCursor =
     clang_Cursor_getArgument(c, Unsigned(i))
 
 ## TODO:
@@ -524,7 +524,13 @@ children(c::CLCursor)::Vector{CLCursor} = children(c.cursor)
     get_function_args(cursor::CLCursor) -> Vector{CLCursor}
 Return function arguments for a given cursor.
 """
-get_function_args(cursor::CLCursor) = [getArgument(cursor, i - 1) for i = 1:getNumArguments(cursor)]
+function get_function_args(cursor::CLCursor)
+    if cursor isa CLFunctionTemplate && getNumArguments(cursor) == -1
+        return search(cursor, x -> kind(x) == CXCursor_ParmDecl)
+    else
+        return [getArgument(cursor, i - 1) for i = 1:getNumArguments(cursor)]
+    end
+end
 
 """
     is_typedef_anon(current::CLCursor, next::CLCursor) -> Bool

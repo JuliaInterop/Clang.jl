@@ -57,7 +57,9 @@ function find_dependent_headers(headers::Vector{T}, args::Vector, system_dirs) w
                     end
                 end
             catch err
-                @warn "failed to parse $header, skip..."
+                if !endswith(header, ".inc")
+                    @warn "failed to parse $header, skip..."
+                end
                 continue
             end
         end

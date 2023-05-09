@@ -4431,7 +4431,7 @@ end
 """
     clang_Cursor_isObjCOptional(C)
 
-Given a cursor that represents an Objective-C method or property declaration, return non-zero if the declaration was affected by "@optional". Returns zero if the cursor is not such a declaration or it is "@required".
+Given a cursor that represents an Objective-C method or property declaration, return non-zero if the declaration was affected by "\\@optional". Returns zero if the cursor is not such a declaration or it is "\\@required".
 """
 function clang_Cursor_isObjCOptional(C)
     @ccall libclang.clang_Cursor_isObjCOptional(C::CXCursor)::Cuint
@@ -6265,71 +6265,6 @@ function clang_Type_visitFields(T, visitor, client_data)
     @ccall libclang.clang_Type_visitFields(T::CXType, visitor::CXFieldVisitor, client_data::CXClientData)::Cuint
 end
 
-const CXRewriter = Ptr{Cvoid}
-
-"""
-    clang_CXRewriter_create(TU)
-
-Create [`CXRewriter`](@ref).
-"""
-function clang_CXRewriter_create(TU)
-    @ccall libclang.clang_CXRewriter_create(TU::CXTranslationUnit)::CXRewriter
-end
-
-"""
-    clang_CXRewriter_insertTextBefore(Rew, Loc, Insert)
-
-Insert the specified string at the specified location in the original buffer.
-"""
-function clang_CXRewriter_insertTextBefore(Rew, Loc, Insert)
-    @ccall libclang.clang_CXRewriter_insertTextBefore(Rew::CXRewriter, Loc::CXSourceLocation, Insert::Cstring)::Cvoid
-end
-
-"""
-    clang_CXRewriter_replaceText(Rew, ToBeReplaced, Replacement)
-
-Replace the specified range of characters in the input with the specified replacement.
-"""
-function clang_CXRewriter_replaceText(Rew, ToBeReplaced, Replacement)
-    @ccall libclang.clang_CXRewriter_replaceText(Rew::CXRewriter, ToBeReplaced::CXSourceRange, Replacement::Cstring)::Cvoid
-end
-
-"""
-    clang_CXRewriter_removeText(Rew, ToBeRemoved)
-
-Remove the specified range.
-"""
-function clang_CXRewriter_removeText(Rew, ToBeRemoved)
-    @ccall libclang.clang_CXRewriter_removeText(Rew::CXRewriter, ToBeRemoved::CXSourceRange)::Cvoid
-end
-
-"""
-    clang_CXRewriter_overwriteChangedFiles(Rew)
-
-Save all changed files to disk. Returns 1 if any files were not saved successfully, returns 0 otherwise.
-"""
-function clang_CXRewriter_overwriteChangedFiles(Rew)
-    @ccall libclang.clang_CXRewriter_overwriteChangedFiles(Rew::CXRewriter)::Cint
-end
-
-"""
-    clang_CXRewriter_writeMainFileToStdOut(Rew)
-
-Write out rewritten version of the main file to stdout.
-"""
-function clang_CXRewriter_writeMainFileToStdOut(Rew)
-    @ccall libclang.clang_CXRewriter_writeMainFileToStdOut(Rew::CXRewriter)::Cvoid
-end
-
-"""
-    clang_CXRewriter_dispose(Rew)
-
-Free the given [`CXRewriter`](@ref).
-"""
-function clang_CXRewriter_dispose(Rew)
-    @ccall libclang.clang_CXRewriter_dispose(Rew::CXRewriter)::Cvoid
-end
-
 """
     CXComment
 
@@ -6899,6 +6834,71 @@ Removes currently installed error handler (if any). If no error handler is intal
 """
 function clang_uninstall_llvm_fatal_error_handler()
     @ccall libclang.clang_uninstall_llvm_fatal_error_handler()::Cvoid
+end
+
+const CXRewriter = Ptr{Cvoid}
+
+"""
+    clang_CXRewriter_create(TU)
+
+Create [`CXRewriter`](@ref).
+"""
+function clang_CXRewriter_create(TU)
+    @ccall libclang.clang_CXRewriter_create(TU::CXTranslationUnit)::CXRewriter
+end
+
+"""
+    clang_CXRewriter_insertTextBefore(Rew, Loc, Insert)
+
+Insert the specified string at the specified location in the original buffer.
+"""
+function clang_CXRewriter_insertTextBefore(Rew, Loc, Insert)
+    @ccall libclang.clang_CXRewriter_insertTextBefore(Rew::CXRewriter, Loc::CXSourceLocation, Insert::Cstring)::Cvoid
+end
+
+"""
+    clang_CXRewriter_replaceText(Rew, ToBeReplaced, Replacement)
+
+Replace the specified range of characters in the input with the specified replacement.
+"""
+function clang_CXRewriter_replaceText(Rew, ToBeReplaced, Replacement)
+    @ccall libclang.clang_CXRewriter_replaceText(Rew::CXRewriter, ToBeReplaced::CXSourceRange, Replacement::Cstring)::Cvoid
+end
+
+"""
+    clang_CXRewriter_removeText(Rew, ToBeRemoved)
+
+Remove the specified range.
+"""
+function clang_CXRewriter_removeText(Rew, ToBeRemoved)
+    @ccall libclang.clang_CXRewriter_removeText(Rew::CXRewriter, ToBeRemoved::CXSourceRange)::Cvoid
+end
+
+"""
+    clang_CXRewriter_overwriteChangedFiles(Rew)
+
+Save all changed files to disk. Returns 1 if any files were not saved successfully, returns 0 otherwise.
+"""
+function clang_CXRewriter_overwriteChangedFiles(Rew)
+    @ccall libclang.clang_CXRewriter_overwriteChangedFiles(Rew::CXRewriter)::Cint
+end
+
+"""
+    clang_CXRewriter_writeMainFileToStdOut(Rew)
+
+Write out rewritten version of the main file to stdout.
+"""
+function clang_CXRewriter_writeMainFileToStdOut(Rew)
+    @ccall libclang.clang_CXRewriter_writeMainFileToStdOut(Rew::CXRewriter)::Cvoid
+end
+
+"""
+    clang_CXRewriter_dispose(Rew)
+
+Free the given [`CXRewriter`](@ref).
+"""
+function clang_CXRewriter_dispose(Rew)
+    @ccall libclang.clang_CXRewriter_dispose(Rew::CXRewriter)::Cvoid
 end
 
 const CINDEX_VERSION_MAJOR = 0

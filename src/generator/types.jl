@@ -77,6 +77,10 @@ struct TypedefToAnonymous <: AbstractTypedefNodeType
     sym::Symbol
 end
 
+abstract type AbstractTypeAliasNodeType <: AbstractExprNodeType end
+
+struct TypeAliasFunction <: AbstractTypeAliasNodeType end
+
 """
     AbstractMacroNodeType <: AbstractExprNodeType
 Supertype for macro nodes.

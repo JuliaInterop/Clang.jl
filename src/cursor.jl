@@ -235,6 +235,13 @@ function value(c::CLEnumConstantDecl)::Integer
                     getCanonicalType |>
                     kind
     end
+    if typeKind == CXType_Enum
+        typeKind = getCursorType(c) |>
+                    getTypeDeclaration |>
+                    # getTypedefDeclUnderlyingType |>
+                    getCanonicalType |>
+                    kind
+    end
     if typeKind == CXType_Int ||
         typeKind == CXType_Long ||
         typeKind == CXType_LongLong

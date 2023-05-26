@@ -244,10 +244,11 @@ function get_default_args(triple=get_triple())
 end
 
 """
-    detect_headers(include_dir, args, options::Dict=Dict())
+    detect_headers(include_dir, args, options::Dict=Dict(), filter=(header)->false)
 Detect a set of headers which can span the whole directory.
+Use `filter` to filter out headers you don't want to consider as candidates
 """
-function detect_headers(include_dir, args, options::Dict=Dict())
+function detect_headers(include_dir, args, options::Dict=Dict(), filter_op = (header)->false)
     system_dirs = filter(x->startswith(x, "-isystem"), args)
     system_dirs = map(x->x[9:end], system_dirs)
 
@@ -259,6 +260,7 @@ function detect_headers(include_dir, args, options::Dict=Dict())
     for (root, dirs, files) in walkdir(normpath(include_dir))
         for file in files
             header = joinpath(root, file)
+            filter_op(header) && continue
             try
                 # FIXME: C++ could also be successful parsed, but that's not what we want
                 parse_header(idx, header, args, flags)

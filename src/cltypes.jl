@@ -95,7 +95,7 @@ Base.unsafe_convert(::Type{CXToken}, x::CLToken) = x.token
 Base.show(io::IO, x::CXToken) = print(io, "$(kind(x))")
 Base.show(io::IO, x::CLToken) = print(io, typeof(x), "(\"", x.text, "\")")
 
-# CLToken
+# CLComment
 abstract type CLComment end
 
 const CLCommentMap = Dict()

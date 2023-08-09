@@ -383,6 +383,10 @@ function (x::RemoveCircularReference)(dag::ExprDAG, options::Dict)
                         dag.nodes[nc] = ExprNode(id, ty, child.cursor, child.exprs, child.adj)
                         show_info &&
                             @info "[RemoveCircularReference]: removed $(child.id)'s dependency $(parent.id)"
+
+                        # Now the cycle is broken and we don't need to look at
+                        # any other nodes in the cycle path.
+                        break
                     end
                 end
                 # exit earlier
@@ -405,8 +409,9 @@ function (x::RemoveCircularReference)(dag::ExprDAG, options::Dict)
                     dag.nodes[nc] = ExprNode(id, ty, child.cursor, child.exprs, child.adj)
                     show_info &&
                         @info "[RemoveCircularReference]: removed $(child.id)'s dependency $(parent.id)"
+
                     # exit earlier
-                    (node_idx + 1) == first(cycle) && break
+                    break
                 end
             end
 

@@ -2,7 +2,7 @@ using Clang
 using Clang.Generators
 using Clang.LibClang.Clang_jll
 using Test
-using Clang.Generators: strip_comment_markers
+using Clang.Generators: StructMutualRef, strip_comment_markers
 
 include("rewriter.jl")
 
@@ -55,6 +55,22 @@ end
     ctx = create_context(headers, args, options)
     build!(ctx)
     @test include("LibDependency.jl") isa Any
+end
+
+# See:
+# - https://github.com/JuliaInterop/Clang.jl/discussions/440
+# - https://github.com/JuliaInterop/Clang.jl/pull/441
+@testset "Cycle detection" begin
+    args = get_default_args()
+    headers = joinpath(@__DIR__, "include", "cycle-detection.h")
+    ctx = create_context(headers, args)
+    build!(ctx)
+
+    # In this particular case there is only one cycle in B, so only B should be
+    # a StructMutualRef.
+    mutual_ref_nodes = [node for node in ctx.dag.nodes if node.type == StructMutualRef()]
+    @test length(mutual_ref_nodes) == 1
+    @test mutual_ref_nodes[1].id == :B
 end
 
 @testset "Issue 320" begin

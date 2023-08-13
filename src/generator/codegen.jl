@@ -543,7 +543,7 @@ function emit!(dag::ExprDAG, node::ExprNode{StructMutualRef}, options::Dict; arg
 
             if node_idx < field_idx
                 # this assumes that circular references were removed at pointers
-                @assert is_jl_pointer(jlty)
+                @assert is_jl_pointer(jlty) "Expected this field to be a pointer: $(struct_sym).$(field_sym)"
 
                 # also emit the original expressions, so we can add corresponding comments
                 # in the pretty-print pass

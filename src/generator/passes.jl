@@ -361,10 +361,10 @@ function (x::RemoveCircularReference)(dag::ExprDAG, options::Dict)
     count = 0
     while any(x -> x != PERMANENT, marks) && (count += 1) < MAX_CIRCIR_DETECTION_COUNT
         fill!(marks, UNMARKED)
-        for (i, node) in enumerate(dag.nodes)
-            marks[i] == UNMARKED || continue
+        for (node_idx, node) in enumerate(dag.nodes)
+            marks[node_idx] == UNMARKED || continue
             cycle = Int[]
-            detect_cycle!(dag.nodes, marks, cycle, i)
+            detect_cycle!(dag.nodes, marks, cycle, node_idx)
             isempty(cycle) && continue
 
             # firstly remove cycle reference caused by mutually referenced structs
@@ -383,10 +383,14 @@ function (x::RemoveCircularReference)(dag::ExprDAG, options::Dict)
                         dag.nodes[nc] = ExprNode(id, ty, child.cursor, child.exprs, child.adj)
                         show_info &&
                             @info "[RemoveCircularReference]: removed $(child.id)'s dependency $(parent.id)"
+
+                        # Now the cycle is broken and we don't need to look at
+                        # any other nodes in the cycle path.
+                        break
                     end
                 end
                 # exit earlier
-                (i + 1) == first(cycle) && break
+                (node_idx + 1) == first(cycle) && break
             end
 
             # there are cases where the circular reference can only be de-referenced at a
@@ -405,8 +409,9 @@ function (x::RemoveCircularReference)(dag::ExprDAG, options::Dict)
                     dag.nodes[nc] = ExprNode(id, ty, child.cursor, child.exprs, child.adj)
                     show_info &&
                         @info "[RemoveCircularReference]: removed $(child.id)'s dependency $(parent.id)"
+
                     # exit earlier
-                    (i + 1) == first(cycle) && break
+                    break
                 end
             end
 

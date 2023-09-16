@@ -18,6 +18,9 @@ end
 struct JuliaCincompletearray <: AbstractJuliaType
     ref::CLIncompleteArray
 end
+struct JuliaCvariablearray <: AbstractJuliaType
+    ref::CLVariableArray
+end
 
 struct JuliaCrecord{T<:CLCursor} <: AbstractJuliaType
     sym::Symbol
@@ -163,6 +166,7 @@ tojulia(x::CLTypedef) = JuliaCtypedef(spelling(getTypeDeclaration(x)))
 tojulia(x::CLUnexposed) = JuliaUnknown(x)
 tojulia(x::CLConstantArray) = JuliaCconstarray(x)
 tojulia(x::CLIncompleteArray) = JuliaCincompletearray(x)
+tojulia(x::CLVariableArray) = JuliaCvariablearray(x)
 
 # helper functions
 is_jl_basic(x::AbstractJuliaType) = false
@@ -187,14 +191,17 @@ is_jl_pointer(x::JuliaCpointer) = true
 is_jl_array(x::AbstractJuliaType) = false
 is_jl_array(x::JuliaCconstarray) = true
 is_jl_array(x::JuliaCincompletearray) = true
+is_jl_array(x::JuliaCvariablearray) = true
 
 is_jl_funcptr(x::AbstractJuliaType) = false
 is_jl_funcptr(x::CLPointer) = Clang.is_function(getPointeeType(getCanonicalType(x)))
 is_jl_funcptr(x::CLConstantArray) = Clang.is_function(getElementType(getCanonicalType(x)))
 is_jl_funcptr(x::CLIncompleteArray) = Clang.is_function(getElementType(getCanonicalType(x)))
+is_jl_funcptr(x::CLVariableArray) = Clang.is_function(getElementType(getCanonicalType(x)))
 is_jl_funcptr(x::JuliaCpointer) = is_jl_funcptr(x.ref)
 is_jl_funcptr(x::JuliaCconstarray) = is_jl_funcptr(x.ref)
 is_jl_funcptr(x::JuliaCincompletearray) = is_jl_funcptr(x.ref)
+is_jl_funcptr(x::JuliaCvariablearray) = is_jl_funcptr(x.ref)
 
 function get_jl_leaf_pointee_type(x::JuliaCpointer)
     jlptree = tojulia(getPointeeType(x.ref))
@@ -208,7 +215,7 @@ function get_jl_leaf_pointee_type(x::JuliaCpointer)
     return get_jl_leaf_type(jlptree)
 end
 
-function get_jl_leaf_eltype(x::Union{JuliaCconstarray,JuliaCincompletearray})
+function get_jl_leaf_eltype(x::Union{JuliaCconstarray,JuliaCincompletearray,JuliaCvariablearray})
     is_jl_funcptr(x) && return JuliaPtrCvoid()
     jlelty = tojulia(getElementType(x.ref))
     return get_jl_leaf_type(jlelty)
@@ -218,6 +225,7 @@ get_jl_leaf_type(x::AbstractJuliaType) = x
 get_jl_leaf_type(x::JuliaCpointer) = get_jl_leaf_pointee_type(x)
 get_jl_leaf_type(x::JuliaCconstarray) = get_jl_leaf_eltype(x)
 get_jl_leaf_type(x::JuliaCincompletearray) = get_jl_leaf_eltype(x)
+get_jl_leaf_type(x::JuliaCvariablearray) = get_jl_leaf_eltype(x)
 
 is_jl_integer(x::AbstractJuliaType) = false
 is_jl_integer(x::JuliaCshort) = true

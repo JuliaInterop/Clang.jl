@@ -106,6 +106,11 @@ function translate(jlty::JuliaCincompletearray, options=Dict())
     return Expr(:curly, :Ptr, elty)
 end
 
+function translate(jlty::JuliaCvariablearray, options=Dict())
+    elty = translate(tojulia(getElementType(jlty.ref)), options)
+    return Expr(:curly, :Ptr, elty)
+end
+
 function translate(jlty::JuliaCtypedef, options=Dict())
     ids = get(options, "DAG_ids", Dict())
     ids_extra = get(options, "DAG_ids_extra", Dict())

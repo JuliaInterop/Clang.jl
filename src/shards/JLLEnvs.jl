@@ -99,7 +99,7 @@ function get_system_shard_key(triple::String)
         startswith(key, "$JLL_ENV_SYSTEM_SHARD_NAME-$triple.") &&
         endswith(key, "$JLL_ENV_HOST_TRIPLE.unpacked")
     end
-    return platform_keys[]
+    return first(platform_keys)
 end
 
 function get_environment_info(triple::String, version::VersionNumber=v"4.8.5")

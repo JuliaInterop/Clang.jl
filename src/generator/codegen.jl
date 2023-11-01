@@ -541,7 +541,7 @@ function emit!(dag::ExprDAG, node::ExprNode{StructMutualRef}, options::Dict; arg
             # if `leaf_ty.sym` can not be found in `tags` and `ids` then it's in `ids_extra`
             field_idx == typemax(Int) && @assert haskey(dag.ids_extra, leaf_ty.sym)
 
-            if node_idx < field_idx
+            if node_idx < field_idx && field_idx != typemax(Int)
                 # this assumes that circular references were removed at pointers
                 @assert is_jl_pointer(jlty) "Expected this field to be a pointer: $(struct_sym).$(field_sym)"
 

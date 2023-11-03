@@ -175,3 +175,8 @@ end
     ctx = create_context([joinpath(@__DIR__, "include/enum.h")], get_default_args(), options)
     @test_logs (:info, "Done!") match_mode = :any build!(ctx)
 end
+
+@testset "Issue 452 - StructMutualRef" begin
+    ctx = create_context([joinpath(@__DIR__, "include/struct-mutual-ref.h")], get_default_args())
+    @test_logs (:info, "Done!") match_mode = :any build!(ctx)
+end

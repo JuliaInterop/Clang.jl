@@ -12,6 +12,9 @@ function collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLCursor, opt
 end
 
 function collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLFunctionDecl, options)
+    skip_static_func = get(options, "skip_static_functions", false)
+    skip_static_func && getCursorLinkage(cursor) == CXLinkage_Internal && return nodes
+
     func_type = getCursorType(cursor)
 
     if kind(func_type) == CXType_FunctionNoProto

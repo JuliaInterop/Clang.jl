@@ -15,6 +15,7 @@ using ..Clang:
     getArgument,
     getCursorType,
     getCanonicalType,
+    getCursorLinkage,
     getCursorResultType,
     getElementType,
     getEnumDeclIntegerType,

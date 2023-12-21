@@ -129,6 +129,15 @@ auto_mutability_includelist = []
 # note: by default, Clang only parses doxygen comment, pass `-fparse-all-comments` to Clang in order to parse non-doxygen comments.
 extract_c_comment_style = "doxygen"
 
+# Pass a function to explicitly generate documentation. It will be called like
+# `callback_documentation(node::ExprNode)` if `extract_c_comment_style` is not
+# set, or if it is set and no docs were found automatically.
+#
+# Do *not* set this in the TOML file, it should be set in the generator script
+# to a function that takes in an ExprNode and returns a String[] (string
+# vector).
+# callback_documentation = ""
+
 # if set to true, single line comment will be printed as """comment""" instead of """\ncomment\n"""
 fold_single_line_comment = false
 

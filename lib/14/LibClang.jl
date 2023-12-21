@@ -1696,6 +1696,11 @@ function clang_getCXTUResourceUsage(TU)
     @ccall libclang.clang_getCXTUResourceUsage(TU::CXTranslationUnit)::CXTUResourceUsage
 end
 
+"""
+    clang_disposeCXTUResourceUsage(usage)
+
+*Documentation not found in headers.*
+"""
 function clang_disposeCXTUResourceUsage(usage)
     @ccall libclang.clang_disposeCXTUResourceUsage(usage::CXTUResourceUsage)::Cvoid
 end
@@ -6842,6 +6847,9 @@ function clang_uninstall_llvm_fatal_error_handler()
     @ccall libclang.clang_uninstall_llvm_fatal_error_handler()::Cvoid
 end
 
+"""
+*Documentation not found in headers.*
+"""
 const CXRewriter = Ptr{Cvoid}
 
 """

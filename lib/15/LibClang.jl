@@ -396,6 +396,626 @@ function clang_ModuleMapDescriptor_dispose(arg1)
 end
 
 """
+A particular source file that is part of a translation unit.
+"""
+const CXFile = Ptr{Cvoid}
+
+"""
+    clang_getFileName(SFile)
+
+Retrieve the complete file and path name of the given file.
+"""
+function clang_getFileName(SFile)
+    @ccall libclang.clang_getFileName(SFile::CXFile)::CXString
+end
+
+"""
+    clang_getFileTime(SFile)
+
+Retrieve the last modification time of the given file.
+"""
+function clang_getFileTime(SFile)
+    @ccall libclang.clang_getFileTime(SFile::CXFile)::Ctime_t
+end
+
+"""
+    CXFileUniqueID
+
+Uniquely identifies a [`CXFile`](@ref), that refers to the same underlying file, across an indexing session.
+"""
+struct CXFileUniqueID
+    data::NTuple{3, Culonglong}
+end
+
+"""
+    clang_getFileUniqueID(file, outID)
+
+Retrieve the unique ID for the given `file`.
+
+### Parameters
+* `file`: the file to get the ID for.
+* `outID`: stores the returned [`CXFileUniqueID`](@ref).
+### Returns
+If there was a failure getting the unique ID, returns non-zero, otherwise returns 0.
+"""
+function clang_getFileUniqueID(file, outID)
+    @ccall libclang.clang_getFileUniqueID(file::CXFile, outID::Ptr{CXFileUniqueID})::Cint
+end
+
+"""
+    clang_File_isEqual(file1, file2)
+
+Returns non-zero if the `file1` and `file2` point to the same file, or they are both NULL.
+"""
+function clang_File_isEqual(file1, file2)
+    @ccall libclang.clang_File_isEqual(file1::CXFile, file2::CXFile)::Cint
+end
+
+"""
+    clang_File_tryGetRealPathName(file)
+
+Returns the real path name of `file`.
+
+An empty string may be returned. Use [`clang_getFileName`](@ref)() in that case.
+"""
+function clang_File_tryGetRealPathName(file)
+    @ccall libclang.clang_File_tryGetRealPathName(file::CXFile)::CXString
+end
+
+"""
+    CXSourceLocation
+
+Identifies a specific source location within a translation unit.
+
+Use [`clang_getExpansionLocation`](@ref)() or [`clang_getSpellingLocation`](@ref)() to map a source location to a particular file, line, and column.
+"""
+struct CXSourceLocation
+    ptr_data::NTuple{2, Ptr{Cvoid}}
+    int_data::Cuint
+end
+
+"""
+    CXSourceRange
+
+Identifies a half-open character range in the source code.
+
+Use [`clang_getRangeStart`](@ref)() and [`clang_getRangeEnd`](@ref)() to retrieve the starting and end locations from a source range, respectively.
+"""
+struct CXSourceRange
+    ptr_data::NTuple{2, Ptr{Cvoid}}
+    begin_int_data::Cuint
+    end_int_data::Cuint
+end
+
+"""
+    clang_getNullLocation()
+
+Retrieve a NULL (invalid) source location.
+"""
+function clang_getNullLocation()
+    @ccall libclang.clang_getNullLocation()::CXSourceLocation
+end
+
+"""
+    clang_equalLocations(loc1, loc2)
+
+Determine whether two source locations, which must refer into the same translation unit, refer to exactly the same point in the source code.
+
+### Returns
+non-zero if the source locations refer to the same location, zero if they refer to different locations.
+"""
+function clang_equalLocations(loc1, loc2)
+    @ccall libclang.clang_equalLocations(loc1::CXSourceLocation, loc2::CXSourceLocation)::Cuint
+end
+
+"""
+    clang_Location_isInSystemHeader(location)
+
+Returns non-zero if the given source location is in a system header.
+"""
+function clang_Location_isInSystemHeader(location)
+    @ccall libclang.clang_Location_isInSystemHeader(location::CXSourceLocation)::Cint
+end
+
+"""
+    clang_Location_isFromMainFile(location)
+
+Returns non-zero if the given source location is in the main file of the corresponding translation unit.
+"""
+function clang_Location_isFromMainFile(location)
+    @ccall libclang.clang_Location_isFromMainFile(location::CXSourceLocation)::Cint
+end
+
+"""
+    clang_getNullRange()
+
+Retrieve a NULL (invalid) source range.
+"""
+function clang_getNullRange()
+    @ccall libclang.clang_getNullRange()::CXSourceRange
+end
+
+"""
+    clang_getRange(_begin, _end)
+
+Retrieve a source range given the beginning and ending source locations.
+"""
+function clang_getRange(_begin, _end)
+    @ccall libclang.clang_getRange(_begin::CXSourceLocation, _end::CXSourceLocation)::CXSourceRange
+end
+
+"""
+    clang_equalRanges(range1, range2)
+
+Determine whether two ranges are equivalent.
+
+### Returns
+non-zero if the ranges are the same, zero if they differ.
+"""
+function clang_equalRanges(range1, range2)
+    @ccall libclang.clang_equalRanges(range1::CXSourceRange, range2::CXSourceRange)::Cuint
+end
+
+"""
+    clang_Range_isNull(range)
+
+Returns non-zero if `range` is null.
+"""
+function clang_Range_isNull(range)
+    @ccall libclang.clang_Range_isNull(range::CXSourceRange)::Cint
+end
+
+"""
+    clang_getExpansionLocation(location, file, line, column, offset)
+
+Retrieve the file, line, column, and offset represented by the given source location.
+
+If the location refers into a macro expansion, retrieves the location of the macro expansion.
+
+### Parameters
+* `location`: the location within a source file that will be decomposed into its parts.
+* `file`: [out] if non-NULL, will be set to the file to which the given source location points.
+* `line`: [out] if non-NULL, will be set to the line to which the given source location points.
+* `column`: [out] if non-NULL, will be set to the column to which the given source location points.
+* `offset`: [out] if non-NULL, will be set to the offset into the buffer to which the given source location points.
+"""
+function clang_getExpansionLocation(location, file, line, column, offset)
+    @ccall libclang.clang_getExpansionLocation(location::CXSourceLocation, file::Ptr{CXFile}, line::Ptr{Cuint}, column::Ptr{Cuint}, offset::Ptr{Cuint})::Cvoid
+end
+
+"""
+    clang_getPresumedLocation(location, filename, line, column)
+
+Retrieve the file, line and column represented by the given source location, as specified in a # line directive.
+
+Example: given the following source code in a file somefile.c
+
+```c++
+ #123 "dummy.c" 1
+ static int func(void)
+ {
+     return 0;
+ }
+```
+
+the location information returned by this function would be
+
+File: dummy.c Line: 124 Column: 12
+
+whereas [`clang_getExpansionLocation`](@ref) would have returned
+
+File: somefile.c Line: 3 Column: 12
+
+### Parameters
+* `location`: the location within a source file that will be decomposed into its parts.
+* `filename`: [out] if non-NULL, will be set to the filename of the source location. Note that filenames returned will be for "virtual" files, which don't necessarily exist on the machine running clang - e.g. when parsing preprocessed output obtained from a different environment. If a non-NULL value is passed in, remember to dispose of the returned value using [`clang_disposeString`](@ref)() once you've finished with it. For an invalid source location, an empty string is returned.
+* `line`: [out] if non-NULL, will be set to the line number of the source location. For an invalid source location, zero is returned.
+* `column`: [out] if non-NULL, will be set to the column number of the source location. For an invalid source location, zero is returned.
+"""
+function clang_getPresumedLocation(location, filename, line, column)
+    @ccall libclang.clang_getPresumedLocation(location::CXSourceLocation, filename::Ptr{CXString}, line::Ptr{Cuint}, column::Ptr{Cuint})::Cvoid
+end
+
+"""
+    clang_getInstantiationLocation(location, file, line, column, offset)
+
+Legacy API to retrieve the file, line, column, and offset represented by the given source location.
+
+This interface has been replaced by the newer interface #[`clang_getExpansionLocation`](@ref)(). See that interface's documentation for details.
+"""
+function clang_getInstantiationLocation(location, file, line, column, offset)
+    @ccall libclang.clang_getInstantiationLocation(location::CXSourceLocation, file::Ptr{CXFile}, line::Ptr{Cuint}, column::Ptr{Cuint}, offset::Ptr{Cuint})::Cvoid
+end
+
+"""
+    clang_getSpellingLocation(location, file, line, column, offset)
+
+Retrieve the file, line, column, and offset represented by the given source location.
+
+If the location refers into a macro instantiation, return where the location was originally spelled in the source file.
+
+### Parameters
+* `location`: the location within a source file that will be decomposed into its parts.
+* `file`: [out] if non-NULL, will be set to the file to which the given source location points.
+* `line`: [out] if non-NULL, will be set to the line to which the given source location points.
+* `column`: [out] if non-NULL, will be set to the column to which the given source location points.
+* `offset`: [out] if non-NULL, will be set to the offset into the buffer to which the given source location points.
+"""
+function clang_getSpellingLocation(location, file, line, column, offset)
+    @ccall libclang.clang_getSpellingLocation(location::CXSourceLocation, file::Ptr{CXFile}, line::Ptr{Cuint}, column::Ptr{Cuint}, offset::Ptr{Cuint})::Cvoid
+end
+
+"""
+    clang_getFileLocation(location, file, line, column, offset)
+
+Retrieve the file, line, column, and offset represented by the given source location.
+
+If the location refers into a macro expansion, return where the macro was expanded or where the macro argument was written, if the location points at a macro argument.
+
+### Parameters
+* `location`: the location within a source file that will be decomposed into its parts.
+* `file`: [out] if non-NULL, will be set to the file to which the given source location points.
+* `line`: [out] if non-NULL, will be set to the line to which the given source location points.
+* `column`: [out] if non-NULL, will be set to the column to which the given source location points.
+* `offset`: [out] if non-NULL, will be set to the offset into the buffer to which the given source location points.
+"""
+function clang_getFileLocation(location, file, line, column, offset)
+    @ccall libclang.clang_getFileLocation(location::CXSourceLocation, file::Ptr{CXFile}, line::Ptr{Cuint}, column::Ptr{Cuint}, offset::Ptr{Cuint})::Cvoid
+end
+
+"""
+    clang_getRangeStart(range)
+
+Retrieve a source location representing the first character within a source range.
+"""
+function clang_getRangeStart(range)
+    @ccall libclang.clang_getRangeStart(range::CXSourceRange)::CXSourceLocation
+end
+
+"""
+    clang_getRangeEnd(range)
+
+Retrieve a source location representing the last character within a source range.
+"""
+function clang_getRangeEnd(range)
+    @ccall libclang.clang_getRangeEnd(range::CXSourceRange)::CXSourceLocation
+end
+
+"""
+    CXSourceRangeList
+
+Identifies an array of ranges.
+
+| Field  | Note                                         |
+| :----- | :------------------------------------------- |
+| count  | The number of ranges in the `ranges` array.  |
+| ranges | An array of `CXSourceRanges`.                |
+"""
+struct CXSourceRangeList
+    count::Cuint
+    ranges::Ptr{CXSourceRange}
+end
+
+"""
+    clang_disposeSourceRangeList(ranges)
+
+Destroy the given [`CXSourceRangeList`](@ref).
+"""
+function clang_disposeSourceRangeList(ranges)
+    @ccall libclang.clang_disposeSourceRangeList(ranges::Ptr{CXSourceRangeList})::Cvoid
+end
+
+"""
+    CXDiagnosticSeverity
+
+Describes the severity of a particular diagnostic.
+
+| Enumerator             | Note                                                                                                                           |
+| :--------------------- | :----------------------------------------------------------------------------------------------------------------------------- |
+| CXDiagnostic\\_Ignored | A diagnostic that has been suppressed, e.g., by a command-line option.                                                         |
+| CXDiagnostic\\_Note    | This diagnostic is a note that should be attached to the previous (non-note) diagnostic.                                       |
+| CXDiagnostic\\_Warning | This diagnostic indicates suspicious code that may not be wrong.                                                               |
+| CXDiagnostic\\_Error   | This diagnostic indicates that the code is ill-formed.                                                                         |
+| CXDiagnostic\\_Fatal   | This diagnostic indicates that the code is ill-formed such that future parser recovery is unlikely to produce useful results.  |
+"""
+@cenum CXDiagnosticSeverity::UInt32 begin
+    CXDiagnostic_Ignored = 0
+    CXDiagnostic_Note = 1
+    CXDiagnostic_Warning = 2
+    CXDiagnostic_Error = 3
+    CXDiagnostic_Fatal = 4
+end
+
+"""
+A single diagnostic, containing the diagnostic's severity, location, text, source ranges, and fix-it hints.
+"""
+const CXDiagnostic = Ptr{Cvoid}
+
+"""
+A group of CXDiagnostics.
+"""
+const CXDiagnosticSet = Ptr{Cvoid}
+
+"""
+    clang_getNumDiagnosticsInSet(Diags)
+
+Determine the number of diagnostics in a [`CXDiagnosticSet`](@ref).
+"""
+function clang_getNumDiagnosticsInSet(Diags)
+    @ccall libclang.clang_getNumDiagnosticsInSet(Diags::CXDiagnosticSet)::Cuint
+end
+
+"""
+    clang_getDiagnosticInSet(Diags, Index)
+
+Retrieve a diagnostic associated with the given [`CXDiagnosticSet`](@ref).
+
+### Parameters
+* `Diags`: the [`CXDiagnosticSet`](@ref) to query.
+* `Index`: the zero-based diagnostic number to retrieve.
+### Returns
+the requested diagnostic. This diagnostic must be freed via a call to [`clang_disposeDiagnostic`](@ref)().
+"""
+function clang_getDiagnosticInSet(Diags, Index)
+    @ccall libclang.clang_getDiagnosticInSet(Diags::CXDiagnosticSet, Index::Cuint)::CXDiagnostic
+end
+
+"""
+    CXLoadDiag_Error
+
+Describes the kind of error that occurred (if any) in a call to [`clang_loadDiagnostics`](@ref).
+
+| Enumerator               | Note                                                                                   |
+| :----------------------- | :------------------------------------------------------------------------------------- |
+| CXLoadDiag\\_None        | Indicates that no error occurred.                                                      |
+| CXLoadDiag\\_Unknown     | Indicates that an unknown error occurred while attempting to deserialize diagnostics.  |
+| CXLoadDiag\\_CannotLoad  | Indicates that the file containing the serialized diagnostics could not be opened.     |
+| CXLoadDiag\\_InvalidFile | Indicates that the serialized diagnostics file is invalid or corrupt.                  |
+"""
+@cenum CXLoadDiag_Error::UInt32 begin
+    CXLoadDiag_None = 0
+    CXLoadDiag_Unknown = 1
+    CXLoadDiag_CannotLoad = 2
+    CXLoadDiag_InvalidFile = 3
+end
+
+"""
+    clang_loadDiagnostics(file, error, errorString)
+
+Deserialize a set of diagnostics from a Clang diagnostics bitcode file.
+
+### Parameters
+* `file`: The name of the file to deserialize.
+* `error`: A pointer to a enum value recording if there was a problem deserializing the diagnostics.
+* `errorString`: A pointer to a [`CXString`](@ref) for recording the error string if the file was not successfully loaded.
+### Returns
+A loaded [`CXDiagnosticSet`](@ref) if successful, and NULL otherwise. These diagnostics should be released using [`clang_disposeDiagnosticSet`](@ref)().
+"""
+function clang_loadDiagnostics(file, error, errorString)
+    @ccall libclang.clang_loadDiagnostics(file::Cstring, error::Ptr{CXLoadDiag_Error}, errorString::Ptr{CXString})::CXDiagnosticSet
+end
+
+"""
+    clang_disposeDiagnosticSet(Diags)
+
+Release a [`CXDiagnosticSet`](@ref) and all of its contained diagnostics.
+"""
+function clang_disposeDiagnosticSet(Diags)
+    @ccall libclang.clang_disposeDiagnosticSet(Diags::CXDiagnosticSet)::Cvoid
+end
+
+"""
+    clang_getChildDiagnostics(D)
+
+Retrieve the child diagnostics of a [`CXDiagnostic`](@ref).
+
+This [`CXDiagnosticSet`](@ref) does not need to be released by [`clang_disposeDiagnosticSet`](@ref).
+"""
+function clang_getChildDiagnostics(D)
+    @ccall libclang.clang_getChildDiagnostics(D::CXDiagnostic)::CXDiagnosticSet
+end
+
+"""
+    clang_disposeDiagnostic(Diagnostic)
+
+Destroy a diagnostic.
+"""
+function clang_disposeDiagnostic(Diagnostic)
+    @ccall libclang.clang_disposeDiagnostic(Diagnostic::CXDiagnostic)::Cvoid
+end
+
+"""
+    CXDiagnosticDisplayOptions
+
+Options to control the display of diagnostics.
+
+The values in this enum are meant to be combined to customize the behavior of [`clang_formatDiagnostic`](@ref)().
+
+| Enumerator                           | Note                                                                                                                                                                                                                                                                                                                                                     |
+| :----------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CXDiagnostic\\_DisplaySourceLocation | Display the source-location information where the diagnostic was located.  When set, diagnostics will be prefixed by the file, line, and (optionally) column to which the diagnostic refers. For example,  ```c++  test.c:28: warning: extra tokens at end of #endif directive ```  This option corresponds to the clang flag `-fshow-source-location.`  |
+| CXDiagnostic\\_DisplayColumn         | If displaying the source-location information of the diagnostic, also include the column number.  This option corresponds to the clang flag `-fshow-column.`                                                                                                                                                                                             |
+| CXDiagnostic\\_DisplaySourceRanges   | If displaying the source-location information of the diagnostic, also include information about source ranges in a machine-parsable format.  This option corresponds to the clang flag `-fdiagnostics-print-source-range-info.`                                                                                                                          |
+| CXDiagnostic\\_DisplayOption         | Display the option name associated with this diagnostic, if any.  The option name displayed (e.g., -Wconversion) will be placed in brackets after the diagnostic text. This option corresponds to the clang flag `-fdiagnostics-show-option.`                                                                                                            |
+| CXDiagnostic\\_DisplayCategoryId     | Display the category number associated with this diagnostic, if any.  The category number is displayed within brackets after the diagnostic text. This option corresponds to the clang flag `-fdiagnostics-show-category=id.`                                                                                                                            |
+| CXDiagnostic\\_DisplayCategoryName   | Display the category name associated with this diagnostic, if any.  The category name is displayed within brackets after the diagnostic text. This option corresponds to the clang flag `-fdiagnostics-show-category=name.`                                                                                                                              |
+"""
+@cenum CXDiagnosticDisplayOptions::UInt32 begin
+    CXDiagnostic_DisplaySourceLocation = 1
+    CXDiagnostic_DisplayColumn = 2
+    CXDiagnostic_DisplaySourceRanges = 4
+    CXDiagnostic_DisplayOption = 8
+    CXDiagnostic_DisplayCategoryId = 16
+    CXDiagnostic_DisplayCategoryName = 32
+end
+
+"""
+    clang_formatDiagnostic(Diagnostic, Options)
+
+Format the given diagnostic in a manner that is suitable for display.
+
+This routine will format the given diagnostic to a string, rendering the diagnostic according to the various options given. The [`clang_defaultDiagnosticDisplayOptions`](@ref)() function returns the set of options that most closely mimics the behavior of the clang compiler.
+
+### Parameters
+* `Diagnostic`: The diagnostic to print.
+* `Options`: A set of options that control the diagnostic display, created by combining [`CXDiagnosticDisplayOptions`](@ref) values.
+### Returns
+A new string containing for formatted diagnostic.
+"""
+function clang_formatDiagnostic(Diagnostic, Options)
+    @ccall libclang.clang_formatDiagnostic(Diagnostic::CXDiagnostic, Options::Cuint)::CXString
+end
+
+"""
+    clang_defaultDiagnosticDisplayOptions()
+
+Retrieve the set of display options most similar to the default behavior of the clang compiler.
+
+### Returns
+A set of display options suitable for use with [`clang_formatDiagnostic`](@ref)().
+"""
+function clang_defaultDiagnosticDisplayOptions()
+    @ccall libclang.clang_defaultDiagnosticDisplayOptions()::Cuint
+end
+
+"""
+    clang_getDiagnosticSeverity(arg1)
+
+Determine the severity of the given diagnostic.
+"""
+function clang_getDiagnosticSeverity(arg1)
+    @ccall libclang.clang_getDiagnosticSeverity(arg1::CXDiagnostic)::CXDiagnosticSeverity
+end
+
+"""
+    clang_getDiagnosticLocation(arg1)
+
+Retrieve the source location of the given diagnostic.
+
+This location is where Clang would print the caret ('^') when displaying the diagnostic on the command line.
+"""
+function clang_getDiagnosticLocation(arg1)
+    @ccall libclang.clang_getDiagnosticLocation(arg1::CXDiagnostic)::CXSourceLocation
+end
+
+"""
+    clang_getDiagnosticSpelling(arg1)
+
+Retrieve the text of the given diagnostic.
+"""
+function clang_getDiagnosticSpelling(arg1)
+    @ccall libclang.clang_getDiagnosticSpelling(arg1::CXDiagnostic)::CXString
+end
+
+"""
+    clang_getDiagnosticOption(Diag, Disable)
+
+Retrieve the name of the command-line option that enabled this diagnostic.
+
+### Parameters
+* `Diag`: The diagnostic to be queried.
+* `Disable`: If non-NULL, will be set to the option that disables this diagnostic (if any).
+### Returns
+A string that contains the command-line option used to enable this warning, such as "-Wconversion" or "-pedantic".
+"""
+function clang_getDiagnosticOption(Diag, Disable)
+    @ccall libclang.clang_getDiagnosticOption(Diag::CXDiagnostic, Disable::Ptr{CXString})::CXString
+end
+
+"""
+    clang_getDiagnosticCategory(arg1)
+
+Retrieve the category number for this diagnostic.
+
+Diagnostics can be categorized into groups along with other, related diagnostics (e.g., diagnostics under the same warning flag). This routine retrieves the category number for the given diagnostic.
+
+### Returns
+The number of the category that contains this diagnostic, or zero if this diagnostic is uncategorized.
+"""
+function clang_getDiagnosticCategory(arg1)
+    @ccall libclang.clang_getDiagnosticCategory(arg1::CXDiagnostic)::Cuint
+end
+
+"""
+    clang_getDiagnosticCategoryName(Category)
+
+Retrieve the name of a particular diagnostic category. This is now deprecated. Use [`clang_getDiagnosticCategoryText`](@ref)() instead.
+
+### Parameters
+* `Category`: A diagnostic category number, as returned by [`clang_getDiagnosticCategory`](@ref)().
+### Returns
+The name of the given diagnostic category.
+"""
+function clang_getDiagnosticCategoryName(Category)
+    @ccall libclang.clang_getDiagnosticCategoryName(Category::Cuint)::CXString
+end
+
+"""
+    clang_getDiagnosticCategoryText(arg1)
+
+Retrieve the diagnostic category text for a given diagnostic.
+
+### Returns
+The text of the given diagnostic category.
+"""
+function clang_getDiagnosticCategoryText(arg1)
+    @ccall libclang.clang_getDiagnosticCategoryText(arg1::CXDiagnostic)::CXString
+end
+
+"""
+    clang_getDiagnosticNumRanges(arg1)
+
+Determine the number of source ranges associated with the given diagnostic.
+"""
+function clang_getDiagnosticNumRanges(arg1)
+    @ccall libclang.clang_getDiagnosticNumRanges(arg1::CXDiagnostic)::Cuint
+end
+
+"""
+    clang_getDiagnosticRange(Diagnostic, Range)
+
+Retrieve a source range associated with the diagnostic.
+
+A diagnostic's source ranges highlight important elements in the source code. On the command line, Clang displays source ranges by underlining them with '~' characters.
+
+### Parameters
+* `Diagnostic`: the diagnostic whose range is being extracted.
+* `Range`: the zero-based index specifying which range to
+### Returns
+the requested source range.
+"""
+function clang_getDiagnosticRange(Diagnostic, Range)
+    @ccall libclang.clang_getDiagnosticRange(Diagnostic::CXDiagnostic, Range::Cuint)::CXSourceRange
+end
+
+"""
+    clang_getDiagnosticNumFixIts(Diagnostic)
+
+Determine the number of fix-it hints associated with the given diagnostic.
+"""
+function clang_getDiagnosticNumFixIts(Diagnostic)
+    @ccall libclang.clang_getDiagnosticNumFixIts(Diagnostic::CXDiagnostic)::Cuint
+end
+
+"""
+    clang_getDiagnosticFixIt(Diagnostic, FixIt, ReplacementRange)
+
+Retrieve the replacement information for a given fix-it.
+
+Fix-its are described in terms of a source range whose contents should be replaced by a string. This approach generalizes over three kinds of operations: removal of source code (the range covers the code to be removed and the replacement string is empty), replacement of source code (the range covers the code to be replaced and the replacement string provides the new code), and insertion (both the start and end of the range point at the insertion location, and the replacement string provides the text to insert).
+
+### Parameters
+* `Diagnostic`: The diagnostic whose fix-its are being queried.
+* `FixIt`: The zero-based index of the fix-it.
+* `ReplacementRange`: The source range whose contents will be replaced with the returned replacement string. Note that source ranges are half-open ranges [a, b), so the source code should be replaced from a and up to (but not including) b.
+### Returns
+A string containing text that should be replace the source code indicated by the `ReplacementRange`.
+"""
+function clang_getDiagnosticFixIt(Diagnostic, FixIt, ReplacementRange)
+    @ccall libclang.clang_getDiagnosticFixIt(Diagnostic::CXDiagnostic, FixIt::Cuint, ReplacementRange::Ptr{CXSourceRange})::CXString
+end
+
+"""
 An "index" that consists of a set of translation units that would typically be linked together into an executable or library.
 """
 const CXIndex = Ptr{Cvoid}
@@ -617,53 +1237,6 @@ function clang_CXIndex_setInvocationEmissionPathOption(arg1, Path)
 end
 
 """
-A particular source file that is part of a translation unit.
-"""
-const CXFile = Ptr{Cvoid}
-
-"""
-    clang_getFileName(SFile)
-
-Retrieve the complete file and path name of the given file.
-"""
-function clang_getFileName(SFile)
-    @ccall libclang.clang_getFileName(SFile::CXFile)::CXString
-end
-
-"""
-    clang_getFileTime(SFile)
-
-Retrieve the last modification time of the given file.
-"""
-function clang_getFileTime(SFile)
-    @ccall libclang.clang_getFileTime(SFile::CXFile)::Ctime_t
-end
-
-"""
-    CXFileUniqueID
-
-Uniquely identifies a [`CXFile`](@ref), that refers to the same underlying file, across an indexing session.
-"""
-struct CXFileUniqueID
-    data::NTuple{3, Culonglong}
-end
-
-"""
-    clang_getFileUniqueID(file, outID)
-
-Retrieve the unique ID for the given `file`.
-
-### Parameters
-* `file`: the file to get the ID for.
-* `outID`: stores the returned [`CXFileUniqueID`](@ref).
-### Returns
-If there was a failure getting the unique ID, returns non-zero, otherwise returns 0.
-"""
-function clang_getFileUniqueID(file, outID)
-    @ccall libclang.clang_getFileUniqueID(file::CXFile, outID::Ptr{CXFileUniqueID})::Cint
-end
-
-"""
     clang_isFileMultipleIncludeGuarded(tu, file)
 
 Determine whether the given header is guarded against multiple inclusions, either with the conventional #ifndef/#define/#endif macro guards or with #pragma once.
@@ -704,72 +1277,6 @@ function clang_getFileContents(tu, file, size)
 end
 
 """
-    clang_File_isEqual(file1, file2)
-
-Returns non-zero if the `file1` and `file2` point to the same file, or they are both NULL.
-"""
-function clang_File_isEqual(file1, file2)
-    @ccall libclang.clang_File_isEqual(file1::CXFile, file2::CXFile)::Cint
-end
-
-"""
-    clang_File_tryGetRealPathName(file)
-
-Returns the real path name of `file`.
-
-An empty string may be returned. Use [`clang_getFileName`](@ref)() in that case.
-"""
-function clang_File_tryGetRealPathName(file)
-    @ccall libclang.clang_File_tryGetRealPathName(file::CXFile)::CXString
-end
-
-"""
-    CXSourceLocation
-
-Identifies a specific source location within a translation unit.
-
-Use [`clang_getExpansionLocation`](@ref)() or [`clang_getSpellingLocation`](@ref)() to map a source location to a particular file, line, and column.
-"""
-struct CXSourceLocation
-    ptr_data::NTuple{2, Ptr{Cvoid}}
-    int_data::Cuint
-end
-
-"""
-    CXSourceRange
-
-Identifies a half-open character range in the source code.
-
-Use [`clang_getRangeStart`](@ref)() and [`clang_getRangeEnd`](@ref)() to retrieve the starting and end locations from a source range, respectively.
-"""
-struct CXSourceRange
-    ptr_data::NTuple{2, Ptr{Cvoid}}
-    begin_int_data::Cuint
-    end_int_data::Cuint
-end
-
-"""
-    clang_getNullLocation()
-
-Retrieve a NULL (invalid) source location.
-"""
-function clang_getNullLocation()
-    @ccall libclang.clang_getNullLocation()::CXSourceLocation
-end
-
-"""
-    clang_equalLocations(loc1, loc2)
-
-Determine whether two source locations, which must refer into the same translation unit, refer to exactly the same point in the source code.
-
-### Returns
-non-zero if the source locations refer to the same location, zero if they refer to different locations.
-"""
-function clang_equalLocations(loc1, loc2)
-    @ccall libclang.clang_equalLocations(loc1::CXSourceLocation, loc2::CXSourceLocation)::Cuint
-end
-
-"""
     clang_getLocation(tu, file, line, column)
 
 Retrieves the source location associated with a given file/line/column in a particular translation unit.
@@ -785,194 +1292,6 @@ Retrieves the source location associated with a given character offset in a part
 """
 function clang_getLocationForOffset(tu, file, offset)
     @ccall libclang.clang_getLocationForOffset(tu::CXTranslationUnit, file::CXFile, offset::Cuint)::CXSourceLocation
-end
-
-"""
-    clang_Location_isInSystemHeader(location)
-
-Returns non-zero if the given source location is in a system header.
-"""
-function clang_Location_isInSystemHeader(location)
-    @ccall libclang.clang_Location_isInSystemHeader(location::CXSourceLocation)::Cint
-end
-
-"""
-    clang_Location_isFromMainFile(location)
-
-Returns non-zero if the given source location is in the main file of the corresponding translation unit.
-"""
-function clang_Location_isFromMainFile(location)
-    @ccall libclang.clang_Location_isFromMainFile(location::CXSourceLocation)::Cint
-end
-
-"""
-    clang_getNullRange()
-
-Retrieve a NULL (invalid) source range.
-"""
-function clang_getNullRange()
-    @ccall libclang.clang_getNullRange()::CXSourceRange
-end
-
-"""
-    clang_getRange(_begin, _end)
-
-Retrieve a source range given the beginning and ending source locations.
-"""
-function clang_getRange(_begin, _end)
-    @ccall libclang.clang_getRange(_begin::CXSourceLocation, _end::CXSourceLocation)::CXSourceRange
-end
-
-"""
-    clang_equalRanges(range1, range2)
-
-Determine whether two ranges are equivalent.
-
-### Returns
-non-zero if the ranges are the same, zero if they differ.
-"""
-function clang_equalRanges(range1, range2)
-    @ccall libclang.clang_equalRanges(range1::CXSourceRange, range2::CXSourceRange)::Cuint
-end
-
-"""
-    clang_Range_isNull(range)
-
-Returns non-zero if `range` is null.
-"""
-function clang_Range_isNull(range)
-    @ccall libclang.clang_Range_isNull(range::CXSourceRange)::Cint
-end
-
-"""
-    clang_getExpansionLocation(location, file, line, column, offset)
-
-Retrieve the file, line, column, and offset represented by the given source location.
-
-If the location refers into a macro expansion, retrieves the location of the macro expansion.
-
-### Parameters
-* `location`: the location within a source file that will be decomposed into its parts.
-* `file`: [out] if non-NULL, will be set to the file to which the given source location points.
-* `line`: [out] if non-NULL, will be set to the line to which the given source location points.
-* `column`: [out] if non-NULL, will be set to the column to which the given source location points.
-* `offset`: [out] if non-NULL, will be set to the offset into the buffer to which the given source location points.
-"""
-function clang_getExpansionLocation(location, file, line, column, offset)
-    @ccall libclang.clang_getExpansionLocation(location::CXSourceLocation, file::Ptr{CXFile}, line::Ptr{Cuint}, column::Ptr{Cuint}, offset::Ptr{Cuint})::Cvoid
-end
-
-"""
-    clang_getPresumedLocation(location, filename, line, column)
-
-Retrieve the file, line and column represented by the given source location, as specified in a # line directive.
-
-Example: given the following source code in a file somefile.c
-
-```c++
- #123 "dummy.c" 1
- static int func(void)
- {
-     return 0;
- }
-```
-
-the location information returned by this function would be
-
-File: dummy.c Line: 124 Column: 12
-
-whereas [`clang_getExpansionLocation`](@ref) would have returned
-
-File: somefile.c Line: 3 Column: 12
-
-### Parameters
-* `location`: the location within a source file that will be decomposed into its parts.
-* `filename`: [out] if non-NULL, will be set to the filename of the source location. Note that filenames returned will be for "virtual" files, which don't necessarily exist on the machine running clang - e.g. when parsing preprocessed output obtained from a different environment. If a non-NULL value is passed in, remember to dispose of the returned value using [`clang_disposeString`](@ref)() once you've finished with it. For an invalid source location, an empty string is returned.
-* `line`: [out] if non-NULL, will be set to the line number of the source location. For an invalid source location, zero is returned.
-* `column`: [out] if non-NULL, will be set to the column number of the source location. For an invalid source location, zero is returned.
-"""
-function clang_getPresumedLocation(location, filename, line, column)
-    @ccall libclang.clang_getPresumedLocation(location::CXSourceLocation, filename::Ptr{CXString}, line::Ptr{Cuint}, column::Ptr{Cuint})::Cvoid
-end
-
-"""
-    clang_getInstantiationLocation(location, file, line, column, offset)
-
-Legacy API to retrieve the file, line, column, and offset represented by the given source location.
-
-This interface has been replaced by the newer interface #[`clang_getExpansionLocation`](@ref)(). See that interface's documentation for details.
-"""
-function clang_getInstantiationLocation(location, file, line, column, offset)
-    @ccall libclang.clang_getInstantiationLocation(location::CXSourceLocation, file::Ptr{CXFile}, line::Ptr{Cuint}, column::Ptr{Cuint}, offset::Ptr{Cuint})::Cvoid
-end
-
-"""
-    clang_getSpellingLocation(location, file, line, column, offset)
-
-Retrieve the file, line, column, and offset represented by the given source location.
-
-If the location refers into a macro instantiation, return where the location was originally spelled in the source file.
-
-### Parameters
-* `location`: the location within a source file that will be decomposed into its parts.
-* `file`: [out] if non-NULL, will be set to the file to which the given source location points.
-* `line`: [out] if non-NULL, will be set to the line to which the given source location points.
-* `column`: [out] if non-NULL, will be set to the column to which the given source location points.
-* `offset`: [out] if non-NULL, will be set to the offset into the buffer to which the given source location points.
-"""
-function clang_getSpellingLocation(location, file, line, column, offset)
-    @ccall libclang.clang_getSpellingLocation(location::CXSourceLocation, file::Ptr{CXFile}, line::Ptr{Cuint}, column::Ptr{Cuint}, offset::Ptr{Cuint})::Cvoid
-end
-
-"""
-    clang_getFileLocation(location, file, line, column, offset)
-
-Retrieve the file, line, column, and offset represented by the given source location.
-
-If the location refers into a macro expansion, return where the macro was expanded or where the macro argument was written, if the location points at a macro argument.
-
-### Parameters
-* `location`: the location within a source file that will be decomposed into its parts.
-* `file`: [out] if non-NULL, will be set to the file to which the given source location points.
-* `line`: [out] if non-NULL, will be set to the line to which the given source location points.
-* `column`: [out] if non-NULL, will be set to the column to which the given source location points.
-* `offset`: [out] if non-NULL, will be set to the offset into the buffer to which the given source location points.
-"""
-function clang_getFileLocation(location, file, line, column, offset)
-    @ccall libclang.clang_getFileLocation(location::CXSourceLocation, file::Ptr{CXFile}, line::Ptr{Cuint}, column::Ptr{Cuint}, offset::Ptr{Cuint})::Cvoid
-end
-
-"""
-    clang_getRangeStart(range)
-
-Retrieve a source location representing the first character within a source range.
-"""
-function clang_getRangeStart(range)
-    @ccall libclang.clang_getRangeStart(range::CXSourceRange)::CXSourceLocation
-end
-
-"""
-    clang_getRangeEnd(range)
-
-Retrieve a source location representing the last character within a source range.
-"""
-function clang_getRangeEnd(range)
-    @ccall libclang.clang_getRangeEnd(range::CXSourceRange)::CXSourceLocation
-end
-
-"""
-    CXSourceRangeList
-
-Identifies an array of ranges.
-
-| Field  | Note                                         |
-| :----- | :------------------------------------------- |
-| count  | The number of ranges in the `ranges` array.  |
-| ranges | An array of `CXSourceRanges`.                |
-"""
-struct CXSourceRangeList
-    count::Cuint
-    ranges::Ptr{CXSourceRange}
 end
 
 """
@@ -995,125 +1314,6 @@ The preprocessor will skip lines when they are surrounded by an if/ifdef/ifndef 
 """
 function clang_getAllSkippedRanges(tu)
     @ccall libclang.clang_getAllSkippedRanges(tu::CXTranslationUnit)::Ptr{CXSourceRangeList}
-end
-
-"""
-    clang_disposeSourceRangeList(ranges)
-
-Destroy the given [`CXSourceRangeList`](@ref).
-"""
-function clang_disposeSourceRangeList(ranges)
-    @ccall libclang.clang_disposeSourceRangeList(ranges::Ptr{CXSourceRangeList})::Cvoid
-end
-
-"""
-    CXDiagnosticSeverity
-
-Describes the severity of a particular diagnostic.
-
-| Enumerator             | Note                                                                                                                           |
-| :--------------------- | :----------------------------------------------------------------------------------------------------------------------------- |
-| CXDiagnostic\\_Ignored | A diagnostic that has been suppressed, e.g., by a command-line option.                                                         |
-| CXDiagnostic\\_Note    | This diagnostic is a note that should be attached to the previous (non-note) diagnostic.                                       |
-| CXDiagnostic\\_Warning | This diagnostic indicates suspicious code that may not be wrong.                                                               |
-| CXDiagnostic\\_Error   | This diagnostic indicates that the code is ill-formed.                                                                         |
-| CXDiagnostic\\_Fatal   | This diagnostic indicates that the code is ill-formed such that future parser recovery is unlikely to produce useful results.  |
-"""
-@cenum CXDiagnosticSeverity::UInt32 begin
-    CXDiagnostic_Ignored = 0
-    CXDiagnostic_Note = 1
-    CXDiagnostic_Warning = 2
-    CXDiagnostic_Error = 3
-    CXDiagnostic_Fatal = 4
-end
-
-"""
-A single diagnostic, containing the diagnostic's severity, location, text, source ranges, and fix-it hints.
-"""
-const CXDiagnostic = Ptr{Cvoid}
-
-"""
-A group of CXDiagnostics.
-"""
-const CXDiagnosticSet = Ptr{Cvoid}
-
-"""
-    clang_getNumDiagnosticsInSet(Diags)
-
-Determine the number of diagnostics in a [`CXDiagnosticSet`](@ref).
-"""
-function clang_getNumDiagnosticsInSet(Diags)
-    @ccall libclang.clang_getNumDiagnosticsInSet(Diags::CXDiagnosticSet)::Cuint
-end
-
-"""
-    clang_getDiagnosticInSet(Diags, Index)
-
-Retrieve a diagnostic associated with the given [`CXDiagnosticSet`](@ref).
-
-### Parameters
-* `Diags`: the [`CXDiagnosticSet`](@ref) to query.
-* `Index`: the zero-based diagnostic number to retrieve.
-### Returns
-the requested diagnostic. This diagnostic must be freed via a call to [`clang_disposeDiagnostic`](@ref)().
-"""
-function clang_getDiagnosticInSet(Diags, Index)
-    @ccall libclang.clang_getDiagnosticInSet(Diags::CXDiagnosticSet, Index::Cuint)::CXDiagnostic
-end
-
-"""
-    CXLoadDiag_Error
-
-Describes the kind of error that occurred (if any) in a call to [`clang_loadDiagnostics`](@ref).
-
-| Enumerator               | Note                                                                                   |
-| :----------------------- | :------------------------------------------------------------------------------------- |
-| CXLoadDiag\\_None        | Indicates that no error occurred.                                                      |
-| CXLoadDiag\\_Unknown     | Indicates that an unknown error occurred while attempting to deserialize diagnostics.  |
-| CXLoadDiag\\_CannotLoad  | Indicates that the file containing the serialized diagnostics could not be opened.     |
-| CXLoadDiag\\_InvalidFile | Indicates that the serialized diagnostics file is invalid or corrupt.                  |
-"""
-@cenum CXLoadDiag_Error::UInt32 begin
-    CXLoadDiag_None = 0
-    CXLoadDiag_Unknown = 1
-    CXLoadDiag_CannotLoad = 2
-    CXLoadDiag_InvalidFile = 3
-end
-
-"""
-    clang_loadDiagnostics(file, error, errorString)
-
-Deserialize a set of diagnostics from a Clang diagnostics bitcode file.
-
-### Parameters
-* `file`: The name of the file to deserialize.
-* `error`: A pointer to a enum value recording if there was a problem deserializing the diagnostics.
-* `errorString`: A pointer to a [`CXString`](@ref) for recording the error string if the file was not successfully loaded.
-### Returns
-A loaded [`CXDiagnosticSet`](@ref) if successful, and NULL otherwise. These diagnostics should be released using [`clang_disposeDiagnosticSet`](@ref)().
-"""
-function clang_loadDiagnostics(file, error, errorString)
-    @ccall libclang.clang_loadDiagnostics(file::Cstring, error::Ptr{CXLoadDiag_Error}, errorString::Ptr{CXString})::CXDiagnosticSet
-end
-
-"""
-    clang_disposeDiagnosticSet(Diags)
-
-Release a [`CXDiagnosticSet`](@ref) and all of its contained diagnostics.
-"""
-function clang_disposeDiagnosticSet(Diags)
-    @ccall libclang.clang_disposeDiagnosticSet(Diags::CXDiagnosticSet)::Cvoid
-end
-
-"""
-    clang_getChildDiagnostics(D)
-
-Retrieve the child diagnostics of a [`CXDiagnostic`](@ref).
-
-This [`CXDiagnosticSet`](@ref) does not need to be released by [`clang_disposeDiagnosticSet`](@ref).
-"""
-function clang_getChildDiagnostics(D)
-    @ccall libclang.clang_getChildDiagnostics(D::CXDiagnostic)::CXDiagnosticSet
 end
 
 """
@@ -1150,206 +1350,6 @@ Retrieve the complete set of diagnostics associated with a translation unit.
 """
 function clang_getDiagnosticSetFromTU(Unit)
     @ccall libclang.clang_getDiagnosticSetFromTU(Unit::CXTranslationUnit)::CXDiagnosticSet
-end
-
-"""
-    clang_disposeDiagnostic(Diagnostic)
-
-Destroy a diagnostic.
-"""
-function clang_disposeDiagnostic(Diagnostic)
-    @ccall libclang.clang_disposeDiagnostic(Diagnostic::CXDiagnostic)::Cvoid
-end
-
-"""
-    CXDiagnosticDisplayOptions
-
-Options to control the display of diagnostics.
-
-The values in this enum are meant to be combined to customize the behavior of [`clang_formatDiagnostic`](@ref)().
-
-| Enumerator                           | Note                                                                                                                                                                                                                                                                                                                                                     |
-| :----------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| CXDiagnostic\\_DisplaySourceLocation | Display the source-location information where the diagnostic was located.  When set, diagnostics will be prefixed by the file, line, and (optionally) column to which the diagnostic refers. For example,  ```c++  test.c:28: warning: extra tokens at end of #endif directive ```  This option corresponds to the clang flag `-fshow-source-location.`  |
-| CXDiagnostic\\_DisplayColumn         | If displaying the source-location information of the diagnostic, also include the column number.  This option corresponds to the clang flag `-fshow-column.`                                                                                                                                                                                             |
-| CXDiagnostic\\_DisplaySourceRanges   | If displaying the source-location information of the diagnostic, also include information about source ranges in a machine-parsable format.  This option corresponds to the clang flag `-fdiagnostics-print-source-range-info.`                                                                                                                          |
-| CXDiagnostic\\_DisplayOption         | Display the option name associated with this diagnostic, if any.  The option name displayed (e.g., -Wconversion) will be placed in brackets after the diagnostic text. This option corresponds to the clang flag `-fdiagnostics-show-option.`                                                                                                            |
-| CXDiagnostic\\_DisplayCategoryId     | Display the category number associated with this diagnostic, if any.  The category number is displayed within brackets after the diagnostic text. This option corresponds to the clang flag `-fdiagnostics-show-category=id.`                                                                                                                            |
-| CXDiagnostic\\_DisplayCategoryName   | Display the category name associated with this diagnostic, if any.  The category name is displayed within brackets after the diagnostic text. This option corresponds to the clang flag `-fdiagnostics-show-category=name.`                                                                                                                              |
-"""
-@cenum CXDiagnosticDisplayOptions::UInt32 begin
-    CXDiagnostic_DisplaySourceLocation = 1
-    CXDiagnostic_DisplayColumn = 2
-    CXDiagnostic_DisplaySourceRanges = 4
-    CXDiagnostic_DisplayOption = 8
-    CXDiagnostic_DisplayCategoryId = 16
-    CXDiagnostic_DisplayCategoryName = 32
-end
-
-"""
-    clang_formatDiagnostic(Diagnostic, Options)
-
-Format the given diagnostic in a manner that is suitable for display.
-
-This routine will format the given diagnostic to a string, rendering the diagnostic according to the various options given. The [`clang_defaultDiagnosticDisplayOptions`](@ref)() function returns the set of options that most closely mimics the behavior of the clang compiler.
-
-### Parameters
-* `Diagnostic`: The diagnostic to print.
-* `Options`: A set of options that control the diagnostic display, created by combining [`CXDiagnosticDisplayOptions`](@ref) values.
-### Returns
-A new string containing for formatted diagnostic.
-"""
-function clang_formatDiagnostic(Diagnostic, Options)
-    @ccall libclang.clang_formatDiagnostic(Diagnostic::CXDiagnostic, Options::Cuint)::CXString
-end
-
-"""
-    clang_defaultDiagnosticDisplayOptions()
-
-Retrieve the set of display options most similar to the default behavior of the clang compiler.
-
-### Returns
-A set of display options suitable for use with [`clang_formatDiagnostic`](@ref)().
-"""
-function clang_defaultDiagnosticDisplayOptions()
-    @ccall libclang.clang_defaultDiagnosticDisplayOptions()::Cuint
-end
-
-"""
-    clang_getDiagnosticSeverity(arg1)
-
-Determine the severity of the given diagnostic.
-"""
-function clang_getDiagnosticSeverity(arg1)
-    @ccall libclang.clang_getDiagnosticSeverity(arg1::CXDiagnostic)::CXDiagnosticSeverity
-end
-
-"""
-    clang_getDiagnosticLocation(arg1)
-
-Retrieve the source location of the given diagnostic.
-
-This location is where Clang would print the caret ('^') when displaying the diagnostic on the command line.
-"""
-function clang_getDiagnosticLocation(arg1)
-    @ccall libclang.clang_getDiagnosticLocation(arg1::CXDiagnostic)::CXSourceLocation
-end
-
-"""
-    clang_getDiagnosticSpelling(arg1)
-
-Retrieve the text of the given diagnostic.
-"""
-function clang_getDiagnosticSpelling(arg1)
-    @ccall libclang.clang_getDiagnosticSpelling(arg1::CXDiagnostic)::CXString
-end
-
-"""
-    clang_getDiagnosticOption(Diag, Disable)
-
-Retrieve the name of the command-line option that enabled this diagnostic.
-
-### Parameters
-* `Diag`: The diagnostic to be queried.
-* `Disable`: If non-NULL, will be set to the option that disables this diagnostic (if any).
-### Returns
-A string that contains the command-line option used to enable this warning, such as "-Wconversion" or "-pedantic".
-"""
-function clang_getDiagnosticOption(Diag, Disable)
-    @ccall libclang.clang_getDiagnosticOption(Diag::CXDiagnostic, Disable::Ptr{CXString})::CXString
-end
-
-"""
-    clang_getDiagnosticCategory(arg1)
-
-Retrieve the category number for this diagnostic.
-
-Diagnostics can be categorized into groups along with other, related diagnostics (e.g., diagnostics under the same warning flag). This routine retrieves the category number for the given diagnostic.
-
-### Returns
-The number of the category that contains this diagnostic, or zero if this diagnostic is uncategorized.
-"""
-function clang_getDiagnosticCategory(arg1)
-    @ccall libclang.clang_getDiagnosticCategory(arg1::CXDiagnostic)::Cuint
-end
-
-"""
-    clang_getDiagnosticCategoryName(Category)
-
-Retrieve the name of a particular diagnostic category. This is now deprecated. Use [`clang_getDiagnosticCategoryText`](@ref)() instead.
-
-### Parameters
-* `Category`: A diagnostic category number, as returned by [`clang_getDiagnosticCategory`](@ref)().
-### Returns
-The name of the given diagnostic category.
-"""
-function clang_getDiagnosticCategoryName(Category)
-    @ccall libclang.clang_getDiagnosticCategoryName(Category::Cuint)::CXString
-end
-
-"""
-    clang_getDiagnosticCategoryText(arg1)
-
-Retrieve the diagnostic category text for a given diagnostic.
-
-### Returns
-The text of the given diagnostic category.
-"""
-function clang_getDiagnosticCategoryText(arg1)
-    @ccall libclang.clang_getDiagnosticCategoryText(arg1::CXDiagnostic)::CXString
-end
-
-"""
-    clang_getDiagnosticNumRanges(arg1)
-
-Determine the number of source ranges associated with the given diagnostic.
-"""
-function clang_getDiagnosticNumRanges(arg1)
-    @ccall libclang.clang_getDiagnosticNumRanges(arg1::CXDiagnostic)::Cuint
-end
-
-"""
-    clang_getDiagnosticRange(Diagnostic, Range)
-
-Retrieve a source range associated with the diagnostic.
-
-A diagnostic's source ranges highlight important elements in the source code. On the command line, Clang displays source ranges by underlining them with '~' characters.
-
-### Parameters
-* `Diagnostic`: the diagnostic whose range is being extracted.
-* `Range`: the zero-based index specifying which range to
-### Returns
-the requested source range.
-"""
-function clang_getDiagnosticRange(Diagnostic, Range)
-    @ccall libclang.clang_getDiagnosticRange(Diagnostic::CXDiagnostic, Range::Cuint)::CXSourceRange
-end
-
-"""
-    clang_getDiagnosticNumFixIts(Diagnostic)
-
-Determine the number of fix-it hints associated with the given diagnostic.
-"""
-function clang_getDiagnosticNumFixIts(Diagnostic)
-    @ccall libclang.clang_getDiagnosticNumFixIts(Diagnostic::CXDiagnostic)::Cuint
-end
-
-"""
-    clang_getDiagnosticFixIt(Diagnostic, FixIt, ReplacementRange)
-
-Retrieve the replacement information for a given fix-it.
-
-Fix-its are described in terms of a source range whose contents should be replaced by a string. This approach generalizes over three kinds of operations: removal of source code (the range covers the code to be removed and the replacement string is empty), replacement of source code (the range covers the code to be replaced and the replacement string provides the new code), and insertion (both the start and end of the range point at the insertion location, and the replacement string provides the text to insert).
-
-### Parameters
-* `Diagnostic`: The diagnostic whose fix-its are being queried.
-* `FixIt`: The zero-based index of the fix-it.
-* `ReplacementRange`: The source range whose contents will be replaced with the returned replacement string. Note that source ranges are half-open ranges [a, b), so the source code should be replaced from a and up to (but not including) b.
-### Returns
-A string containing text that should be replace the source code indicated by the `ReplacementRange`.
-"""
-function clang_getDiagnosticFixIt(Diagnostic, FixIt, ReplacementRange)
-    @ccall libclang.clang_getDiagnosticFixIt(Diagnostic::CXDiagnostic, FixIt::Cuint, ReplacementRange::Ptr{CXSourceRange})::CXString
 end
 
 """
@@ -1696,6 +1696,11 @@ function clang_getCXTUResourceUsage(TU)
     @ccall libclang.clang_getCXTUResourceUsage(TU::CXTranslationUnit)::CXTUResourceUsage
 end
 
+"""
+    clang_disposeCXTUResourceUsage(usage)
+
+*Documentation not found in headers.*
+"""
 function clang_disposeCXTUResourceUsage(usage)
     @ccall libclang.clang_disposeCXTUResourceUsage(usage::CXTUResourceUsage)::Cvoid
 end
@@ -1864,6 +1869,7 @@ Describes the kind of entity that a cursor refers to.
 | CXCursor\\_CXXAddrspaceCastExpr                             | OpenCL's addrspace\\_cast<> expression.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | CXCursor\\_ConceptSpecializationExpr                        | Expression that references a C++20 concept.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | CXCursor\\_RequiresExpr                                     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| CXCursor\\_CXXParenListInitExpr                             | Expression that references a C++20 parenthesized list aggregate initializer.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | CXCursor\\_LastExpr                                         |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | CXCursor\\_FirstStmt                                        |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | CXCursor\\_UnexposedStmt                                    | A statement whose specific kind is not exposed via this interface.  Unexposed statements have the same operations as any other kind of statement; one can extract their location information, spelling, children, etc. However, the specific kind of the statement is not reported.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
@@ -1972,6 +1978,7 @@ Describes the kind of entity that a cursor refers to.
 | CXCursor\\_OMPMaskedTaskLoopSimdDirective                   | OpenMP masked taskloop simd directive.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | CXCursor\\_OMPParallelMaskedTaskLoopDirective               | OpenMP parallel masked taskloop directive.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | CXCursor\\_OMPParallelMaskedTaskLoopSimdDirective           | OpenMP parallel masked taskloop simd directive.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| CXCursor\\_OMPErrorDirective                                | OpenMP error directive.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | CXCursor\\_LastStmt                                         |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | CXCursor\\_TranslationUnit                                  | Cursor that represents the translation unit itself.  The translation unit cursor exists primarily to act as the root cursor for traversing the contents of a translation unit.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | CXCursor\\_FirstAttr                                        |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
@@ -2151,7 +2158,8 @@ Describes the kind of entity that a cursor refers to.
     CXCursor_CXXAddrspaceCastExpr = 152
     CXCursor_ConceptSpecializationExpr = 153
     CXCursor_RequiresExpr = 154
-    CXCursor_LastExpr = 154
+    CXCursor_CXXParenListInitExpr = 155
+    CXCursor_LastExpr = 155
     CXCursor_FirstStmt = 200
     CXCursor_UnexposedStmt = 200
     CXCursor_LabelStmt = 201
@@ -2259,7 +2267,8 @@ Describes the kind of entity that a cursor refers to.
     CXCursor_OMPMaskedTaskLoopSimdDirective = 302
     CXCursor_OMPParallelMaskedTaskLoopDirective = 303
     CXCursor_OMPParallelMaskedTaskLoopSimdDirective = 304
-    CXCursor_LastStmt = 304
+    CXCursor_OMPErrorDirective = 305
+    CXCursor_LastStmt = 305
     CXCursor_TranslationUnit = 350
     CXCursor_FirstAttr = 400
     CXCursor_UnexposedAttr = 400
@@ -3293,7 +3302,7 @@ end
 """
     clang_Cursor_getNumTemplateArguments(C)
 
-Returns the number of template args of a function decl representing a template specialization.
+Returns the number of template args of a function, struct, or class decl representing a template specialization.
 
 If the argument cursor cannot be converted into a template function declaration, -1 is returned.
 
@@ -3312,7 +3321,7 @@ end
 
 Retrieve the kind of the I'th template argument of the [`CXCursor`](@ref) C.
 
-If the argument [`CXCursor`](@ref) does not represent a FunctionDecl, an invalid template argument kind is returned.
+If the argument [`CXCursor`](@ref) does not represent a FunctionDecl, StructDecl, or ClassTemplatePartialSpecialization, an invalid template argument kind is returned.
 
 For example, for the following declaration and specialization: template <typename T, int kInt, bool kBool> void foo() { ... }
 
@@ -3329,7 +3338,7 @@ end
 
 Retrieve a [`CXType`](@ref) representing the type of a TemplateArgument of a function decl representing a template specialization.
 
-If the argument [`CXCursor`](@ref) does not represent a FunctionDecl whose I'th template argument has a kind of CXTemplateArgKind\\_Integral, an invalid type is returned.
+If the argument [`CXCursor`](@ref) does not represent a FunctionDecl, StructDecl, ClassDecl or ClassTemplatePartialSpecialization whose I'th template argument has a kind of CXTemplateArgKind\\_Integral, an invalid type is returned.
 
 For example, for the following declaration and specialization: template <typename T, int kInt, bool kBool> void foo() { ... }
 
@@ -3346,7 +3355,7 @@ end
 
 Retrieve the value of an Integral TemplateArgument (of a function decl representing a template specialization) as a signed long long.
 
-It is undefined to call this function on a [`CXCursor`](@ref) that does not represent a FunctionDecl or whose I'th template argument is not an integral value.
+It is undefined to call this function on a [`CXCursor`](@ref) that does not represent a FunctionDecl, StructDecl, ClassDecl or ClassTemplatePartialSpecialization whose I'th template argument is not an integral value.
 
 For example, for the following declaration and specialization: template <typename T, int kInt, bool kBool> void foo() { ... }
 
@@ -3363,7 +3372,7 @@ end
 
 Retrieve the value of an Integral TemplateArgument (of a function decl representing a template specialization) as an unsigned long long.
 
-It is undefined to call this function on a [`CXCursor`](@ref) that does not represent a FunctionDecl or whose I'th template argument is not an integral value.
+It is undefined to call this function on a [`CXCursor`](@ref) that does not represent a FunctionDecl, StructDecl, ClassDecl or ClassTemplatePartialSpecialization or whose I'th template argument is not an integral value.
 
 For example, for the following declaration and specialization: template <typename T, int kInt, bool kBool> void foo() { ... }
 
@@ -3477,6 +3486,52 @@ For pointer types, returns the type of the pointee.
 """
 function clang_getPointeeType(T)
     @ccall libclang.clang_getPointeeType(T::CXType)::CXType
+end
+
+"""
+    clang_getUnqualifiedType(CT)
+
+Retrieve the unqualified variant of the given type, removing as little sugar as possible.
+
+For example, given the following series of typedefs:
+
+```c++
+ typedef int Integer;
+ typedef const Integer CInteger;
+ typedef CInteger DifferenceType;
+```
+
+Executing [`clang_getUnqualifiedType`](@ref)() on a [`CXType`](@ref) that represents `DifferenceType`, will desugar to a type representing `Integer`, that has no qualifiers.
+
+And, executing [`clang_getUnqualifiedType`](@ref)() on the type of the first argument of the following function declaration:
+
+```c++
+ void foo(const int);
+```
+
+Will return a type representing `int`, removing the `const` qualifier.
+
+Sugar over array types is not desugared.
+
+A type can be checked for qualifiers with [`clang_isConstQualifiedType`](@ref)(), [`clang_isVolatileQualifiedType`](@ref)() and [`clang_isRestrictQualifiedType`](@ref)().
+
+A type that resulted from a call to [`clang_getUnqualifiedType`](@ref) will return `false` for all of the above calls.
+"""
+function clang_getUnqualifiedType(CT)
+    @ccall libclang.clang_getUnqualifiedType(CT::CXType)::CXType
+end
+
+"""
+    clang_getNonReferenceType(CT)
+
+For reference types (e.g., "const int&"), returns the type that the reference refers to (e.g "const int").
+
+Otherwise, returns the type itself.
+
+A type that has kind `CXType_LValueReference` or `CXType_RValueReference` is a reference type.
+"""
+function clang_getNonReferenceType(CT)
+    @ccall libclang.clang_getNonReferenceType(CT::CXType)::CXType
 end
 
 """
@@ -4718,6 +4773,15 @@ function clang_CXXMethod_isDefaulted(C)
 end
 
 """
+    clang_CXXMethod_isDeleted(C)
+
+Determine if a C++ method is declared '= delete'.
+"""
+function clang_CXXMethod_isDeleted(C)
+    @ccall libclang.clang_CXXMethod_isDeleted(C::CXCursor)::Cuint
+end
+
+"""
     clang_CXXMethod_isPureVirtual(C)
 
 Determine if a C++ member function or member function template is pure virtual.
@@ -4742,6 +4806,48 @@ Determine if a C++ member function or member function template is explicitly dec
 """
 function clang_CXXMethod_isVirtual(C)
     @ccall libclang.clang_CXXMethod_isVirtual(C::CXCursor)::Cuint
+end
+
+"""
+    clang_CXXMethod_isCopyAssignmentOperator(C)
+
+Determine if a C++ member function is a copy-assignment operator, returning 1 if such is the case and 0 otherwise.
+
+> A copy-assignment operator `X::operator=` is a non-static, > non-template member function of \\_class\\_ `X` with exactly one > parameter of type `X`, `X&`, `const X&`, `volatile X&` or `const > volatile X&`.
+
+That is, for example, the `operator=` in:
+
+class Foo { bool operator=(const volatile Foo&); };
+
+Is a copy-assignment operator, while the `operator=` in:
+
+class Bar { bool operator=(const int&); };
+
+Is not.
+"""
+function clang_CXXMethod_isCopyAssignmentOperator(C)
+    @ccall libclang.clang_CXXMethod_isCopyAssignmentOperator(C::CXCursor)::Cuint
+end
+
+"""
+    clang_CXXMethod_isMoveAssignmentOperator(C)
+
+Determine if a C++ member function is a move-assignment operator, returning 1 if such is the case and 0 otherwise.
+
+> A move-assignment operator `X::operator=` is a non-static, > non-template member function of \\_class\\_ `X` with exactly one > parameter of type `X&&`, `const X&&`, `volatile X&&` or `const > volatile X&&`.
+
+That is, for example, the `operator=` in:
+
+class Foo { bool operator=(const volatile Foo&&); };
+
+Is a move-assignment operator, while the `operator=` in:
+
+class Bar { bool operator=(const int&&); };
+
+Is not.
+"""
+function clang_CXXMethod_isMoveAssignmentOperator(C)
+    @ccall libclang.clang_CXXMethod_isMoveAssignmentOperator(C::CXCursor)::Cuint
 end
 
 """
@@ -6852,6 +6958,72 @@ function clang_FullComment_getAsXML(Comment)
     @ccall libclang.clang_FullComment_getAsXML(Comment::CXComment)::CXString
 end
 
+mutable struct CXAPISetImpl end
+
+"""
+[`CXAPISet`](@ref) is an opaque type that represents a data structure containing all the API information for a given translation unit. This can be used for a single symbol symbol graph for a given symbol.
+"""
+const CXAPISet = Ptr{CXAPISetImpl}
+
+"""
+    clang_createAPISet(tu, out_api)
+
+Traverses the translation unit to create a [`CXAPISet`](@ref).
+
+### Parameters
+* `tu`: is the [`CXTranslationUnit`](@ref) to build the [`CXAPISet`](@ref) for.
+* `out_api`: is a pointer to the output of this function. It is needs to be disposed of by calling [`clang_disposeAPISet`](@ref).
+### Returns
+Error code indicating success or failure of the APISet creation.
+"""
+function clang_createAPISet(tu, out_api)
+    @ccall libclang.clang_createAPISet(tu::CXTranslationUnit, out_api::Ptr{CXAPISet})::CXErrorCode
+end
+
+"""
+    clang_disposeAPISet(api)
+
+Dispose of an APISet.
+
+The provided [`CXAPISet`](@ref) can not be used after this function is called.
+"""
+function clang_disposeAPISet(api)
+    @ccall libclang.clang_disposeAPISet(api::CXAPISet)::Cvoid
+end
+
+"""
+    clang_getSymbolGraphForUSR(usr, api)
+
+Generate a single symbol symbol graph for the given USR. Returns a null string if the associated symbol can not be found in the provided [`CXAPISet`](@ref).
+
+The output contains the symbol graph as well as some additional information about related symbols.
+
+### Parameters
+* `usr`: is a string containing the USR of the symbol to generate the symbol graph for.
+* `api`: the [`CXAPISet`](@ref) to look for the symbol in.
+### Returns
+a string containing the serialized symbol graph representation for the symbol being queried or a null string if it can not be found in the APISet.
+"""
+function clang_getSymbolGraphForUSR(usr, api)
+    @ccall libclang.clang_getSymbolGraphForUSR(usr::Cstring, api::CXAPISet)::CXString
+end
+
+"""
+    clang_getSymbolGraphForCursor(cursor)
+
+Generate a single symbol symbol graph for the declaration at the given cursor. Returns a null string if the AST node for the cursor isn't a declaration.
+
+The output contains the symbol graph as well as some additional information about related symbols.
+
+### Parameters
+* `cursor`: the declaration for which to generate the single symbol symbol graph.
+### Returns
+a string containing the serialized symbol graph representation for the symbol being queried or a null string if it can not be found in the APISet.
+"""
+function clang_getSymbolGraphForCursor(cursor)
+    @ccall libclang.clang_getSymbolGraphForCursor(cursor::CXCursor)::CXString
+end
+
 """
     clang_install_aborting_llvm_fatal_error_handler()
 
@@ -6870,6 +7042,9 @@ function clang_uninstall_llvm_fatal_error_handler()
     @ccall libclang.clang_uninstall_llvm_fatal_error_handler()::Cvoid
 end
 
+"""
+*Documentation not found in headers.*
+"""
 const CXRewriter = Ptr{Cvoid}
 
 """
@@ -6937,7 +7112,7 @@ end
 
 const CINDEX_VERSION_MAJOR = 0
 
-const CINDEX_VERSION_MINOR = 62
+const CINDEX_VERSION_MINOR = 63
 
 CINDEX_VERSION_ENCODE(major, minor) = major * 10000 + minor * 1
 

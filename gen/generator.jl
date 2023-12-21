@@ -41,6 +41,16 @@ function rewrite!(dag::ExprDAG)
     end
 end
 
+function get_docs(node::ExprNode)
+    whitelist = [:CXRewriter, :clang_disposeCXTUResourceUsage]
+
+    if node.id in whitelist
+        String["*Documentation not found in headers.*"]
+    else
+        String[]
+    end
+end
+
 import Pkg
 import BinaryBuilderBase: PkgSpec, Prefix, temp_prefix, setup_dependencies, cleanup_dependencies, destdir
 
@@ -61,6 +71,7 @@ for (llvm_version, julia_version) in (#=(v"12.0.1", v"1.7"),=#
         artifact_paths = setup_dependencies(prefix, dependencies, platform; verbose=true)
 
         let options = deepcopy(options)
+            options["general"]["callback_documentation"] = get_docs
             output_file_path = joinpath(libdir, string(llvm_version.major), options["general"]["output_file_path"])
             isdir(dirname(output_file_path)) || mkpath(dirname(output_file_path))
             options["general"]["output_file_path"] = output_file_path

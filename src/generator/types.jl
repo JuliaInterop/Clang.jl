@@ -165,8 +165,12 @@ struct ExprNode{T<:AbstractExprNodeType,S<:CLCursor}
     type::T
     cursor::S
     exprs::Vector{Expr}
+    premature_exprs::Vector{Expr}
     adj::Vector{Int}
 end
+
+# Outer constructor that sets `premature_exprs` to an empty vector
+ExprNode(id, type, cursor, exprs, adj) = ExprNode(id, type, cursor, exprs, Expr[], adj)
 
 """
     ExprDAG
@@ -174,6 +178,7 @@ An expression DAG.
 """
 Base.@kwdef struct ExprDAG
     nodes::Vector{ExprNode} = ExprNode[]
+    partial_nodes::Dict{Symbol, ExprNode} = Dict{Symbol, ExprNode}()
     sys::Vector{ExprNode} = ExprNode[]
     tags::Dict{Symbol,Int} = Dict{Symbol,Int}()
     ids::Dict{Symbol,Int} = Dict{Symbol,Int}()

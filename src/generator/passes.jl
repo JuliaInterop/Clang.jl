@@ -740,6 +740,11 @@ function (x::Codegen)(dag::ExprDAG, options::Dict)
         show_info && @info "[Codegen]: emit Julia expression for $(node.id)"
     end
 
+    # Make sure that all nodes have been fully emitted
+    if !isempty(dag.partial_nodes)
+        error("Codegen error, these nodes have not been fully emitted: $(keys(dag.partial_nodes))")
+    end
+
     # clean up
     delete!(codegen_options, "DAG_tags")
     delete!(codegen_options, "DAG_ids")

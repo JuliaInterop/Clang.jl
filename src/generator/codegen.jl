@@ -235,20 +235,28 @@ function emit!(dag::ExprDAG, node::ExprNode{TypedefMutualRef}, options::Dict; ar
         signature = Expr(:call, :(Base.setproperty!), :(x::Ptr{$fake_sym}), :(f::Symbol), :v)
         body = Expr(:block, :(setproperty!(Ptr{$real_sym}(x), f, v)))
         push!(node.exprs, Expr(:function, signature, body))
-        # `Base.unsafe_convert`
-        lhs = Expr(:call, :(Base.unsafe_convert), :(::Type{Ptr{$fake_sym}}), :(x::Ref))
+
+        # These exprs for `Base.unsafe_convert()` need to be emitted after the
+        # struct named `real_sym` has been emitted so that we can use `real_sym`
+        # in the method signature (which is necessary to avoid a method
+        # ambiguity with Base). Hence we add it to `node.premature_exprs` to be
+        # used later when the struct itself is emitted.
+        lhs = Expr(:call, :(Base.unsafe_convert), :(::Type{Ptr{$fake_sym}}), :(x::Ref{$real_sym}))
         rhs = :(Base.unsafe_convert(Ptr{$fake_sym}, Base.unsafe_convert(Ptr{$real_sym}, x)))
-        push!(node.exprs, :($lhs = $rhs))
+        push!(node.premature_exprs, :($lhs = $rhs))
         # make sure the behavior remains the same for `Ptr`
-        lhs = Expr(:call, :(Base.unsafe_convert), :(::Type{Ptr{$fake_sym}}), :(x::Ptr))
+        lhs = Expr(:call, :(Base.unsafe_convert), :(::Type{Ptr{$fake_sym}}), :(x::Ptr{$real_sym}))
         rhs = :(Ptr{$fake_sym}(x))
-        push!(node.exprs, :($lhs = $rhs))
+        push!(node.premature_exprs, :($lhs = $rhs))
 
         # generate typedef
         typedefee = translate(jlty, options)
         replace_pointee!(typedefee, fake_sym)
         typedef_sym = make_symbol_safe(node.id)
         push!(node.exprs, :(const $typedef_sym = $typedefee))
+
+        # Record this node as only partially emitted
+        dag.partial_nodes[real_sym] = node
     end
     return dag
 end
@@ -510,6 +518,14 @@ function emit!(dag::ExprDAG, node::ExprNode{<:AbstractStructNodeType}, options::
             # emit_getproperty!(dag, node, options)
             emit_setproperty!(dag, node, options)
         end
+    end
+
+    # Emit any existing premature expressions
+    if haskey(dag.partial_nodes, struct_sym)
+        partial_node = dag.partial_nodes[struct_sym]
+        append!(node.exprs, partial_node.premature_exprs)
+        empty!(partial_node.premature_exprs)
+        delete!(dag.partial_nodes, struct_sym)
     end
 
     return dag

@@ -8,16 +8,22 @@ function print_documentation(io::IO, node::ExprNode, indent, options, members::B
     show_c_function_prototype = get(options, "show_c_function_prototype", false)
     ids = get(options, "DAG_ids", Dict())
 
+    callback_documentation = get(options, "callback_documentation", nothing)
+
     if extract_c_comment_style == "doxygen"
         doc = format_doxygen(node.cursor, options, members)
     elseif extract_c_comment_style == "raw"
         doc = format_raw(node.cursor, members)
     else
-        if (callback_documentation = get(options, "callback_documentation", nothing)) ≢ nothing
+        if !isnothing(callback_documentation)
             doc = callback_documentation(node)
         else
             return
         end
+    end
+
+    if all(isempty, doc) && !isnothing(callback_documentation)
+        doc = callback_documentation(node)
     end
     
     prototype = if show_c_function_prototype && node.cursor isa Clang.CLFunctionDecl

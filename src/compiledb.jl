@@ -6,7 +6,7 @@ end
     CLCompileCommand
 
 Represents a command to compile the specific file.
-Call [`getDirectory`](@ref), [`getArguments`](@ref) and [`getArguments`](@ref) to get its attributes.
+Call [`getDirection`](@ref), [`getArguments`](@ref) and [`getArguments`](@ref) to get its attributes.
 """
 mutable struct CLCompileCommand
     # Keep a reference to its root

@@ -70,7 +70,7 @@ getPointeeType(t::CLType)::CLType = clang_getPointeeType(t)
     getTypeDeclaration(t::CXType) -> CXCursor
     getTypeDeclaration(t::CLType) -> CLCursor
 Return the cursor for the declaration of the given type. To get the type of the cursor,
-see [`type`](@ref). Wrapper for libclang's [`clang_getTypeDeclaration`](@ref).
+see [`getCursorType`](@ref). Wrapper for libclang's [`clang_getTypeDeclaration`](@ref).
 """
 getTypeDeclaration(t::CXType) = clang_getTypeDeclaration(t)
 getTypeDeclaration(t::CLType)::CLCursor = clang_getTypeDeclaration(t)

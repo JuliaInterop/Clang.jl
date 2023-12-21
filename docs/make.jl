@@ -4,12 +4,13 @@ using Documenter
 
 makedocs(;
     modules=[Clang, Clang.LibClang],
-    repo="https://github.com/JuliaInterop/Clang.jl/blob/{commit}{path}#L{line}",
+    repo=Remotes.GitHub("JuliaInterop", "Clang.jl"),
     sitename="Clang.jl",
     format=Documenter.HTML(;
         prettyurls=get(ENV, "CI", "false") == "true",
         canonical="https://JuliaInterop.github.io/Clang.jl",
         assets=String[],
+        size_threshold=700000
     ),
     pages=[
         "Introduction" => "index.md",
@@ -18,6 +19,7 @@ makedocs(;
         "LibClang Wrapper API Reference" => "libclang.md",
         "Clang API Reference" => "api.md",
     ],
+    warnonly=:missing_docs
 )
 
 deploydocs(; repo="github.com/JuliaInterop/Clang.jl.git")

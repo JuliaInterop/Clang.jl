@@ -1,4 +1,4 @@
-using CMake, p7zip_jll, Tar
+using CMake_jll, p7zip_jll, Tar
 using Clang.Generators
 
 function build_libbitfield_native()
@@ -8,7 +8,8 @@ function build_libbitfield_native()
         src_dir = joinpath(@__DIR__, "bitfield")
         build_dir = joinpath(@__DIR__, "build")
 
-        config_cmd = `$cmake -B $build_dir -S $src_dir`
+        cmake_path = CMake_jll.get_cmake_path()
+        config_cmd = `$cmake_path -B $build_dir -S $src_dir`
         if Sys.WORD_SIZE == 32
             if Sys.iswindows()
                 config_cmd = `$config_cmd -A win32`
@@ -19,9 +20,13 @@ function build_libbitfield_native()
         build_cmd = `$cmake --build $build_dir --config Debug`
         install_cmd = `$cmake --install $build_dir --config Debug --prefix $build_dir`
 
-        run(config_cmd)
-        run(build_cmd)
-        run(install_cmd)
+        # This will show a warning about the do-block method being deprecated,
+        # but not using it throws an error about libssl not being found.
+        cmake() do _
+            run(config_cmd)
+            run(build_cmd)
+            run(install_cmd)
+        end
     catch e
         @warn "Building libbitfield with native tools failed" exception=(e, catch_backtrace())
         success = false

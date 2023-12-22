@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include <stdlib.h>
 #include <stdbool.h>
 
@@ -7,8 +8,8 @@ struct mutualref {
   struct buffer *buffer;
 
   int n_dims;
-  int64_t ne[10]; 
-  size_t nb[10]; 
+  int64_t ne[10];
+  size_t nb[10];
 
   int32_t op_params[10 / sizeof(int32_t)];
 
@@ -19,7 +20,7 @@ struct mutualref {
 
   struct mutualref *view_src;
   size_t view_offs;
-  
+
   void *data;
 
   char padding[12];

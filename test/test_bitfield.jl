@@ -23,7 +23,7 @@ function build_libbitfield_native()
         run(build_cmd)
         run(install_cmd)
     catch e
-        @warn "Building libbitfield with native tools failed: $e"
+        @warn "Building libbitfield with native tools failed" exception=(e, catch_backtrace())
         success = false
     end
     return success
@@ -37,13 +37,14 @@ function build_libbitfield_binarybuilder()
         cd(@__DIR__) do
             run(`$(Base.julia_cmd()) --project bitfield/build_tarballs.jl`)
             # from Pkg.download_verify_unpack
-            tarball_path = only(readdir("products"))
+            # Note that we filter out the extra log file that's generated
+            tarball_path = only(filter(!contains("-logs.v"), readdir("products")))
             dest = "build"
             rm(dest; recursive = true)
             Tar.extract(`$(p7zip_jll.p7zip()) x products/$tarball_path -so`, dest)
         end
     catch e
-        @warn "Building libbitfield with BinaryBuilder failed: $e"
+        @warn "Building libbitfield with BinaryBuilder failed" exception=(e, catch_backtrace())
         success = false
     end
     return success

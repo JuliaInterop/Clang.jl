@@ -37,7 +37,7 @@ const JLL_ENV_GCC_VERSIONS = VersionNumber[
 # External API.
 # The triples used for cross-platform configuration
 const JLL_ENV_TRIPLES = String[
-    "aarch64-apple-darwin20",
+    "aarch64-apple-darwin20",      # Tier 1
     "aarch64-linux-gnu",           # Tier 1
     "aarch64-linux-musl",
     "armv7l-linux-gnueabihf",

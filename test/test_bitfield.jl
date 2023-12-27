@@ -1,4 +1,5 @@
-using CMake_jll, p7zip_jll, Tar
+import CMake_jll
+using p7zip_jll, Tar
 using Clang.Generators
 
 function build_libbitfield_native()
@@ -17,16 +18,12 @@ function build_libbitfield_native()
                 config_cmd = `$config_cmd -D CMAKE_C_FLAGS=-march=native -D CMAKE_CXX_FLAGS=-march=native`
             end
         end
-        build_cmd = `$cmake --build $build_dir --config Debug`
-        install_cmd = `$cmake --install $build_dir --config Debug --prefix $build_dir`
+        build_cmd = `$cmake_path --build $build_dir --config Debug`
+        install_cmd = `$cmake_path --install $build_dir --config Debug --prefix $build_dir`
 
-        # This will show a warning about the do-block method being deprecated,
-        # but not using it throws an error about libssl not being found.
-        cmake() do _
-            run(config_cmd)
-            run(build_cmd)
-            run(install_cmd)
-        end
+        run(config_cmd)
+        run(build_cmd)
+        run(install_cmd)
     catch e
         @warn "Building libbitfield with native tools failed" exception=(e, catch_backtrace())
         success = false

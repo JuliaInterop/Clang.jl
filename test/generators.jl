@@ -210,3 +210,29 @@ end
     ctx = create_context([joinpath(@__DIR__, "include/static.h")], get_default_args(), options)
     @test_logs (:info, "Done!") match_mode = :any build!(ctx)
 end
+
+# Test the documentation parser
+@testset "Documentation" begin
+    mktemp() do path, io
+        # Generate the bindings
+        options = Dict("general" => Dict{String, Any}("output_file_path" => path,
+                                                      "extract_c_comment_style" => "doxygen"))
+        ctx = create_context([joinpath(@__DIR__, "include/documentation.h")], get_default_args(), options)
+        build!(ctx)
+
+        # Load into a temporary module to avoid polluting the global namespace
+        m = Module()
+        Base.include(m, path)
+
+        # Do some sanity checks on the docstring
+        docstring = string(@doc m.doxygen_func)
+        docstring_has = occursin(docstring)
+        @test docstring_has("!!! compat \"Deprecated\"")
+        @test docstring_has("### Parameters")
+        @test docstring_has(" * `foo`: A parameter")
+        @test docstring_has("### Returns")
+        @test docstring_has("Whatever I want")
+        @test docstring_has("### See also")
+        @test docstring_has("quux()")
+    end
+end

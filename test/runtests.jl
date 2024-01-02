@@ -1,13 +1,10 @@
-using Clang
-using Test
+import ReTest: retest
+import Clang
 
 # Temporary hack to make @doc work in 1.11 for the documentation tests. See:
 # https://github.com/JuliaLang/julia/issues/54664
 using REPL
 
-include("jllenvs.jl")
-include("file.jl")
-include("generators.jl")
+include("ClangTests.jl")
 
-include("test_mpi.jl")
-include("test_bitfield.jl")
+retest(Clang, ClangTests; stats=true)

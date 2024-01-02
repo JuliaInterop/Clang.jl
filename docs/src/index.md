@@ -12,6 +12,29 @@ could simply install it by running:
 pkg> add Clang
 ```
 
+If you want to run the tests to check that everything is working the usual `]
+test` command will work. If you're making changes to the package you can also
+use [ReTest.jl](https://juliatesting.github.io/ReTest.jl/stable/) and
+[TestEnv.jl](https://github.com/JuliaTesting/TestEnv.jl) to run the tests (or a
+selection) iteratively:
+```julia
+# One-liner to keep in your shell history
+julia> using TestEnv; TestEnv.activate(); import ReTest, Clang; ReTest.load(Clang)
+
+# Run all the tests. This will be slow the first time because ReTest needs to
+# start the worker process for running the tests.
+julia> ClangTests.runtests()
+
+# Run a selection of the tests
+julia> ClangTests.runtests("comments")
+```
+
+We need to load the `ClangTests` module with `ReTest.load(Clang)` because that
+will take care of tracking all the `include`'ed test files if Revise is already
+loaded. This way the tests will be tracked by Revise just like regular package
+code and the worker process used for running the tests will be kept around,
+which is a much faster workflow than running `] test`.
+
 ## C-bindings generator
 The package includes a generator to create Julia wrappers for C libraries from a collection of header files. The following declarations are currently supported:
 

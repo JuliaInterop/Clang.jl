@@ -1,6 +1,15 @@
 using Clang
 using Clang.LibClang
 using Documenter
+import Changelog
+
+
+Changelog.generate(
+    Changelog.Documenter(),
+    joinpath(@__DIR__, "src/changelog.md"),
+    joinpath(@__DIR__, "src/generated_changelog.md"),
+    repo="JuliaInterop/Clang.jl"
+)
 
 makedocs(;
     modules=[Clang, Clang.LibClang],
@@ -18,6 +27,7 @@ makedocs(;
         "LibClang Tutorial" => "tutorial.md",
         "LibClang Wrapper API Reference" => "libclang.md",
         "Clang API Reference" => "api.md",
+        "Changelog" => "generated_changelog.md"
     ],
     warnonly=:missing_docs
 )

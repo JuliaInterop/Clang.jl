@@ -9,3 +9,4 @@ Manifest.toml
 /test/Lib*.jl
 /test/build
 /test/products
+docs/src/generated_changelog.md

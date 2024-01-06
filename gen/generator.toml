@@ -130,8 +130,9 @@ auto_mutability_includelist = []
 extract_c_comment_style = "doxygen"
 
 # Pass a function to explicitly generate documentation. It will be called like
-# `callback_documentation(node::ExprNode)` if `extract_c_comment_style` is not
-# set, or if it is set and no docs were found automatically.
+# `callback_documentation(node::ExprNode, doc::Vector{String})` if it is
+# set. The `doc` argument will contain the docs parsed from the headers if
+# `extract_c_comment_style` is set, otherwise it will be an empty vector.
 #
 # Do *not* set this in the TOML file, it should be set in the generator script
 # to a function that takes in an ExprNode and returns a String[] (string

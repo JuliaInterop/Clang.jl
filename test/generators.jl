@@ -213,10 +213,15 @@ end
 
 # Test the documentation parser
 @testset "Documentation" begin
+    function doc_callback(node::ExprNode, doc::Vector{String})
+        return vcat(doc, "callback")
+    end
+
     mktemp() do path, io
         # Generate the bindings
         options = Dict("general" => Dict{String, Any}("output_file_path" => path,
-                                                      "extract_c_comment_style" => "doxygen"))
+                                                      "extract_c_comment_style" => "doxygen",
+                                                      "callback_documentation" => doc_callback))
         ctx = create_context([joinpath(@__DIR__, "include/documentation.h")], get_default_args(), options)
         build!(ctx)
 
@@ -234,5 +239,6 @@ end
         @test docstring_has("Whatever I want")
         @test docstring_has("### See also")
         @test docstring_has("quux()")
+        @test docstring_has("callback")
     end
 end

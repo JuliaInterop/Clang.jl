@@ -1,3 +1,4 @@
 [deps]
+Changelog = "5217a498-cd5d-4ec6-b8c2-9b85a09b6e3e"
 Clang = "40e3b903-d033-50b4-a0cc-940c62c95e31"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"

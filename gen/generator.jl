@@ -41,13 +41,13 @@ function rewrite!(dag::ExprDAG)
     end
 end
 
-function get_docs(node::ExprNode)
+function get_docs(node::ExprNode, doc::Vector{String})
     whitelist = [:CXRewriter, :clang_disposeCXTUResourceUsage]
 
     if node.id in whitelist
         String["*Documentation not found in headers.*"]
     else
-        String[]
+        doc
     end
 end
 

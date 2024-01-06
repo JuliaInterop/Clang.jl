@@ -7,8 +7,8 @@ Changelog](https://keepachangelog.com).
 
 ### Added
 
-- Doxygens `@deprecated` command will now be translated to a `!!! compat`
-  admonition ([#460]).
+- Doxygens `@deprecated` and `@bug` commands will now be translated to `!!!
+  compat` and `!!! danger` admonitions, respectively ([#460], [#463]).
 
 ### Breaking
 

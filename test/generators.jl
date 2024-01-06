@@ -237,6 +237,7 @@ end
         @test docstring_has(" * `foo`: A parameter")
         @test docstring_has("### Returns")
         @test docstring_has("Whatever I want")
+        @test docstring_has("!!! danger \"Known bug\"")
         @test docstring_has("### See also")
         @test docstring_has("quux()")
         @test docstring_has("callback")

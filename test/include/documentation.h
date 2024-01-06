@@ -5,6 +5,8 @@
  *
  * @return              Whatever I want.
  *
+ * @bug May wipe your disk.
+ *
  * @see quux()
  *
  * @deprecated This function is evil.

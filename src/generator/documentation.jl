@@ -306,6 +306,7 @@ function format_block(x::Clang.BlockCommand, options)
     name in ["brief", "details"] && return [content]
     name in ["note", "warning"] && return ["!!! $name", "", "    $content"]
     name in ["deprecated"] && return ["!!! compat \"Deprecated\"", "", "    $content"]
+    name in ["bug"] && return ["!!! danger \"Known bug\"", "", "    $content"]
     ["\\$name$args $content"]
 end
 

@@ -119,7 +119,7 @@ function tojulia end
 tojulia(x::CLType) = JuliaUnknown(x)
 tojulia(x::CLVoid) = JuliaCvoid()
 tojulia(x::CLBool) = JuliaCbool()
-tojulia(x::CLChar_U) = JuliaCchar()
+tojulia(x::CLChar_U) = JuliaCuchar()
 tojulia(x::CLUChar) = JuliaCuchar()
 tojulia(x::CLChar16) = JuliaUnknown(x)  # C++11 char16_t
 tojulia(x::CLChar32) = JuliaUnknown(x)  # C++11 char32_t

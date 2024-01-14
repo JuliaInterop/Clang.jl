@@ -61,7 +61,8 @@ const libdir = joinpath(@__DIR__, "..", "lib")
 for (llvm_version, julia_version) in (#=(v"12.0.1", v"1.7"),=#
                                       (v"13.0.1", v"1.8"),
                                       (v"14.0.5", v"1.9"),
-                                      (v"15.0.6", v"1.10"))
+                                      (v"15.0.6", v"1.10"),
+                                      (v"16.0.6", v"1.11"))
     @info "Generating..." llvm_version julia_version
     temp_prefix() do prefix
     # let prefix = Prefix(mktempdir())

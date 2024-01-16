@@ -285,6 +285,17 @@ function emit!(dag::ExprDAG, node::ExprNode{TypedefToAnonymous}, options::Dict; 
     return dag
 end
 
+############################## TypeAlias #############################
+
+function emit!(dag::ExprDAG, node::ExprNode{TypeAliasFunction}, options::Dict; args...)
+    # ty = getTypedefDeclUnderlyingType(node.cursor)
+    # typedefee = translate(tojulia(ty), options)
+    typedefee = Ptr{Cvoid}
+    typedef_sym = make_symbol_safe(node.id)
+    push!(node.exprs, :(const $typedef_sym = $typedefee))
+    return dag
+end
+
 ############################### Struct ###############################
 
 function _emit_getproperty_ptr!(body, root_cursor, cursor, options)

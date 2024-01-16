@@ -59,7 +59,7 @@ function collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLTypeAliasDe
     # if has_elaborated_reference(lhs_type)
     #     ty = TypedefElaborated()
     # elseif has_function_reference(lhs_type)
-        ty = TypedefFunction()
+        ty = TypeAliasFunction()
     # else
     #     ty = TypedefDefault()
     # end

@@ -103,6 +103,24 @@ function pretty_print(io, node::ExprNode{TypedefDefault}, options::Dict)
     return nothing
 end
 
+function pretty_print(io, node::ExprNode{TypeAliasFunction}, options::Dict)
+    @assert length(node.exprs) == 1
+
+    # print C code
+    toks = tokenize(node.cursor)
+    c_str = reduce((lhs, rhs) -> lhs * " " * rhs, [tok.text for tok in toks])
+    println(io, "# " * replace(c_str, "\n" => "\n#"))
+
+    # print documentation
+    print_documentation(io, node, "", options)
+
+    # print expr
+    println(io, node.exprs[1])
+    println(io)
+
+    return nothing
+end
+
 function pretty_print(io, node::ExprNode{<:AbstractStructNodeType}, options::Dict)
     @assert !isempty(node.exprs)
     struct_field_comment_style = get(options, "struct_field_comment_style", "disable")

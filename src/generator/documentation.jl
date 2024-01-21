@@ -242,20 +242,20 @@ function format_doxygen(cursor, options, members=false)
         push!(lines, "")
     end
     if !isempty(parameters)
-        push!(lines, "### Parameters")
+        push!(lines, "# Arguments")
         for p in parameters
             append!(lines, format_parameter(p, options))
         end
     end
     if !ismissing(returns)
-        push!(lines, "### Returns")
+        push!(lines, "# Returns")
         append!(lines, format_block(Clang.getParagraph(returns), options))
     end
     if !isempty(member_docs)
         append!(lines, member_docs)
     end
     if !isempty(seealso)
-        push!(lines, "### See also")
+        push!(lines, "# See also")
         push!(lines, join(strip.(seealso), ", "), "")
     end
     lines

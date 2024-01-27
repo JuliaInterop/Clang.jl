@@ -10,6 +10,10 @@ Changelog](https://keepachangelog.com).
 - Doxygens `@deprecated` and `@bug` commands will now be translated to `!!!
   compat` and `!!! danger` admonitions, respectively ([#460], [#463]).
 
+### Changed
+
+- Renamed the 'Parameters' docstring section to 'Arguments' ([#466]).
+
 ### Breaking
 
 - The `callback_documentation` callback will be called whenever it is set, and

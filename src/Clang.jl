@@ -28,14 +28,23 @@ end
 
 include("string.jl")
 
+include("file.jl")
+export CLFile, name, unique_id, get_filename
+
 include("index.jl")
 export Index
 
 include("trans_unit.jl")
 export TranslationUnit, spelling, parse_header, parse_headers
 
+include("module.jl")
+export get_module, ast_file, name
+export parent_module, full_name, is_system
+export toplevel_headers
+
 include("cursor.jl")
 export kind, name, spelling, value
+export file, file_line_column
 export get_filename, get_file_line_column, get_function_args
 export is_typedef_anon, is_forward_declaration, is_inclusion_directive
 export search, children

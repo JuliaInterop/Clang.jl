@@ -6,6 +6,34 @@ Parse the given source file and the translation unit corresponding to that file.
 mutable struct TranslationUnit
     ptr::CXTranslationUnit
     idx::Index
+    
+    function TranslationUnit(
+        ptr::CXTranslationUnit,
+        idx::Index,
+    )
+        @assert ptr != C_NULL 
+        obj = new(ptr, idx)
+        finalizer(obj) do x
+            if x.ptr != C_NULL
+                clang_disposeTranslationUnit(x)
+                x.ptr = C_NULL
+            end
+        end
+        return obj
+    end
+
+    function TranslationUnit(
+        idx::Index,
+        ast_filename::AbstractString,
+    )
+        ptr = clang_createTranslationUnit(
+            idx,
+            ast_filename)
+        @assert ptr != C_NULL "failed to parse file: $ast_filename"
+        return TranslationUnit(ptr, idx)
+    end
+            
+    
     function TranslationUnit(
         idx::Index,
         source_filename,
@@ -25,14 +53,7 @@ mutable struct TranslationUnit
             options,
         )
         @assert ptr != C_NULL "failed to parse file: $source_filename"
-        obj = new(ptr, idx)
-        finalizer(obj) do x
-            if x.ptr != C_NULL
-                clang_disposeTranslationUnit(x)
-                x.ptr = C_NULL
-            end
-        end
-        return obj
+        return TranslationUnit(ptr, idx)
     end
 end
 function TranslationUnit(idx, source, args, unsavedFiles, options)
@@ -142,4 +163,22 @@ function parse_headers(
     map(unique(headers)) do header
         parse_header(index, header, args, flags)
     end
+end
+
+"""
+    load_ast(
+        index::Index,
+        ast_file::AbstractString,
+    ) -> TranslationUnit
+Return the [`TranslationUnit`](@ref) for a given precompiled header (aka an "ast file" in clang).
+
+# Arguments
+- `index::Index`: Index.
+- `ast_file::AbstractString`: the ast file to load`.  
+   Ast files can be generated using clang e.g. `clang t.h -emit-ast -o t.pch`
+"""
+function load_ast(
+    index::Index,
+    ast_file::AbstractString)
+    TranslationUnit(index, ast_file)
 end

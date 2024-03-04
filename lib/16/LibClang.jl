@@ -4330,6 +4330,19 @@ function clang_visitChildren(parent, visitor, client_data)
     @ccall libclang.clang_visitChildren(parent::CXCursor, visitor::CXCursorVisitor, client_data::CXClientData)::Cuint
 end
 
+mutable struct _CXChildVisitResult end
+
+const CXCursorVisitorBlock = Ptr{_CXChildVisitResult}
+
+"""
+    clang_visitChildrenWithBlock(parent, block)
+
+Visits the children of a cursor using the specified block. Behaves identically to [`clang_visitChildren`](@ref)() in all other respects.
+"""
+function clang_visitChildrenWithBlock(parent, block)
+    @ccall libclang.clang_visitChildrenWithBlock(parent::CXCursor, block::CXCursorVisitorBlock)::Cuint
+end
+
 """
     clang_getCursorUSR(arg1)
 
@@ -6084,6 +6097,18 @@ one of the [`CXResult`](@ref) enumerators.
 """
 function clang_findIncludesInFile(TU, file, visitor)
     @ccall libclang.clang_findIncludesInFile(TU::CXTranslationUnit, file::CXFile, visitor::CXCursorAndRangeVisitor)::CXResult
+end
+
+mutable struct _CXCursorAndRangeVisitorBlock end
+
+const CXCursorAndRangeVisitorBlock = Ptr{_CXCursorAndRangeVisitorBlock}
+
+function clang_findReferencesInFileWithBlock(arg1, arg2, arg3)
+    @ccall libclang.clang_findReferencesInFileWithBlock(arg1::CXCursor, arg2::CXFile, arg3::CXCursorAndRangeVisitorBlock)::CXResult
+end
+
+function clang_findIncludesInFileWithBlock(arg1, arg2, arg3)
+    @ccall libclang.clang_findIncludesInFileWithBlock(arg1::CXTranslationUnit, arg2::CXFile, arg3::CXCursorAndRangeVisitorBlock)::CXResult
 end
 
 """

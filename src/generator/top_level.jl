@@ -37,7 +37,7 @@ end
 function collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLTypedefDecl, options)
     lhs_type = getTypedefDeclUnderlyingType(cursor)
 
-    if has_elaborated_reference(lhs_type)
+    if has_elaborated_tag_reference(lhs_type)
         ty = TypedefElaborated()
     elseif has_function_reference(lhs_type)
         ty = TypedefFunction()

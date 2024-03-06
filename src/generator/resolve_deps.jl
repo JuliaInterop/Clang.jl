@@ -21,7 +21,7 @@ function resolve_dependency!(dag::ExprDAG, node::ExprNode{FunctionProto}, option
         # do nothing for unknowns since we just skip them in the downstream passes
         is_jl_unknown(leaf_ty) && return dag
 
-        hasref = has_elaborated_reference(ty)
+        hasref = has_elaborated_tag_reference(ty)
         if hasref && haskey(dag.tags, leaf_ty.sym)
             push!(node.adj, dag.tags[leaf_ty.sym])
         elseif !hasref && haskey(dag.ids, leaf_ty.sym)
@@ -59,7 +59,7 @@ function resolve_dependency!(dag::ExprDAG, node::ExprNode{FunctionNoProto}, opti
 
     is_jl_basic(leaf_ty) && return dag
 
-    hasref = has_elaborated_reference(ty)
+    hasref = has_elaborated_tag_reference(ty)
     if hasref && haskey(dag.tags, leaf_ty.sym)
         push!(node.adj, dag.tags[leaf_ty.sym])
     elseif !hasref && haskey(dag.ids, leaf_ty.sym)
@@ -145,7 +145,7 @@ function resolve_dependency!(dag::ExprDAG, node::ExprNode{<:AbstractStructNodeTy
 
         is_jl_basic(leaf_ty) && continue
 
-        hasref = has_elaborated_reference(ty)
+        hasref = has_elaborated_tag_reference(ty)
         if hasref && haskey(dag.tags, leaf_ty.sym)
             push!(node.adj, dag.tags[leaf_ty.sym])
         elseif !hasref && haskey(dag.ids, leaf_ty.sym)

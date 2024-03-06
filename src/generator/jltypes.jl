@@ -146,11 +146,7 @@ tojulia(x::CLFloat16) = JuliaCfloat16()  # Float16
 tojulia(x::CLNullPtr) = JuliaUnknown(x)  # C++11 nullptr
 tojulia(x::CLPointer) = JuliaCpointer(x)
 tojulia(x::CLBlockPointer) = JuliaUnknown(x)  # ObjectveC's block pointer
-function tojulia(x::CLElaborated)
-    jlty = tojulia(getNamedType(x))
-    @assert jlty isa JuliaCenum || jlty isa JuliaCrecord
-    return jlty
-end
+tojulia(x::CLElaborated) = tojulia(getNamedType(x))
 tojulia(x::CLInvalid) = JuliaUnknown(x)
 tojulia(x::CLFunctionProto) = JuliaCfunction(spelling(getTypeDeclaration(x)))
 tojulia(x::CLFunctionNoProto) = JuliaCfunction(spelling(getTypeDeclaration(x)))

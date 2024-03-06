@@ -4,7 +4,7 @@ function collect_nested_record!(dag::ExprDAG, node::ExprNode, new_tags, isdeterm
     field_cursors = isempty(field_cursors) ? children(node.cursor) : field_cursors
     for field_cursor in field_cursors
         field_ty = getCursorType(field_cursor)
-        has_elaborated_reference(field_ty) || continue
+        has_elaborated_tag_reference(field_ty) || continue
         field_jlty = tojulia(field_ty)
         leaf_jlty = get_jl_leaf_type(field_jlty)
         leaf_jlty isa JuliaCrecord || continue  # nested enums are not legal in C

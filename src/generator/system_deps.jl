@@ -23,7 +23,7 @@ function collect_dependent_system_nodes!(dag::ExprDAG, node::ExprNode{FunctionPr
 
         # FIXME: typedef func proto
 
-        hasref = has_elaborated_reference(ty)
+        hasref = has_elaborated_tag_reference(ty)
         if (hasref && haskey(dag.tags, leaf_ty.sym)) ||
             (!hasref && haskey(dag.ids, leaf_ty.sym)) ||
             haskey(dag.ids_extra, leaf_ty.sym) ||
@@ -50,7 +50,7 @@ function collect_dependent_system_nodes!(dag::ExprDAG, node::ExprNode{FunctionNo
 
     is_jl_basic(leaf_ty) && return system_nodes
 
-    hasref = has_elaborated_reference(ty)
+    hasref = has_elaborated_tag_reference(ty)
     if (hasref && haskey(dag.tags, leaf_ty.sym)) ||
         (!hasref && haskey(dag.ids, leaf_ty.sym)) ||
         haskey(dag.ids_extra, leaf_ty.sym)
@@ -134,7 +134,7 @@ function collect_dependent_system_nodes!(dag::ExprDAG, type::CLType, system_node
 
         # FIXME: typedef func proto
 
-        hasref = has_elaborated_reference(ty)
+        hasref = has_elaborated_tag_reference(ty)
         if (hasref && haskey(dag.tags, leaf_ty.sym)) ||
             (!hasref && haskey(dag.ids, leaf_ty.sym)) ||
             haskey(dag.ids_extra, leaf_ty.sym) ||

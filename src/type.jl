@@ -302,7 +302,11 @@ function has_elaborated_tag_reference(ty::CXType)
         return has_elaborated_tag_reference(elty)
     elseif is_elaborated(ty)
         nty = getNamedType(ty)
-        return kind(nty) == CXType_Enum || kind(nty) == CXType_Record
+        if kind(nty) == CXType_Enum || kind(nty) == CXType_Record
+            return true
+        else
+            return has_elaborated_tag_reference(nty)
+        end
     else
         return false
     end

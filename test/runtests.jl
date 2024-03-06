@@ -1,7 +1,6 @@
-using Clang
-using Test
+import ReTest: retest
+import Clang
 
-include("generators.jl")
+include("ClangTests.jl")
 
-include("test_mpi.jl")
-include("test_bitfield.jl")
+retest(Clang, ClangTests)

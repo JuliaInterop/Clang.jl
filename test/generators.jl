@@ -1,7 +1,6 @@
 using Clang
 using Clang.Generators
 using Clang.LibClang.Clang_jll
-using Test
 using Clang.Generators: StructDefinition, StructMutualRef, strip_comment_markers
 
 include("rewriter.jl")
@@ -11,6 +10,7 @@ include("rewriter.jl")
     CLANG_C_DIR = joinpath(INCLUDE_DIR, "clang-c")
 
     options = load_options(joinpath(@__DIR__, "test.toml"))
+    options["general"]["output_file_path"] = joinpath(@__DIR__, "LibClang.jl")
 
     # add compiler flags
     args = get_default_args()

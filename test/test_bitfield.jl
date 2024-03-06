@@ -1,4 +1,4 @@
-import CMake_jll
+import CMake_jll: cmake
 using p7zip_jll, Tar
 using Clang.Generators
 
@@ -9,8 +9,7 @@ function build_libbitfield_native()
         src_dir = joinpath(@__DIR__, "bitfield")
         build_dir = joinpath(@__DIR__, "build")
 
-        cmake_path = CMake_jll.get_cmake_path()
-        config_cmd = `$cmake_path -B $build_dir -S $src_dir`
+        config_cmd = `$(cmake()) -B $build_dir -S $src_dir`
         if Sys.WORD_SIZE == 32
             if Sys.iswindows()
                 config_cmd = `$config_cmd -A win32`
@@ -18,8 +17,8 @@ function build_libbitfield_native()
                 config_cmd = `$config_cmd -D CMAKE_C_FLAGS=-march=native -D CMAKE_CXX_FLAGS=-march=native`
             end
         end
-        build_cmd = `$cmake_path --build $build_dir --config Debug`
-        install_cmd = `$cmake_path --install $build_dir --config Debug --prefix $build_dir`
+        build_cmd = `$(cmake()) --build $build_dir --config Debug`
+        install_cmd = `$(cmake()) --install $build_dir --config Debug --prefix $build_dir`
 
         run(config_cmd)
         run(build_cmd)

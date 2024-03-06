@@ -45,7 +45,7 @@ export is_typedef_anon, is_forward_declaration, is_inclusion_directive
 export search, children
 
 include("type.jl")
-export has_elaborated_reference, get_elaborated_cursor
+export has_elaborated_reference, has_elaborated_tag_reference, get_elaborated_cursor
 export has_function_reference
 export fields
 

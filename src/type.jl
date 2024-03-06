@@ -286,6 +286,31 @@ function has_elaborated_reference(ty::CXType)
 end
 has_elaborated_reference(ty::CLType) = has_elaborated_reference(ty.type)
 
+
+"""
+    has_elaborated_tag_reference(ty::CLType) -> Bool
+    has_elaborated_tag_reference(ty::CXType) -> Bool
+Return true if the type is an elaborated tag type or the type indirectly refers to an
+elaborated tag type.
+"""
+function has_elaborated_tag_reference(ty::CXType)
+    if kind(ty) == CXType_Pointer
+        ptreety = getPointeeType(ty)
+        return has_elaborated_tag_reference(ptreety)
+    elseif kind(ty) == CXType_ConstantArray || kind(ty) == CXType_IncompleteArray
+        elty = getElementType(ty)
+        return has_elaborated_tag_reference(elty)
+    elseif is_elaborated(ty)
+        nty = getNamedType(ty)
+        return kind(nty) == CXType_Enum || kind(nty) == CXType_Record
+    else
+        return false
+    end
+end
+has_elaborated_tag_reference(ty::CLType) = has_elaborated_tag_reference(ty.type)
+
+
+
 """
     get_elaborated_cursor(ty::CLType) -> CLCursor
     get_elaborated_cursor(ty::CXType) -> CXCursor

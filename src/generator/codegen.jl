@@ -241,7 +241,7 @@ function emit!(dag::ExprDAG, node::ExprNode{TypedefMutualRef}, options::Dict; ar
         # in the method signature (which is necessary to avoid a method
         # ambiguity with Base). Hence we add it to `node.premature_exprs` to be
         # used later when the struct itself is emitted.
-        lhs = Expr(:call, :(Base.unsafe_convert), :(::Type{Ptr{$fake_sym}}), :(x::Ref{$real_sym}))
+        lhs = Expr(:call, :(Base.unsafe_convert), :(::Type{Ptr{$fake_sym}}), :(x::Base.RefValue{$real_sym}))
         rhs = :(Base.unsafe_convert(Ptr{$fake_sym}, Base.unsafe_convert(Ptr{$real_sym}, x)))
         push!(node.premature_exprs, :($lhs = $rhs))
         # make sure the behavior remains the same for `Ptr`

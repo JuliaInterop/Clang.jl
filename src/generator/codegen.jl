@@ -256,7 +256,7 @@ function emit!(dag::ExprDAG, node::ExprNode{TypedefMutualRef}, options::Dict; ar
         push!(node.exprs, :(const $typedef_sym = $typedefee))
 
         # Record this node as only partially emitted
-        dag.partial_nodes[real_sym] = node
+        dag.partially_emitted_nodes[real_sym] = node
     end
     return dag
 end
@@ -521,11 +521,11 @@ function emit!(dag::ExprDAG, node::ExprNode{<:AbstractStructNodeType}, options::
     end
 
     # Emit any existing premature expressions
-    if haskey(dag.partial_nodes, struct_sym)
-        partial_node = dag.partial_nodes[struct_sym]
+    if haskey(dag.partially_emitted_nodes, struct_sym)
+        partial_node = dag.partially_emitted_nodes[struct_sym]
         append!(node.exprs, partial_node.premature_exprs)
         empty!(partial_node.premature_exprs)
-        delete!(dag.partial_nodes, struct_sym)
+        delete!(dag.partially_emitted_nodes, struct_sym)
     end
 
     return dag

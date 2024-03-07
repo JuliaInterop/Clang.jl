@@ -741,8 +741,8 @@ function (x::Codegen)(dag::ExprDAG, options::Dict)
     end
 
     # Make sure that all nodes have been fully emitted
-    if !isempty(dag.partial_nodes)
-        error("Codegen error, these nodes have not been fully emitted: $(keys(dag.partial_nodes))")
+    if !isempty(dag.partially_emitted_nodes)
+        error("Codegen error, these nodes have not been fully emitted: $(keys(dag.partially_emitted_nodes))")
     end
 
     # clean up

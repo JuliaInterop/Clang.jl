@@ -178,7 +178,7 @@ An expression DAG.
 """
 Base.@kwdef struct ExprDAG
     nodes::Vector{ExprNode} = ExprNode[]
-    partial_nodes::Dict{Symbol, ExprNode} = Dict{Symbol, ExprNode}()
+    partially_emitted_nodes::Dict{Symbol, ExprNode} = Dict{Symbol, ExprNode}()
     sys::Vector{ExprNode} = ExprNode[]
     tags::Dict{Symbol,Int} = Dict{Symbol,Int}()
     ids::Dict{Symbol,Int} = Dict{Symbol,Int}()

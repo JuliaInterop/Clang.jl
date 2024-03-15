@@ -52,6 +52,25 @@ function collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLTypedefDecl
     return nodes
 end
 
+function collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLTypeAliasDecl, options)
+    # lhs_type = getTypedefDeclUnderlyingType(cursor)
+
+    # @show lhs_type
+    # if has_elaborated_reference(lhs_type)
+    #     ty = TypedefElaborated()
+    # elseif has_function_reference(lhs_type)
+        ty = TypedefFunction()
+    # else
+    #     ty = TypedefDefault()
+    # end
+
+    id = Symbol(spelling(cursor))
+
+    push!(nodes, ExprNode(id, ty, cursor, Expr[], Int[]))
+
+    return nodes
+end
+
 function collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLMacroDefinition, options)
     is_macro_no_op(cursor) && return nodes
 
@@ -162,7 +181,12 @@ collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLInclusionDirective, 
 collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLLastPreprocessing, options) = nodes  # FIXME: fix cltype.jl
 
 # skip unexposed decl
-collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLUnexposedDecl, options) = nodes
+function collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLUnexposedDecl, options)
+    for child in children(cursor)
+        collect_top_level_nodes!(nodes, child, options)
+    end
+    nodes
+end
 collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLFirstDecl, options) = nodes  # FIXME: fix cltype.jl
 
 # skip C11's `_Static_assert`

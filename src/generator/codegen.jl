@@ -493,13 +493,18 @@ function emit_constructor!(dag, node::ExprNode{<:StructLayout}, options)
     push!(node.exprs, func)
 end
 
+function extract_fields(cursor::CLCursor)
+    field_cursors = fields(getCursorType(cursor))
+    !isempty(field_cursors) && return field_cursors
+    # `chldren(cursor)` may also return forward declaration of struct type for example, so we filter these out.
+    filter(x->x isa CLFieldDecl, children(cursor))
+end
+
 function emit!(dag::ExprDAG, node::ExprNode{<:AbstractStructNodeType}, options::Dict; args...)
     struct_sym = make_symbol_safe(node.id)
     block = Expr(:block)
     expr = Expr(:struct, false, struct_sym, block)
-    field_cursors = fields(getCursorType(node.cursor))
-    field_cursors = isempty(field_cursors) ? children(node.cursor) : field_cursors
-    for field_cursor in field_cursors
+    for field_cursor in extract_fields(node.cursor)
         field_sym = make_symbol_safe(name(field_cursor))
         field_ty = getCursorType(field_cursor)
         push!(block.args, Expr(:(::), field_sym, translate(tojulia(field_ty), options)))
@@ -537,9 +542,7 @@ function emit!(dag::ExprDAG, node::ExprNode{StructMutualRef}, options::Dict; arg
     block = Expr(:block)
     expr = Expr(:struct, false, struct_sym, block)
     mutual_ref_field_cursors = CLCursor[]
-    field_cursors = fields(getCursorType(node.cursor))
-    field_cursors = isempty(field_cursors) ? children(node.cursor) : field_cursors
-    for field_cursor in field_cursors
+    for field_cursor in extract_fields(node.cursor)
         field_sym = make_symbol_safe(name(field_cursor))
         field_ty = getCursorType(field_cursor)
         jlty = tojulia(field_ty)

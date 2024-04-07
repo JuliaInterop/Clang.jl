@@ -235,6 +235,13 @@ function value(c::CLEnumConstantDecl)::Integer
                     getCanonicalType |>
                     kind
     end
+    # PR #435
+    if typeKind == CXType_Enum
+        typeKind = getCursorType(c) |>
+                     getTypeDeclaration |>
+                     getCanonicalType |>
+                     kind
+    end
     if typeKind == CXType_Int ||
         typeKind == CXType_Long ||
         typeKind == CXType_LongLong
@@ -245,6 +252,7 @@ function value(c::CLEnumConstantDecl)::Integer
            typeKind == CXType_UChar
         return clang_getEnumConstantDeclUnsignedValue(c)
     end
+
     return error("Unknown EnumConstantDecl type: ", typeKind, " cursor: ", kind(c))
 end
 

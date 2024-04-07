@@ -161,9 +161,20 @@ collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLVarDecl, options) = 
 collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLInclusionDirective, options) = nodes
 collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLLastPreprocessing, options) = nodes  # FIXME: fix cltype.jl
 
-# skip unexposed decl
-collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLUnexposedDecl, options) = nodes
+
 collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLFirstDecl, options) = nodes  # FIXME: fix cltype.jl
 
 # skip C11's `_Static_assert`
 collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLStaticAssert, options) = nodes
+
+# C++ experimental support
+collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLNamespace, options) = nodes
+collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLUsingDeclaration, options) = nodes
+
+# unexposed decl
+function collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLUnexposedDecl, options)
+    for child in children(cursor)
+        collect_top_level_nodes!(nodes, child, options)
+    end
+    nodes
+end

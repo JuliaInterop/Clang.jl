@@ -24,8 +24,11 @@ include("target.jl")
 include("types.jl")
 include("system.jl")
 
-function get_system_dirs(triple::String, version::VersionNumber=v"4.8.5", is_cxx=false)
-    env = get_env(parse(Platform, triple); version, is_cxx)
+function get_system_dirs(triple::String, version::VersionNumber=GCC_MIN_VER, is_cxx=false)
+    p = parse(Platform, triple)
+    # tweak the default version for aarch64 macos
+    v = version == GCC_MIN_VER && os(p) == "macos" && arch(p) == "aarch64" ? v"11.0.0-iains" : version
+    env = get_env(p; version=v, is_cxx)
     return get_system_includes(env)
 end
 

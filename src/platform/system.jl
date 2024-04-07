@@ -15,7 +15,12 @@ function get_env(p::Platform; version::VersionNumber=GCC_MIN_VER, is_cxx=false)
     end
 end
 
-get_default_env(; version::VersionNumber=GCC_MIN_VER, is_cxx=false) = get_env(HostPlatform(); version, is_cxx)
+function get_default_env(; version::VersionNumber=GCC_MIN_VER, is_cxx=false)
+    p = HostPlatform()
+    # tweak the default version for aarch64 macos
+    v = version == GCC_MIN_VER && os(p) == "macos" && arch(p) == "aarch64" ? v"11.0.0-iains" : version
+    return get_env(p; v, is_cxx)
+end
 
 function get_system_includes(env::AbstractJLLEnv=get_default_env())
     gcc_info = get_environment_info(env.platform, env.gcc_version)

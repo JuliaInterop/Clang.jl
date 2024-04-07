@@ -16,6 +16,7 @@ elseif Base.libllvm_version.major == 16
 else
     "16"
 end
+
 libdir = joinpath(@__DIR__, "..", "lib")
 
 include(joinpath(libdir, llvm_version, "LibClang.jl"))
@@ -58,9 +59,6 @@ export dumpobj
 include("compiledb.jl")
 export CLCompilationDatabase
 
-include("generator/Generators.jl")
-using .Generators
-
 function version()
     cxstr = clang_getClangVersion()
     ptr = clang_getCString(cxstr)
@@ -76,5 +74,8 @@ const LLVM_INCLUDE = joinpath(LLVM_LIBDIR, "clang", LLVM_VERSION, "include")
 const CLANG_INCLUDE = LLVM_INCLUDE
 
 export LLVM_VERSION, LLVM_LIBDIR, LLVM_INCLUDE, CLANG_INCLUDE
+
+include("generator/Generators.jl")
+using .Generators
 
 end

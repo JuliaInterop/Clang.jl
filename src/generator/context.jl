@@ -236,18 +236,19 @@ function get_triple()
     end
 end
 
-function get_default_args(triple=get_triple())
-    args = ["-isystem"*dir for dir in get_system_dirs(triple)]
-    target = triple2target(triple)
-    push!(args, "--target=$target")
-    return args
-end
-
-function get_default_args(; version=JLLEnvs.GCC_MIN_VER, is_cxx=false)
-    env = get_default_env(; is_cxx, version)
-    args = ["-isystem" * dir for dir in get_system_includes(env)]
-    push!(args, "--target=$(target(env.platform))")
-    return args
+function get_default_args(triple=get_triple(); is_cxx=false)
+    if is_cxx
+        env = get_default_env(triple; version=GCC_MIN_VER, is_cxx)
+        args = ["-isystem" * dir for dir in get_system_includes(env)]
+        clang_inc = joinpath(LLVM_LIBDIR, "clang", string(Base.libllvm_version.major), "include")
+        push!(args, "-isystem" * clang_inc)
+        push!(args, "--target=$(target(env.platform))")
+        return args
+    else
+        args = ["-isystem"*dir for dir in get_system_dirs(triple)]
+        push!(args, "--target=$(triple2target(triple))")
+        return args
+    end
 end
 
 """

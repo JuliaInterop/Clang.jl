@@ -22,6 +22,13 @@ function get_default_env(; version::VersionNumber=GCC_MIN_VER, is_cxx=false)
     return get_env(p; version=v, is_cxx)
 end
 
+function get_default_env(triple::AbstractString; version::VersionNumber=GCC_MIN_VER, is_cxx=false)
+    p = parse(Platform, triple)
+    # tweak the default version for aarch64 macos
+    v = version == GCC_MIN_VER && os(p) == "macos" && arch(p) == "aarch64" ? v"11.0.0-iains" : version
+    return get_env(p; version=v, is_cxx)
+end
+
 function get_system_includes(env::AbstractJLLEnv=get_default_env())
     gcc_info = get_environment_info(env.platform, env.gcc_version)
 
@@ -72,14 +79,15 @@ function get_system_includes!(env::MacEnv, prefix::String, isys::Vector{String})
         end
     else  # "aarch64-apple-darwin20"
         if env.is_cxx
+            ver = VersionNumber(version.major,version.minor,version.patch)
+            push!(isys, joinpath(prefix, triple, "include", "c++", string(ver)))
+            push!(isys, joinpath(prefix, triple, "include", "c++", string(ver), triple))
+            push!(isys, joinpath(prefix, triple, "include", "c++", string(ver), "backward"))
             push!(isys, joinpath(prefix, triple, "sys-root", "usr", "include", "c++", "v1"))
             push!(isys, joinpath(prefix, triple, "sys-root", "usr", "include"))
-            push!(isys, joinpath(prefix, triple, "include", "c++", "11.0.0"))
-            push!(isys, joinpath(prefix, triple, "include", "c++", "11.0.0", triple))
-            push!(isys, joinpath(prefix, triple, "include", "c++", "11.0.0", "backward"))
         else
-            push!(isys, joinpath(prefix, "lib", "gcc", triple, "11.0.0", "include"))
-            push!(isys, joinpath(prefix, "lib", "gcc", triple, "11.0.0", "include-fixed"))
+            push!(isys, joinpath(prefix, "lib", "gcc", triple, string(ver), "include"))
+            push!(isys, joinpath(prefix, "lib", "gcc", triple, string(ver), "include-fixed"))
             push!(isys, joinpath(prefix, triple, "include"))
             push!(isys, joinpath(prefix, triple, "sys-root", "usr", "include"))
             push!(isys,

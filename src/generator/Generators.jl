@@ -5,6 +5,7 @@ using TOML
 using ..Clang
 using ..Clang.LibClang
 using ..Clang:
+    LLVM_LIBDIR,
     isBitField,
     isCursorDefinition,
     isMacroBuiltin,
@@ -35,7 +36,8 @@ using ..Clang:
     hasAttrs
 
 using ..JLLEnvs
-using ..JLLEnvs: get_system_dirs, triple2target, get_default_env, get_system_includes, target, GCC_MIN_VER
+using ..JLLEnvs: get_system_dirs, triple2target
+using ..JLLEnvs: get_default_env, get_system_includes, target, GCC_MIN_VER
 
 const __ANONYMOUS_MARKER = "(anonymous";
 const __UNNAMED_MARKER = "(unnamed";

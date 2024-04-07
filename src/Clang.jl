@@ -1,6 +1,6 @@
 module Clang
 
-include("shards/JLLEnvs.jl")
+include("platform/JLLEnvs.jl")
 using .JLLEnvs
 
 llvm_version = if Base.libllvm_version < v"13"

@@ -35,7 +35,7 @@ using ..Clang:
     hasAttrs
 
 using ..JLLEnvs
-using ..JLLEnvs: get_system_dirs, triple2target
+using ..JLLEnvs: get_system_dirs, triple2target, get_default_env, get_system_includes, target, GCC_MIN_VER
 
 const __ANONYMOUS_MARKER = "(anonymous";
 const __UNNAMED_MARKER = "(unnamed";

@@ -32,13 +32,6 @@ function get_system_dirs(triple::String, version::VersionNumber=GCC_MIN_VER, is_
     return get_system_includes(env)
 end
 
-function get_default_args(is_cxx=false, version=GCC_MIN_VER)
-    env = get_default_env(; is_cxx, version)
-    args = ["-isystem" * dir for dir in get_system_includes(env)]
-    push!(args, "--target=$(target(env.platform))")
-    return args
-end
-
 function get_pkg_artifact_dir(pkg::Module, target::String)
     arftspath = Artifacts.find_artifacts_toml(Pkg.pathof(pkg))
     arfts = first(values(Artifacts.load_artifacts_toml(arftspath)))

@@ -243,6 +243,13 @@ function get_default_args(triple=get_triple())
     return args
 end
 
+function get_default_args(; version=JLLEnvs.GCC_MIN_VER, is_cxx=false)
+    env = get_default_env(; is_cxx, version)
+    args = ["-isystem" * dir for dir in get_system_includes(env)]
+    push!(args, "--target=$(target(env.platform))")
+    return args
+end
+
 """
     detect_headers(include_dir, args, options::Dict=Dict(), filter=(header)->false)
 Detect a set of headers which can span the whole directory.

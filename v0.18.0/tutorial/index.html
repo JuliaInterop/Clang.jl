@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>LibClang Tutorial · Clang.jl</title><meta name="title" content="LibClang Tutorial · Clang.jl"/><meta property="og:title" content="LibClang Tutorial · Clang.jl"/><meta property="twitter:title" content="LibClang Tutorial · Clang.jl"/><meta name="description" content="Documentation for Clang.jl."/><meta property="og:description" content="Documentation for Clang.jl."/><meta property="twitter:description" content="Documentation for Clang.jl."/><meta property="og:url" content="https://JuliaInterop.github.io/Clang.jl/tutorial/"/><meta property="twitter:url" content="https://JuliaInterop.github.io/Clang.jl/tutorial/"/><link rel="canonical" href="https://JuliaInterop.github.io/Clang.jl/tutorial/"/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">Clang.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../">Introduction</a></li><li><a class="tocitem" href="../generator/">Generator Tutorial</a></li><li class="is-active"><a class="tocitem" href>LibClang Tutorial</a><ul class="internal"><li><a class="tocitem" href="#Printing-Struct-Fields"><span>Printing Struct Fields</span></a></li><li><a class="tocitem" href="#Function-Arguments-and-Types"><span>Function Arguments and Types</span></a></li><li><a class="tocitem" href="#Printing-Indented-Cursor-Hierarchy"><span>Printing Indented Cursor Hierarchy</span></a></li><li><a class="tocitem" href="#Parsing-Summary"><span>Parsing Summary</span></a></li><li><a class="tocitem" href="#Acknowledgement"><span>Acknowledgement</span></a></li></ul></li><li><a class="tocitem" href="../libclang/">LibClang Wrapper API Reference</a></li><li><a class="tocitem" href="../api/">Clang API Reference</a></li><li><a class="tocitem" href="../generated_changelog/">Changelog</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>LibClang Tutorial</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>LibClang Tutorial</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/JuliaInterop/Clang.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/JuliaInterop/Clang.jl/blob/master/docs/src/tutorial.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="LibClang-Tutorial"><a class="docs-heading-anchor" href="#LibClang-Tutorial">LibClang Tutorial</a><a id="LibClang-Tutorial-1"></a><a class="docs-heading-anchor-permalink" href="#LibClang-Tutorial" title="Permalink"></a></h1><p>Clang is an open-source compiler built on the LLVM framework and targeting C, C++, and Objective-C (LLVM is also the JIT backend for Julia). Due to a highly modular design, Clang has in recent years become the core of a growing number of projects utilizing pieces of the compiler, such as tools for source-to-source translation, static analysis and security evaluation, and editor tools for code completion, formatting, etc.</p><p>While LLVM and Clang are written in C++, the Clang project maintains a C-exported interface called &quot;libclang&quot; which provides access to the abstract syntax tree and type representations. Thanks to the ubiquity of support for C calling conventions, a number of languages have utilized libclang as a basis for tooling related to C and C++.</p><p>The Clang.jl Julia package wraps libclang, provides a small convenience API for Julia-style programming, and provides a C-to-Julia wrapper generator built on libclang functionality.</p><p>Here is the header file <code>example.h</code> used in the following examples:  </p><pre><code class="language-c hljs">// example.h
+struct ExStruct {
+    int    kind;
+    char*  name;
+    float* data;
+};
+
+void* ExFunction (int kind, char* name, float* data) {
+    struct ExStruct st;
+    st.kind = kind;
+    st.name = name;
+    st.data = data;
+}</code></pre><h2 id="Printing-Struct-Fields"><a class="docs-heading-anchor" href="#Printing-Struct-Fields">Printing Struct Fields</a><a id="Printing-Struct-Fields-1"></a><a class="docs-heading-anchor-permalink" href="#Printing-Struct-Fields" title="Permalink"></a></h2><p>To motivate the discussion with a succinct example, consider this struct:</p><pre><code class="language-c hljs">struct ExStruct {
+    int    kind;
+    char*  name;
+    float* data;
+};</code></pre><p>Parsing and querying the fields of this struct requires just a few lines of code:</p><pre><code class="language-julia hljs">julia&gt; using Clang
+
+julia&gt; trans_unit = Clang.parse_header(Index(), &quot;example.h&quot;)
+TranslationUnit(Ptr{Nothing} @0x00007fe13cdc8a00, Index(Ptr{Nothing} @0x00007fe13cc8dde0, 0, 1))
+
+julia&gt; root_cursor = Clang.getTranslationUnitCursor(trans_unit)
+CLCursor (CLTranslationUnit) example.h
+
+julia&gt; struct_cursor = search(root_cursor, &quot;ExStruct&quot;) |&gt; only
+CLCursor (CLStructDecl) ExStruct
+
+julia&gt; for c in children(struct_cursor)  # print children
+           println(&quot;Cursor: &quot;, c, &quot;\n  Kind: &quot;, kind(c), &quot;\n  Name: &quot;, name(c), &quot;\n  Type: &quot;, Clang.getCursorType(c))
+       end
+Cursor: CLCursor (CLFieldDecl) kind
+  Kind: CXCursor_FieldDecl(6)
+  Name: kind
+  Type: CLType (CLInt)
+Cursor: CLCursor (CLFieldDecl) name
+  Kind: CXCursor_FieldDecl(6)
+  Name: name
+  Type: CLType (CLPointer)
+Cursor: CLCursor (CLFieldDecl) data
+  Kind: CXCursor_FieldDecl(6)
+  Name: data
+  Type: CLType (CLPointer)</code></pre><h3 id="AST-Representation"><a class="docs-heading-anchor" href="#AST-Representation">AST Representation</a><a id="AST-Representation-1"></a><a class="docs-heading-anchor-permalink" href="#AST-Representation" title="Permalink"></a></h3><p>Let&#39;s examine the example above, starting with the variable <code>trans_unit</code>:</p><pre><code class="language-julia hljs">julia&gt; trans_unit
+TranslationUnit(Ptr{Nothing} @0x00007fa9ac6a9f90, Index(Ptr{Nothing} @0x00007fa9ac6b4080, 0, 1))</code></pre><p>A <code>TranslationUnit</code> is the entry point to the libclang AST. In the example above, <code>trans_unit</code> is a <code>TranslationUnit</code> for the parsed file <code>example.h</code>. The libclang AST is represented as a directed acyclic graph of cursor nodes carrying three pieces of essential information:</p><ul><li>Kind: purpose of cursor node</li><li>Type: type of the object represented by cursor</li><li>Children: list of child nodes</li></ul><pre><code class="language-julia hljs">julia&gt; root_cursor
+CLCursor (CLTranslationUnit) example.h</code></pre><p><code>root_cursor</code> is the root cursor node of the <code>TranslationUnit</code>.</p><p>In Clang.jl the cursor type is encapsulated by a Julia type deriving from the abstract type CLCursor. Under the hood, libclang represents each cursor (CXCursor) kind and type (CXType) as an enum value. These enum values are used to automatically map all CXCursor and CXType objects to Julia types. Thus, it is possible to write multiple-dispatch methods against CLCursor or CLType variables.</p><pre><code class="language-julia hljs">julia&gt; dump(root_cursor)
+CLTranslationUnit
+  cursor: Clang.LibClang.CXCursor
+    kind: Clang.LibClang.CXCursorKind CXCursor_TranslationUnit(300)
+    xdata: Int32 0
+    data: Tuple{Ptr{Nothing},Ptr{Nothing},Ptr{Nothing}}
+      1: Ptr{Nothing} @0x00007fe13b3552e8
+      2: Ptr{Nothing} @0x0000000000000001
+      3: Ptr{Nothing} @0x00007fe13cdc8a00</code></pre><p>Under the hood, libclang represents each cursor kind and type as an enum value. These enums are translated into Julia as a subtype of <code>Cenum</code>:</p><pre><code class="language-julia hljs">julia&gt; dump(Clang.LibClang.CXCursorKind)
+Clang.LibClang.CXCursorKind &lt;: Clang.LibClang.CEnum.Cenum{UInt32}</code></pre><p>The example demonstrates two different ways of accessing child nodes of a given cursor. Here, the children function returns an iterator over the child nodes of the given cursor:</p><pre><code class="language-julia hljs">julia&gt; children(struct_cursor)
+3-element Array{CLCursor,1}:
+ CLCursor (CLFieldDecl) kind
+ CLCursor (CLFieldDecl) name
+ CLCursor (CLFieldDecl) data</code></pre><p>And here, the search function returns a list of child node(s) matching the given name:</p><pre><code class="language-julia hljs">julia&gt; search(root_cursor, &quot;ExStruct&quot;)
+1-element Array{CLCursor,1}:
+ CLCursor (CLStructDecl) ExStruct</code></pre><h3 id="Type-representation"><a class="docs-heading-anchor" href="#Type-representation">Type representation</a><a id="Type-representation-1"></a><a class="docs-heading-anchor-permalink" href="#Type-representation" title="Permalink"></a></h3><p>The above example also demonstrates querying of the type associated with a given cursor using the helper function <code>type</code>. In the output:</p><pre><code class="language-julia hljs">Cursor: CLCursor (CLFieldDecl) kind
+  Kind: CXCursor_FieldDecl(6)
+  Name: kind
+  Type: CLType (CLInt)
+Cursor: CLCursor (CLFieldDecl) name
+  Kind: CXCursor_FieldDecl(6)
+  Name: name
+  Type: CLType (CLPointer)
+Cursor: CLCursor (CLFieldDecl) data
+  Kind: CXCursor_FieldDecl(6)
+  Name: data
+  Type: CLType (CLPointer)</code></pre><p>Each <code>CLFieldDecl</code> cursor has an associated <code>CLType</code> object, with an identity reflecting the field type for the given struct member. It is critical to note the difference between the representation for the <em>kind</em> field and the name and data fields. <em>kind</em> is represented directly as an <code>CLInt</code> object, but name and data are represented as <code>CLPointer</code> CLTypes. As explored in the next section, the full type of the <code>CLPointer</code> can be queried to retrieve the full <code>char *</code> and <code>float *</code> types of these members. User-defined types are captured using a similar scheme.</p><h2 id="Function-Arguments-and-Types"><a class="docs-heading-anchor" href="#Function-Arguments-and-Types">Function Arguments and Types</a><a id="Function-Arguments-and-Types-1"></a><a class="docs-heading-anchor-permalink" href="#Function-Arguments-and-Types" title="Permalink"></a></h2><p>To further explore type representations, consider the following function (included in example.h):</p><pre><code class="language-c hljs">void* ExFunction (int kind, char* name, float* data) {
+    struct ExStruct st;
+    st.kind = kind;
+    st.name = name;
+    st.data = data;
+}</code></pre><p>To find the cursor for this function declaration, we use function <code>search</code> to retrieve nodes of kind  <code>CXCursor_FunctionDecl</code> , and select the final one in the list:</p><pre><code class="language-julia hljs">julia&gt; using Clang.LibClang  # CXCursor_FunctionDecl is exposed from LibClang
+
+julia&gt; fdecl = search(root_cursor, CXCursor_FunctionDecl) |&gt; only
+CLCursor (CLFunctionDecl) ExFunction(int, char *, float *)
+
+julia&gt; fdecl_children = [c for c in children(fdecl)]
+4-element Array{CLCursor,1}:
+ CLCursor (CLParmDecl) kind
+ CLCursor (CLParmDecl) name
+ CLCursor (CLParmDecl) data
+ CLCursor (CLCompoundStmt)</code></pre><p>The first three children are <code>CLParmDecl</code> cursors with the same name as the arguments in the function signature. Checking the types of the <code>CLParmDecl</code> cursors indicates a similarity to the function signature:</p><pre><code class="language-julia hljs">julia&gt; [Clang.getCursorType(t) for t in fdecl_children[1:3]]
+3-element Array{CLType,1}:
+ CLType (CLInt)     
+ CLType (CLPointer)
+ CLType (CLPointer)</code></pre><p>And, finally, retrieving the target type of each <code>CLPointer</code> argument confirms that these cursors represent the function argument type declaration:</p><pre><code class="language-julia hljs">julia&gt; [Clang.getPointeeType(Clang.getCursorType(t)) for t in fdecl_children[2:3]]
+2-element Array{CLType,1}:
+ CLType (CLChar_S)
+ CLType (CLFloat)  </code></pre><h2 id="Printing-Indented-Cursor-Hierarchy"><a class="docs-heading-anchor" href="#Printing-Indented-Cursor-Hierarchy">Printing Indented Cursor Hierarchy</a><a id="Printing-Indented-Cursor-Hierarchy-1"></a><a class="docs-heading-anchor-permalink" href="#Printing-Indented-Cursor-Hierarchy" title="Permalink"></a></h2><p>As a closing example, here is a simple, indented AST printer using <code>CLType</code>- and <code>CLCursor</code>-related functions, and utilizing various aspects of Julia&#39;s type system.</p><pre><code class="language-julia hljs">printind(ind::Int, st...) = println(join([repeat(&quot; &quot;, 2*ind), st...]))
+
+printobj(cursor::CLCursor) = printobj(0, cursor)
+printobj(t::CLType) = join(typeof(t), &quot; &quot;, spelling(t))
+printobj(t::CLInt) = t
+printobj(t::CLPointer) = Clang.getPointeeType(t)
+printobj(ind::Int, t::CLType) = printind(ind, printobj(t))
+
+function printobj(ind::Int, cursor::Union{CLFieldDecl, CLParmDecl})
+    printind(ind+1, typeof(cursor), &quot; &quot;, printobj(Clang.getCursorType(cursor)), &quot; &quot;, name(cursor))
+end
+
+function printobj(ind::Int, node::Union{CLCursor, CLStructDecl, CLCompoundStmt,
+                                        CLFunctionDecl, CLBinaryOperator})
+    printind(ind, &quot; &quot;, typeof(node), &quot; &quot;, name(node))
+    for c in children(node)
+        printobj(ind + 1, c)
+    end
+end</code></pre><pre><code class="language-julia hljs">julia&gt; printobj(root_cursor)
+ CLTranslationUnit example.h
+   CLStructDecl ExStruct
+      CLFieldDecl CLType (CLInt)  kind
+      CLFieldDecl CLType (CLChar_S)  name
+      CLFieldDecl CLType (CLFloat)  data
+   CLFunctionDecl ExFunction(int, char *, float *)
+      CLParmDecl CLType (CLInt)  kind
+      CLParmDecl CLType (CLChar_S)  name
+      CLParmDecl CLType (CLFloat)  data
+     CLCompoundStmt
+       CLDeclStmt
+         CLVarDecl st
+           CLTypeRef struct ExStruct
+       CLBinaryOperator
+         CLMemberRefExpr kind
+           CLDeclRefExpr st
+         CLUnexposedExpr kind
+           CLDeclRefExpr kind
+       CLBinaryOperator
+         CLMemberRefExpr name
+           CLDeclRefExpr st
+         CLUnexposedExpr name
+           CLDeclRefExpr name
+       CLBinaryOperator
+         CLMemberRefExpr data
+           CLDeclRefExpr st
+         CLUnexposedExpr data
+           CLDeclRefExpr data</code></pre><p>Note that a generic <code>printobj</code> function has been defined for the abstract <code>CLType</code> and <code>CLCursor</code> types, and multiple dispatch is used to define the printers for various specific types needing custom behavior. In particular, the following function handles all cursor types for which recursive printing of child nodes is required:</p><pre><code class="language-julia hljs">function printobj(ind::Int, node::Union{CLCursor, CLStructDecl, CLCompoundStmt, CLFunctionDecl})</code></pre><p>Now, <code>printobj</code> has been moved into Clang.jl with a new name: <code>dumpobj</code>.</p><h2 id="Parsing-Summary"><a class="docs-heading-anchor" href="#Parsing-Summary">Parsing Summary</a><a id="Parsing-Summary-1"></a><a class="docs-heading-anchor-permalink" href="#Parsing-Summary" title="Permalink"></a></h2><p>As discussed above, there are several key aspects of the Clang.jl/libclang API:</p><ul><li>tree of Cursor nodes representing the AST, notes have unique children.</li><li>each Cursor node has a Julia type identifying the syntactic construct represented by the node.</li><li>each node also has an associated CLType referencing either intrinsic or user-defined datatypes.</li></ul><p>There are a number of details omitted from this post, especially concerning the full variety of <code>CLCursor</code> and <code>CLType</code> representations available via libclang. For further information, please see the <a href="http://clang.llvm.org/doxygen/group__CINDEX.html">libclang documentation</a>.</p><h2 id="Acknowledgement"><a class="docs-heading-anchor" href="#Acknowledgement">Acknowledgement</a><a id="Acknowledgement-1"></a><a class="docs-heading-anchor-permalink" href="#Acknowledgement" title="Permalink"></a></h2><p>Eli Bendersky&#39;s post <a href="http://eli.thegreenplace.net/2011/07/03/parsing-c-in-python-with-clang/">Parsing C++ in Python with Clang</a> has been an extremely helpful reference.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../generator/">« Generator Tutorial</a><a class="docs-footer-nextpage" href="../libclang/">LibClang Wrapper API Reference »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.3.0 on <span class="colophon-date" title="Monday 8 April 2024 14:38">Monday 8 April 2024</span>. Using Julia version 1.8.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

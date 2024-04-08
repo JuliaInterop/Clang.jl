@@ -78,8 +78,8 @@ function get_system_includes!(env::MacEnv, prefix::String, isys::Vector{String})
                   joinpath(prefix, triple, "sys-root", "System", "Library", "Frameworks"))
         end
     else  # "aarch64-apple-darwin20"
+        ver = VersionNumber(version.major,version.minor,version.patch)
         if env.is_cxx
-            ver = VersionNumber(version.major,version.minor,version.patch)
             push!(isys, joinpath(prefix, triple, "include", "c++", string(ver)))
             push!(isys, joinpath(prefix, triple, "include", "c++", string(ver), triple))
             push!(isys, joinpath(prefix, triple, "include", "c++", string(ver), "backward"))

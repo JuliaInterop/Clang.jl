@@ -52,6 +52,16 @@ function collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLTypedefDecl
     return nodes
 end
 
+function collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLTypeAliasDecl, options)
+    ty = TypeAliasFunction()
+
+    id = Symbol(spelling(cursor))
+
+    push!(nodes, ExprNode(id, ty, cursor, Expr[], Int[]))
+
+    return nodes
+end
+
 function collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLMacroDefinition, options)
     is_macro_no_op(cursor) && return nodes
 

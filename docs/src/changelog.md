@@ -3,7 +3,7 @@
 This documents notable changes in Clang.jl. The format is based on [Keep a
 Changelog](https://keepachangelog.com).
 
-## [v0.18.0] - 2024-xx-xx
+## [v0.18.0] - 2024-04-08
 
 ### Added
 
@@ -11,6 +11,7 @@ Changelog](https://keepachangelog.com).
   compat` and `!!! danger` admonitions, respectively ([#460], [#463]).
 - Initial support for non-field struct children ([#479]).
 - Experimental support has been added for a few C++-isms ([#432], [#435]).
+- `CXFile` and `unique_id` support ([#424])
 
 ### Changed
 

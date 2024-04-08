@@ -32,9 +32,40 @@ function get_system_dirs(triple::String, version::VersionNumber=GCC_MIN_VER, is_
     return get_system_includes(env)
 end
 
+get_arch_os_libc(target::AbstractString) = get_arch(target), get_os(target), get_libc(target)
+
+get_arch(target::AbstractString) = first(split(target, '-'))
+
+function get_os(target::AbstractString)
+    _, vendor, _ = split(target, '-')
+    if vendor == "apple"
+        os = "macos"
+    elseif vendor == "w64"
+        os = "windows"
+    elseif vendor == "unknown"
+        os = "freebsd"
+    elseif vendor == "linux"
+        os = "linux"
+    else
+        error("Unknown OS: $target")
+    end
+    return os
+end
+
+function get_libc(target::AbstractString)
+    _, _, env = split(target, '-')
+    if startswith(env, "gnu")
+        return "glibc"
+    elseif startswith(env, "musl")
+        return "musl"
+    else
+        return ""
+    end
+end
+
 function get_pkg_artifact_dir(pkg::Module, target::String)
-    arftspath = Artifacts.find_artifacts_toml(Pkg.pathof(pkg))
-    arfts = first(values(Artifacts.load_artifacts_toml(arftspath)))
+    arftspath = Artifacts.find_artifacts_toml(Pkg.pathof(pkg)::String)
+    arfts = first(values(Artifacts.load_artifacts_toml(arftspath::String)))
     target_arch, target_os, target_libc = get_arch_os_libc(target)
     candidates = Dict[]
     for info in arfts
@@ -55,7 +86,7 @@ function get_pkg_artifact_dir(pkg::Module, target::String)
     length(candidates) > 1 && @warn "found more than one candidate artifacts, only use the first one: $(first(candidates))"
     info = first(candidates)
     name = info["git-tree-sha1"]  # this is not a real name but a hash
-    Artifacts.ensure_artifact_installed(name, info, arftspath)
+    Artifacts.ensure_artifact_installed(name, info, arftspath::String)
     return normpath(Artifacts.artifact_path(Base.SHA1(name)))
 end
 

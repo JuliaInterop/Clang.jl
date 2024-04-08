@@ -71,7 +71,7 @@ isExpression(c::CLCursor) = isExpression(kind(c))
 Return true if the given cursor kind represents a statement.
 """
 isStatement(k::CXCursorKind)::Bool = clang_isStatement(k)
-isStatement(c::CLCursor) = isstat(kind(c))
+isStatement(c::CLCursor) = isStatement(kind(c))
 
 """
     isAttribute(k::CXcursorKind) -> Bool

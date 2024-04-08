@@ -22,6 +22,7 @@ using ..Clang:
     getEnumDeclIntegerType,
     getFieldDeclBitWidth,
     getIncludedFile,
+    getNullCursor,
     getNamedType,
     getNumArguments,
     getNumElements,

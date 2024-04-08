@@ -26,15 +26,15 @@ struct JuliaCrecord{T<:CLCursor} <: AbstractJuliaType
     sym::Symbol
     cursor::T
 end
-JuliaCrecord() = JuliaCrecord(Symbol())
-JuliaCrecord(x::AbstractString) = JuliaCrecord(Symbol(x), getNullCursor())
+JuliaCrecord() = JuliaCrecord(Symbol(), CLCursor(getNullCursor()))
+JuliaCrecord(x::AbstractString) = JuliaCrecord(Symbol(x), CLCursor(getNullCursor()))
 
 struct JuliaCenum{T<:CLCursor} <: AbstractJuliaType
     sym::Symbol
     cursor::T
 end
-JuliaCenum() = JuliaCenum(Symbol())
-JuliaCenum(x::AbstractString) = JuliaCenum(Symbol(x), getNullCursor())
+JuliaCenum() = JuliaCenum(Symbol(), CLCursor(getNullCursor()))
+JuliaCenum(x::AbstractString) = JuliaCenum(Symbol(x), CLCursor(getNullCursor()))
 
 struct JuliaCtypedef <: AbstractJuliaType
     sym::Symbol

@@ -6,7 +6,6 @@
 [![docs-stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://JuliaInterop.github.io/Clang.jl/stable)
 [![docs-dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://JuliaInterop.github.io/Clang.jl/dev)
 [![GitHub Discussions](https://img.shields.io/github/discussions/JuliaInterop/Clang.jl)](https://github.com/JuliaInterop/Clang.jl/discussions)
-[![Genie Downloads](https://shields.io/endpoint?url=https://pkgs.genieframework.com/api/v1/badge/Clang)](https://pkgs.genieframework.com?packages=Clang)
 
 This package provides a Julia language wrapper for libclang: the stable, C-exported
 interface to the LLVM Clang compiler. The [libclang API documentation](http://clang.llvm.org/doxygen/group__CINDEX.html)

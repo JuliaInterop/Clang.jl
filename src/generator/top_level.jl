@@ -89,7 +89,7 @@ function collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLStructDecl,
 
     str = spelling(cursor)
 
-    if isempty(str)
+    if isempty(str) || occursin(__ANONYMOUS_MARKER, str) || occursin(__UNNAMED_MARKER, str)
         @assert isCursorDefinition(cursor)
         ty = StructAnonymous()
         id = use_deterministic_sym ? gensym_deterministic("Ctag") : gensym("Ctag")
@@ -114,7 +114,7 @@ function collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLUnionDecl, 
 
     str = spelling(cursor)
 
-    if isempty(str)
+    if isempty(str) || occursin(__ANONYMOUS_MARKER, str) || occursin(__UNNAMED_MARKER, str)
         @assert isCursorDefinition(cursor)
         ty = UnionAnonymous()
         id = use_deterministic_sym ? gensym_deterministic("Ctag") : gensym("Ctag")
@@ -139,7 +139,7 @@ function collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLEnumDecl, o
 
     str = spelling(cursor)
 
-    if isempty(str)
+    if isempty(str) || occursin(__ANONYMOUS_MARKER, str) || occursin(__UNNAMED_MARKER, str)
         @assert isCursorDefinition(cursor)
         ty = EnumAnonymous()
         id = use_deterministic_sym ? gensym_deterministic("Ctag") : gensym("Ctag")

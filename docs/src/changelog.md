@@ -3,6 +3,13 @@
 This documents notable changes in Clang.jl. The format is based on [Keep a
 Changelog](https://keepachangelog.com).
 
+## [v0.18.1] - 2024-04-09
+
+### Fixed
+
+- Improved support for the internal changes in Clang 16
+  ([8652cd4](https://github.com/JuliaInterop/Clang.jl/commit/8652cd4f73ffe2a1e5996f6bb8efe5273a3da4a2)).
+
 ## [v0.18.0] - 2024-04-08
 
 ### Added

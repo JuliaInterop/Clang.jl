@@ -1006,10 +1006,12 @@ function (x::GeneralPrinter)(dag::ExprDAG, options::Dict)
     ignorelist = get(general_options, "output_ignorelist", get(general_options, "printer_blacklist", []))
     general_options["DAG_ids"] = merge(dag.ids, dag.tags)
     exclusivelist = get(general_options, "output_exclusivelist", nothing)
+    output_system = get(general_options, "output_system", true)
 
     show_info && @info "[GeneralPrinter]: print to $(x.file)"
     open(x.file, "a") do io
         for node in dag.nodes
+            !output_system && string(node.id) in map(it -> string(it.id), dag.sys) && continue
             should_exclude_node(node, ignorelist, exclusivelist) && continue
             node.type isa AbstractMacroNodeType && continue
             pretty_print(io, node, general_options)

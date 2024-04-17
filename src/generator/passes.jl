@@ -943,6 +943,7 @@ function (x::FunctionPrinter)(dag::ExprDAG, options::Dict)
     show_info = get(log_options, "FunctionPrinter_log", x.show_info)
     ignorelist = get(general_options, "output_ignorelist", get(general_options, "printer_blacklist", []))
     exclusivelist = get(general_options, "output_exclusivelist", nothing)
+    get(general_options, "generate_isystem_symbols", true) && append!(ignorelist, string(x.id) for x in dag.sys)
 
     show_info && @info "[FunctionPrinter]: print to $(x.file)"
     open(x.file, "w") do io
@@ -971,6 +972,7 @@ function (x::CommonPrinter)(dag::ExprDAG, options::Dict)
     show_info = get(log_options, "CommonPrinter_log", x.show_info)
     ignorelist = get(general_options, "output_ignorelist", get(general_options, "printer_blacklist", []))
     exclusivelist = get(general_options, "output_exclusivelist", nothing)
+    get(general_options, "generate_isystem_symbols", true) && append!(ignorelist, string(x.id) for x in dag.sys)
 
     show_info && @info "[CommonPrinter]: print to $(x.file)"
     open(x.file, "w") do io
@@ -1006,12 +1008,11 @@ function (x::GeneralPrinter)(dag::ExprDAG, options::Dict)
     ignorelist = get(general_options, "output_ignorelist", get(general_options, "printer_blacklist", []))
     general_options["DAG_ids"] = merge(dag.ids, dag.tags)
     exclusivelist = get(general_options, "output_exclusivelist", nothing)
-    output_system = get(general_options, "output_system", true)
+    get(general_options, "generate_isystem_symbols", true) && append!(ignorelist, string(x.id) for x in dag.sys)
 
     show_info && @info "[GeneralPrinter]: print to $(x.file)"
     open(x.file, "a") do io
         for node in dag.nodes
-            !output_system && string(node.id) in map(it -> string(it.id), dag.sys) && continue
             should_exclude_node(node, ignorelist, exclusivelist) && continue
             node.type isa AbstractMacroNodeType && continue
             pretty_print(io, node, general_options)
@@ -1044,6 +1045,7 @@ function (x::StdPrinter)(dag::ExprDAG, options::Dict)
     show_info = get(log_options, "StdPrinter_log", x.show_info)
     ignorelist = get(general_options, "output_ignorelist", get(general_options, "printer_blacklist", []))
     exclusivelist = get(general_options, "output_exclusivelist", nothing)
+    get(general_options, "generate_isystem_symbols", true) && append!(ignorelist, string(x.id) for x in dag.sys)
 
     for node in dag.nodes
         should_exclude_node(node, ignorelist, exclusivelist) && continue

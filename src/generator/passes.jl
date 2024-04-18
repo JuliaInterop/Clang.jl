@@ -907,8 +907,10 @@ function (x::Audit)(dag::ExprDAG, options::Dict)
     return dag
 end
 
-function should_exclude_node(node, ignorelist, exclusivelist)
+function should_exclude_node(node, ignorelist, exclusivelist, isystem_ignorelist=[])
     str_node = string(node.id)
+    str_node ∈ isystem_ignorelist && return true
+
     for item ∈ ignorelist
         the_match = match(Regex(item), str_node)
         if the_match !== nothing  && the_match.match == str_node
@@ -943,12 +945,14 @@ function (x::FunctionPrinter)(dag::ExprDAG, options::Dict)
     show_info = get(log_options, "FunctionPrinter_log", x.show_info)
     ignorelist = get(general_options, "output_ignorelist", get(general_options, "printer_blacklist", []))
     exclusivelist = get(general_options, "output_exclusivelist", nothing)
-    get(general_options, "generate_isystem_symbols", true) && append!(ignorelist, string(x.id) for x in dag.sys)
+
+    isystem_ignorelist = []
+    !get(general_options, "generate_isystem_symbols", true) && append!(isystem_ignorelist, string(x.id) for x in dag.sys)
 
     show_info && @info "[FunctionPrinter]: print to $(x.file)"
     open(x.file, "w") do io
         for node in dag.nodes
-            should_exclude_node(node, ignorelist, exclusivelist) && continue
+            should_exclude_node(node, ignorelist, exclusivelist, isystem_ignorelist) && continue
             node.type isa AbstractFunctionNodeType || continue
             pretty_print(io, node, general_options)
         end
@@ -972,18 +976,20 @@ function (x::CommonPrinter)(dag::ExprDAG, options::Dict)
     show_info = get(log_options, "CommonPrinter_log", x.show_info)
     ignorelist = get(general_options, "output_ignorelist", get(general_options, "printer_blacklist", []))
     exclusivelist = get(general_options, "output_exclusivelist", nothing)
-    get(general_options, "generate_isystem_symbols", true) && append!(ignorelist, string(x.id) for x in dag.sys)
+
+    isystem_ignorelist = []
+    !get(general_options, "generate_isystem_symbols", true) && append!(isystem_ignorelist, string(x.id) for x in dag.sys)
 
     show_info && @info "[CommonPrinter]: print to $(x.file)"
     open(x.file, "w") do io
         for node in dag.nodes
-            should_exclude_node(node, ignorelist, exclusivelist) && continue
+            should_exclude_node(node, ignorelist, exclusivelist, isystem_ignorelist) && continue
             (node.type isa AbstractMacroNodeType || node.type isa AbstractFunctionNodeType) && continue
             pretty_print(io, node, general_options)
         end
         # print macros in the bottom of the file
         for node in dag.nodes
-            should_exclude_node(node, ignorelist, exclusivelist) && continue
+            should_exclude_node(node, ignorelist, exclusivelist, isystem_ignorelist) && continue
             node.type isa AbstractMacroNodeType || continue
             pretty_print(io, node, options)
         end
@@ -1008,18 +1014,20 @@ function (x::GeneralPrinter)(dag::ExprDAG, options::Dict)
     ignorelist = get(general_options, "output_ignorelist", get(general_options, "printer_blacklist", []))
     general_options["DAG_ids"] = merge(dag.ids, dag.tags)
     exclusivelist = get(general_options, "output_exclusivelist", nothing)
-    get(general_options, "generate_isystem_symbols", true) && append!(ignorelist, string(x.id) for x in dag.sys)
+
+    isystem_ignorelist = []
+    !get(general_options, "generate_isystem_symbols", true) && append!(isystem_ignorelist, string(x.id) for x in dag.sys)
 
     show_info && @info "[GeneralPrinter]: print to $(x.file)"
     open(x.file, "a") do io
         for node in dag.nodes
-            should_exclude_node(node, ignorelist, exclusivelist) && continue
+            should_exclude_node(node, ignorelist, exclusivelist, isystem_ignorelist) && continue
             node.type isa AbstractMacroNodeType && continue
             pretty_print(io, node, general_options)
         end
         # print macros in the bottom of the file
         for node in dag.nodes
-            should_exclude_node(node, ignorelist, exclusivelist) && continue
+            should_exclude_node(node, ignorelist, exclusivelist, isystem_ignorelist) && continue
             node.type isa AbstractMacroNodeType || continue
             isempty(node.exprs)
             pretty_print(io, node, options)
@@ -1045,16 +1053,18 @@ function (x::StdPrinter)(dag::ExprDAG, options::Dict)
     show_info = get(log_options, "StdPrinter_log", x.show_info)
     ignorelist = get(general_options, "output_ignorelist", get(general_options, "printer_blacklist", []))
     exclusivelist = get(general_options, "output_exclusivelist", nothing)
-    get(general_options, "generate_isystem_symbols", true) && append!(ignorelist, string(x.id) for x in dag.sys)
+
+    isystem_ignorelist = []
+    !get(general_options, "generate_isystem_symbols", true) && append!(isystem_ignorelist, string(x.id) for x in dag.sys)
 
     for node in dag.nodes
-        should_exclude_node(node, ignorelist, exclusivelist) && continue
+        should_exclude_node(node, ignorelist, exclusivelist, isystem_ignorelist) && continue
         node.type isa AbstractMacroNodeType && continue
         pretty_print(stdout, node, general_options)
     end
     # print macros
     for node in dag.nodes
-        should_exclude_node(node, ignorelist, exclusivelist) && continue
+        should_exclude_node(node, ignorelist, exclusivelist, isystem_ignorelist) && continue
         node.type isa AbstractMacroNodeType || continue
         pretty_print(stdout, node, options)
     end

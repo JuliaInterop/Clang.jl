@@ -3,6 +3,12 @@
 This documents notable changes in Clang.jl. The format is based on [Keep a
 Changelog](https://keepachangelog.com).
 
+## [v0.18.2] - 2024-04-20
+
+### Added
+
+- Add an option `generate_isystem_symbols` for ignoring all symbols in the `-isystem` headers ([#485]).
+
 ## [v0.18.1] - 2024-04-09
 
 ### Fixed

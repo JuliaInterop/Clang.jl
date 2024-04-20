@@ -79,6 +79,9 @@ use_deterministic_symbol = true
 # if you'd like to generate all of the symbols in the system headers, please set this option to false.
 is_local_header_only = true
 
+# set this option to false if you'd like to ignore the symbols(even if necessary) in the system headers.
+generate_isystem_symbols = true
+
 # if this option is set to true, C code with a style of
 # ```c
 # typedef struct {

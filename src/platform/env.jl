@@ -11,7 +11,7 @@ const JLL_ENV_TRIPLES = String[
     "x86_64-apple-darwin14",
     "x86_64-linux-gnu",
     "x86_64-linux-musl",
-    "x86_64-unknown-freebsd",
+    "x86_64-unknown-freebsd13.2",
     "x86_64-w64-mingw32",
 ]
 

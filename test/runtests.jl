@@ -5,6 +5,7 @@ using Test
 # https://github.com/JuliaLang/julia/issues/52986
 using REPL
 
+include("jllenvs.jl")
 include("file.jl")
 include("generators.jl")
 

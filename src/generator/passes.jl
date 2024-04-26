@@ -1119,7 +1119,7 @@ function (x::ProloguePrinter)(dag::ExprDAG, options::Dict)
 
         # print "using CEnum"
         if !use_native_enum && print_CEnum
-            println(io, "using CEnum")
+            println(io, "using CEnum: CEnum, @cenum")
             println(io)
         end
 

@@ -244,7 +244,8 @@ function value(c::CLEnumConstantDecl)::Integer
     end
     if typeKind == CXType_Int ||
         typeKind == CXType_Long ||
-        typeKind == CXType_LongLong
+        typeKind == CXType_LongLong ||
+        typeKind == CXType_Char_S # enum : char
         return clang_getEnumConstantDeclValue(c)
     elseif typeKind == CXType_UInt ||
            typeKind == CXType_ULong ||

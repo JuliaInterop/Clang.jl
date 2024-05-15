@@ -242,12 +242,14 @@ function value(c::CLEnumConstantDecl)::Integer
                      getCanonicalType |>
                      kind
     end
-    if typeKind == CXType_Int ||
+    if typeKind == CXType_Short ||
+        typeKind == CXType_Int ||
         typeKind == CXType_Long ||
         typeKind == CXType_LongLong ||
         typeKind == CXType_Char_S # enum : char
         return clang_getEnumConstantDeclValue(c)
-    elseif typeKind == CXType_UInt ||
+    elseif typeKind == CXType_UShort ||
+           typeKind == CXType_UInt ||
            typeKind == CXType_ULong ||
            typeKind == CXType_ULongLong ||
            typeKind == CXType_UChar

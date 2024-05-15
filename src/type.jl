@@ -67,6 +67,97 @@ getPointeeType(t::CXType) = clang_getPointeeType(t)
 getPointeeType(t::CLType)::CLType = clang_getPointeeType(t)
 
 """
+    getObjCObjectBaseType(T::CXType) -> CXType
+    getObjCObjectBaseType(T::CLType) -> CLType
+Retrieves the base type of the ObjCObjectType.
+If the type is not an ObjC object, an invalid type is returned.
+Wrapper for libclang's [`clang_Type_getObjCObjectBaseType`](@ref).
+"""
+getObjCObjectBaseType(t::CXType) = clang_Type_getObjCObjectBaseType(t)
+getObjCObjectBaseType(t::CLType)::CLType = clang_Type_getObjCObjectBaseType(t)
+
+"""
+    getDeclObjCTypeEncoding(C::CXCursor)::CXString
+    getDeclObjCTypeEncoding(C::CLCursor)::String
+Returns the Objective-C type encoding for the specified declaration.
+Wrapper for libclang's [`clang_getDeclObjCTypeEncoding`](@ref).
+"""
+getDeclObjCTypeEncoding(c::CXCursor) = clang_getDeclObjCTypeEncoding(c)
+function getDeclObjCTypeEncoding(c::CLCursor)::String
+        cxstr = clang_getDeclObjCTypeEncoding(c)
+        ptr = clang_getCString(cxstr)
+        s = unsafe_string(ptr)
+        clang_disposeString(cxstr)
+        return s
+end
+
+"""
+    getNumObjCProtocolRefs(T::Union{CXType, CLType})::Cuint
+
+Retrieve the number of protocol references associated with an ObjC object/id.
+
+If the type is not an ObjC object, 0 is returned.
+"""
+function getNumObjCProtocolRefs(T::Union{CXType, CLType})
+    clang_Type_getNumObjCProtocolRefs(T)::Cuint
+end
+
+"""
+    getObjCProtocolDecl(T::CXType, i) -> CLCursor
+    getObjCProtocolDecl(T::CLType, i) -> CXCursor
+
+Retrieve the decl for a protocol reference for an ObjC object/id.
+
+If the type is not an ObjC object or there are not enough protocol references, an invalid cursor is returned.
+"""
+getObjCProtocolDecl(T::CXType, i) = clang_Type_getObjCProtocolDecl(T, i)
+getObjCProtocolDecl(T::CLType, i)::CLCursor = clang_Type_getObjCProtocolDecl(T, i)
+
+function getObjCProtocolDecls(T::CLType)::Vector{CLCursor}
+    n_refs = getNumObjCProtocolRefs(T)
+    return [getObjCProtocolDecl(T,i-1) for i in 1:n_refs]
+end
+
+"""
+    getNumObjCTypeArgs(T::Union{CXType, CLType})::Cuint
+
+Retrieve the number of type arguments associated with an ObjC object.
+
+If the type is not an ObjC object, 0 is returned.
+"""
+getNumObjCTypeArgs(T::Union{CXType, CLType}) = clang_Type_getNumObjCTypeArgs(T)
+
+"""
+    getObjCTypeArg(T::CXType, i) -> CXType
+    getObjCTypeArg(T::CLType, i) -> CLType
+
+Retrieve a type argument associated with an ObjC object.
+
+If the type is not an ObjC or the index is not valid, an invalid type is returned.
+"""
+getObjCTypeArg(T::CXType, i) = clang_Type_getObjCTypeArg(T, i)
+getObjCTypeArg(T::CLType, i)::CLType = clang_Type_getObjCTypeArg(T, i)
+
+function getObjCTypeArgs(T::CLType)::Vector{CLType}
+    n_refs = getNumObjCTypeArgs(T)
+    return [getObjCTypeArg(T,i-1) for i in 1:n_refs]
+end
+
+"""
+    getObjCEncoding(T::CXType) -> String
+    getObjCEncoding(T::CLType) -> String
+Returns the Objective-C type encoding for the specified `Type`.
+Wrapper for libclang's [`clang_Type_getObjCEncoding`](@ref).
+"""
+function getObjCEncoding(c::CLType)
+    cxstr = clang_Type_getObjCEncoding(c)
+    ptr = clang_getCString(cxstr)
+    s = unsafe_string(ptr)
+    clang_disposeString(cxstr)
+    return s
+end
+
+"""
     getTypeDeclaration(t::CXType) -> CXCursor
     getTypeDeclaration(t::CLType) -> CLCursor
 Return the cursor for the declaration of the given type. To get the type of the cursor,

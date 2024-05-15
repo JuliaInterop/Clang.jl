@@ -12,6 +12,23 @@ struct JuliaUnsupported <: AbstractJuliaType end
 struct JuliaCpointer <: AbstractJuliaType
     ref::CLPointer
 end
+
+struct JuliaObjCObjectPointer <: AbstractJuliaType
+    ref::CLObjCObjectPointer
+end
+struct JuliaObjCId{T<:Union{CLCursor}} <: AbstractJuliaType
+    sym::Symbol
+    ref::T
+end
+JuliaObjCId() = JuliaObjCId(Symbol(), CLCursor(getNullCursor()))
+JuliaObjCId(x::AbstractString) = JuliaObjCId(Symbol(x), CLCursor(getNullCursor()))
+struct JuliaObjCClass{T<:Union{CLCursor}} <: AbstractJuliaType
+    sym::Symbol
+    ref::T
+end
+JuliaObjCClass() = JuliaObjCClass(Symbol(), CLCursor(getNullCursor()))
+JuliaObjCClass(x::AbstractString) = JuliaObjCClass(Symbol(x), CLCursor(getNullCursor()))
+
 struct JuliaCconstarray <: AbstractJuliaType
     ref::CLConstantArray
 end
@@ -146,6 +163,15 @@ tojulia(x::CLFloat16) = JuliaCfloat16()  # Float16
 tojulia(x::CLFloat128) = JuliaCfloat128() # see Quadmath.jl
 tojulia(x::CLNullPtr) = JuliaUnknown(x)  # C++11 nullptr
 tojulia(x::CLPointer) = JuliaCpointer(x)
+tojulia(x::CLObjCObjectPointer) = JuliaObjCObjectPointer(x)
+function tojulia(x::CLObjCId)
+    c = getTypeDeclaration(x)
+    JuliaObjCId(Symbol(spelling(c)), c)
+end
+function tojulia(x::CLObjCClass)
+    c = getTypeDeclaration(x)
+    JuliaObjCClass(Symbol(spelling(c)), c)
+end
 tojulia(x::CLBlockPointer) = JuliaUnknown(x)  # ObjectveC's block pointer
 tojulia(x::CLElaborated) = tojulia(getNamedType(x))
 tojulia(x::CLInvalid) = JuliaUnknown(x)
@@ -184,6 +210,8 @@ is_jl_wchar(x::JuliaCwchar_t) = true
 
 is_jl_pointer(x::AbstractJuliaType) = false
 is_jl_pointer(x::JuliaCpointer) = true
+is_jl_pointer(_::JuliaObjCId) = true
+is_jl_pointer(_::JuliaObjCObjectPointer) = true
 
 is_jl_array(x::AbstractJuliaType) = false
 is_jl_array(x::JuliaCconstarray) = true
@@ -212,6 +240,18 @@ function get_jl_leaf_pointee_type(x::JuliaCpointer)
     return get_jl_leaf_type(jlptree)
 end
 
+function get_jl_leaf_pointee_type(x::JuliaObjCObjectPointer)
+    jlptree = tojulia(getPointeeType(x.ref))
+    if is_jl_funcptr(x)
+        if jlptree isa JuliaCtypedef
+            return get_jl_leaf_type(jlptree)
+        else
+            return JuliaPtrCvoid()
+        end
+    end
+    return get_jl_leaf_type(jlptree)
+end
+
 function get_jl_leaf_eltype(x::Union{JuliaCconstarray,JuliaCincompletearray,JuliaCvariablearray})
     is_jl_funcptr(x) && return JuliaPtrCvoid()
     jlelty = tojulia(getElementType(x.ref))
@@ -220,6 +260,7 @@ end
 
 get_jl_leaf_type(x::AbstractJuliaType) = x
 get_jl_leaf_type(x::JuliaCpointer) = get_jl_leaf_pointee_type(x)
+get_jl_leaf_type(x::JuliaObjCObjectPointer) = get_jl_leaf_pointee_type(x)
 get_jl_leaf_type(x::JuliaCconstarray) = get_jl_leaf_eltype(x)
 get_jl_leaf_type(x::JuliaCincompletearray) = get_jl_leaf_eltype(x)
 get_jl_leaf_type(x::JuliaCvariablearray) = get_jl_leaf_eltype(x)

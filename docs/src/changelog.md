@@ -3,6 +3,26 @@
 This documents notable changes in Clang.jl. The format is based on [Keep a
 Changelog](https://keepachangelog.com).
 
+## [Unreleased](https://github.com/JuliaInterop/Clang.jl/compare/v0.18.3...master)
+
+### Added
+
+- Added support for recognizing signed chars as enum constants
+  ([5a1cc29](https://github.com/JuliaInterop/Clang.jl/commit/5a1cc29c154ed925f01e59dfd705cbf8042158e4)).
+- Added bindings for Clang 17, which should allow compatibility with Julia 1.12
+  ([#494]).
+
+### Fixed
+
+- The generator will now explicitly import the symbols from `CEnum` it uses to
+  avoid implicit imports ([#488]).
+
+## [v0.18.3] - 2024-04-23
+
+### Fixed
+
+- Fixed a regression regarding shard names ([#487]).
+
 ## [v0.18.2] - 2024-04-20
 
 ### Added

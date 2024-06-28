@@ -205,6 +205,9 @@ is_anonymous(::ExprNode{<:Union{StructAnonymous,UnionAnonymous,EnumAnonymous}}) 
 is_function(::ExprNode) = false
 is_function(::ExprNode{<:AbstractFunctionNodeType}) = true
 
+is_macrofunctionlike(::ExprNode) = false
+is_macrofunctionlike(::ExprNode{MacroFunctionLike}) = true
+
 is_variadic_function(::ExprNode) = false
 is_variadic_function(::ExprNode{FunctionVariadic}) = true
 

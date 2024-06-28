@@ -40,13 +40,15 @@ struct bar {
 typedef struct foo bar;
 typedef struct bar foo;
 ```
-* use the same name for structs and functions. For example,
+* use the same name for structs and functions/function macros. For example,
 ```c
 struct post {
     char m;
 };
 
-void post(post m);
+#define post(x) ((int)(x))
+// Or
+void post(struct post m);
 ```
 * two identifiers with same name are actually different things.
 
@@ -63,20 +65,21 @@ function sanity_check(dag::ExprDAG, options::Dict)
         # in case the audit pass is executed after the `Skip` marking
         is_hardskip(idn) && continue
 
+        ifile, iline, icol = get_file_line_column(idn.cursor)
+        tfile, tline, tcol = get_file_line_column(tn.cursor)
+
         if is_typedef(idn)
             ty = getCanonicalType(getTypedefDeclUnderlyingType(idn.cursor))
             if getTypeDeclaration(ty) isa CLNoDeclFound
                 ty = getTypedefDeclUnderlyingType(idn.cursor)
             end
             if !is_same(getTypeDeclaration(ty), dag.nodes[tv].cursor)
-                ifile, iline, icol = get_file_line_column(idn.cursor)
-                tfile, tline, tcol = get_file_line_column(tn.cursor)
                 error("sanity check failed. [REASON]: typedef an identifier $(idn.cursor) at $ifile:$iline:$icol that has the same name as a tag-type $(tn.cursor) at $tfile:$tline:$tcol. The C code use the same name for different things, which is not a good code-style, please fix it in the upstream.")
             end
         elseif is_function(idn)
-            ifile, iline, icol = get_file_line_column(idn.cursor)
-            tfile, tline, tcol = get_file_line_column(tn.cursor)
-            @warn "sanity check failed. [REASON]: use the same name $tk for struct $(tn.cursor) at $tfile:$tline:$tcol and function $(idn.cursor) at $ifile:$iline:$icol. The C code use the same name for structs and functions, which is not a good code-style, please fix it in the upstream."
+            @warn "sanity check failed. [REASON]: the same name $tk is used for struct $(tn.cursor) at $tfile:$tline:$tcol and function $(idn.cursor) at $ifile:$iline:$icol. The C code use the same name for structs and functions, which is not a good code-style, please fix it in the upstream."
+        elseif is_macrofunctionlike(idn)
+            @warn "sanity check failed. [REASON]: the same name $tk is used for struct $(tn.cursor) at $tfile:$tline:$tcol and function-like macro $(idn.cursor) at $ifile:$iline:$icol. The C code use the same name for structs and functions, which is not a good code-style, please fix it in the upstream."
         else
             error("sanity check failed. please file an issue to Clang.jl.")
         end

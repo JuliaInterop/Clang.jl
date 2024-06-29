@@ -282,7 +282,7 @@ function detect_headers(include_dir, args, options::Dict=Dict(), filter_op = (he
                 tu_cursor = getTranslationUnitCursor(tu)
                 header_name = spelling(tu_cursor)
                 header_dir = dirname(header_name)
-                @assert startswith(header_dir, include_dir)
+                @assert startswith(header_dir, normpath(include_dir))
                 for cursor in children(tu_cursor)
                     is_inclusion_directive(cursor) || continue
                     incfile = getIncludedFile(cursor)

@@ -97,6 +97,12 @@ end
     @test node.exprs[3].head == :(=)
 end
 
+@testset "Sanity checking" begin
+    ctx = create_context(joinpath(@__DIR__, "include/sanity-checks.h"), get_default_args())
+    @test_logs (:warn, r"function-like macro .* foo") match_mode = :any build!(ctx)
+    @test_logs (:warn, r"function .* post") match_mode = :any build!(ctx)
+end
+
 @testset "Issue 320" begin
     args = get_default_args()
     dir = joinpath(@__DIR__, "sys")

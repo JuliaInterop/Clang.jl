@@ -16,6 +16,8 @@ Changelog](https://keepachangelog.com).
 
 - The generator will now explicitly import the symbols from `CEnum` it uses to
   avoid implicit imports ([#488]).
+- Added support to the auditor for detecting structs and function-like macros of
+  the same name, which previously caused the generator to crash ([#500]).
 
 ## [v0.18.3] - 2024-04-23
 

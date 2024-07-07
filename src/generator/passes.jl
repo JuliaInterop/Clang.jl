@@ -1094,6 +1094,7 @@ function (x::ProloguePrinter)(dag::ExprDAG, options::Dict)
     use_native_enum = get(general_options, "use_julia_native_enum_type", false)
     print_CEnum = get(general_options, "print_using_CEnum", true)
     wrap_variadic_function = get(codegen_options, "wrap_variadic_function", false)
+    auto_deref = get(codegen_options, "auto_field_dereference", false)
 
     show_info && @info "[ProloguePrinter]: print to $(x.file)"
     open(x.file, "w") do io
@@ -1184,6 +1185,21 @@ function (x::ProloguePrinter)(dag::ExprDAG, options::Dict)
 
             println(io, string(get_expr), "\n")
             println(io, string(set_expr), "\n")
+        end
+
+        if auto_deref
+            println(io, raw"""
+                    macro ptr(expr)
+                        if !Meta.isexpr(expr, :.)
+                            error("Expression is not a property access, cannot use @ptr on it.")
+                        end
+
+                        quote
+                            local penultimate_obj = $(esc(expr.args[1]))
+                            getptr(penultimate_obj, $(esc(expr.args[2])))
+                        end
+                    end
+                    """)
         end
 
         # print prelogue patches

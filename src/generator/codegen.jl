@@ -296,19 +296,20 @@ end
 
 ############################### Struct ###############################
 
-function _emit_getproperty_ptr!(body, root_cursor, cursor, options)
+function _emit_pointer_access!(body, root_cursor, cursor, options)
     field_cursors = fields(getCursorType(cursor))
     field_cursors = isempty(field_cursors) ? children(cursor) : field_cursors
     for field_cursor in field_cursors
         n = name(field_cursor)
         if isempty(n)
-            _emit_getproperty_ptr!(body, root_cursor, field_cursor, options)
+            _emit_pointer_access!(body, root_cursor, field_cursor, options)
             continue
         end
         fsym = make_symbol_safe(n)
         fty = getCursorType(field_cursor)
         ty = translate(tojulia(fty), options)
         offset = getOffsetOf(getCursorType(root_cursor), n)
+
         if isBitField(field_cursor)
             w = getFieldDeclBitWidth(field_cursor)
             @assert w <= 32 # Bit fields should not be larger than int(32 bits)
@@ -322,12 +323,63 @@ function _emit_getproperty_ptr!(body, root_cursor, cursor, options)
     end
 end
 
-# Base.getproperty(x::Ptr, f::Symbol) -> Ptr
-function emit_getproperty_ptr!(dag, node, options)
+# getptr(x::Ptr, f::Symbol) -> Ptr
+function emit_getptr!(dag, node, options)
     sym = make_symbol_safe(node.id)
+    signature = Expr(:call, :getptr, :(x::Ptr{$sym}), :(f::Symbol))
+    body = Expr(:block)
+    _emit_pointer_access!(body, node.cursor, node.cursor, options)
+
+    push!(body.args, :(error($("Unrecognized field of type `$sym`") * ": $f")))
+    push!(node.exprs, Expr(:function, signature, body))
+    return dag
+end
+
+function emit_deref_getproperty!(body, root_cursor, cursor, options)
+    field_cursors = fields(getCursorType(cursor))
+    field_cursors = isempty(field_cursors) ? children(cursor) : field_cursors
+    for field_cursor in field_cursors
+        n = name(field_cursor)
+        if isempty(n)
+            emit_deref_getproperty!(body, root_cursor, field_cursor, options)
+            continue
+        end
+        fsym = make_symbol_safe(n)
+        fty = getCursorType(field_cursor)
+        canonical_type = getCanonicalType(fty)
+
+        return_expr = :(getptr(x, f))
+
+        # Automatically dereference all field types except for nested structs
+        # and arrays.
+        if !(canonical_type isa Union{CLRecord, CLConstantArray}) && !isBitField(field_cursor)
+            return_expr = :(unsafe_load($return_expr))
+        elseif isBitField(field_cursor)
+            return_expr = :(getbitfieldproperty(x, $return_expr))
+        end
+
+        ex = :(f === $(QuoteNode(fsym)) && return $return_expr)
+        push!(body.args, ex)
+    end
+end
+
+# Base.getproperty(x::Ptr, f::Symbol)
+function emit_getproperty_ptr!(dag, node, options)
+    auto_deref = get(options, "auto_field_dereference", false)
+    sym = make_symbol_safe(node.id)
+
+    # If automatically dereferencing, we first need to emit getptr!()
+    if auto_deref
+        emit_getptr!(dag, node, options)
+    end
+
     signature = Expr(:call, :(Base.getproperty), :(x::Ptr{$sym}), :(f::Symbol))
     body = Expr(:block)
-    _emit_getproperty_ptr!(body, node.cursor, node.cursor, options)
+    if auto_deref
+        emit_deref_getproperty!(body, node.cursor, node.cursor, options)
+    else
+        _emit_pointer_access!(body, node.cursor, node.cursor, options)
+    end
     push!(body.args, :(return getfield(x, f)))
     getproperty_expr = Expr(:function, signature, body)
     push!(node.exprs, getproperty_expr)
@@ -370,10 +422,14 @@ end
 function emit_setproperty!(dag, node, options)
     sym = make_symbol_safe(node.id)
     signature = Expr(:call, :(Base.setproperty!), :(x::Ptr{$sym}), :(f::Symbol), :v)
-    store_expr = :(unsafe_store!(getproperty(x, f), v))
+
+    auto_deref = get(options, "auto_field_dereference", false)
+    pointer_getter = auto_deref ? :getptr : :getproperty
+    store_expr = :(unsafe_store!($pointer_getter(x, f), v))
+
     if is_bitfield_type(node.type)
         body = quote
-            fptr = getproperty(x, f)
+            fptr = $pointer_getter(x, f)
             if fptr isa Ptr
                 $store_expr
             else
@@ -398,7 +454,7 @@ function get_names_types(root_cursor, cursor, options)
     for field_cursor in field_cursors
         n = name(field_cursor)
         if isempty(n)
-            _emit_getproperty_ptr!(root_cursor, field_cursor, options)
+            _emit_pointer_access!(root_cursor, field_cursor, options)
             continue
         end
         fsym = make_symbol_safe(n)

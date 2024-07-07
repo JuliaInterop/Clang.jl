@@ -36,8 +36,10 @@ function build_libbitfield_binarybuilder()
     success = true
     try
         cd(@__DIR__) do
+            # Delete any old products and rebuild
+            rm("products"; force=true, recursive=true)
             run(`$(Base.julia_cmd()) --project bitfield/build_tarballs.jl`)
-            # from Pkg.download_verify_unpack
+
             # Note that we filter out the extra log file that's generated
             tarball_path = only(filter(!contains("-logs.v"), readdir("products")))
             dest = "build"

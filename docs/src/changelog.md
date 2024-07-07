@@ -11,6 +11,8 @@ Changelog](https://keepachangelog.com).
   ([5a1cc29](https://github.com/JuliaInterop/Clang.jl/commit/5a1cc29c154ed925f01e59dfd705cbf8042158e4)).
 - Added bindings for Clang 17, which should allow compatibility with Julia 1.12
   ([#494]).
+- Experimental support for automatically dereferencing struct fields in
+  `Base.getproperty()` with the `auto_field_dereference` option ([#502]).
 
 ### Fixed
 

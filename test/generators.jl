@@ -249,3 +249,56 @@ end
         @test docstring_has("callback")
     end
 end
+
+@testset "Struct getproperty()/setproperty!()" begin
+    # Test the auto_field_dereference option
+    mktemp() do path, io
+        options = Dict("general" => Dict{String, Any}("output_file_path" => path,
+                                                      "auto_mutability" => true,
+                                                      "auto_mutability_with_new" => false,
+                                                      "auto_mutability_includelist" => ["WithFields"]),
+                       "codegen" => Dict{String, Any}("field_access_method_list" => ["WithFields", "Other"],
+                                                      "auto_field_dereference" => true))
+        ctx = create_context([joinpath(@__DIR__, "include/struct-properties.h")], get_default_args(), options)
+        build!(ctx)
+
+        println(read(path, String))
+
+        m = Module()
+        Base.include(m, path)
+
+        # We now have to run in the latest world to use the new definitions
+        Base.invokelatest() do
+            obj = m.WithFields(1, C_NULL, m.Other(42), C_NULL, m.TypedefStruct(1), (1, 1))
+
+            GC.@preserve obj begin
+                obj_ptr = Ptr{m.WithFields}(pointer_from_objref(obj))
+
+                # Test getproperty()
+                @test obj_ptr.int_value isa Cint
+                @test obj_ptr.int_value == obj.int_value
+                @test obj_ptr.int_ptr isa Ptr{Cint}
+
+                @test obj_ptr.struct_value isa Ptr{m.Other}
+                @test obj_ptr.struct_value.i == obj.struct_value.i
+                @test obj_ptr.struct_ptr isa Ptr{m.Other}
+                @test obj_ptr.typedef_struct_value isa Ptr{m.TypedefStruct}
+
+                @test obj_ptr.array isa Ptr{NTuple{2, Cint}}
+
+                @test_throws ErrorException obj_ptr.foo
+
+                # Test setproperty!()
+                new_value = obj.int_value * 2
+                obj_ptr.int_value = new_value
+                @test obj.int_value == new_value
+
+                new_value = obj.struct_value.i * 2
+                obj_ptr.struct_value.i = new_value
+                @test obj.struct_value.i == new_value
+
+                @test_throws ErrorException obj_ptr.foo = 1
+            end
+        end
+    end
+end

@@ -345,45 +345,24 @@ end
 function emit_getproperty!(dag, node, options)
     sym = make_symbol_safe(node.id)
 
-    ref_expr = :(r = Ref{$sym}(x))
-    conv_expr = :(ptr = Base.unsafe_convert(Ptr{$sym}, r))
-    fptr_expr = :(fptr = getproperty(ptr, f))
+    # Build the macrocall manually so we can set the extra LineNumberNode to
+    # nothing to stop it from being printed.
+    return_expr = :(GC.@preserve r getproperty(ptr, f))
+    return_expr.args[2] = nothing
 
-    load_expr = :(GC.@preserve r unsafe_load(fptr))
-    load_expr.args[2] = nothing
-
-    load_base_expr = :(GC.@preserve r unsafe_load(baseptr32))
-    load_base_expr.args[2] = nothing
-    load_next_expr = :(GC.@preserve r unsafe_load(baseptr32 + 4))
-    load_next_expr.args[2] = nothing
-
-    if is_bitfield_type(node.type)
-        ex = quote
-            if fptr isa Ptr
-                return $load_expr
-            else
-                baseptr, offset, width = fptr
-                ty = eltype(baseptr)
-                baseptr32 = convert(Ptr{UInt32}, baseptr)
-                u64 = $load_base_expr
-                if offset + width > 32
-                    u64 |= ($load_next_expr) << 32
-                end
-                u64 = (u64 >> offset) & ((1 << width) - 1)
-                return u64 % ty
-            end
+    ex = quote
+        function Base.getproperty(x::$sym, f::Symbol)
+            r = Ref{$sym}(x)
+            ptr = Base.unsafe_convert(Ptr{$sym}, r)
+            return $return_expr
         end
-    else
-        ex = load_expr
     end
 
+    # Remove line number nodes and the enclosing :block node
     rm_line_num_node!(ex)
+    ex = ex.args[1]
 
-    signature = Expr(:call, :(Base.getproperty), :(x::$sym), :(f::Symbol))
-    body = Expr(:block, ref_expr, conv_expr, fptr_expr, ex)
-    getproperty_expr = Expr(:function, signature, body)
-
-    push!(node.exprs, getproperty_expr)
+    push!(node.exprs, ex)
 
     return dag
 end
@@ -398,20 +377,8 @@ function emit_setproperty!(dag, node, options)
             if fptr isa Ptr
                 $store_expr
             else
-                baseptr, offset, width = fptr
-                baseptr32 = convert(Ptr{UInt32}, baseptr)
-                u64 = unsafe_load(baseptr32)
-                straddle = offset + width > 32
-                if straddle
-                    u64 |= unsafe_load(baseptr32 + 4) << 32
-                end
-                mask = ((1 << width) - 1)
-                u64 &= ~(mask << offset)
-                u64 |= (unsigned(v) & mask) << offset
-                unsafe_store!(baseptr32, u64 & typemax(UInt32))
-                if straddle
-                    unsafe_store!(baseptr32 + 4, u64 >> 32)
-                end
+                # setbitfieldproperty!() is emitted by ProloguePrinter
+                setbitfieldproperty!(fptr, v)
             end
         end
         rm_line_num_node!(body)

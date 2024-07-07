@@ -1132,6 +1132,60 @@ function (x::ProloguePrinter)(dag::ExprDAG, options::Dict)
             """)
         end
 
+        # Print the bitfield helpers if there are any bitfield structs
+        if any(is_bitfield_type(node.type) for node in dag.nodes)
+            # These expressions include macrocalls, which are oddly clingy to
+            # their LineNumberNode's (rm_line_num_node!() will give wrong
+            # results). Instead we create the expressions explicitly and remove
+            # the LineNumberNode's by setting their 2nd argument to nothing.
+            u64_expr = :(GC.@preserve obj_handle unsafe_load(baseptr32))
+            u64_expr.args[2] = nothing
+            ptrload_expr = :(GC.@preserve obj_handle unsafe_load(baseptr32 + 4))
+            ptrload_expr.args[2] = nothing
+
+            get_expr = quote
+                function getbitfieldproperty(obj_handle, bitfield_info)
+                    baseptr, offset, width = bitfield_info
+                    ty = eltype(baseptr)
+                    baseptr32 = convert(Ptr{UInt32}, baseptr)
+                    u64 = $u64_expr
+                    if offset + width > 32
+                        u64 |= ($ptrload_expr) << 32
+                    end
+                    u64 = (u64 >> offset) & ((1 << width) - 1)
+                    return u64 % ty
+                end
+            end
+
+            set_expr = quote
+                function setbitfieldproperty!(bitfield_info, value)
+                    baseptr, offset, width = bitfield_info
+                    baseptr32 = convert(Ptr{UInt32}, baseptr)
+                    u64 = unsafe_load(baseptr32)
+                    straddle = offset + width > 32
+                    if straddle
+                        u64 |= unsafe_load(baseptr32 + 4) << 32
+                    end
+                    mask = ((1 << width) - 1)
+                    u64 &= ~(mask << offset)
+                    u64 |= (unsigned(value) & mask) << offset
+                    unsafe_store!(baseptr32, u64 & typemax(UInt32))
+                    if straddle
+                        unsafe_store!(baseptr32 + 4, u64 >> 32)
+                    end
+                end
+            end
+
+            # Remove line number nodes and the extra :block node
+            rm_line_num_node!(get_expr)
+            rm_line_num_node!(set_expr)
+            get_expr = get_expr.args[1]
+            set_expr = set_expr.args[1]
+
+            println(io, string(get_expr), "\n")
+            println(io, string(set_expr), "\n")
+        end
+
         # print prelogue patches
         if !isempty(prologue_file_path)
             println(io, read(prologue_file_path, String))

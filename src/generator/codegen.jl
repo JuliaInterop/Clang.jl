@@ -323,10 +323,10 @@ function _emit_pointer_access!(body, root_cursor, cursor, options)
     end
 end
 
-# _getptr(x::Ptr, f::Symbol) -> Ptr
+# getptr(x::Ptr, f::Symbol) -> Ptr
 function emit_getptr!(dag, node, options)
     sym = make_symbol_safe(node.id)
-    signature = Expr(:call, :_getptr, :(x::Ptr{$sym}), :(f::Symbol))
+    signature = Expr(:call, :getptr, :(x::Ptr{$sym}), :(f::Symbol))
     body = Expr(:block)
     _emit_pointer_access!(body, node.cursor, node.cursor, options)
 
@@ -348,7 +348,7 @@ function emit_deref_getproperty!(body, root_cursor, cursor, options)
         fty = getCursorType(field_cursor)
         canonical_type = getCanonicalType(fty)
 
-        return_expr = :(_getptr(x, f))
+        return_expr = :(getptr(x, f))
 
         # Automatically dereference all field types except for nested structs
         # and arrays.
@@ -368,7 +368,7 @@ function emit_getproperty_ptr!(dag, node, options)
     auto_deref = get(options, "auto_field_dereference", false)
     sym = make_symbol_safe(node.id)
 
-    # If automatically dereferencing, we first need to emit _getptr!()
+    # If automatically dereferencing, we first need to emit getptr!()
     if auto_deref
         emit_getptr!(dag, node, options)
     end
@@ -424,7 +424,7 @@ function emit_setproperty!(dag, node, options)
     signature = Expr(:call, :(Base.setproperty!), :(x::Ptr{$sym}), :(f::Symbol), :v)
 
     auto_deref = get(options, "auto_field_dereference", false)
-    pointer_getter = auto_deref ? :_getptr : :getproperty
+    pointer_getter = auto_deref ? :getptr : :getproperty
     store_expr = :(unsafe_store!($pointer_getter(x, f), v))
 
     if is_bitfield_type(node.type)

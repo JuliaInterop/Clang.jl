@@ -288,6 +288,15 @@ end
 
                 @test_throws ErrorException obj_ptr.foo
 
+                # Test @ptr
+                val_ptr = @eval m @ptr $obj_ptr.int_value
+                @test val_ptr isa Ptr{Cint}
+                int_ptr = @eval m @ptr $obj_ptr.int_ptr
+                @test int_ptr isa Ptr{Ptr{Cint}}
+
+                @test_throws LoadError (@eval m @ptr $obj_ptr)
+                @test_throws ErrorException (@eval m @ptr $obj_ptr.foo)
+
                 # Test setproperty!()
                 new_value = obj.int_value * 2
                 obj_ptr.int_value = new_value

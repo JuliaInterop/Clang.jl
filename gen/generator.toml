@@ -187,7 +187,9 @@ field_access_method_list = []
 # useful for accessing nested struct fields but it does require explicitly
 # calling unsafe_load() every time. When enabled this option will automatically
 # call unsafe_load() for you *except on nested struct fields and arrays*, which
-# should make explicitly calling unsafe_load() unnecessary in most cases.
+# should make explicitly calling unsafe_load() unnecessary in most cases. A @ptr
+# macro will be defined for cases where you really do want a pointer to a field
+# (e.g. for writing), which supports syntax like `@ptr(foo.bar)`.
 #
 # This should be used with `field_access_method_list`.
 auto_field_dereference = false

@@ -181,6 +181,19 @@ wrap_variadic_function = false
 # generate getproperty/setproperty! methods for the types in the following list
 field_access_method_list = []
 
+# EXPERIMENTAL:
+# By default the getproperty!(x::Ptr, ::Symbol) methods created for wrapped
+# types will return pointers (Ptr{T}) to the struct fields. That behaviour is
+# useful for accessing nested struct fields but it does require explicitly
+# calling unsafe_load() every time. When enabled this option will automatically
+# call unsafe_load() for you *except on nested struct fields and arrays*, which
+# should make explicitly calling unsafe_load() unnecessary in most cases. A @ptr
+# macro will be defined for cases where you really do want a pointer to a field
+# (e.g. for writing), which supports syntax like `@ptr(foo.bar)`.
+#
+# This should be used with `field_access_method_list`.
+auto_field_dereference = false
+
 # the generator will prefix the function argument names in the following list with a "_" to
 # prevent the generated symbols from conflicting with the symbols defined and exported in Base.
 function_argument_conflict_symbols = []

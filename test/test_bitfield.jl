@@ -36,8 +36,10 @@ function build_libbitfield_binarybuilder()
     success = true
     try
         cd(@__DIR__) do
+            # Delete any old products and rebuild
+            rm("products"; force=true, recursive=true)
             run(`$(Base.julia_cmd()) --project bitfield/build_tarballs.jl`)
-            # from Pkg.download_verify_unpack
+
             # Note that we filter out the extra log file that's generated
             tarball_path = only(filter(!contains("-logs.v"), readdir("products")))
             dest = "build"
@@ -59,21 +61,8 @@ function build_libbitfield()
             error("Could not build libbitfield binary")
         end
 
-        # Generate wrappers
-        @info "Building libbitfield wrapper"
-        args = get_default_args()
-        headers = joinpath(@__DIR__, "build", "include", "bitfield.h")
-        options = load_options(joinpath(@__DIR__, "bitfield", "generate.toml"))
-        lib_path = joinpath(@__DIR__, "build", "lib", Sys.iswindows() ? "bitfield.dll" : "libbitfield")
-        options["general"]["library_name"] = "\"$(escape_string(lib_path))\""
-        options["general"]["output_file_path"] = joinpath(@__DIR__, "LibBitField.jl")
-        ctx = create_context(headers, args, options)
-        build!(ctx)
-
-        # Call a function to ensure build is successful
-        include("LibBitField.jl")
-        m = Base.@invokelatest LibBitField.Mirror(10, 1.5, 1e6, -4, 7, 3)
-        Base.@invokelatest LibBitField.toBitfield(Ref(m))
+        # Test the binary
+        generate_wrappers(false)
     catch e
         @warn "Building libbitfield failed: $e"
         success = false
@@ -81,22 +70,51 @@ function build_libbitfield()
     return success
 end
 
+function generate_wrappers(auto_deref::Bool)
+    @info "Building libbitfield wrapper"
+    args = get_default_args()
+    headers = joinpath(@__DIR__, "build", "include", "bitfield.h")
+    options = load_options(joinpath(@__DIR__, "bitfield", "generate.toml"))
+    options["codegen"]["auto_field_dereference"] = auto_deref
+    options["codegen"]["field_access_method_list"] = ["BitField"]
 
+    lib_path = joinpath(@__DIR__, "build", "lib", Sys.iswindows() ? "bitfield.dll" : "libbitfield")
+    options["general"]["library_name"] = "\"$(escape_string(lib_path))\""
+    options["general"]["output_file_path"] = joinpath(@__DIR__, "LibBitField.jl")
+    ctx = create_context(headers, args, options)
+    build!(ctx)
+
+    # Call a function to ensure build is successful
+    anonmod = Module()
+    Base.include(anonmod, "LibBitField.jl")
+    m = Base.@invokelatest anonmod.LibBitField.Mirror(10, 1.5, 1e6, -4, 7, 3)
+    Base.@invokelatest anonmod.LibBitField.toBitfield(Ref(m))
+
+    return anonmod
+end
 
 @testset "Bitfield" begin
     if build_libbitfield()
-        bf = Ref(LibBitField.BitField(Int8(10), 1.5, Int32(1e6), Int32(-4), Int32(7), UInt32(3)))
-        m = Ref(LibBitField.Mirror(10, 1.5, 1e6, -4, 7, 3))
-        GC.@preserve bf m begin
-            pbf = Ptr{LibBitField.BitField}(pointer_from_objref(bf))
-            pm = Ptr{LibBitField.Mirror}(pointer_from_objref(m))
-            @test LibBitField.toMirror(bf) == m[]
-            @test LibBitField.toBitfield(m).a == bf[].a
-            @test LibBitField.toBitfield(m).b == bf[].b
-            @test LibBitField.toBitfield(m).c == bf[].c
-            @test LibBitField.toBitfield(m).d == bf[].d
-            @test LibBitField.toBitfield(m).e == bf[].e
-            @test LibBitField.toBitfield(m).f == bf[].f
+        # Test the wrappers with and without auto-dereferencing. In the case of
+        # bitfields they should have identical behaviour.
+        for auto_deref in [false, true]
+            anonmod = generate_wrappers(auto_deref)
+            lib = anonmod.LibBitField
+
+            bf = Ref(lib.BitField(Int8(10), 1.5, Int32(1e6), Int32(-4), Int32(7), UInt32(3)))
+            m = Ref(lib.Mirror(10, 1.5, 1e6, -4, 7, 3))
+
+            GC.@preserve bf m begin
+                pbf = Ptr{lib.BitField}(pointer_from_objref(bf))
+                pm = Ptr{lib.Mirror}(pointer_from_objref(m))
+                @test lib.toMirror(bf) == m[]
+                @test lib.toBitfield(m).a == bf[].a
+                @test lib.toBitfield(m).b == bf[].b
+                @test lib.toBitfield(m).c == bf[].c
+                @test lib.toBitfield(m).d == bf[].d
+                @test lib.toBitfield(m).e == bf[].e
+                @test lib.toBitfield(m).f == bf[].f
+            end
         end
     end
 end

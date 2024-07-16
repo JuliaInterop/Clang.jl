@@ -251,14 +251,53 @@ end
 end
 
 @testset "Struct getproperty()/setproperty!()" begin
+    options = Dict("general" => Dict{String, Any}("auto_mutability" => true,
+                                                  "auto_mutability_with_new" => false,
+                                                  "auto_mutability_includelist" => ["WithFields"]),
+                   "codegen" => Dict{String, Any}("field_access_method_list" => ["WithFields", "Other"]))
+
+    # Test the default getproperty()/setproperty!() behaviour
+    mktemp() do path, io
+        options["general"]["output_file_path"] = path
+        ctx = create_context([joinpath(@__DIR__, "include/struct-properties.h")], get_default_args(), options)
+        build!(ctx)
+
+        println(read(path, String))
+
+        m = Module()
+        Base.include(m, path)
+
+        # We now have to run in the latest world to use the new definitions
+        Base.invokelatest() do
+            obj = m.WithFields(1, C_NULL, m.Other(42), C_NULL, m.TypedefStruct(1), (1, 1))
+
+            GC.@preserve obj begin
+                obj_ptr = Ptr{m.WithFields}(pointer_from_objref(obj))
+
+                # The default getproperty() should basically always return a
+                # pointer to the field (except for bitfields, which are tested
+                # elsewhere).
+                @test obj_ptr.int_value isa Ptr{Cint}
+                @test obj_ptr.int_ptr isa Ptr{Ptr{Cint}}
+                @test obj_ptr.struct_value isa Ptr{m.Other}
+                @test obj_ptr.typedef_struct_value isa Ptr{m.TypedefStruct}
+                @test obj_ptr.array isa Ptr{NTuple{2, Cint}}
+
+                # Sanity test
+                int_value = unsafe_load(obj_ptr.int_value)
+                @test int_value == obj.int_value
+
+                # Test setproperty!()
+                obj_ptr.int_value = int_value + 1
+                @test unsafe_load(obj_ptr.int_value) == int_value + 1
+            end
+        end
+    end
+
     # Test the auto_field_dereference option
     mktemp() do path, io
-        options = Dict("general" => Dict{String, Any}("output_file_path" => path,
-                                                      "auto_mutability" => true,
-                                                      "auto_mutability_with_new" => false,
-                                                      "auto_mutability_includelist" => ["WithFields"]),
-                       "codegen" => Dict{String, Any}("field_access_method_list" => ["WithFields", "Other"],
-                                                      "auto_field_dereference" => true))
+        options["general"]["output_file_path"] = path
+        options["codegen"]["auto_field_dereference"] = true
         ctx = create_context([joinpath(@__DIR__, "include/struct-properties.h")], get_default_args(), options)
         build!(ctx)
 

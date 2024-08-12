@@ -10,8 +10,8 @@ Base.show(io::IO, x::CLFile) = print(io, """CLFile ("$(name(x))")""")
 
 
 """
-    get_filename(x::CXFile) -> String
-Return the complete file and path name of the given file
+    get_filename(file::CXFile) -> String
+Return the complete file and path name of the given `file`.
 """
 function get_filename(file::CXFile)
     name(CLFile(file))
@@ -19,8 +19,8 @@ end
 
 
 """
-    name(x::CLFile) -> String
-Return the complete file and path name of the given file
+    name(file::CLFile) -> String
+Return the complete file and path name of the given `file`.
 """
 function name(file::CLFile)
     file |> clang_getFileName |> _cxstring_to_string
@@ -28,7 +28,7 @@ end
 
 """
     unique_id(file::CLFile) -> CXFileUniqueID
-Return the unique id of the given file.
+Return the unique id of the given `file`.
 """
 function unique_id(file::CLFile)
     id = Ref{CXFileUniqueID}()

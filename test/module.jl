@@ -47,7 +47,7 @@ mod = get_module(tu, f)
 @test name(mod) == "bar"
 @test full_name(mod) == "foo.bar"
 @test full_name(parent_module(mod)) == "foo"
-@test toplevel_headers(tu,mod) |> only |> name == h 
+@test toplevel_headers(tu,mod) |> only |> name |> normpath == h
 @test is_system(mod) == true
 @test ast_file(mod) |> name != ""
 end

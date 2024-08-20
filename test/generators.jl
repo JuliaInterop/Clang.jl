@@ -325,7 +325,12 @@ end
 
                 @test obj_ptr.array isa Ptr{NTuple{2, Cint}}
 
-                @test_throws ErrorException obj_ptr.foo
+                field_exception_t = @static if VERSION >= v"1.12.0-DEV"
+                    FieldError
+                else
+                    ErrorException
+                end
+                @test_throws field_exception_t obj_ptr.foo
 
                 # Test @ptr
                 val_ptr = @eval m @ptr $obj_ptr.int_value
@@ -334,7 +339,7 @@ end
                 @test int_ptr isa Ptr{Ptr{Cint}}
 
                 @test_throws LoadError (@eval m @ptr $obj_ptr)
-                @test_throws ErrorException (@eval m @ptr $obj_ptr.foo)
+                @test_throws field_exception_t (@eval m @ptr $obj_ptr.foo)
 
                 # Test setproperty!()
                 new_value = obj.int_value * 2
@@ -345,7 +350,7 @@ end
                 obj_ptr.struct_value.i = new_value
                 @test obj.struct_value.i == new_value
 
-                @test_throws ErrorException obj_ptr.foo = 1
+                @test_throws field_exception_t obj_ptr.foo = 1
             end
         end
     end

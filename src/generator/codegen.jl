@@ -330,7 +330,18 @@ function emit_getptr!(dag, node, options)
     body = Expr(:block)
     _emit_pointer_access!(body, node.cursor, node.cursor, options)
 
-    push!(body.args, :(error($("Unrecognized field of type `$sym`") * ": $f")))
+    # The default field access exception changed to FieldError in 1.12
+    throw_expr = :(
+        @static if VERSION >= v"1.12.0-DEV"
+            throw(FieldError($sym, f))
+        else
+            error($("Unrecognized field of type `$sym`") * ": $f")
+        end
+    )
+    Base.remove_linenums!(throw_expr)
+    throw_expr.args[2] = nothing # Remove the sticky LineNumberNode from the macro
+
+    push!(body.args, throw_expr)
     push!(node.exprs, Expr(:function, signature, body))
     return dag
 end

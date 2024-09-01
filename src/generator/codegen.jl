@@ -296,19 +296,20 @@ end
 
 ############################### Struct ###############################
 
-function _emit_getproperty_ptr!(body, root_cursor, cursor, options)
+function _emit_pointer_access!(body, root_cursor, cursor, options)
     field_cursors = fields(getCursorType(cursor))
     field_cursors = isempty(field_cursors) ? children(cursor) : field_cursors
     for field_cursor in field_cursors
         n = name(field_cursor)
         if isempty(n)
-            _emit_getproperty_ptr!(body, root_cursor, field_cursor, options)
+            _emit_pointer_access!(body, root_cursor, field_cursor, options)
             continue
         end
         fsym = make_symbol_safe(n)
         fty = getCursorType(field_cursor)
         ty = translate(tojulia(fty), options)
         offset = getOffsetOf(getCursorType(root_cursor), n)
+
         if isBitField(field_cursor)
             w = getFieldDeclBitWidth(field_cursor)
             @assert w <= 32 # Bit fields should not be larger than int(32 bits)
@@ -322,12 +323,74 @@ function _emit_getproperty_ptr!(body, root_cursor, cursor, options)
     end
 end
 
-# Base.getproperty(x::Ptr, f::Symbol) -> Ptr
-function emit_getproperty_ptr!(dag, node, options)
+# getptr(x::Ptr, f::Symbol) -> Ptr
+function emit_getptr!(dag, node, options)
     sym = make_symbol_safe(node.id)
+    signature = Expr(:call, :getptr, :(x::Ptr{$sym}), :(f::Symbol))
+    body = Expr(:block)
+    _emit_pointer_access!(body, node.cursor, node.cursor, options)
+
+    # The default field access exception changed to FieldError in 1.12
+    throw_expr = :(
+        @static if VERSION >= v"1.12.0-DEV"
+            throw(FieldError($sym, f))
+        else
+            error($("Unrecognized field of type `$sym`") * ": $f")
+        end
+    )
+    Base.remove_linenums!(throw_expr)
+    throw_expr.args[2] = nothing # Remove the sticky LineNumberNode from the macro
+
+    push!(body.args, throw_expr)
+    push!(node.exprs, Expr(:function, signature, body))
+    return dag
+end
+
+function emit_deref_getproperty!(body, root_cursor, cursor, options)
+    field_cursors = fields(getCursorType(cursor))
+    field_cursors = isempty(field_cursors) ? children(cursor) : field_cursors
+    for field_cursor in field_cursors
+        n = name(field_cursor)
+        if isempty(n)
+            emit_deref_getproperty!(body, root_cursor, field_cursor, options)
+            continue
+        end
+        fsym = make_symbol_safe(n)
+        fty = getCursorType(field_cursor)
+        canonical_type = getCanonicalType(fty)
+
+        return_expr = :(getptr(x, f))
+
+        # Automatically dereference all field types except for nested structs
+        # and arrays.
+        if !(canonical_type isa Union{CLRecord, CLConstantArray}) && !isBitField(field_cursor)
+            return_expr = :(unsafe_load($return_expr))
+        elseif isBitField(field_cursor)
+            return_expr = :(getbitfieldproperty(x, $return_expr))
+        end
+
+        ex = :(f === $(QuoteNode(fsym)) && return $return_expr)
+        push!(body.args, ex)
+    end
+end
+
+# Base.getproperty(x::Ptr, f::Symbol)
+function emit_getproperty_ptr!(dag, node, options)
+    auto_deref = get(options, "auto_field_dereference", false)
+    sym = make_symbol_safe(node.id)
+
+    # If automatically dereferencing, we first need to emit getptr!()
+    if auto_deref
+        emit_getptr!(dag, node, options)
+    end
+
     signature = Expr(:call, :(Base.getproperty), :(x::Ptr{$sym}), :(f::Symbol))
     body = Expr(:block)
-    _emit_getproperty_ptr!(body, node.cursor, node.cursor, options)
+    if auto_deref
+        emit_deref_getproperty!(body, node.cursor, node.cursor, options)
+    else
+        _emit_pointer_access!(body, node.cursor, node.cursor, options)
+    end
     push!(body.args, :(return getfield(x, f)))
     getproperty_expr = Expr(:function, signature, body)
     push!(node.exprs, getproperty_expr)
@@ -345,45 +408,24 @@ end
 function emit_getproperty!(dag, node, options)
     sym = make_symbol_safe(node.id)
 
-    ref_expr = :(r = Ref{$sym}(x))
-    conv_expr = :(ptr = Base.unsafe_convert(Ptr{$sym}, r))
-    fptr_expr = :(fptr = getproperty(ptr, f))
+    # Build the macrocall manually so we can set the extra LineNumberNode to
+    # nothing to stop it from being printed.
+    return_expr = :(GC.@preserve r getproperty(ptr, f))
+    return_expr.args[2] = nothing
 
-    load_expr = :(GC.@preserve r unsafe_load(fptr))
-    load_expr.args[2] = nothing
-
-    load_base_expr = :(GC.@preserve r unsafe_load(baseptr32))
-    load_base_expr.args[2] = nothing
-    load_next_expr = :(GC.@preserve r unsafe_load(baseptr32 + 4))
-    load_next_expr.args[2] = nothing
-
-    if is_bitfield_type(node.type)
-        ex = quote
-            if fptr isa Ptr
-                return $load_expr
-            else
-                baseptr, offset, width = fptr
-                ty = eltype(baseptr)
-                baseptr32 = convert(Ptr{UInt32}, baseptr)
-                u64 = $load_base_expr
-                if offset + width > 32
-                    u64 |= ($load_next_expr) << 32
-                end
-                u64 = (u64 >> offset) & ((1 << width) - 1)
-                return u64 % ty
-            end
+    ex = quote
+        function Base.getproperty(x::$sym, f::Symbol)
+            r = Ref{$sym}(x)
+            ptr = Base.unsafe_convert(Ptr{$sym}, r)
+            return $return_expr
         end
-    else
-        ex = load_expr
     end
 
+    # Remove line number nodes and the enclosing :block node
     rm_line_num_node!(ex)
+    ex = ex.args[1]
 
-    signature = Expr(:call, :(Base.getproperty), :(x::$sym), :(f::Symbol))
-    body = Expr(:block, ref_expr, conv_expr, fptr_expr, ex)
-    getproperty_expr = Expr(:function, signature, body)
-
-    push!(node.exprs, getproperty_expr)
+    push!(node.exprs, ex)
 
     return dag
 end
@@ -391,27 +433,19 @@ end
 function emit_setproperty!(dag, node, options)
     sym = make_symbol_safe(node.id)
     signature = Expr(:call, :(Base.setproperty!), :(x::Ptr{$sym}), :(f::Symbol), :v)
-    store_expr = :(unsafe_store!(getproperty(x, f), v))
+
+    auto_deref = get(options, "auto_field_dereference", false)
+    pointer_getter = auto_deref ? :getptr : :getproperty
+    store_expr = :(unsafe_store!($pointer_getter(x, f), v))
+
     if is_bitfield_type(node.type)
         body = quote
-            fptr = getproperty(x, f)
+            fptr = $pointer_getter(x, f)
             if fptr isa Ptr
                 $store_expr
             else
-                baseptr, offset, width = fptr
-                baseptr32 = convert(Ptr{UInt32}, baseptr)
-                u64 = unsafe_load(baseptr32)
-                straddle = offset + width > 32
-                if straddle
-                    u64 |= unsafe_load(baseptr32 + 4) << 32
-                end
-                mask = ((1 << width) - 1)
-                u64 &= ~(mask << offset)
-                u64 |= (unsigned(v) & mask) << offset
-                unsafe_store!(baseptr32, u64 & typemax(UInt32))
-                if straddle
-                    unsafe_store!(baseptr32 + 4, u64 >> 32)
-                end
+                # setbitfieldproperty!() is emitted by ProloguePrinter
+                setbitfieldproperty!(fptr, v)
             end
         end
         rm_line_num_node!(body)
@@ -431,7 +465,7 @@ function get_names_types(root_cursor, cursor, options)
     for field_cursor in field_cursors
         n = name(field_cursor)
         if isempty(n)
-            _emit_getproperty_ptr!(root_cursor, field_cursor, options)
+            _emit_pointer_access!(root_cursor, field_cursor, options)
             continue
         end
         fsym = make_symbol_safe(n)

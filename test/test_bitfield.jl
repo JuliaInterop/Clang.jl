@@ -65,13 +65,15 @@ function build_libbitfield()
         headers = joinpath(@__DIR__, "build", "include", "bitfield.h")
         options = load_options(joinpath(@__DIR__, "bitfield", "generate.toml"))
         lib_path = joinpath(@__DIR__, "build", "lib", Sys.iswindows() ? "bitfield.dll" : "libbitfield")
+        output_path = joinpath(@__DIR__, "LibBitField.jl")
         options["general"]["library_name"] = "\"$(escape_string(lib_path))\""
-        options["general"]["output_file_path"] = joinpath(@__DIR__, "LibBitField.jl")
+        options["general"]["output_file_path"] = output_path
         ctx = create_context(headers, args, options)
         build!(ctx)
 
         # Call a function to ensure build is successful
-        include("LibBitField.jl")
+        include(output_path)
+
         m = Base.@invokelatest LibBitField.Mirror(10, 1.5, 1e6, -4, 7, 3)
         Base.@invokelatest LibBitField.toBitfield(Ref(m))
     catch e

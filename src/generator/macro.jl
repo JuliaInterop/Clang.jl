@@ -55,7 +55,7 @@ const LITERAL_NON_FLOAT_SUFFIXES = [
 const LITERAL_FLOAT_SUFFIXES = ["F", "f"]
 const LITERAL_SUFFIXES = vcat(LITERAL_NON_FLOAT_SUFFIXES, LITERAL_FLOAT_SUFFIXES)
 
-function c_non_float_literal_to_julia(sfx)
+function c_non_float_literal_to_julia(sfx, txt_no_sfx)
     sfx = lowercase(sfx)
     # integers following http://en.cppreference.com/w/cpp/language/integer_literal
     unsigned = occursin("u", sfx)
@@ -66,7 +66,11 @@ function c_non_float_literal_to_julia(sfx)
     elseif occursin("ul", sfx) || occursin("lu", sfx)
         return "Culong"
     elseif !unsigned && endswith(sfx, "l")
-        return "Clong"
+        if length(txt_no_sfx) == 10 && startswith(txt_no_sfx, r"0x[8-9a-fA-F]")
+            return "Culong"
+        else
+            return "Clong"
+        end
     else
         return unsigned ? "Cuint" : "Cint"
     end
@@ -89,7 +93,8 @@ function normalize_literal_type(text::AbstractString)
     for sfx in LITERAL_NON_FLOAT_SUFFIXES
         if endswith(txt, sfx)
             txt_no_sfx = replace(txt, Regex(sfx*"\$")=>"")
-            type = c_non_float_literal_to_julia(sfx)
+            txt_no_sfx = replace(txt_no_sfx, r"^0X" => "0x")
+            type = c_non_float_literal_to_julia(sfx, txt_no_sfx)
             return "$(type)($txt_no_sfx)"
         end
     end

@@ -66,7 +66,8 @@ function c_non_float_literal_to_julia(sfx, txt_no_sfx)
     elseif occursin("ul", sfx) || occursin("lu", sfx)
         return "Culong"
     elseif !unsigned && endswith(sfx, "l")
-        if length(txt_no_sfx) == 10 && startswith(txt_no_sfx, r"0x[8-9a-fA-F]")
+        value = tryparse(Clong, txt_no_sfx)
+        if isnothing(value) && !isnothing(tryparse(Culong, txt_no_sfx))
             return "Culong"
         else
             return "Clong"

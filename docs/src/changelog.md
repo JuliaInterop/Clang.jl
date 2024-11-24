@@ -18,6 +18,8 @@ Changelog](https://keepachangelog.com).
   avoid implicit imports ([#488]).
 - Added support to the auditor for detecting structs and function-like macros of
   the same name, which previously caused the generator to crash ([#500]).
+- Large L-suffixed integer literals that are greater than `typemax(Clong)` will now be wrapped
+  as unsigned integers (`Culong`) ([#516]).
 
 ## [v0.18.3] - 2024-04-23
 

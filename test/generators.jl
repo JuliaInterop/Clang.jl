@@ -249,3 +249,15 @@ end
         @test docstring_has("callback")
     end
 end
+
+@testset "Issue 515 - unsigned types for large literals" begin
+    args = get_default_args()
+    headers = joinpath(@__DIR__, "include", "large-integer-literals.h")
+    ctx = create_context(headers, args)
+    build!(ctx)
+    extract_expr(ctx, i) = only(ctx.dag.nodes[i].exprs)
+    @test extract_expr(ctx, 1) == :(const TEST = Culong(0x80000001))
+    @test extract_expr(ctx, 2) == :(const TEST_2 = Culong(2147483649))
+    @test extract_expr(ctx, 3) == :(const TEST_SIGNED = Clong(0x00000001))
+    @test extract_expr(ctx, 4) == :(const TEST_SIGNED_2 = Clong(2147483646))
+end

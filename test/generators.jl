@@ -249,3 +249,23 @@ end
         @test docstring_has("callback")
     end
 end
+
+@testset "Issue 515 - unsigned types for large literals" begin
+    args = get_default_args()
+    headers = joinpath(@__DIR__, "include", "large-integer-literals.h")
+    ctx = create_context(headers, args)
+    build!(ctx, BUILDSTAGE_NO_PRINTING)
+    extract_expr(ctx, i) = only(ctx.dag.nodes[i].exprs)
+    # Clong is Int32 on Windows and Int on other platforms.
+    clong_is_int32 = Sys.iswindows() || Int === Int32
+    if clong_is_int32
+        # We need an unsigned type to be able to hold the value on 4 bytes.
+        @test extract_expr(ctx, 1) == :(const TEST = Culong(0x80000001))
+        @test extract_expr(ctx, 2) == :(const TEST_2 = Culong(2147483649))
+    else
+        @test extract_expr(ctx, 1) == :(const TEST = Clong(0x80000001))
+        @test extract_expr(ctx, 2) == :(const TEST_2 = Clong(2147483649))
+    end
+    @test extract_expr(ctx, 3) == :(const TEST_SIGNED = Clong(0x00000001))
+    @test extract_expr(ctx, 4) == :(const TEST_SIGNED_2 = Clong(2147483646))
+end

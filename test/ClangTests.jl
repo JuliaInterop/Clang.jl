@@ -16,6 +16,7 @@ using ReTest
 include("jllenvs.jl")
 include("file.jl")
 include("generators.jl")
+include("module.jl")
 
 include("test_mpi.jl")
 include("test_bitfield.jl")

@@ -227,6 +227,16 @@ Return the integer value of an enum constant declaration.
 """
 function value(c::CLEnumConstantDecl)::Integer
     typeKind = kind(getCursorType(c))
+
+    # PR ???
+    if typeKind == CXType_Elaborated
+        typeKind = getCursorType(c) |>
+                    get_elaborated_cursor |>
+                    getTypedefDeclUnderlyingType |>
+                    getCanonicalType |>
+                    kind
+    end
+
     # issue #404
     if typeKind == CXType_Typedef
         typeKind = getCursorType(c) |>

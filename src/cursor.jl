@@ -228,7 +228,7 @@ Return the integer value of an enum constant declaration.
 function value(c::CLEnumConstantDecl)::Integer
     typeKind = kind(getCursorType(c))
 
-    # PR ???
+    # PR 519
     if typeKind == CXType_Elaborated
         typeKind = getCursorType(c) |>
                     get_elaborated_cursor |>

@@ -635,20 +635,17 @@ function (x::CodegenPreprocessing)(dag::ExprDAG, options::Dict)
             dag.nodes[i] = ExprNode(node.id, skip_mode, node.cursor, node.exprs, node.adj)
             show_info &&
                 @info "[CodegenPreprocessing]: skip a $(node.type) node named $(node.id)"
-        end
-        if attribute_check(dag, node)
+        elseif attribute_check(dag, node)
             ty = attribute_type(node.type)
             dag.nodes[i] = ExprNode(node.id, ty, node.cursor, node.exprs, node.adj)
             show_info &&
                 @info "[CodegenPreprocessing]: mark an attribute $(node.type) node named $(node.id)"
-        end
-        if nested_anonymous_check(dag, node)
+        elseif nested_anonymous_check(dag, node)
             ty = nested_anonymous_type(node.type)
             dag.nodes[i] = ExprNode(node.id, ty, node.cursor, node.exprs, node.adj)
             show_info &&
                 @info "[CodegenPreprocessing]: mark a nested anonymous $(node.type) node named $(node.id)"
-        end
-        if bitfield_check(dag, node)
+        elseif bitfield_check(dag, node)
             ty = bitfield_type(node.type)
             dag.nodes[i] = ExprNode(node.id, ty, node.cursor, node.exprs, node.adj)
             show_info &&

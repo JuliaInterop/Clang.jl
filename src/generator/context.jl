@@ -160,7 +160,7 @@ create_context(header::AbstractString, args=String[], ops=Dict()) = create_conte
 end
 
 """
-    build!(ctx::Context, skip_printing = true)
+    build!(ctx::Context, stage = BUILDSTAGE_ALL)
 Run all passes.
 """
 function build!(ctx::Context, stage=BUILDSTAGE_ALL)

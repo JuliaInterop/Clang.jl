@@ -190,7 +190,7 @@ function_argument_conflict_symbols = []
 add_record_constructors = []
 
 [codegen.macro]
-# it‘s highly recommended to set this entry to "basic".
+# it's highly recommended to set this entry to "basic".
 # if you'd like to skip all of the macros, please set this entry to "disable".
 # if you'd like to translate function-like macros to Julia, please set this entry to "aggressive".
 macro_mode = "basic"

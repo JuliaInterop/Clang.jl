@@ -211,6 +211,26 @@ end
     @test_logs (:info, "Done!") match_mode = :any build!(ctx)
 end
 
+@testset "PR 522 - Still skip EnumForwardDecl with attributes" begin
+    ctx = create_context([joinpath(@__DIR__, "include/elaborateEnum.h")], get_default_args())
+
+    mktemp() do path, io
+        redirect_stdout(io) do
+            build!(ctx)
+        end
+        close(io)
+
+        output = Ref{String}("")
+        open(path) do file
+            output[] = read(file, String)
+        end
+
+        print(output[])
+        @test contains(output[],"@cenum X::UInt32 begin") # Correctly output
+        @test !contains(output[], "const X = UInt32")     # const not output
+    end
+end
+
 @testset "Issue 452 - StructMutualRef" begin
     ctx = create_context([joinpath(@__DIR__, "include/struct-mutual-ref.h")], get_default_args())
     @test_logs (:info, "Done!") match_mode = :any build!(ctx)

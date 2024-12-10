@@ -531,8 +531,8 @@ function (x::LinkEnumAlias)(dag::ExprDAG, options::Dict)
 
         ty = getTypedefDeclUnderlyingType(node.cursor) |> getCanonicalType
         typeKind = kind(ty)
-        typeKind == CXType_Int || typeKind == CXType_Short || typeKind == CXType_Long || typeKind == CXType_LongLong ||
-        typeKind == CXType_UInt || typeKind == CXType_UShort || typeKind == CXType_ULong || typeKind == CXType_ULongLong ||
+        typeKind == CXType_Int || typeKind == CXType_Short || typeKind == CXType_Long || typeKind == CXType_LongLong || typeKind == CXType_Char_S ||
+        typeKind == CXType_UInt || typeKind == CXType_UShort || typeKind == CXType_ULong || typeKind == CXType_ULongLong || typeKind == CXType_UChar ||
         continue
 
         for (tagid, j) in dag.tags

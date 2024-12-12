@@ -668,6 +668,13 @@ const ENUM_SYMBOL2TYPE = Dict(
 function emit!(dag::ExprDAG, node::ExprNode{<:AbstractEnumNodeType}, options::Dict; args...)
     cursor = node.cursor
     ty = getEnumDeclIntegerType(cursor)
+
+    if ty isa Clang.CLElaborated
+        ty = get_elaborated_cursor(ty) |>
+             getTypedefDeclUnderlyingType |>
+             getCanonicalType
+    end
+
     if ty isa Clang.CLTypedef
         ty = getTypeDeclaration(ty) |>
              getTypedefDeclUnderlyingType |>

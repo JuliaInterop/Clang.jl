@@ -159,6 +159,23 @@ function collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLEnumDecl, o
     return nodes
 end
 
+# TODO: Implement full ObjectiveC codegen
+function collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLObjCClassRef, options)
+    return nodes
+end
+function collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLObjCProtocolDecl, options)
+    return nodes
+end
+function collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLObjCProtocolRef, options)
+    return nodes
+end
+function collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLObjCInterfaceDecl, options)
+    return nodes
+end
+function collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLObjCCategoryDecl, options)
+    return nodes
+end
+
 # skip macro expansion since the expanded info is already embedded in the AST
 collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLMacroInstantiation, options) = nodes
 collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLMacroExpansion, options) = nodes

@@ -147,7 +147,7 @@ struct EnumDuplicated <: AbstractEnumNodeType end
 struct EnumDefault <: AbstractEnumNodeType end
 
 """
-    EnumLayout{Attribute} <: AbstractStructNodeType
+    EnumLayout{Attribute} <: AbstractEnumNodeType
 Enum nodes that have special layout.
 """
 struct EnumLayout{Attribute} <: AbstractEnumNodeType end

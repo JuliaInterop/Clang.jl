@@ -90,6 +90,11 @@ function create_context(headers::Vector, args::Vector=String[], options::Dict=Di
     @info "Parsing headers..."
     parse_headers!(ctx, headers, args)
 
+    add_default_passes!(ctx, options, system_dirs, dependent_headers)
+end
+
+function add_default_passes!(ctx::AbstractContext, options::Dict, system_dirs::Vector, dependent_headers::Vector)
+
     push!(ctx.passes, CollectTopLevelNode(ctx.trans_units, dependent_headers, system_dirs))
     push!(ctx.passes, LinkTypedefToAnonymousTagType())
     push!(ctx.passes, LinkTypedefToAnonymousTagType(is_system=true))

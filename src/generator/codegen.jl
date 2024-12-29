@@ -695,6 +695,7 @@ const ENUM_SYMBOL2TYPE = Dict(
     :Int32 => Int32,
     :Int16 => Int16,
     :Int8 => Int8,
+    :Bool => Int8,
 )
 
 function emit!(dag::ExprDAG, node::ExprNode{<:AbstractEnumNodeType}, options::Dict; args...)

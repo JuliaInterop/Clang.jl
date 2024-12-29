@@ -252,7 +252,8 @@ function value(c::CLEnumConstantDecl)::Integer
                      getCanonicalType |>
                      kind
     end
-    if typeKind == CXType_Short ||
+    if typeKind == CXType_Bool ||
+        typeKind == CXType_Short ||
         typeKind == CXType_Int ||
         typeKind == CXType_Long ||
         typeKind == CXType_LongLong ||

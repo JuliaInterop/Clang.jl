@@ -126,11 +126,41 @@ Return the linkage of the entity referred to by a given cursor.
 """
 getCursorLinkage(c::Union{CXCursor,CLCursor})::CXLinkageKind = clang_getCursorLinkage(c)
 
+function getCursorPlatformAvailability(c::Union{<:CXCursor,<:CLCursor})::Union{Nothing, CLPlatformAvailability}
+    n_plats = clang_getCursorPlatformAvailability(c, C_NULL, C_NULL, C_NULL, C_NULL, C_NULL, C_NULL)
+
+    avails = Vector{LibClang.CXPlatformAvailability}(undef, n_plats)
+
+    GC.@preserve avails clang_getCursorPlatformAvailability(c, C_NULL, C_NULL, C_NULL, C_NULL, pointer(avails), n_plats)
+
+    macos_index = findfirst(avails) do avail
+        platstr = clang_getCString(avail.Platform)
+        ismacos = unsafe_string(platstr) == "macos"
+        clang_disposeString(avail.Platform)
+
+        ismacos
+    end
+
+    res = if !isnothing(macos_index)
+        CLPlatformAvailability(avails[macos_index])
+    else
+        nothing
+    end
+
+    # XXX: figure out
+    # dispose availabilities
+    # for avail in avails
+    #     disposeCXPlatformAvailability(avail)
+    # end
+
+    return res
+end
+
+disposeCXPlatformAvailability(avail::CXPlatformAvailability)::Nothing = clang_disposeCXPlatformAvailability(avail)
+
 ## TODO:
 # clang_getCursorVisibility
 # clang_getCursorAvailability
-# clang_getCursorPlatformAvailability
-# clang_disposeCXPlatformAvailability
 
 """
     getCursorLanguage(c::Union{CXCursor,CLCursor}) -> CXLanguageKind
@@ -578,7 +608,6 @@ function is_inclusion_directive(x::CLCursor)
     k = kind(x)
     return k == CXCursor_InclusionDirective && k == CXCursor_LastPreprocessing
 end
-
 
 ## Comment utilities
 

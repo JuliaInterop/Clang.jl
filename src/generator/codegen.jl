@@ -737,6 +737,18 @@ function emit!(dag::ExprDAG, node::ExprNode{<:AbstractEnumNodeType}, options::Di
 end
 
 function emit!(dag::ExprDAG, node::ExprNode{ObjCObjInterfaceDecl}, options::Dict; args...)
+    minsupported = get(options, "minimum_macos_supported", "13")
+    versiongetter = get(options, "version_function", ":VERSION") |> Meta.parse
+
+    introver = let
+        platavail = getCursorPlatformAvailability(node.cursor)
+        if !isnothing(platavail)
+            convert(VersionNumber, platavail.Introduced)
+        else
+            typemin(VersionNumber)
+        end
+    end
+
     super = let
         firstref = findfirst(children(node.cursor)) do item_cursor
             item_cursor isa CLObjCSuperClassRef
@@ -748,13 +760,31 @@ function emit!(dag::ExprDAG, node::ExprNode{ObjCObjInterfaceDecl}, options::Dict
         end
     end
 
-    expr = Expr(:macrocall, Symbol("@objcwrapper"), nothing, Expr(:(=), :immutable, :true), Expr(:(<:), node.id, super))
+    wrapperexpr = Expr(:macrocall, Symbol("@objcwrapper"), nothing, Expr(:(=), :immutable, :true), Expr(:(<:), node.id, super))
 
-    push!(node.exprs, expr)
+    if introver <= VersionNumber(minsupported)
+        push!(node.exprs, wrapperexpr)
+    else
+        verexpr = Expr(:macrocall, Symbol("@static"), nothing, Expr(:if, Expr(:call, :(>=), versiongetter, introver), wrapperexpr))
+        push!(node.exprs, verexpr)
+    end
+
     return dag
 end
 
 function emit!(dag::ExprDAG, node::ExprNode{ObjCObjProtocolDecl}, options::Dict; args...)
+    minsupported = get(options, "minimum_macos_supported", "13")
+    versiongetter = get(options, "version_function", ":VERSION") |> Meta.parse
+
+    introver = let
+        platavail = getCursorPlatformAvailability(node.cursor)
+        if !isnothing(platavail)
+            convert(VersionNumber, platavail.Introduced)
+        else
+            typemin(VersionNumber)
+        end
+    end
+
     super = let
         firstref = findfirst(children(node.cursor)) do item_cursor
             item_cursor isa CLObjCProtocolRef
@@ -766,9 +796,15 @@ function emit!(dag::ExprDAG, node::ExprNode{ObjCObjProtocolDecl}, options::Dict;
         end
     end
 
-    expr = Expr(:macrocall, Symbol("@objcwrapper"), nothing, Expr(:(=), :immutable, :true), Expr(:(<:), node.id, super))
+    wrapperexpr = Expr(:macrocall, Symbol("@objcwrapper"), nothing, Expr(:(=), :immutable, :true), Expr(:(<:), node.id, super))
 
-    push!(node.exprs, expr)
+    if introver <= VersionNumber(minsupported)
+        push!(node.exprs, wrapperexpr)
+    else
+        verexpr = Expr(:macrocall, Symbol("@static"), nothing, Expr(:if, Expr(:call, :(>=), versiongetter, introver), wrapperexpr))
+        push!(node.exprs, verexpr)
+    end
+
     return dag
 end
 

@@ -737,57 +737,158 @@ function emit!(dag::ExprDAG, node::ExprNode{<:AbstractEnumNodeType}, options::Di
 end
 
 function emit!(dag::ExprDAG, node::ExprNode{ObjCObjInterfaceDecl}, options::Dict; args...)
-    minsupported = get(options, "minimum_macos_supported", "13")
-    versiongetter = get(options, "version_function", ":VERSION") |> Meta.parse
-
-    introver = let
-        platavail = getCursorPlatformAvailability(node.cursor)
-        if !isnothing(platavail)
-            convert(VersionNumber, platavail.Introduced)
-        else
-            typemin(VersionNumber)
-        end
-    end
-
-    super = let
-        firstref = findfirst(children(node.cursor)) do item_cursor
-            item_cursor isa CLObjCSuperClassRef
-        end
-        if !isnothing(firstref)
-            Symbol(spelling(children(node.cursor)[firstref]))
-        else
-            :NSObject
-        end
-    end
-
-    wrapperexpr = Expr(:macrocall, Symbol("@objcwrapper"), nothing, Expr(:(=), :immutable, :true), Expr(:(<:), node.id, super))
-
-    if introver <= VersionNumber(minsupported)
-        push!(node.exprs, wrapperexpr)
-    else
-        verexpr = Expr(:macrocall, Symbol("@static"), nothing, Expr(:if, Expr(:call, :(>=), versiongetter, introver), wrapperexpr))
-        push!(node.exprs, verexpr)
-    end
-
-    return dag
+    _emit_objcdecl!(CLObjCSuperClassRef, dag, node, options::Dict; args...)
+end
+function emit!(dag::ExprDAG, node::ExprNode{ObjCObjProtocolDecl}, options::Dict; args...)
+    _emit_objcdecl!(CLObjCProtocolRef, dag, node, options::Dict; args...)
 end
 
-function emit!(dag::ExprDAG, node::ExprNode{ObjCObjProtocolDecl}, options::Dict; args...)
-    minsupported = get(options, "minimum_macos_supported", "13")
-    versiongetter = get(options, "version_function", ":VERSION") |> Meta.parse
+# TODO: add setters and stuff
+# TODO: use ObjCPropertyDeclInfo (I can't remember what for)
+# TODO: figure out vectors
+_get_version_introduced(node) = _get_version_introduced(node.cursor)
+function _get_version_introduced(cursor::CLCursor)
+    platavail = getCursorPlatformAvailability(cursor)
 
-    introver = let
-        platavail = getCursorPlatformAvailability(node.cursor)
-        if !isnothing(platavail)
-            convert(VersionNumber, platavail.Introduced)
+    if !isnothing(platavail)
+        tmpver = convert(VersionNumber, platavail.Introduced)
+        return tmpver
+    end
+    return nothing
+end
+
+# Base case
+function getobjcpropertyexpr(_, propertyname::Symbol, propertytype::Union{Symbol, Expr}, asid::Bool, _::Dict)
+    typeexpr = if asid
+        Expr(:curly, :id, propertytype)
+    elseif haskey(ENUM_SYMBOL2TYPE, propertytype)
+        eval(propertytype)
+    else
+        propertytype
+    end
+    Expr(:macrocall, Symbol("@autoproperty"), nothing, Expr(:(::), propertyname, typeexpr))
+end
+
+# Something probably went wrong
+function getobjcpropertyexpr(_, propertyname::Symbol, _, _::Bool, _::Dict)
+    @assert !isnothing(typerefidx) "Something went wrong while generating code for $propertyname, please file an issue."
+end
+
+function getobjcpropertyexpr(node, propertyname::Symbol, propertytype::CLType, asid::Bool, options::Dict)
+    jlty = tojulia(propertytype)
+    if jlty isa JuliaUnknown
+        return Expr(:line, "Skipping property $(Symbol(spelling(node))) because it is $(dumpobj(jlty.x))")
+    else
+        tysym = translate(jlty, options)
+        return getobjcpropertyexpr(node, propertyname, tysym, asid, options)
+    end
+end
+
+function getobjcpropertyexpr(node, propertyname::Symbol, cursor::CLObjCProtocolRef, asid::Bool, options::Dict)
+    getobjcpropertyexpr(node, propertyname, Symbol(spelling(cursor)), asid, options)
+end
+
+function getobjcpropertyexpr(node, propertyname::Symbol, _::CLObjCObjectPointer, _::Bool, options::Dict)
+    ch = children(node)
+    classrefidx = findfirst(ch) do c
+        c isa CLObjCClassRef
+    end
+
+    if !isnothing(classrefidx)
+        proptype = Symbol(spelling(ch[classrefidx]))
+        tmpexpr = getobjcpropertyexpr(node, propertyname, proptype, true, options)
+        if proptype == :NSArray
+            arrrefidx = let
+                otherclassidx = findnext(ch, classrefidx+1) do c
+                    c isa CLObjCClassRef
+                end
+                if isnothing(otherclassidx)
+                    ididx = findnext(ch, classrefidx+1) do c
+                        c isa CLTypeRef && spelling(c) == "id"
+                    end
+                    if !isnothing(ididx)
+                        otherprotrefidx = findnext(ch, ididx+1) do c
+                            c isa CLObjCProtocolRef
+                        end
+                        otherprotrefidx
+                    end
+                else
+                    otherclassidx
+                end
+            end
+            if !isnothing(arrrefidx)
+                arrtype = Symbol(spelling(ch[arrrefidx]))
+                julia_type = Expr(:(=), :type, Expr(:curly, :Vector, arrtype))
+                push!(tmpexpr.args, julia_type)
+            end
+        end
+        return tmpexpr
+    else
+        typerefidx = findfirst(ch) do c
+            c isa CLTypeRef
+        end
+
+        @assert !isnothing(typerefidx) "Something went wrong while generating code for $propertyname, please file an issue."
+
+        ty = ch[typerefidx]
+
+        if Symbol(spelling(ty)) == :id
+            protrefidx = findnext(ch, typerefidx+1) do c
+                c isa CLObjCProtocolRef
+            end
+            if !isnothing(protrefidx)
+                return getobjcpropertyexpr(node, propertyname, ch[protrefidx], true, options)
+            end
+        end
+
+        getobjcpropertyexpr(node, propertyname, Symbol(spelling(ty)), true, options)
+    end
+end
+
+function getobjcpropertyexpr(node, propertyname::Symbol, cursortype::CLElaborated, asid::Bool, options::Dict)
+    ty = getTypeDeclaration(cursortype) |>
+        getTypedefDeclUnderlyingType |>
+        getCanonicalType
+
+    return getobjcpropertyexpr(node, propertyname, ty, asid, options)
+end
+
+function generateautopropertydecl(propdeclnode, minsup, versiongetter, options::Dict)
+    propertyname = Symbol(spelling(propdeclnode))
+    cursortype = getCursorType(propdeclnode)
+
+    expr = getobjcpropertyexpr(propdeclnode, propertyname, cursortype, false, options)
+
+    version_introduced = _get_version_introduced(propdeclnode)
+
+    if isnothing(version_introduced) || isnothing(minsup) || isnothing(versiongetter) || version_introduced <= minsup
+        return expr
+    else
+        return Expr(:macrocall, Symbol("@static"), nothing, Expr(:if, Expr(:call, :(>=), versiongetter, version_introduced), Expr(:block, expr)))
+    end
+end
+
+@inline function _emit_objcdecl!(::Type{T}, dag::ExprDAG, node::ExprNode, options::Dict; args...) where T
+    minsupported = let
+        tmpver = get(options, "minimum_macos_supported", "13")
+        if isnothing(tmpver)
+            nothing
         else
-            typemin(VersionNumber)
+            VersionNumber(tmpver)
+        end
+    end
+    versiongetter, version_introduced = let
+        tmpver = get(options, "version_function", nothing)
+        if isnothing(tmpver)
+            nothing, nothing
+        else
+            Meta.parse(tmpver), _get_version_introduced(node)
         end
     end
 
     super = let
         firstref = findfirst(children(node.cursor)) do item_cursor
-            item_cursor isa CLObjCProtocolRef
+            item_cursor isa T
         end
         if !isnothing(firstref)
             Symbol(spelling(children(node.cursor)[firstref]))
@@ -796,12 +897,33 @@ function emit!(dag::ExprDAG, node::ExprNode{ObjCObjProtocolDecl}, options::Dict;
         end
     end
 
+    # @objcwrapper
     wrapperexpr = Expr(:macrocall, Symbol("@objcwrapper"), nothing, Expr(:(=), :immutable, :true), Expr(:(<:), node.id, super))
 
-    if introver <= VersionNumber(minsupported)
-        push!(node.exprs, wrapperexpr)
+    # @objcproperties
+    propertyexpr = Expr(:macrocall, Symbol("@objcproperties"), nothing, node.id, Expr(:block))
+    propertyargs = propertyexpr.args[4].args
+    for child in children(node.cursor)
+        if child isa CLObjCPropertyDecl
+            # Use version_introduced for the object as the minimum supported version
+            #  for the property to avoid needless versions checks
+            minsup = isnothing(version_introduced) ? minsupported : max(minsupported, version_introduced)
+            declexpr = generateautopropertydecl(child, minsup, versiongetter, options)
+            # isnothing(declexpr) || push!(propertyargs, declexpr)
+            push!(propertyargs, declexpr)
+        end
+    end
+
+    tmpexprs = Any[wrapperexpr]
+    if !isempty(propertyargs)
+        push!(tmpexprs, propertyexpr)
+    end
+
+    # if isnothing(version_introduced) || isnothing(minsupported) || version_introduced <= minsupported
+    if isnothing(version_introduced) || isnothing(minsupported) || isnothing(versiongetter) || version_introduced <= minsupported
+        push!(node.exprs, tmpexprs...)
     else
-        verexpr = Expr(:macrocall, Symbol("@static"), nothing, Expr(:if, Expr(:call, :(>=), versiongetter, introver), wrapperexpr))
+        verexpr = Expr(:macrocall, Symbol("@static"), nothing, Expr(:if, Expr(:call, :(>=), versiongetter, version_introduced), Expr(:block, tmpexprs...)))
         push!(node.exprs, verexpr)
     end
 

@@ -251,7 +251,18 @@ end
         @test contains(output[],"@objcwrapper immutable = true TestProtocol <: NSObject") # Protocol
         @test contains(output[],"@objcwrapper immutable = true TestProtocol2 <: TestProtocol") # Protocol subtyping Protocol
         @test contains(output[],"@objcwrapper immutable = true TestInterface <: NSObject") # Interface
+
         @test contains(output[],"@static if version_function() >= v\"100.11.0\"") # Wrapper Availability
+        @test contains(output[],"@static if version_function() >= v\"101.11.0\"") # Property Availability
+
+        # Interface Properties
+        @test contains(output[],"@objcproperties TestInterfaceProperties begin")
+        @test contains(output[],"@autoproperty intproperty1")
+        @test contains(output[],"@autoproperty intproperty2")
+        @test contains(output[],"@autoproperty intproperty3::id{TestInterface}")
+        @test contains(output[],"@autoproperty intproperty4::id{TestProtocol}")
+        @test contains(output[],"type = Vector{TestProtocol}") broken=true #XXX
+        @test contains(output[],"type = Vector{TestInterface}") broken=true #XXX
     end
 end
 

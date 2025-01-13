@@ -28,6 +28,14 @@ jobs:
             arch: x86
     steps:
       - uses: actions/checkout@v4
+
+      # gcc-multilib is needed to build 32bit binaries for the bitfield tests
+      - if: runner.os == 'Linux'
+        uses: awalsh128/cache-apt-pkgs-action@v1
+        with:
+          packages: gcc-multilib
+          version: 1.0
+
       - uses: julia-actions/setup-julia@latest
         with:
           version: ${{ matrix.version }}
@@ -39,6 +47,7 @@ jobs:
       - uses: codecov/codecov-action@v4
         with:
           file: lcov.info
+
   docs:
     name: Documentation
     runs-on: ubuntu-latest

@@ -1,19 +1,8 @@
 [deps]
-BinaryBuilder = "12aac903-9f7c-5d81-afc2-d9565ea332ae"
 CEnum = "fa961155-64e5-5f13-b03f-caf6b980ea82"
 CMake_jll = "3f4e10e2-61f2-5801-8945-23b9d642d0e6"
 Libdl = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
 REPL = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
 ReTest = "e0db7c4e-2690-44b9-bad6-7687da720f89"
 TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
-Tar = "a4e569a6-e804-4fa4-b0f3-eef7a1d5b13e"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
-p7zip_jll = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
-
-[compat]
-# This is the last release that won't error out on Julia >1.7:
-# https://github.com/JuliaPackaging/BinaryBuilder.jl/pull/1318
-#
-# We don't require much of BinaryBuilder so until BB2 comes out this should be
-# safe.
-BinaryBuilder = "0.5.8"

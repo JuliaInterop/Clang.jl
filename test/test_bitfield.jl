@@ -1,5 +1,4 @@
 import CMake_jll: cmake
-using p7zip_jll, Tar
 using Clang.Generators
 
 function build_libbitfield_native()
@@ -14,7 +13,7 @@ function build_libbitfield_native()
             if Sys.iswindows()
                 config_cmd = `$config_cmd -A win32`
             elseif Sys.islinux()
-                config_cmd = `$config_cmd -D CMAKE_C_FLAGS=-march=native -D CMAKE_CXX_FLAGS=-march=native`
+                config_cmd = `$config_cmd -D CMAKE_C_FLAGS='-m32 -march=native'`
             end
         end
         build_cmd = `$(cmake()) --build $build_dir --config Debug`
@@ -30,32 +29,11 @@ function build_libbitfield_native()
     return success
 end
 
-
-function build_libbitfield_binarybuilder()
-    @info "Building libbitfield binary with BinaryBuilder."
-    success = true
-    try
-        cd(@__DIR__) do
-            run(`$(Base.julia_cmd()) --project bitfield/build_tarballs.jl`)
-            # from Pkg.download_verify_unpack
-            # Note that we filter out the extra log file that's generated
-            tarball_path = only(filter(!contains("-logs.v"), readdir("products")))
-            dest = "build"
-            rm(dest; recursive = true)
-            Tar.extract(`$(p7zip_jll.p7zip()) x products/$tarball_path -so`, dest)
-        end
-    catch e
-        @warn "Building libbitfield with BinaryBuilder failed" exception=(e, catch_backtrace())
-        success = false
-    end
-    return success
-end
-
 function build_libbitfield()
     success = true
     try
         # Compile binary
-        if !build_libbitfield_binarybuilder() && !build_libbitfield_native()
+        if !build_libbitfield_native()
             error("Could not build libbitfield binary")
         end
 
@@ -77,28 +55,36 @@ function build_libbitfield()
         m = Base.@invokelatest LibBitField.Mirror(10, 1.5, 1e6, -4, 7, 3)
         Base.@invokelatest LibBitField.toBitfield(Ref(m))
     catch e
-        @warn "Building libbitfield failed: $e"
-        success = false
+        if haskey(ENV, "CI")
+            rethrow()
+        else
+            @warn "Building libbitfield failed: $e"
+            success = false
+        end
     end
     return success
 end
 
-
+# The actual tests are in this separate function so it's easier to @invokelatest
+# all of the new functions.
+function test_libbitfield()
+    bf = Ref(LibBitField.BitField(Int8(10), 1.5, Int32(1e6), Int32(-4), Int32(7), UInt32(3)))
+    m = Ref(LibBitField.Mirror(10, 1.5, 1e6, -4, 7, 3))
+    GC.@preserve bf m begin
+        pbf = Ptr{LibBitField.BitField}(pointer_from_objref(bf))
+        pm = Ptr{LibBitField.Mirror}(pointer_from_objref(m))
+        @test LibBitField.toMirror(bf) == m[]
+        @test LibBitField.toBitfield(m).a == bf[].a
+        @test LibBitField.toBitfield(m).b == bf[].b
+        @test LibBitField.toBitfield(m).c == bf[].c
+        @test LibBitField.toBitfield(m).d == bf[].d
+        @test LibBitField.toBitfield(m).e == bf[].e
+        @test LibBitField.toBitfield(m).f == bf[].f
+    end
+end
 
 @testset "Bitfield" begin
     if build_libbitfield()
-        bf = Ref(LibBitField.BitField(Int8(10), 1.5, Int32(1e6), Int32(-4), Int32(7), UInt32(3)))
-        m = Ref(LibBitField.Mirror(10, 1.5, 1e6, -4, 7, 3))
-        GC.@preserve bf m begin
-            pbf = Ptr{LibBitField.BitField}(pointer_from_objref(bf))
-            pm = Ptr{LibBitField.Mirror}(pointer_from_objref(m))
-            @test LibBitField.toMirror(bf) == m[]
-            @test LibBitField.toBitfield(m).a == bf[].a
-            @test LibBitField.toBitfield(m).b == bf[].b
-            @test LibBitField.toBitfield(m).c == bf[].c
-            @test LibBitField.toBitfield(m).d == bf[].d
-            @test LibBitField.toBitfield(m).e == bf[].e
-            @test LibBitField.toBitfield(m).f == bf[].f
-        end
+        Base.@invokelatest test_libbitfield()
     end
 end

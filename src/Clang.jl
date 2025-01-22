@@ -17,8 +17,10 @@ elseif Base.libllvm_version.major == 17
     "17"
 elseif Base.libllvm_version.major == 18
     "18"
-else
+elseif Base.libllvm_version.major == 19
     "19"
+else
+    "20"
 end
 
 libdir = joinpath(@__DIR__, "..", "lib")

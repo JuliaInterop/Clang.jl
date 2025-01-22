@@ -3,22 +3,21 @@ module Clang
 include("platform/JLLEnvs.jl")
 using .JLLEnvs
 
-llvm_version = if Base.libllvm_version < v"13"
-    "12"
-elseif Base.libllvm_version.major == 13
-    "13"
-elseif Base.libllvm_version.major == 14
-    "14"
-elseif Base.libllvm_version.major == 15
-    "15"
-elseif Base.libllvm_version.major == 16
-    "16"
-elseif Base.libllvm_version.major == 17
-    "17"
-elseif Base.libllvm_version.major == 18
-    "18"
+# LLVM 12 is used in Julia 1.7.
+# Change this value when increasing
+# minimum supported version
+EARLIEST_LLVM_VERSION = 12
+
+# Change this value when adding
+# new supported wrapper version
+LATEST_LLVM_VERSION = 19
+
+llvm_version = if Base.libllvm_version < VersionNumber(EARLIEST_LLVM_VERSION+1)
+    string(EARLIEST_LLVM_VERSION)
+elseif Base.libllvm_version >= VersionNumber(LATEST_LLVM_VERSION+1)
+    string(LATEST_LLVM_VERSION+1)
 else
-    "19"
+    string(Base.libllvm_version.major)
 end
 
 libdir = joinpath(@__DIR__, "..", "lib")

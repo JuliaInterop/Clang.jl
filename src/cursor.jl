@@ -460,6 +460,45 @@ getCanonicalCursor(c::CLCursor)::CLCursor = clang_getCanonicalCursor(c)
 # clang_Cursor_getReceiverType
 
 """
+    getObjCPropertyAttributes(c, reserved)::Cuint
+
+Given a cursor that represents a property declaration, return the associated property attributes. The bits are formed from [`CXObjCPropertyAttrKind`](@ref).
+
+# Arguments
+* `reserved`: Reserved for future use, pass 0.
+"""
+getObjCPropertyAttributes(c, reserved=Cuint(0)) = clang_Cursor_getObjCPropertyAttributes(c, reserved)
+
+checkPropertyAttribute(attributes::Cuint, property) = (attributes & property) == property
+
+
+"""
+    getObjCPropertyGetterName(C)::String
+
+Given a cursor that represents a property declaration, return the name of the method that implements the getter.
+"""
+function getObjCPropertyGetterName(c)
+    cxstr = clang_Cursor_getObjCPropertyGetterName(c)
+    ptr = clang_getCString(cxstr)
+    s = unsafe_string(ptr)
+    clang_disposeString(cxstr)
+    return s
+end
+
+"""
+    getObjCPropertySetterName(c)::String
+
+Given a cursor that represents a property declaration, return the name of the method that implements the setter, if any.
+"""
+function getObjCPropertySetterName(c)
+    cxstr = clang_Cursor_getObjCPropertySetterName(c)
+    ptr = clang_getCString(cxstr)
+    s = unsafe_string(ptr)
+    clang_disposeString(cxstr)
+    return s
+end
+
+"""
     isVariadic(c::Union{CXCursor,CLCursor}) -> Bool
 Return true if the given cursor is a variadic function or method.
 """

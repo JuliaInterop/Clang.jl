@@ -743,9 +743,6 @@ function emit!(dag::ExprDAG, node::ExprNode{ObjCObjProtocolDecl}, options::Dict;
     _emit_objcdecl!(CLObjCProtocolRef, dag, node, options::Dict; args...)
 end
 
-# TODO: add setters and stuff
-# TODO: use ObjCPropertyDeclInfo (I can't remember what for)
-# TODO: figure out vectors
 _get_version_introduced(node) = _get_version_introduced(node.cursor)
 function _get_version_introduced(cursor::CLCursor)
     platavail = getCursorPlatformAvailability(cursor)
@@ -860,6 +857,23 @@ function generateautopropertydecl(propdeclnode, minsup, versiongetter, options::
     expr = getobjcpropertyexpr(propdeclnode, propertyname, cursortype, false, options)
 
     version_introduced = _get_version_introduced(propdeclnode)
+
+    ## Add getter if property name is different to getter (Bools)
+    getter = Symbol(Clang.getObjCPropertyGetterName(propdeclnode))
+    if expr isa Expr && getter != propertyname
+        push!(expr.args, Expr(:(=), :getter, getter))
+    end
+
+    ## Add setter if necessary
+    attrs = Clang.getObjCPropertyAttributes(propdeclnode)
+
+    # readwrite is the default, and is mutually exclusive with readonly,
+    # so check that readonly is false to capture properties that don't set either
+    isreadwrite = !Clang.checkPropertyAttribute(attrs, CXObjCPropertyAttr_readonly)
+    if expr isa Expr && isreadwrite
+        setter = Symbol(replace(Clang.getObjCPropertySetterName(propdeclnode), ":" => ""))
+        push!(expr.args, Expr(:(=), :setter, setter))
+    end
 
     if isnothing(version_introduced) || isnothing(minsup) || isnothing(versiongetter) || version_introduced <= minsup
         return expr

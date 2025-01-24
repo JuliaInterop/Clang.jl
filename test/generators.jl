@@ -259,8 +259,12 @@ end
         @test contains(output[],"@objcproperties TestInterfaceProperties begin")
         @test contains(output[],"@autoproperty intproperty1")
         @test contains(output[],"@autoproperty intproperty2")
-        @test contains(output[],"@autoproperty intproperty3::id{TestInterface}")
-        @test contains(output[],"@autoproperty intproperty4::id{TestProtocol}")
+        @test contains(output[],"setter = setIntproperty1")
+        @test contains(output[],"getter = isintproperty2")
+        @test contains(output[],"getter = isintproperty3 setter = setIntproperty3")
+        @test contains(output[],"@autoproperty intproperty3")
+        @test contains(output[],"@autoproperty intproperty4::id{TestInterface}")
+        @test contains(output[],"@autoproperty intproperty5::id{TestProtocol}")
         @test contains(output[],"type = Vector{TestProtocol}") broken=true #XXX
         @test contains(output[],"type = Vector{TestInterface}") broken=true #XXX
     end

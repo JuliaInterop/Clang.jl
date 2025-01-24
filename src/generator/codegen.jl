@@ -777,6 +777,7 @@ function getobjcpropertyexpr(node, propertyname::Symbol, propertytype::CLType, a
         return Expr(:line, "Skipping property $(Symbol(spelling(node))) because it is $(dumpobj(jlty.x))")
     else
         tysym = translate(jlty, options)
+        tysym = tysym == :Cvoid ? jlty.sym : tysym
         return getobjcpropertyexpr(node, propertyname, tysym, asid, options)
     end
 end

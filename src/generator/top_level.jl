@@ -164,12 +164,26 @@ function collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLObjCClassRe
     return nodes
 end
 function collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLObjCProtocolDecl, options)
+    str = spelling(cursor)
+    id = Symbol(str)
+
+    ty = ObjCObjProtocolDecl()
+
+    push!(nodes, ExprNode(id, ty, cursor, Expr[], Int[]))
+
     return nodes
 end
 function collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLObjCProtocolRef, options)
     return nodes
 end
 function collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLObjCInterfaceDecl, options)
+    str = spelling(cursor)
+    id = Symbol(str)
+
+    ty = ObjCObjInterfaceDecl()
+
+    push!(nodes, ExprNode(id, ty, cursor, Expr[], Int[]))
+
     return nodes
 end
 function collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLObjCCategoryDecl, options)

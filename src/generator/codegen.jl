@@ -736,6 +736,41 @@ function emit!(dag::ExprDAG, node::ExprNode{<:AbstractEnumNodeType}, options::Di
     return dag
 end
 
+function emit!(dag::ExprDAG, node::ExprNode{ObjCObjInterfaceDecl}, options::Dict; args...)
+    super = let
+        firstref = findfirst(children(node.cursor)) do item_cursor
+            item_cursor isa CLObjCSuperClassRef
+        end
+        if !isnothing(firstref)
+            Symbol(spelling(children(node.cursor)[firstref]))
+        else
+            :NSObject
+        end
+    end
+
+    expr = Expr(:macrocall, Symbol("@objcwrapper"), nothing, Expr(:(=), :immutable, :true), Expr(:(<:), node.id, super))
+
+    push!(node.exprs, expr)
+    return dag
+end
+
+function emit!(dag::ExprDAG, node::ExprNode{ObjCObjProtocolDecl}, options::Dict; args...)
+    super = let
+        firstref = findfirst(children(node.cursor)) do item_cursor
+            item_cursor isa CLObjCProtocolRef
+        end
+        if !isnothing(firstref)
+            Symbol(spelling(children(node.cursor)[firstref]))
+        else
+            :NSObject
+        end
+    end
+
+    expr = Expr(:macrocall, Symbol("@objcwrapper"), nothing, Expr(:(=), :immutable, :true), Expr(:(<:), node.id, super))
+
+    push!(node.exprs, expr)
+    return dag
+end
 
 ################## ForwardDecl OpaqueDecl DefaultDecl DuplicatedTags ##################
 

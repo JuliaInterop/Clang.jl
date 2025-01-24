@@ -231,6 +231,28 @@ end
     end
 end
 
+@testset "Objective-C" begin
+    args = [get_default_args(); ["-x","objective-c"]]
+
+    ctx = create_context([joinpath(@__DIR__, "include/objectiveC.h")], args)
+    mktemp() do path, io
+        redirect_stdout(io) do
+            build!(ctx)
+        end
+        close(io)
+
+        output = Ref{String}("")
+        open(path) do file
+            output[] = read(file, String)
+        end
+
+        print(output[])
+        @test contains(output[],"@objcwrapper immutable = true TestProtocol <: NSObject") # Protocol
+        @test contains(output[],"@objcwrapper immutable = true TestProtocol2 <: TestProtocol") # Protocol subtyping Protocol
+        @test contains(output[],"@objcwrapper immutable = true TestInterface <: NSObject") # Interface
+    end
+end
+
 @testset "Issue 452 - StructMutualRef" begin
     ctx = create_context([joinpath(@__DIR__, "include/struct-mutual-ref.h")], get_default_args())
     @test_logs (:info, "Done!") match_mode = :any build!(ctx)

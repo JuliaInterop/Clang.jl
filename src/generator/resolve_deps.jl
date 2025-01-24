@@ -172,6 +172,69 @@ function resolve_dependency!(dag::ExprDAG, node::ExprNode{<:AbstractStructNodeTy
     return dag
 end
 
+function resolve_objc_property!(dag::ExprDAG, node, property_type, options)
+    return
+end
+function resolve_objc_property!(dag::ExprDAG, node, property_type::CLElaborated, options)
+    newty = getTypeDeclaration(property_type) |>
+            getTypedefDeclUnderlyingType |>
+            getCanonicalType
+    jlty = tojulia(newty)
+    leaf_ty = get_jl_leaf_type(jlty)
+
+    is_jl_basic(leaf_ty) && return
+    is_jl_unknown(leaf_ty) && return
+
+    if haskey(dag.tags, leaf_ty.sym)
+        push!(node.adj, dag.tags[leaf_ty.sym])
+    end
+end
+function resolve_objc_property!(dag::ExprDAG, node, property_type::CLObjCObjectPointer, options)
+
+    ptr_ty = getPointeeType(property_type)
+
+    protocol_decls = Clang.getObjCProtocolDecls(ptr_ty)
+    type_args = Clang.getObjCTypeArgs(ptr_ty)
+
+    if !(Clang.getObjCObjectBaseType(ptr_ty) isa CLObjCId) && isempty(type_args)
+        tag = Symbol(spelling(ptr_ty))
+        if haskey(dag.tags, tag) && tag != node.id && dag.tags[tag] ∉ node.adj
+            push!(node.adj, dag.tags[tag])
+        end
+    end
+
+    for tyarg in type_args
+        resolve_objc_property!(dag, node, tyarg, options)
+    end
+
+    for decl in protocol_decls
+        tag = Symbol(spelling(decl))
+
+        # Avoid self-references
+        if haskey(dag.tags, tag) && tag != node.id && dag.tags[tag] ∉ node.adj
+            push!(node.adj, dag.tags[tag])
+        end
+    end
+    return
+end
+function resolve_objc_property!(dag::ExprDAG, node, property_type::CLPointer, options)
+    ptr_ty = getPointeeType(property_type)
+    resolve_objc_property!(dag, node, ptr_ty, options)
+    return
+end
+function resolve_dependency!(dag::ExprDAG, node::ExprNode{<:ObjCClassLikeDecl}, options)
+    # TODO: method deps
+    cursor = node.cursor
+    for c in children(cursor)
+        if c isa CLObjCPropertyDecl
+            ty = getCursorType(c)
+
+            resolve_objc_property!(dag, node, ty, options)
+        end
+    end
+    return dag
+end
+
 # enums are just "named integers", no dependency needs to be resolved.
 resolve_dependency!(dag::ExprDAG, node::ExprNode{<:AbstractEnumNodeType}, options) = dag
 

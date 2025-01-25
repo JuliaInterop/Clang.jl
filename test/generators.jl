@@ -231,6 +231,7 @@ end
     end
 end
 
+@static if Sys.isapple()
 @testset "Objective-C" begin
     args = [get_default_args(); ["-x","objective-c"]]
     options = Dict("codegen" => Dict{String,Any}("version_function" => "version_function()"))
@@ -268,6 +269,7 @@ end
         @test contains(output[],"type = Vector{TestProtocol}") broken=true #XXX
         @test contains(output[],"type = Vector{TestInterface}") broken=true #XXX
     end
+end
 end
 
 @testset "Issue 452 - StructMutualRef" begin

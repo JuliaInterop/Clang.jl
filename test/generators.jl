@@ -234,7 +234,7 @@ end
 @static if Sys.isapple()
 @testset "Objective-C" begin
     args = [get_default_args(); ["-x","objective-c"]]
-    options = Dict("codegen" => Dict{String,Any}("version_function" => "version_function()"))
+    options = Dict("codegen" => Dict{String,Any}("version_function" => "version_function"))
 
     ctx = create_context([joinpath(@__DIR__, "include/objectiveC.h")], args, options)
     mktemp() do path, io
@@ -253,8 +253,8 @@ end
         @test contains(output[],"@objcwrapper immutable = true TestProtocol2 <: TestProtocol") # Protocol subtyping Protocol
         @test contains(output[],"@objcwrapper immutable = true TestInterface <: NSObject") # Interface
 
-        @test contains(output[],"@static if version_function() >= v\"100.11.0\"") # Wrapper Availability
-        @test contains(output[],"@static if version_function() >= v\"101.11.0\"") # Property Availability
+        @test contains(output[],"@objcwrapper immutable = true availability = macos(v\"100.11.0\") TestAvailability <: NSObject") # Wrapper Availability
+        @test contains(output[],"@autoproperty length::Int32 availability = macos(v\"101.11.0\")") # Property Availability
 
         # Interface Properties
         @test contains(output[],"@objcproperties TestInterfaceProperties begin")

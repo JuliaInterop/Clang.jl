@@ -747,11 +747,35 @@ _get_version_introduced(node) = _get_version_introduced(node.cursor)
 function _get_version_introduced(cursor::CLCursor)
     platavail = getCursorPlatformAvailability(cursor)
 
-    if !isnothing(platavail)
-        tmpver = convert(VersionNumber, platavail.Introduced)
-        return tmpver
+    isnothing(platavail) && return nothing
+
+    return convert(CLPlatformAvailability, platavail)
+end
+function _get_availability_expr(avail::CLPlatformAvailability)
+    avail.Unavailable && return Expr(:call, :macos, Expr(:kw, :unavailable, true))
+
+    expr = Expr(:call, :macos)
+
+    depr = avail.Deprecated
+    if !(depr.Major == -1 && depr.Minor == -1 && depr.Subminor == -1)
+        push!(expr.args, Expr(:kw, :deprecated, convert(VersionNumber, depr)))
     end
-    return nothing
+    obso = avail.Obsoleted
+    if !(obso.Major == -1 && obso.Minor == -1 && obso.Subminor == -1)
+        push!(expr.args, Expr(:kw, :obsoleted, convert(VersionNumber, obso)))
+    end
+
+    # For legibility, use the simpler constructor if "introduced" is the only attribute
+    intr = avail.Introduced
+    if !(intr.Major == -1 && intr.Minor == -1 && intr.Subminor == -1)
+        if length(expr.args) > 1
+            insert!(expr.args, 2, Expr(:kw, :introduced, convert(VersionNumber, intr)))
+        else
+            push!(expr.args, convert(VersionNumber, intr))
+        end
+    end
+
+    return length(expr.args) > 1 ? expr : nothing
 end
 
 # Base case
@@ -851,13 +875,13 @@ function getobjcpropertyexpr(node, propertyname::Symbol, cursortype::CLElaborate
     return getobjcpropertyexpr(node, propertyname, ty, asid, options)
 end
 
-function generateautopropertydecl(propdeclnode, minsup, versiongetter, options::Dict)
+function generateautopropertydecl(propdeclnode, minsup, options::Dict)
     propertyname = Symbol(spelling(propdeclnode))
     cursortype = getCursorType(propdeclnode)
 
     expr = getobjcpropertyexpr(propdeclnode, propertyname, cursortype, false, options)
 
-    version_introduced = _get_version_introduced(propdeclnode)
+    platform_availability = _get_version_introduced(propdeclnode)
 
     ## Add getter if property name is different to getter (Bools)
     getter = Symbol(Clang.getObjCPropertyGetterName(propdeclnode))
@@ -876,30 +900,20 @@ function generateautopropertydecl(propdeclnode, minsup, versiongetter, options::
         push!(expr.args, Expr(:(=), :setter, setter))
     end
 
-    if isnothing(version_introduced) || isnothing(minsup) || isnothing(versiongetter) || version_introduced <= minsup
-        return expr
-    else
-        return Expr(:macrocall, Symbol("@static"), nothing, Expr(:if, Expr(:call, :(>=), versiongetter, version_introduced), Expr(:block, expr)))
+    # add availability attribute to end of property declaration
+    if !isnothing(platform_availability) && !isnothing(minsup) && convert(VersionNumber, platform_availability.Introduced) > minsup
+        avail_expr = _get_availability_expr(platform_availability)
+        isnothing(avail_expr) || push!(expr.args, Expr(:(=), :availability, avail_expr))
     end
+
+    return expr
 end
 
 @inline function _emit_objcdecl!(::Type{T}, dag::ExprDAG, node::ExprNode, options::Dict; args...) where T
-    minsupported = let
-        tmpver = get(options, "minimum_macos_supported", "13")
-        if isnothing(tmpver)
-            nothing
-        else
-            VersionNumber(tmpver)
-        end
-    end
-    versiongetter, version_introduced = let
-        tmpver = get(options, "version_function", nothing)
-        if isnothing(tmpver)
-            nothing, nothing
-        else
-            Meta.parse(tmpver), _get_version_introduced(node)
-        end
-    end
+    # macOS 13 is the oldest support version of macOS
+    minsupported = get(options, "minimum_macos_supported", "13") |> VersionNumber
+
+    platform_availability = _get_version_introduced(node)
 
     super = let
         firstref = findfirst(children(node.cursor)) do item_cursor
@@ -913,7 +927,19 @@ end
     end
 
     # @objcwrapper
-    wrapperexpr = Expr(:macrocall, Symbol("@objcwrapper"), nothing, Expr(:(=), :immutable, :true), Expr(:(<:), node.id, super))
+    wrapperexpr = Expr(:macrocall, Symbol("@objcwrapper"), nothing, Expr(:(=), :immutable, :true))
+
+    # add availability attribute before type declaration
+    if !isnothing(platform_availability) && !isnothing(minsupported) && convert(VersionNumber, platform_availability.Introduced) > minsupported
+        avail_expr = _get_availability_expr(platform_availability)
+        isnothing(avail_expr) || push!(wrapperexpr.args, Expr(:(=), :availability, avail_expr))
+    end
+
+    # type declaration
+    push!(wrapperexpr.args, Expr(:(<:), node.id, super))
+
+    # add @objcwrapper to node expressions
+    push!(node.exprs, wrapperexpr)
 
     # @objcproperties
     propertyexpr = Expr(:macrocall, Symbol("@objcproperties"), nothing, node.id, Expr(:block))
@@ -922,24 +948,16 @@ end
         if child isa CLObjCPropertyDecl
             # Use version_introduced for the object as the minimum supported version
             #  for the property to avoid needless versions checks
-            minsup = isnothing(version_introduced) ? minsupported : max(minsupported, version_introduced)
-            declexpr = generateautopropertydecl(child, minsup, versiongetter, options)
+            minsup = isnothing(platform_availability) ? minsupported : max(minsupported, convert(VersionNumber, platform_availability.Introduced))
+            declexpr = generateautopropertydecl(child, minsup, options)
             # isnothing(declexpr) || push!(propertyargs, declexpr)
             push!(propertyargs, declexpr)
         end
     end
 
-    tmpexprs = Any[wrapperexpr]
+    # add @objcproperties to node expression
     if !isempty(propertyargs)
-        push!(tmpexprs, propertyexpr)
-    end
-
-    # if isnothing(version_introduced) || isnothing(minsupported) || version_introduced <= minsupported
-    if isnothing(version_introduced) || isnothing(minsupported) || isnothing(versiongetter) || version_introduced <= minsupported
-        push!(node.exprs, tmpexprs...)
-    else
-        verexpr = Expr(:macrocall, Symbol("@static"), nothing, Expr(:if, Expr(:call, :(>=), versiongetter, version_introduced), Expr(:block, tmpexprs...)))
-        push!(node.exprs, verexpr)
+        push!(node.exprs, propertyexpr)
     end
 
     return dag

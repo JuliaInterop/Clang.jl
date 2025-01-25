@@ -31,9 +31,10 @@ API_AVAILABLE(macos(100.11))
 @interface TestInterfaceProperties : NSObject
 
 @property (readwrite) NSUInteger intproperty1;
-@property (readonly, getter=isprotproperty2) BOOL intproperty2;
-@property (readonly) TestInterface * intproperty3;
-@property (readonly) id<TestProtocol> intproperty4;
-@property (readonly) NSArray<id<TestProtocol>> *intproperty5;
-@property (readonly) NSArray<TestInterface *> *intproperty6;
+@property (readonly, getter=isintproperty2) BOOL intproperty2;
+@property (readwrite, getter=isintproperty3) BOOL intproperty3;
+@property (readonly) TestInterface * intproperty4;
+@property (readonly) id<TestProtocol> intproperty5;
+@property (readonly) NSArray<id<TestProtocol>> *intproperty6;
+@property (readonly) NSArray<TestInterface *> *intproperty7;
 @end

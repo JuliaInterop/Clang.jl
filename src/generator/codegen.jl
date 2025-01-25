@@ -847,7 +847,7 @@ function generateautopropertydecl(propdeclnode, minsup, versiongetter, options::
     if isnothing(version_introduced) || isnothing(minsup) || isnothing(versiongetter) || version_introduced <= minsup
         return expr
     else
-        return Expr(:macrocall, Symbol("@static"), nothing, Expr(:if, Expr(:call, :(>=), versiongetter, version_introduced), Expr(:block, expr)))
+        return Expr(:macrocall, Symbol("@static"), nothing, Expr(:if, Expr(:call, versiongetter, version_introduced), Expr(:block, expr)))
     end
 end
 
@@ -906,7 +906,7 @@ end
     if isnothing(version_introduced) || isnothing(minsupported) || isnothing(versiongetter) || version_introduced <= minsupported
         push!(node.exprs, tmpexprs...)
     else
-        verexpr = Expr(:macrocall, Symbol("@static"), nothing, Expr(:if, Expr(:call, :(>=), versiongetter, version_introduced), Expr(:block, tmpexprs...)))
+        verexpr = Expr(:macrocall, Symbol("@static"), nothing, Expr(:if, Expr(:call, versiongetter, version_introduced), Expr(:block, tmpexprs...)))
         push!(node.exprs, verexpr)
     end
 

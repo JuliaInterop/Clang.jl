@@ -30,7 +30,8 @@ API_AVAILABLE(macos(100.11))
 // Interface
 @interface TestInterfaceProperties : NSObject
 
-@property (readwrite) NSUInteger intproperty1;
+@property (readwrite) NSUInteger intproperty1 __attribute__((availability(macos, introduced = 101.11, deprecated = 130.0,
+                            message = "Use X instead")));
 @property (readonly, getter=isintproperty2) BOOL intproperty2;
 @property (readwrite, getter=isintproperty3) BOOL intproperty3;
 @property (readonly) TestInterface * intproperty4;

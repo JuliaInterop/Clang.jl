@@ -299,6 +299,7 @@ end
 function _emit_getproperty_ptr!(body, root_cursor, cursor, options)
     field_cursors = fields(getCursorType(cursor))
     field_cursors = isempty(field_cursors) ? children(cursor) : field_cursors
+    bitoffset = 0
     for field_cursor in field_cursors
         n = name(field_cursor)
         if isempty(n)
@@ -311,11 +312,13 @@ function _emit_getproperty_ptr!(body, root_cursor, cursor, options)
         offset = getOffsetOf(getCursorType(root_cursor), n)
         if isBitField(field_cursor)
             w = getFieldDeclBitWidth(field_cursor)
-            @assert w <= 32 # Bit fields should not be larger than int(32 bits)
-            d, r = divrem(offset, 32)
-            ex = :(f === $(QuoteNode(fsym)) && return (Ptr{$ty}(x + $(4d)), $r, $w))
+            d = (offset - bitoffset) ÷ 8
+            r = bitoffset
+            bitoffset += w
+            ex = :(f === $(QuoteNode(fsym)) && return (Ptr{$ty}(x + $d), $r, $w))
         else
             d = offset ÷ 8
+            bitoffset = 0
             ex = :(f === $(QuoteNode(fsym)) && return Ptr{$ty}(x + $d))
         end
         push!(body.args, ex)
@@ -352,10 +355,8 @@ function emit_getproperty!(dag, node, options)
     load_expr = :(GC.@preserve r unsafe_load(fptr))
     load_expr.args[2] = nothing
 
-    load_base_expr = :(GC.@preserve r unsafe_load(baseptr32))
+    load_base_expr = :(GC.@preserve r unsafe_load(baseptr))
     load_base_expr.args[2] = nothing
-    load_next_expr = :(GC.@preserve r unsafe_load(baseptr32 + 4))
-    load_next_expr.args[2] = nothing
 
     if is_bitfield_type(node.type)
         ex = quote
@@ -364,13 +365,9 @@ function emit_getproperty!(dag, node, options)
             else
                 baseptr, offset, width = fptr
                 ty = eltype(baseptr)
-                baseptr32 = convert(Ptr{UInt32}, baseptr)
-                u64 = $load_base_expr
-                if offset + width > 32
-                    u64 |= ($load_next_expr) << 32
-                end
-                u64 = (u64 >> offset) & ((1 << width) - 1)
-                return u64 % ty
+                v = $load_base_expr
+                mask = (one(unsigned(ty)) << width) - 0x1
+                return ((unsigned(v) >> offset) & mask) % ty
             end
         end
     else
@@ -399,19 +396,12 @@ function emit_setproperty!(dag, node, options)
                 $store_expr
             else
                 baseptr, offset, width = fptr
-                baseptr32 = convert(Ptr{UInt32}, baseptr)
-                u64 = unsafe_load(baseptr32)
-                straddle = offset + width > 32
-                if straddle
-                    u64 |= unsafe_load(baseptr32 + 4) << 32
-                end
-                mask = ((1 << width) - 1)
-                u64 &= ~(mask << offset)
-                u64 |= (unsigned(v) & mask) << offset
-                unsafe_store!(baseptr32, u64 & typemax(UInt32))
-                if straddle
-                    unsafe_store!(baseptr32 + 4, u64 >> 32)
-                end
+                ty = eltype(baseptr)
+                mask = (one(unsigned(ty)) << width) - 0x1
+                v0 = unsigned(unsafe_load(baseptr))
+                v0 &= ~(mask << offset)
+                v0 |= (unsigned(v) & mask) << offset
+                unsafe_store!(baseptr, v0 % ty)
             end
         end
         rm_line_num_node!(body)
@@ -489,10 +479,14 @@ end
 function emit_constructor!(dag, node::ExprNode{<:StructLayout}, options)
     sym = make_symbol_safe(node.id)
     fsyms, tys = get_names_types(node.cursor, node.cursor, options)
+    valassign = :(GC.@preserve ref begin
+        $((:(ptr.$fsym = $fsym) for fsym in fsyms)...)
+    end)
+    valassign.args[2] = nothing
     body = quote
         ref = Ref{$sym}()
         ptr = Base.unsafe_convert(Ptr{$sym}, ref)
-        $((:(ptr.$fsym = $fsym) for fsym in fsyms)...)
+        $valassign
         ref[]
     end
 

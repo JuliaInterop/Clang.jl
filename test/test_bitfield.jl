@@ -50,7 +50,7 @@ function build_libbitfield()
         build!(ctx)
 
         # Call a function to ensure build is successful
-        println(read(output_path))
+        println(read(output_path, String))
         include(output_path)
 
         m = Base.@invokelatest LibBitField.Mirror(10, 1.5, 1e6, -4, 7, 3)
@@ -72,8 +72,8 @@ end
 function test_libbitfield()
     bf = Ref(LibBitField.BitField(Int8(10), 1.5, Int32(1e6), Int32(-4), Int32(7), UInt32(3)))
     m = Ref(LibBitField.Mirror(10, 1.5, 1e6, -4, 7, 3))
-    lbf = Ref(LibBitField.LargeBitField(1.5, Int16(10000), UInt(1023), UInt(2^40 - 1), Int8(-73), Int32(1234567)))
-    lm = Ref(LibBitField.LargeMirror(1.5, 10000, 1023, 2^40 - 1, Int8(-73), Int32(1234567)))
+    lbf = Ref(LibBitField.LargeBitField(1.5, Int16(10000), UInt64(1023), UInt64(Int64(2)^40 - 1), Int8(-73), Int32(1234567)))
+    lm = Ref(LibBitField.LargeMirror(1.5, 10000, 1023, Int64(2)^40 - 1, Int8(-73), Int32(1234567)))
     GC.@preserve bf m lbf lm begin
         pbf = Ptr{LibBitField.BitField}(pointer_from_objref(bf))
         pm = Ptr{LibBitField.Mirror}(pointer_from_objref(m))

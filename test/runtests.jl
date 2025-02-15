@@ -7,5 +7,6 @@ using REPL
 
 include("ClangTests.jl")
 
+using Test
 include("test_bitfield.jl")
 #retest(Clang, ClangTests; stats=true)

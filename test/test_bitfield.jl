@@ -50,17 +50,19 @@ function build_libbitfield()
         build!(ctx)
 
         # Call a function to ensure build is successful
+        println(read(output_path))
         include(output_path)
 
         m = Base.@invokelatest LibBitField.Mirror(10, 1.5, 1e6, -4, 7, 3)
         Base.@invokelatest LibBitField.toBitfield(Ref(m))
     catch e
-        if haskey(ENV, "CI")
-            rethrow()
-        else
-            @warn "Building libbitfield failed: $e"
-            success = false
-        end
+        rethrow()
+        # if haskey(ENV, "CI")
+        #     rethrow()
+        # else
+        #     @warn "Building libbitfield failed: $e"
+        #     success = false
+        # end
     end
     return success
 end
@@ -72,7 +74,7 @@ function test_libbitfield()
     m = Ref(LibBitField.Mirror(10, 1.5, 1e6, -4, 7, 3))
     lbf = Ref(LibBitField.LargeBitField(1.5, Int16(10000), UInt(1023), UInt(2^40 - 1), Int8(-73), Int32(1234567)))
     lm = Ref(LibBitField.LargeMirror(1.5, 10000, 1023, 2^40 - 1, Int8(-73), Int32(1234567)))
-    GC.@preserve bf m begin
+    GC.@preserve bf m lbf lm begin
         pbf = Ptr{LibBitField.BitField}(pointer_from_objref(bf))
         pm = Ptr{LibBitField.Mirror}(pointer_from_objref(m))
         @test LibBitField.toMirror(bf) == m[]

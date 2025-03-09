@@ -299,5 +299,6 @@ end
     ctx = create_context(joinpath(@__DIR__, "include/typedef-union-in-struct.h"),
                          get_default_args())
     @test_logs (:info, "Done!") match_mode = :any build!(ctx)
-    @test ctx.dag.nodes[end].type isa Generators.StructLayout
+    @test ctx.dag.nodes[end-1].id == :C_STRUCT
+    @test ctx.dag.nodes[end-1].type isa Generators.StructLayout
 end

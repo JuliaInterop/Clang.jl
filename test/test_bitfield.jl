@@ -34,7 +34,7 @@ function build_libbitfield()
     try
         # Compile binary
         if !build_libbitfield_native()
-            error("Could not build libbitfield binary")
+            error("Could not build libbitfield binary. Hint: Deleting `$(joinpath(@__DIR__, "build/"))` may resolve the issue.")
         end
 
         # Generate wrappers

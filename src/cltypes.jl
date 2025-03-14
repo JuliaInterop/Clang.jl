@@ -123,3 +123,19 @@ Base.show(io::IO, x::CXComment) = print(io, "$(kind(x))")
 Base.show(io::IO, x::CLComment) = print(io, "CLComment (", typeof(x), ")")
 
 getTranslationUnit(c::CLComment) = c.TranslationUnit
+
+const CLVersion = CXVersion
+Base.convert(::Type{VersionNumber}, x::CLVersion) = VersionNumber(max(x.Major,0), max(x.Minor,0), max(x.Subminor,0))
+
+
+struct CLPlatformAvailability
+    Introduced::CLVersion
+    Deprecated::CLVersion
+    Obsoleted::CLVersion
+    Unavailable::Bool
+end
+CLPlatformAvailability(pa::CXPlatformAvailability) =
+    CLPlatformAvailability(pa.Introduced, pa.Deprecated, pa.Obsoleted, pa.Unavailable != 0)
+Base.convert(::Type{CLPlatformAvailability}, x::CXPlatformAvailability) =
+    CLPlatformAvailability(x)
+

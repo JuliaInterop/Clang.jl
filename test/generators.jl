@@ -294,3 +294,11 @@ end
     @test extract_expr(ctx, 3) == :(const TEST_SIGNED = Clong(0x00000001))
     @test extract_expr(ctx, 4) == :(const TEST_SIGNED_2 = Clong(2147483646))
 end
+
+@testset "#529" begin
+    ctx = create_context(joinpath(@__DIR__, "include/typedef-union-in-struct.h"),
+                         get_default_args())
+    @test_logs (:info, "Done!") match_mode = :any build!(ctx)
+    @test ctx.dag.nodes[end-1].id == :C_STRUCT
+    @test ctx.dag.nodes[end-1].type isa Generators.StructLayout
+end

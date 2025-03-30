@@ -3,10 +3,10 @@ module Clang
 include("platform/JLLEnvs.jl")
 using .JLLEnvs
 
-# LLVM 16 is used in Julia 1.11.
+# LLVM 12 is used in Julia 1.7.
 # Change this value when increasing
 # minimum supported version
-EARLIEST_LLVM_VERSION = 16
+EARLIEST_LLVM_VERSION = 12
 
 # Change this value when adding
 # new supported wrapper version

@@ -178,7 +178,11 @@ use_ccall_macro = true
 # if true, variadic functions are wrapped with `@ccall` macro. Otherwise variadic functions are ignored.
 wrap_variadic_function = false
 
-# generate getproperty/setproperty! methods for the types in the following list
+# Generate getproperty/setproperty! methods for the types in the following list.
+# Warning: the generated methods will only work on the architecture that they
+# were generated on. i.e. if you generate them on a 64bit machine they are not
+# guaranteed to work on 32bit machines. See
+# https://github.com/JuliaInterop/Clang.jl/issues/512 for more details.
 field_access_method_list = []
 
 # the generator will prefix the function argument names in the following list with a "_" to

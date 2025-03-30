@@ -299,8 +299,9 @@ end
     ctx = create_context(joinpath(@__DIR__, "include/typedef-union-in-struct.h"),
                          get_default_args())
     @test_logs (:info, "Done!") match_mode = :any build!(ctx)
-    @test ctx.dag.nodes[end-1].id == :C_STRUCT
-    @test ctx.dag.nodes[end-1].type isa Generators.StructLayout
+    i = Clang.llvm_version >= 16 ? 1 : 0
+    @test ctx.dag.nodes[end-i].id == :C_STRUCT
+    @test ctx.dag.nodes[end-i].type isa Generators.StructLayout
 end
 
 @testset "#535" begin
@@ -315,6 +316,7 @@ end
     ctx = create_context(joinpath(@__DIR__, "include/alignment.h"),
                          get_default_args())
     @test_logs (:info, "Done!") match_mode = :any build!(ctx)
-    @test ctx.dag.nodes[end-1].id == :UA_FieldMetaData
-    @test ctx.dag.nodes[end-1].type isa Generators.StructLayout
+    i = Clang.llvm_version >= 16 ? 1 : 0
+    @test ctx.dag.nodes[end-i].id == :UA_FieldMetaData
+    @test ctx.dag.nodes[end-i].type isa Generators.StructLayout
 end

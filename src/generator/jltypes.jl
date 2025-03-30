@@ -86,6 +86,7 @@ struct JuliaClongdouble <: AbstractJuliaSIT end
 struct JuliaComplex <: AbstractJuliaSIT end
 struct JuliaChalf <: AbstractJuliaSIT end
 struct JuliaCfloat16 <: AbstractJuliaSIT end
+struct JuliaCfloat128 <: AbstractJuliaSIT end
 
 struct JuliaCuint64_t <: AbstractJuliaSIT end
 struct JuliaCuint32_t <: AbstractJuliaSIT end

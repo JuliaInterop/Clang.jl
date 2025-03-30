@@ -310,3 +310,11 @@ end
     @test occursin("##Ctag#", string(ctx.dag.nodes[6].id))
     @test ctx.dag.nodes[6].type isa Generators.UnionAnonymous
 end
+
+@testset "#536" begin
+    ctx = create_context(joinpath(@__DIR__, "include/alignment.h"),
+                         get_default_args())
+    @test_logs (:info, "Done!") match_mode = :any build!(ctx)
+    @test ctx.dag.nodes[end-1].id == :UA_FieldMetaData
+    @test ctx.dag.nodes[end-1].type isa Generators.StructLayout
+end

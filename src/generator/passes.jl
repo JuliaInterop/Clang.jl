@@ -679,13 +679,8 @@ function (x::CodegenPreprocessing)(dag::ExprDAG, options::Dict)
                 # if any dependent node is a `RecordLayouts` node, mark this node as `StructLayout`
                 for j in n.adj
                     dn = dag.nodes[j]
-                    should_mark = dn.type isa RecordLayouts
-                    # resolve typedefs that are not marked correctly
-                    if is_typedef_elaborated(dn)
-                        dn_cur = getTypeDeclaration(getTypedefDeclUnderlyingType(dn.cursor))
-                        should_mark = dn_cur isa CLUnionDecl
-                    end
-                    should_mark || continue
+                    dn = is_typedef_elaborated(dn) ? dag.nodes[first(dn.adj)] : dn
+                    dn.type isa RecordLayouts || continue
                     # ignore pointer fields
                     field_cursors = fields(getCursorType(n.cursor))
                     field_cursors = isempty(field_cursors) ? children(n.cursor) : field_cursors

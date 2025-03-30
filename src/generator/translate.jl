@@ -63,6 +63,7 @@ translate(jlty::JuliaClongdouble, options=Dict()) = :Float64  # FIXME: the actua
 translate(jlty::JuliaComplex, options=Dict()) = :ComplexF32  # FIXME: correct this
 translate(jlty::JuliaChalf, options=Dict()) = :Float16
 translate(jlty::JuliaCfloat16, options=Dict()) = :Float16
+translate(jlty::JuliaCfloat128, options=Dict()) = :(NTuple{2,VecElement{Float64}})
 translate(jlty::JuliaCuint64_t, options=Dict()) = :UInt64
 translate(jlty::JuliaCuint32_t, options=Dict()) = :UInt32
 translate(jlty::JuliaCuint16_t, options=Dict()) = :UInt16

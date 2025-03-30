@@ -10,7 +10,8 @@ function collect_nested_record!(dag::ExprDAG, node::ExprNode, new_tags, isdeterm
         leaf_jlty isa JuliaCrecord || continue  # nested enums are not legal in C
         # isempty(string(jlty.sym)) && @assert occursin(__ANONYMOUS_MARKER, spelling(named_ty))
         n_cursor = get_elaborated_cursor(field_ty)
-        if isempty(string(leaf_jlty.sym))
+        sym_str = string(leaf_jlty.sym)
+        if isempty(sym_str) || occursin(__ANONYMOUS_MARKER, sym_str) || occursin(__UNNAMED_MARKER, sym_str)
             @assert isCursorDefinition(n_cursor)
             n_id = isdeterministic ? gensym_deterministic("Ctag") : gensym("Ctag")
             ty = n_cursor isa CLStructDecl ? StructAnonymous() : UnionAnonymous()

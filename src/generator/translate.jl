@@ -161,7 +161,7 @@ translate(jlty::JuliaCfunction, options=Dict()) = translate(JuliaCvoid(), option
 function get_nested_tag(nested_tags, jlty)
     for (id, cursor) in nested_tags
         if is_same(jlty.cursor, cursor)
-            @assert isempty(string(jlty.sym))
+            # @assert isempty(string(jlty.sym))
             return id
         end
     end

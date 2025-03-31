@@ -334,6 +334,33 @@ function emit_getproperty_ptr!(dag, node, options)
     return dag
 end
 
+function emit_propertynames!(dag, node, options)
+    sym = make_symbol_safe(node.id)
+    signature = Expr(:call, :(Base.propertynames), :(x::$sym), :($(Expr(:kw, :(private::Bool), false))))
+    body = Expr(:block)
+    props = Expr(:tuple)
+    _emit_propertynames!(props, node.cursor, options)
+    push!(props.args, :((private ? fieldnames(typeof(x)) : ())...))
+    push!(body.args, props)
+    propertynames_expr = Expr(:function, signature, body)
+    push!(node.exprs, propertynames_expr)
+    return dag
+end
+
+function _emit_propertynames!(body, cursor, options)
+    field_cursors = fields(getCursorType(cursor))
+    field_cursors = isempty(field_cursors) ? children(cursor) : field_cursors
+    for field_cursor in field_cursors
+        n = name(field_cursor)
+        if isempty(n)
+            _emit_propertynames!(body, field_cursor, options)
+            continue
+        end
+        fsym = make_symbol_safe(n)
+        push!(body.args, :($(QuoteNode(fsym))))
+    end
+end
+
 function rm_line_num_node!(ex::Expr)
     filter!(ex.args) do arg
         arg isa Expr && rm_line_num_node!(arg)
@@ -633,6 +660,7 @@ function emit!(dag::ExprDAG, node::ExprNode{<:RecordLayouts}, options::Dict; arg
     emit_getproperty_ptr!(dag, node, options)
     emit_getproperty!(dag, node, options)
     emit_setproperty!(dag, node, options)
+    emit_propertynames!(dag, node, options)
 
     opt = get(options, "add_record_constructors", [])
     if (opt isa Bool && opt) || sym in opt

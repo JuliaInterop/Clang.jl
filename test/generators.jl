@@ -318,3 +318,39 @@ end
     @test ctx.dag.nodes[end-1].id == :UA_FieldMetaData
     @test ctx.dag.nodes[end-1].type isa Generators.StructLayout
 end
+
+@testset "Constructors" begin
+    mktemp() do path, io
+        # Generate the bindings
+        # XXX: change `[:_ConstructorTestNormal]` to `true` when constructors of structs with unions are supported
+        options = Dict("general" => Dict{String, Any}("output_file_path" => path),
+        "codegen" => Dict{String, Any}("add_record_constructors" => [:_ConstructorTestNormal]))
+        ctx = create_context(joinpath(@__DIR__, "include/constructors.h"),
+                         get_default_args(), options)
+        build!(ctx)
+
+        # Load into a temporary module to avoid polluting the global namespace
+        m = Module()
+        Base.include(m, path)
+
+        pf1 = @invokelatest m.PackedFloat3(reinterpret(NTuple{12, UInt8}, (1f0, 2f0, 3f0)))
+        pf2 = @invokelatest m.PackedFloat3(reinterpret(NTuple{12, UInt8}, (4f0, 5f0, 6f0)))
+        ctn = @invokelatest m.ConstructorTestNormal(pf1, pf2)
+
+        @test @invokelatest(ctn.arg1) === pf1
+        @test @invokelatest(ctn.arg2) === pf2
+
+        # XXX: Unmark broken when constructors of structs with Unions are supported
+        @test_broken tpf1 = @invokelatest m.PackedFloat3(1f0, 2f0, 3f0)
+        @test_broken @invokelatest(tpf1.x) === 1f0
+        @test_broken @invokelatest(tpf1.y) === 2f0
+        @test_broken @invokelatest(tpf1.z) === 3f0
+        @test_broken @invokelatest(tpf1.elements) === (1f0, 2f0, 3f0)
+
+        @test_broken tpf2 = @invokelatest m.PackedFloat3((1f0, 2f0, 3f0))
+        @test_broken @invokelatest(tpf2.x) === 1f0
+        @test_broken @invokelatest(tpf2.y) === 2f0
+        @test_broken @invokelatest(tpf2.z) === 3f0
+        @test_broken @invokelatest(tpf2.elements) === (1f0, 2f0, 3f0)
+    end
+end

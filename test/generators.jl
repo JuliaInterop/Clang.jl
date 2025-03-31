@@ -322,9 +322,8 @@ end
 @testset "Constructors" begin
     mktemp() do path, io
         # Generate the bindings
-        # XXX: change `[:_ConstructorTestNormal]` to `true` when constructors of structs with unions are supported
         options = Dict("general" => Dict{String, Any}("output_file_path" => path),
-        "codegen" => Dict{String, Any}("add_record_constructors" => [:_ConstructorTestNormal]))
+        "codegen" => Dict{String, Any}("add_record_constructors" => true))
         ctx = create_context(joinpath(@__DIR__, "include/constructors.h"),
                          get_default_args(), options)
         build!(ctx)

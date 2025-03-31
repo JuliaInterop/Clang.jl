@@ -62,8 +62,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: julia-actions/setup-julia@latest
-        with:
-          version: '1.11'
       - run: |
           julia --project=docs -e '
             using Pkg

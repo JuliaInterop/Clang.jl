@@ -423,15 +423,20 @@ function emit_setproperty!(dag, node, options)
     return dag
 end
 
-function get_names_types(root_cursor, cursor, options)
-    field_cursors = fields(getCursorType(cursor))
-    field_cursors = isempty(field_cursors) ? children(cursor) : field_cursors
+function get_names_types(cursor, options)
     tys = []
     fsyms = []
+    _get_names_types(fsyms, tys, cursor, options)
+    fsyms, tys
+end
+function _get_names_types(fsyms, tys, cursor, options)
+    field_cursors = fields(getCursorType(cursor))
+    field_cursors = isempty(field_cursors) ? children(cursor) : field_cursors
     for field_cursor in field_cursors
         n = name(field_cursor)
         if isempty(n)
-            _emit_getproperty_ptr!(root_cursor, field_cursor, options)
+            # XXX: fix constructors of structs with unions (issue #541)
+            # _get_names_types(fsyms, tys, field_cursor, options)
             continue
         end
         fsym = make_symbol_safe(n)
@@ -440,12 +445,11 @@ function get_names_types(root_cursor, cursor, options)
         push!(tys, ty)
         push!(fsyms, fsym)
     end
-    fsyms, tys
 end
 
 function emit_constructor!(dag, node::ExprNode{<:AbstractUnionNodeType}, options)
     sym = make_symbol_safe(node.id)
-    fsyms, tys = get_names_types(node.cursor, node.cursor, options)
+    fsyms, tys = get_names_types(node.cursor, options)
     union_sym = Symbol(:__U_, sym)
     push!(node.exprs, :(const $union_sym = Union{$(tys...)}))
     body = Expr(:block,
@@ -488,7 +492,7 @@ end
 
 function emit_constructor!(dag, node::ExprNode{<:StructLayout}, options)
     sym = make_symbol_safe(node.id)
-    fsyms, tys = get_names_types(node.cursor, node.cursor, options)
+    fsyms, tys = get_names_types(node.cursor, options)
     body = quote
         ref = Ref{$sym}()
         ptr = Base.unsafe_convert(Ptr{$sym}, ref)

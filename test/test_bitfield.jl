@@ -70,7 +70,9 @@ end
 function test_libbitfield()
     bf = Ref(LibBitField.BitField(Int8(10), 1.5, Int32(1e6), Int32(-4), Int32(7), UInt32(3)))
     m = Ref(LibBitField.Mirror(10, 1.5, 1e6, -4, 7, 3))
-    GC.@preserve bf m begin
+    lbf = Ref(LibBitField.LargeBitField(1.5, Int16(10000), UInt64(1023), UInt64(Int64(2)^40 - 1), Int8(-73), Int32(1234567)))
+    lm = Ref(LibBitField.LargeMirror(1.5, 10000, 1023, Int64(2)^40 - 1, Int8(-73), Int32(1234567)))
+    GC.@preserve bf m lbf lm begin
         pbf = Ptr{LibBitField.BitField}(pointer_from_objref(bf))
         pm = Ptr{LibBitField.Mirror}(pointer_from_objref(m))
         @test LibBitField.toMirror(bf) == m[]
@@ -80,6 +82,15 @@ function test_libbitfield()
         @test LibBitField.toBitfield(m).d == bf[].d
         @test LibBitField.toBitfield(m).e == bf[].e
         @test LibBitField.toBitfield(m).f == bf[].f
+        plbf = Ptr{LibBitField.LargeBitField}(pointer_from_objref(lbf))
+        plm = Ptr{LibBitField.LargeMirror}(pointer_from_objref(lm))
+        @test LibBitField.toLargeMirror(lbf) == lm[]
+        @test LibBitField.toLargeBitfield(lm).a == lbf[].a
+        @test LibBitField.toLargeBitfield(lm).b == lbf[].b
+        @test LibBitField.toLargeBitfield(lm).c == lbf[].c
+        @test LibBitField.toLargeBitfield(lm).d == lbf[].d
+        @test LibBitField.toLargeBitfield(lm).e == lbf[].e
+        @test LibBitField.toLargeBitfield(lm).f == lbf[].f
     end
 end
 

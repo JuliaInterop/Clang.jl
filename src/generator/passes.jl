@@ -337,7 +337,7 @@ function detect_cycle!(nodes, marks, cycle, i)
     return cycle
 end
 
-function is_non_pointer_ref(child, parent)
+function is_non_pointer_ref(child::ExprNode{<:AbstractStructNodeType}, parent)
     is_non_pointer_dep = false
     for fc in fields(getCursorType(child.cursor))
         fty = getCursorType(fc)
@@ -349,6 +349,25 @@ function is_non_pointer_ref(child, parent)
     end
     return is_non_pointer_dep
 end
+
+function is_non_pointer_ref(child::ExprNode{<:AbstractObjCObjNodeType}, parent)
+    is_non_pointer_dep = false
+    for c in children(child.cursor)
+        if c isa CLObjCPropertyDecl
+            fty = getCursorType(c)
+            is_jl_pointer(tojulia(fty)) && continue
+
+            c = getTypeDeclaration(fty)
+            if c == parent.cursor
+                is_non_pointer_dep = true
+            end
+        end
+    end
+    return is_non_pointer_dep
+end
+
+_new_node_type(::ExprNode{<:AbstractStructNodeType}) = StructMutualRef()
+_new_node_type(child::ExprNode{<:AbstractObjCObjNodeType}) = child.type
 
 const MAX_CIRCIR_DETECTION_COUNT = 100000
 
@@ -372,14 +391,14 @@ function (x::RemoveCircularReference)(dag::ExprDAG, options::Dict)
             for i in 1:(length(cycle) - 1)
                 np, nc = cycle[i], cycle[i + 1]
                 parent, child = dag.nodes[np], dag.nodes[nc]
-                if child.type isa AbstractStructNodeType
+                if child.type isa AbstractStructNodeType || child.type isa AbstractObjCObjNodeType
                     # only pointer references can be safely removed
                     if !is_non_pointer_ref(child, parent)
                         typedef_only = false
                         idx = findfirst(x -> x == np, child.adj)
                         deleteat!(child.adj, idx)
                         id = child.id
-                        ty = StructMutualRef()
+                        ty = _new_node_type(child)
                         dag.nodes[nc] = ExprNode(id, ty, child.cursor, child.exprs, child.adj)
                         show_info &&
                             @info "[RemoveCircularReference]: removed $(child.id)'s dependency $(parent.id)"

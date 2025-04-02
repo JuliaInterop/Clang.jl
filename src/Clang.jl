@@ -33,6 +33,8 @@ foreach(names(@__MODULE__; all=true)) do s
         @eval export $s
     end
 end
+export CLVersion, CLPlatformAvailability
+
 
 include("string.jl")
 
@@ -55,7 +57,7 @@ export kind, name, spelling, value
 export file, file_line_column
 export get_filename, get_file_line_column, get_function_args
 export is_typedef_anon, is_forward_declaration, is_inclusion_directive
-export search, children
+export search, children, getCursorPlatformAvailability
 
 include("type.jl")
 export has_elaborated_reference, has_elaborated_tag_reference, get_elaborated_cursor

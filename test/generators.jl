@@ -231,6 +231,47 @@ end
     end
 end
 
+@static if Sys.isapple()
+@testset "Objective-C" begin
+    args = [get_default_args(); ["-x","objective-c"]]
+    options = Dict("codegen" => Dict{String,Any}("version_function" => "version_function"))
+
+    ctx = create_context([joinpath(@__DIR__, "include/objectiveC.h")], args, options)
+    mktemp() do path, io
+        redirect_stdout(io) do
+            build!(ctx)
+        end
+        close(io)
+
+        output = Ref{String}("")
+        open(path) do file
+            output[] = read(file, String)
+        end
+
+        print(output[])
+        @test contains(output[],"@objcwrapper immutable = true TestProtocol <: NSObject") # Protocol
+        @test contains(output[],"@objcwrapper immutable = true TestProtocol2 <: TestProtocol") # Protocol subtyping Protocol
+        @test contains(output[],"@objcwrapper immutable = true TestInterface <: NSObject") # Interface
+
+        @test contains(output[],"@objcwrapper immutable = true availability = macos(v\"100.11.0\") TestAvailability <: NSObject") # Wrapper Availability
+        @test contains(output[],"@autoproperty length::Int32 availability = macos(v\"101.11.0\")") # Property Availability
+
+        # Interface Properties
+        @test contains(output[],"@objcproperties TestInterfaceProperties begin")
+        @test contains(output[],"@autoproperty intproperty1")
+        @test contains(output[],"@autoproperty intproperty2")
+        @test contains(output[],"setter = setIntproperty1")
+        @test contains(output[],"getter = isintproperty2")
+        @test contains(output[],"getter = isintproperty3 setter = setIntproperty3")
+        @test contains(output[],"@autoproperty intproperty3")
+        @test contains(output[],"@autoproperty intproperty4::id{TestInterface}")
+        @test contains(output[],"@autoproperty intproperty5::id{TestProtocol}")
+        @test contains(output[],"type = Vector{TestProtocol}") broken=true #XXX
+        @test contains(output[],"type = Vector{TestInterface}") broken=true #XXX
+    end
+end
+end
+
 @testset "Issue 452 - StructMutualRef" begin
     ctx = create_context([joinpath(@__DIR__, "include/struct-mutual-ref.h")], get_default_args())
     @test_logs (:info, "Done!") match_mode = :any build!(ctx)

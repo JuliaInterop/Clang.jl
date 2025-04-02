@@ -158,6 +158,31 @@ end
 
 translate(jlty::JuliaCfunction, options=Dict()) = translate(JuliaCvoid(), options)
 
+function translate(jlty::JuliaObjCClass, options=Dict())
+    ids = get(options, "DAG_ids", Dict())
+    ids_extra = get(options, "DAG_ids_extra", Dict())
+
+    if haskey(ids, jlty.sym)
+        return make_symbol_safe(jlty.sym)
+    elseif haskey(ids_extra, jlty.sym)
+        return translate(ids_extra[jlty.sym], options)
+    elseif get(options, "opaque_func_arg_as_PtrCvoid", false)
+        return translate(JuliaCvoid(), options)
+    else
+        return make_symbol_safe(jlty.sym)
+    end
+end
+function translate(jlty::JuliaObjCId, options=Dict())
+    ids = get(options, "DAG_ids", Dict())
+    ids_extra = get(options, "DAG_ids_extra", Dict())
+
+    if haskey(ids, jlty.sym)
+        return :(id{Object})
+    else
+        return :(id{NSObject})
+    end
+end
+
 function get_nested_tag(nested_tags, jlty)
     for (id, cursor) in nested_tags
         if is_same(jlty.cursor, cursor)

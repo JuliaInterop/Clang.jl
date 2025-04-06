@@ -353,3 +353,22 @@ end
         @test_broken @invokelatest(tpf2.elements) === (1f0, 2f0, 3f0)
     end
 end
+
+@testset "#426 - Base.propertynames" begin
+    mktemp() do path, io
+        # Generate the bindings
+        options = Dict("general" => Dict{String, Any}("output_file_path" => path))
+        ctx = create_context(joinpath(@__DIR__, "include/anon-struct-in-anon-union.h"),
+                         get_default_args(), options)
+        build!(ctx)
+
+        # Load into a temporary module to avoid polluting the global namespace
+        m = Module()
+        Base.include(m, path)
+
+        pf = @invokelatest m.PackedFloat3(reinterpret(NTuple{12, UInt8}, (1f0, 2f0, 3f0)))
+
+        @test @invokelatest(Base.propertynames(pf)) == (:x, :y, :z, :elements)
+        @test @invokelatest(Base.propertynames(pf, true)) == (:x, :y, :z, :elements, :data)
+    end
+end

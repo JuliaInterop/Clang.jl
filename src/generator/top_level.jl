@@ -159,17 +159,70 @@ function collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLEnumDecl, o
     return nodes
 end
 
+is_sometimes_available(::Nothing, ::VersionNumber) = true
+function is_sometimes_available(platavail::CLPlatformAvailability, minver::VersionNumber)
+    platavail.Unavailable && return false
+
+    obsver = platavail.Obsoleted
+
+    # If Obsoleted major version is -1, still available
+    obsver.Major == -1 && return true
+
+    (obsver.Major < minver.major) && return false
+    (obsver.Major > minver.major) && return true
+    (obsver.Minor < minver.minor) && return false
+    (obsver.Minor > minver.minor) && return true
+    (obsver.Subminor <= minver.patch) && return false
+    return true
+end
+
 # TODO: Implement full ObjectiveC codegen
 function collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLObjCClassRef, options)
     return nodes
 end
 function collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLObjCProtocolDecl, options)
+    minsupported = get(options, "minimum_macos_supported", "13") |> VersionNumber
+
+    platavail = getCursorPlatformAvailability(cursor)
+
+    str = spelling(cursor)
+
+    # Ignore if cursor is completely unavailable or obsolete before the minimum supported version
+    if !is_sometimes_available(platavail, minsupported)
+        @info "$str never available, skipping."
+        return nodes
+    end
+
+    id = Symbol(str)
+
+    ty = ObjCObjProtocolDecl()
+
+    push!(nodes, ExprNode(id, ty, cursor, Expr[], Int[]))
+
     return nodes
 end
 function collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLObjCProtocolRef, options)
     return nodes
 end
 function collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLObjCInterfaceDecl, options)
+    minsupported = get(options, "minimum_macos_supported", "13") |> VersionNumber
+
+    platavail = getCursorPlatformAvailability(cursor)
+
+    str = spelling(cursor)
+
+    # Ignore if cursor is completely unavailable or obsolete before the minimum supported version
+    if !is_sometimes_available(platavail, minsupported)
+        @info "$str never available, skipping."
+        return nodes
+    end
+
+    id = Symbol(str)
+
+    ty = ObjCObjInterfaceDecl()
+
+    push!(nodes, ExprNode(id, ty, cursor, Expr[], Int[]))
+
     return nodes
 end
 function collect_top_level_nodes!(nodes::Vector{ExprNode}, cursor::CLObjCCategoryDecl, options)

@@ -21,6 +21,7 @@ skip_check(dag::ExprDAG, node::ExprNode{MacroDuplicated}) = true
 skip_check(dag::ExprDAG, node::ExprNode{StructDuplicated}) = true
 skip_check(dag::ExprDAG, node::ExprNode{UnionDuplicated}) = true
 skip_check(dag::ExprDAG, node::ExprNode{EnumDuplicated}) = true
+skip_check(dag::ExprDAG, node::ExprNode{ObjCObjDuplicated}) = true
 
 function skip_check(dag::ExprDAG, node::ExprNode{FunctionProto})
     cursor = node.cursor

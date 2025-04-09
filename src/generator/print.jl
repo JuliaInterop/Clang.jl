@@ -26,6 +26,15 @@ function pretty_print(io, node::ExprNode{FunctionProto}, options::Dict)
     return nothing
 end
 
+function pretty_print(io, node::ExprNode{<:Union{ObjCObjProtocolDecl,ObjCObjInterfaceDecl}}, options::Dict)
+    @assert !isempty(node.exprs)
+    for expr in node.exprs
+        println(io, expr)
+        println(io)
+    end
+    return nothing
+end
+
 function pretty_print(io, node::ExprNode{FunctionVariadic}, options::Dict)
     isempty(node.exprs) && return
     println(io, "# automatic type deduction for variadic arguments may not be what you want, please use with caution")

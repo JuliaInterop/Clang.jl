@@ -152,13 +152,24 @@ Enum nodes that have special layout.
 """
 struct EnumLayout{Attribute} <: AbstractEnumNodeType end
 
+"""
+    AbstractObjCObjNodeType <: AbstractExprNodeType
+Supertype for ObjectiveC Object declarations nodes.
+"""
+abstract type AbstractObjCObjNodeType <: AbstractTagType end
+
+struct ObjCObjProtocolDecl <: AbstractObjCObjNodeType end
+struct ObjCObjInterfaceDecl <: AbstractObjCObjNodeType end
+struct ObjCObjDuplicated <: AbstractObjCObjNodeType end
+
 # helper type unions
 const ForwardDecls = Union{StructForwardDecl,UnionForwardDecl,EnumForwardDecl}
 const OpaqueTags = Union{StructOpaqueDecl,UnionOpaqueDecl,EnumOpaqueDecl}
 const UnknownDefaults = Union{FunctionDefault,StructDefault,UnionDefault,EnumDefault}
 const RecordLayouts = Union{<:AbstractUnionNodeType,<:StructLayout}
-const DuplicatedTags = Union{EnumDuplicated,UnionDuplicated,StructDuplicated}
+const DuplicatedTags = Union{EnumDuplicated,UnionDuplicated,StructDuplicated, ObjCObjDuplicated}
 const NestedRecords = Union{UnionAnonymous,UnionDefinition,StructAnonymous,StructDefinition}
+const ObjCClassLikeDecl = Union{ObjCObjInterfaceDecl, ObjCObjProtocolDecl}
 
 """
     ExprNode{T<:AbstractExprNodeType,S<:CLCursor}
@@ -253,14 +264,17 @@ is_dup_tagtype(::ExprNode) = false
 is_dup_tagtype(::ExprNode{StructDuplicated}) = true
 is_dup_tagtype(::ExprNode{UnionDuplicated}) = true
 is_dup_tagtype(::ExprNode{EnumDuplicated}) = true
+is_dup_tagtype(::ExprNode{ObjCObjDuplicated}) = true
 
 is_record(::ExprNode) = false
 is_record(::ExprNode{<:AbstractStructNodeType}) = true
 is_record(::ExprNode{<:AbstractUnionNodeType}) = true
+is_record(::ExprNode{<:AbstractObjCObjNodeType}) = true
 
 dup_type(::AbstractFunctionNodeType) = FunctionDuplicated()
 dup_type(::AbstractTypedefNodeType) = TypedefDuplicated()
 dup_type(::AbstractMacroNodeType) = MacroDuplicated()
+dup_type(::AbstractObjCObjNodeType) = ObjCObjDuplicated()
 
 # tag-types are possiblely duplicated because we are doing CTU analysis
 dup_type(::AbstractStructNodeType) = StructDuplicated()

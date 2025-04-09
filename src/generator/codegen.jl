@@ -695,6 +695,7 @@ const ENUM_SYMBOL2TYPE = Dict(
     :Int32 => Int32,
     :Int16 => Int16,
     :Int8 => Int8,
+    :Bool => Int8,
 )
 
 function emit!(dag::ExprDAG, node::ExprNode{<:AbstractEnumNodeType}, options::Dict; args...)
@@ -735,6 +736,232 @@ function emit!(dag::ExprDAG, node::ExprNode{<:AbstractEnumNodeType}, options::Di
     return dag
 end
 
+function emit!(dag::ExprDAG, node::ExprNode{ObjCObjInterfaceDecl}, options::Dict; args...)
+    _emit_objcdecl!(CLObjCSuperClassRef, dag, node, options::Dict; args...)
+end
+function emit!(dag::ExprDAG, node::ExprNode{ObjCObjProtocolDecl}, options::Dict; args...)
+    _emit_objcdecl!(CLObjCProtocolRef, dag, node, options::Dict; args...)
+end
+
+_get_version_introduced(node) = _get_version_introduced(node.cursor)
+function _get_version_introduced(cursor::CLCursor)
+    platavail = getCursorPlatformAvailability(cursor)
+
+    isnothing(platavail) && return nothing
+
+    return convert(CLPlatformAvailability, platavail)
+end
+function _get_availability_expr(avail::CLPlatformAvailability)
+    avail.Unavailable && return Expr(:call, :macos, Expr(:kw, :unavailable, true))
+
+    expr = Expr(:call, :macos)
+
+    depr = avail.Deprecated
+    if !(depr.Major == -1 && depr.Minor == -1 && depr.Subminor == -1)
+        push!(expr.args, Expr(:kw, :deprecated, convert(VersionNumber, depr)))
+    end
+    obso = avail.Obsoleted
+    if !(obso.Major == -1 && obso.Minor == -1 && obso.Subminor == -1)
+        push!(expr.args, Expr(:kw, :obsoleted, convert(VersionNumber, obso)))
+    end
+
+    # For legibility, use the simpler constructor if "introduced" is the only attribute
+    intr = avail.Introduced
+    if !(intr.Major == -1 && intr.Minor == -1 && intr.Subminor == -1)
+        if length(expr.args) > 1
+            insert!(expr.args, 2, Expr(:kw, :introduced, convert(VersionNumber, intr)))
+        else
+            push!(expr.args, convert(VersionNumber, intr))
+        end
+    end
+
+    return length(expr.args) > 1 ? expr : nothing
+end
+
+# Base case
+function getobjcpropertyexpr(_, propertyname::Symbol, propertytype::Union{Symbol, Expr}, asid::Bool, _::Dict)
+    typeexpr = if asid
+        Expr(:curly, :id, propertytype)
+    elseif haskey(ENUM_SYMBOL2TYPE, propertytype)
+        eval(propertytype)
+    else
+        propertytype
+    end
+    Expr(:macrocall, Symbol("@autoproperty"), nothing, Expr(:(::), propertyname, typeexpr))
+end
+
+# Something probably went wrong
+function getobjcpropertyexpr(_, propertyname::Symbol, _, _::Bool, _::Dict)
+    @assert !isnothing(typerefidx) "Something went wrong while generating code for $propertyname, please file an issue."
+end
+
+function getobjcpropertyexpr(node, propertyname::Symbol, propertytype::CLType, asid::Bool, options::Dict)
+    jlty = tojulia(propertytype)
+    if jlty isa JuliaUnknown
+        return Expr(:line, "Skipping property $(Symbol(spelling(node))) because it is $(dumpobj(jlty.x))")
+    else
+        tysym = translate(jlty, options)
+        tysym = tysym == :Cvoid ? jlty.sym : tysym
+        return getobjcpropertyexpr(node, propertyname, tysym, asid, options)
+    end
+end
+
+function getobjcpropertyexpr(node, propertyname::Symbol, cursor::CLObjCProtocolRef, asid::Bool, options::Dict)
+    getobjcpropertyexpr(node, propertyname, Symbol(spelling(cursor)), asid, options)
+end
+
+function getobjcpropertyexpr(node, propertyname::Symbol, _::CLObjCObjectPointer, _::Bool, options::Dict)
+    ch = children(node)
+    classrefidx = findfirst(ch) do c
+        c isa CLObjCClassRef
+    end
+
+    if !isnothing(classrefidx)
+        proptype = Symbol(spelling(ch[classrefidx]))
+        tmpexpr = getobjcpropertyexpr(node, propertyname, proptype, true, options)
+        if proptype == :NSArray
+            arrrefidx = let
+                otherclassidx = findnext(ch, classrefidx+1) do c
+                    c isa CLObjCClassRef
+                end
+                if isnothing(otherclassidx)
+                    ididx = findnext(ch, classrefidx+1) do c
+                        c isa CLTypeRef && spelling(c) == "id"
+                    end
+                    if !isnothing(ididx)
+                        otherprotrefidx = findnext(ch, ididx+1) do c
+                            c isa CLObjCProtocolRef
+                        end
+                        otherprotrefidx
+                    end
+                else
+                    otherclassidx
+                end
+            end
+            if !isnothing(arrrefidx)
+                arrtype = Symbol(spelling(ch[arrrefidx]))
+                julia_type = Expr(:(=), :type, Expr(:curly, :Vector, arrtype))
+                push!(tmpexpr.args, julia_type)
+            end
+        end
+        return tmpexpr
+    else
+        typerefidx = findfirst(ch) do c
+            c isa CLTypeRef
+        end
+
+        @assert !isnothing(typerefidx) "Something went wrong while generating code for $propertyname, please file an issue."
+
+        ty = ch[typerefidx]
+
+        if Symbol(spelling(ty)) == :id
+            protrefidx = findnext(ch, typerefidx+1) do c
+                c isa CLObjCProtocolRef
+            end
+            if !isnothing(protrefidx)
+                return getobjcpropertyexpr(node, propertyname, ch[protrefidx], true, options)
+            end
+        end
+
+        getobjcpropertyexpr(node, propertyname, Symbol(spelling(ty)), true, options)
+    end
+end
+
+function getobjcpropertyexpr(node, propertyname::Symbol, cursortype::CLElaborated, asid::Bool, options::Dict)
+    ty = getTypeDeclaration(cursortype) |>
+        getTypedefDeclUnderlyingType |>
+        getCanonicalType
+
+    return getobjcpropertyexpr(node, propertyname, ty, asid, options)
+end
+
+function generateautopropertydecl(propdeclnode, minsup, options::Dict)
+    propertyname = Symbol(spelling(propdeclnode))
+    cursortype = getCursorType(propdeclnode)
+
+    expr = getobjcpropertyexpr(propdeclnode, propertyname, cursortype, false, options)
+
+    platform_availability = _get_version_introduced(propdeclnode)
+
+    ## Add getter if property name is different to getter (Bools)
+    getter = Symbol(Clang.getObjCPropertyGetterName(propdeclnode))
+    if expr isa Expr && getter != propertyname
+        push!(expr.args, Expr(:(=), :getter, getter))
+    end
+
+    ## Add setter if necessary
+    attrs = Clang.getObjCPropertyAttributes(propdeclnode)
+
+    # readwrite is the default, and is mutually exclusive with readonly,
+    # so check that readonly is false to capture properties that don't set either
+    isreadwrite = !Clang.checkPropertyAttribute(attrs, CXObjCPropertyAttr_readonly)
+    if expr isa Expr && isreadwrite
+        setter = Symbol(replace(Clang.getObjCPropertySetterName(propdeclnode), ":" => ""))
+        push!(expr.args, Expr(:(=), :setter, setter))
+    end
+
+    # add availability attribute to end of property declaration
+    if !isnothing(platform_availability) && !isnothing(minsup) && convert(VersionNumber, platform_availability.Introduced) > minsup
+        avail_expr = _get_availability_expr(platform_availability)
+        isnothing(avail_expr) || push!(expr.args, Expr(:(=), :availability, avail_expr))
+    end
+
+    return expr
+end
+
+@inline function _emit_objcdecl!(::Type{T}, dag::ExprDAG, node::ExprNode, options::Dict; args...) where T
+    # macOS 13 is the oldest support version of macOS
+    minsupported = get(options, "minimum_macos_supported", "13") |> VersionNumber
+
+    platform_availability = _get_version_introduced(node)
+
+    super = let
+        firstref = findfirst(children(node.cursor)) do item_cursor
+            item_cursor isa T
+        end
+        if !isnothing(firstref)
+            Symbol(spelling(children(node.cursor)[firstref]))
+        else
+            :NSObject
+        end
+    end
+
+    # @objcwrapper
+    wrapperexpr = Expr(:macrocall, Symbol("@objcwrapper"), nothing, Expr(:(=), :immutable, :true))
+
+    # add availability attribute before type declaration
+    if !isnothing(platform_availability) && !isnothing(minsupported) && convert(VersionNumber, platform_availability.Introduced) > minsupported
+        avail_expr = _get_availability_expr(platform_availability)
+        isnothing(avail_expr) || push!(wrapperexpr.args, Expr(:(=), :availability, avail_expr))
+    end
+
+    # type declaration
+    push!(wrapperexpr.args, Expr(:(<:), node.id, super))
+
+    # add @objcwrapper to node expressions
+    push!(node.exprs, wrapperexpr)
+
+    # @objcproperties
+    propertyexpr = Expr(:macrocall, Symbol("@objcproperties"), nothing, node.id, Expr(:block))
+    propertyargs = propertyexpr.args[4].args
+    for child in children(node.cursor)
+        if child isa CLObjCPropertyDecl
+            # Use version_introduced for the object as the minimum supported version
+            #  for the property to avoid needless versions checks
+            minsup = isnothing(platform_availability) ? minsupported : max(minsupported, convert(VersionNumber, platform_availability.Introduced))
+            declexpr = generateautopropertydecl(child, minsup, options)
+            # isnothing(declexpr) || push!(propertyargs, declexpr)
+            push!(propertyargs, declexpr)
+        end
+    end
+
+    # add @objcproperties to node expression
+    if !isempty(propertyargs)
+        push!(node.exprs, propertyexpr)
+    end
+
+    return dag
+end
 
 ################## ForwardDecl OpaqueDecl DefaultDecl DuplicatedTags ##################
 

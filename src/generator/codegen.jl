@@ -301,7 +301,7 @@ function _emit_getproperty_ptr!(body, root_cursor, cursor, options)
     field_cursors = isempty(field_cursors) ? children(cursor) : field_cursors
     for field_cursor in field_cursors
         n = name(field_cursor)
-        if isempty(n)
+        if isempty(n) || getCursorType(field_cursor) isa CLRecord
             _emit_getproperty_ptr!(body, root_cursor, field_cursor, options)
             continue
         end
@@ -352,7 +352,7 @@ function _emit_propertynames!(body, cursor, options)
     field_cursors = isempty(field_cursors) ? children(cursor) : field_cursors
     for field_cursor in field_cursors
         n = name(field_cursor)
-        if isempty(n)
+        if isempty(n) || getCursorType(field_cursor) isa CLRecord
             _emit_propertynames!(body, field_cursor, options)
             continue
         end

@@ -3,17 +3,20 @@
 This documents notable changes in Clang.jl. The format is based on [Keep a
 Changelog](https://keepachangelog.com).
 
-## [Unreleased](https://github.com/JuliaInterop/Clang.jl/compare/v0.18.3...master)
+## [v0.19.0] - 2025-08-14
 
 ### Added
 
 - Added support for recognizing signed chars as enum constants
   ([5a1cc29](https://github.com/JuliaInterop/Clang.jl/commit/5a1cc29c154ed925f01e59dfd705cbf8042158e4)).
-- Added bindings for Clang 17, which should allow compatibility with Julia 1.12
-  ([#494]).
+- Added bindings for Clang 17/18/19, which should allow compatibility with Julia
+  1.12 and 1.13 ([#494], [#503], [#526]).
 - Added [`TranslationUnit(::Function)`](@ref),
   [`parse_header(::Function)`](@ref), and [`parse_headers(::Function)`](@ref) to
   help with using Clang.jl in a memory-safe way ([#545]).
+- Added initial support for generating bindings for ObjectiveC code, currently
+  limited to interfaces and protocols ([#505], [#519], [#522], [#524], [#527]).
+- Implemented `Base.propertynames` for Union structs ([#538]).
 
 ### Fixed
 
@@ -23,6 +26,7 @@ Changelog](https://keepachangelog.com).
   the same name, which previously caused the generator to crash ([#500]).
 - Large L-suffixed integer literals that are greater than `typemax(Clong)` will now be wrapped
   as unsigned integers (`Culong`) ([#516]).
+- Fixed handling of non-field struct children ([#479]).
 
 ## [v0.18.3] - 2024-04-23
 

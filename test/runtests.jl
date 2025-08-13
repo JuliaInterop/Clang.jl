@@ -7,4 +7,4 @@ using REPL
 
 include("ClangTests.jl")
 
-retest(Clang, ClangTests; stats=true, spin=false)
+retest(Clang, ClangTests; stats=true)

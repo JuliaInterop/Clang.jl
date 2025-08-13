@@ -11,6 +11,15 @@ mutable struct Index
     exclude_decls_from_PCH::Cint
     display_diagnostics::Cint
     function Index(exclude_decls_from_PCH, display_diagnostics)
+        # LLVM's CrashRecoveryContext replaces all signal handlers and assumes that
+        # a SIGSEGV signal is fatal, which is incompatible with language runtimes
+        # like Julia / Java which use this signal as a hook for GC safepoints.
+        #
+        # This update to ENV is not thread-safe either. However, we don't have many
+        # other options at this point, since libclang exposes no argument for this.
+        if !in("LIBCLANG_DISABLE_CRASH_RECOVERY", keys(ENV))
+            ENV["LIBCLANG_DISABLE_CRASH_RECOVERY"] = "1" # value doesn't matter
+        end
         ptr = clang_createIndex(exclude_decls_from_PCH, display_diagnostics)
         @assert ptr != C_NULL
         obj = new(ptr, exclude_decls_from_PCH, display_diagnostics)

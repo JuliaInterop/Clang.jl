@@ -11,6 +11,9 @@ Changelog](https://keepachangelog.com).
   ([5a1cc29](https://github.com/JuliaInterop/Clang.jl/commit/5a1cc29c154ed925f01e59dfd705cbf8042158e4)).
 - Added bindings for Clang 17, which should allow compatibility with Julia 1.12
   ([#494]).
+- Added [`TranslationUnit(::Function)`](@ref),
+  [`parse_header(::Function)`](@ref), and [`parse_headers(::Function)`](@ref) to
+  help with using Clang.jl in a memory-safe way ([#545]).
 
 ### Fixed
 

@@ -29,6 +29,11 @@ function build_libbitfield_native()
     return success
 end
 
+function check_build()
+    m = LibBitField.Mirror(10, 1.5, 1e6, -4, 7, 3)
+    LibBitField.toBitfield(Ref(m))
+end
+
 function build_libbitfield()
     success = true
     try
@@ -52,8 +57,7 @@ function build_libbitfield()
         # Call a function to ensure build is successful
         include(output_path)
 
-        m = Base.@invokelatest LibBitField.Mirror(10, 1.5, 1e6, -4, 7, 3)
-        Base.@invokelatest LibBitField.toBitfield(Ref(m))
+        Base.@invokelatest check_build()
     catch e
         if haskey(ENV, "CI")
             rethrow()

@@ -146,18 +146,20 @@ end
 end
 
 @testset "Issue 327" begin
-    tu = parse_header(Index(), joinpath(@__DIR__, "include/void-type.h"))
-    root = Clang.getTranslationUnitCursor(tu)
-    func = children(root)[]
-    ret_type = Clang.getCursorResultType(func)
-    @test ret_type isa CLVoid
+    parse_header(Index(), joinpath(@__DIR__, "include/void-type.h")) do tu
+        root = Clang.getTranslationUnitCursor(tu)
+        func = children(root)[]
+        ret_type = Clang.getCursorResultType(func)
+        @test ret_type isa CLVoid
+    end
 end
 
 @testset "Issue 355" begin
-    tu = parse_header(Index(), joinpath(@__DIR__, "include/return-funcptr.h"))
-    root = Clang.getTranslationUnitCursor(tu)
-    func = children(root)[3]
-    @test length(get_function_args(func)) == 1
+    parse_header(Index(), joinpath(@__DIR__, "include/return-funcptr.h")) do tu
+        root = Clang.getTranslationUnitCursor(tu)
+        func = children(root)[3]
+        @test length(get_function_args(func)) == 1
+    end
 end
 
 @testset "macros" begin
@@ -411,5 +413,29 @@ end
 
         @test @invokelatest(Base.propertynames(pf)) == (:x, :y, :z, :elements)
         @test @invokelatest(Base.propertynames(pf, true)) == (:x, :y, :z, :elements, :data)
+    end
+end
+
+@testset "parse_headers()" begin
+    # Mostly a test of the do-method
+    mktempdir() do d
+        headers = joinpath.(d, ["foo.h", "bar.h"])
+        write(headers[1], "void foo();")
+        write(headers[2], "void bar();")
+
+        x = nothing
+        index = Index()
+        parse_headers(index, headers) do tus
+            @test length(tus) == length(headers)
+            GC.gc()
+            # All of the TU's should still be alive
+            @test all([tu.ptr != C_NULL for tu in tus])
+
+            # Assign to an outer variable
+            x = tus
+        end
+
+        # After the function call ends the TU's should have been cleaned up
+        @test all([tu.ptr == C_NULL for tu in x])
     end
 end

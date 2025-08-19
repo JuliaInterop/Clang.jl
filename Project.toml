@@ -11,7 +11,7 @@ TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 
 [compat]
 CEnum = "0.4, 0.5"
-Clang_jll = "16,17,18,19"
+Clang_jll = "16,17,18,19,20"
 Downloads = "1.4"
 TOML = "1.0"
 julia = "1.11.0"

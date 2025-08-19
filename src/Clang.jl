@@ -10,7 +10,7 @@ EARLIEST_LLVM_VERSION = 16
 
 # Change this value when adding
 # new supported wrapper version
-LATEST_LLVM_VERSION = 19
+LATEST_LLVM_VERSION = 20
 
 llvm_version = if Base.libllvm_version < VersionNumber(EARLIEST_LLVM_VERSION+1)
     string(EARLIEST_LLVM_VERSION)

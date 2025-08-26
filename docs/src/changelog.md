@@ -3,6 +3,11 @@
 This documents notable changes in Clang.jl. The format is based on [Keep a
 Changelog](https://keepachangelog.com).
 
+## Unreleased
+
+### Added
+- Added support for Clang 20 ([#550], [#551]).
+
 ## [v0.19.0] - 2025-08-14
 
 ### Added

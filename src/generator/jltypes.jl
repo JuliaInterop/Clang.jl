@@ -115,6 +115,7 @@ struct JuliaCint16_t <: AbstractJuliaSIT end
 struct JuliaCint8_t <: AbstractJuliaSIT end
 
 struct JuliaCuintptr_t <: AbstractJuliaSIT end  # Csize_t
+struct JuliaCintptr_t <: AbstractJuliaSIT end  # Cptrdiff_t
 struct JuliaCtm <: AbstractJuliaSIT end  # Libc.TmStruct
 struct JuliaCFILE <: AbstractJuliaSIT end  # Libc.FILE
 

@@ -133,6 +133,7 @@ end
 function pretty_print(io, node::ExprNode{<:AbstractStructNodeType}, options::Dict)
     @assert !isempty(node.exprs)
     struct_field_comment_style = get(options, "struct_field_comment_style", "disable")
+    struct_field_count_assert = get(options, "struct_field_count_assert", "enable")
     outofline = struct_field_comment_style == "outofline"
     inline = struct_field_comment_style == "inline"
     struct_def = node.exprs[1]
@@ -143,7 +144,10 @@ function pretty_print(io, node::ExprNode{<:AbstractStructNodeType}, options::Dic
     child_nodes = filter(x->x isa CLFieldDecl, children(node.cursor))
     fields = filter(x->Meta.isexpr(x, :(::)), members.args)
     others = filter(x->!Meta.isexpr(x, :(::)), members.args)
-    @assert length(child_nodes) == length(fields)
+    # some pipelines may want to edit the fields such as wrapping some fields into another object, thus modifying the field count
+    if struct_field_count_assert == "enable"
+        @assert length(child_nodes) == length(fields)
+    end
     print_documentation(io, node, "", options, outofline; prologue=["    $name", ""])
     mutable && print(io, "mutable ")
     println(io, "struct ", name)

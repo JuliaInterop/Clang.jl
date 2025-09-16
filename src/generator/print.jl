@@ -147,6 +147,8 @@ function pretty_print(io, node::ExprNode{<:AbstractStructNodeType}, options::Dic
     # some pipelines may want to edit the fields such as wrapping some fields into another object, thus modifying the field count
     if struct_field_count_assert == "enable"
         @assert length(child_nodes) == length(fields)
+    else
+        @assert struct_field_comment_style == "disable" || outofline
     end
     print_documentation(io, node, "", options, outofline; prologue=["    $name", ""])
     mutable && print(io, "mutable ")

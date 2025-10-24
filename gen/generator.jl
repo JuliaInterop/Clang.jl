@@ -64,7 +64,7 @@ cd(@__DIR__) do
                                           #=(v"15.0.6", v"1.10"),=#
                                           #=(v"16.0.6", v"1.11"),=#
                                           #=(v"18.1.7", v"1.12"),=#
-                                          (v"20.1.8", v"1.13"),)
+                                          (v"21.1.2", v"1.13"),)
         @info "Generating..." llvm_version julia_version
         temp_prefix() do prefix
             # let prefix = Prefix(mktempdir())

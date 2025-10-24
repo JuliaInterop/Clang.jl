@@ -6,7 +6,7 @@ Changelog](https://keepachangelog.com).
 ## Unreleased
 
 ### Added
-- Added support for Clang 20 ([#550], [#551]).
+- Added support for Clang 20 and Clang 21 ([#550], [#551], [#558]).
 
 ## [v0.19.0] - 2025-08-14
 

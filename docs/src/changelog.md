@@ -3,10 +3,12 @@
 This documents notable changes in Clang.jl. The format is based on [Keep a
 Changelog](https://keepachangelog.com).
 
-## Unreleased
+## [v0.19.1] - 2026-01-14
 
 ### Added
+
 - Added support for Clang 20 and Clang 21 ([#550], [#551], [#558]).
+- Added support for recognizing `intptr_t` as `Cptrdiff_t` [#552].
 
 ## [v0.19.0] - 2025-08-14
 

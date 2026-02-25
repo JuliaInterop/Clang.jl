@@ -12,9 +12,9 @@ isNull(c::Union{CXCursor,CLCursor}) = clang_Cursor_isNull(c) != 0
 
 # equality
 Base.:(==)(c1::CXCursor, c2::CXCursor)::Bool = clang_equalCursors(c1, c2)
-Base.hash(c::CXCursor)::UInt = clang_hashCursor(c)
+Base.hash(c::CXCursor, h::UInt) = hash(clang_hashCursor(c), h)
 Base.:(==)(c1::CLCursor, c2::CLCursor) = c1.cursor == c2.cursor
-Base.hash(x::CLCursor) = hash(x.cursor)
+Base.hash(x::CLCursor, h::UInt) = hash(x.cursor, h)
 Base.:(==)(c1::CLCursor, c2::CXCursor) = c1.cursor == c2
 Base.:(==)(c1::CXCursor, c2::CLCursor) = c1 == c2.cursor
 

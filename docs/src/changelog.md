@@ -3,6 +3,12 @@
 This documents notable changes in Clang.jl. The format is based on [Keep a
 Changelog](https://keepachangelog.com).
 
+## [v0.19.2] - 2026-02-25
+
+### Fixed
+
+- Implement two-arg `hash` to avoid invalidations ([#562]).
+
 ## [v0.19.1] - 2026-01-14
 
 ### Added

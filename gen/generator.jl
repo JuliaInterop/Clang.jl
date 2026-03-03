@@ -1,5 +1,5 @@
 using Clang.Generators
-using Clang.LibClang.Clang_jll
+using Clang.LibClang.Clang_unified_jll
 
 
 options = load_options(joinpath(@__DIR__, "generator.toml"))

@@ -1,12 +1,12 @@
 using Clang
 using Clang.Generators
-using Clang.LibClang.Clang_jll
+using Clang.LibClang.Clang_unified_jll
 using Clang.Generators: StructDefinition, StructMutualRef, strip_comment_markers
 
 include("rewriter.jl")
 
 @testset "Generators" begin
-    INCLUDE_DIR = normpath(Clang_jll.artifact_dir, "include")
+    INCLUDE_DIR = normpath(Clang_unified_jll.artifact_dir, "include")
     CLANG_C_DIR = joinpath(INCLUDE_DIR, "clang-c")
 
     options = load_options(joinpath(@__DIR__, "test.toml"))

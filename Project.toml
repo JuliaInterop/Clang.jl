@@ -1,17 +1,17 @@
 name = "Clang"
 uuid = "40e3b903-d033-50b4-a0cc-940c62c95e31"
-version = "0.19.2"
+version = "0.19.3"
 
 [deps]
 CEnum = "fa961155-64e5-5f13-b03f-caf6b980ea82"
-Clang_jll = "0ee61d77-7f21-5576-8119-9fcc46b10100"
+Clang_unified_jll = "ffc816e1-ba66-5fa9-9ecc-bcc5cb19bea1"
 Downloads = "f43a241f-c20a-4ad4-852c-f6b1247861c6"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 
 [compat]
 CEnum = "0.4, 0.5"
-Clang_jll = "16,17,18,19,20,21"
+Clang_unified_jll = "0.1"
 Downloads = "1.4"
 TOML = "1.0"
 julia = "1.11.0"

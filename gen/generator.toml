@@ -28,7 +28,7 @@ module_name = "LibClang"
 # if this entry is not empty, the generator will print the code below to the `output_file_path`.
 # using jll_pkg_name
 # export jll_pkg_name
-jll_pkg_name = "Clang_jll"
+jll_pkg_name = "Clang_unified_jll"
 
 # for packages that have extra JLL package dependencies
 jll_pkg_extra = []

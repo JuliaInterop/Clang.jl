@@ -15,11 +15,11 @@ The general workflow of wrapping a JLL package is as follows.
 A generator context consists of a list of headers, a list of compiler flags, and generator options. The example below creates a typical context and runs the generator.
 ```julia
 using Clang.Generators
-using Clang.LibClang.Clang_jll
+using Clang.LibClang.Clang_unified_jll
 
 cd(@__DIR__)
 
-include_dir = normpath(Clang_jll.artifact_dir, "include")
+include_dir = normpath(Clang_unified_jll.artifact_dir, "include")
 
 # wrapper generator options
 options = load_options(joinpath(@__DIR__, "generator.toml"))

@@ -33,18 +33,18 @@ Write a config file `generator.toml`:
 library_name = "libclang"
 output_file_path = "./LibClang.jl"
 module_name = "LibClang"
-jll_pkg_name = "Clang_jll"
+jll_pkg_name = "Clang_unified_jll"
 export_symbol_prefixes = ["CX", "clang_"]
 ```
 
 and a Julia script `generator.jl`:
 ```julia
 using Clang.Generators
-using Clang.LibClang.Clang_jll  # replace this with your jll package
+using Clang.LibClang.Clang_unified_jll  # replace this with your jll package
 
 cd(@__DIR__)
 
-include_dir = normpath(Clang_jll.artifact_dir, "include")
+include_dir = normpath(Clang_unified_jll.artifact_dir, "include")
 clang_dir = joinpath(include_dir, "clang-c")
 
 options = load_options(joinpath(@__DIR__, "generator.toml"))

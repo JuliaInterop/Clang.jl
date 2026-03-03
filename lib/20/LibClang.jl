@@ -1,7 +1,7 @@
 module LibClang
 
-using Clang_jll
-export Clang_jll
+using Clang_unified_jll
+export Clang_unified_jll
 
 using CEnum: CEnum, @cenum
 

@@ -3,6 +3,12 @@
 This documents notable changes in Clang.jl. The format is based on [Keep a
 Changelog](https://keepachangelog.com).
 
+## [v0.19.3] - 2026-03-03
+
+### Changed
+
+- Switch to Clang_unified_jll.jl for improved compatibility ([#563]).
+
 ## [v0.19.2] - 2026-02-25
 
 ### Fixed

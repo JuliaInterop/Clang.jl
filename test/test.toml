@@ -1,7 +1,7 @@
 [general]
 library_name = "libclang"
 module_name = "LibClang"
-jll_pkg_name = "Clang_jll"
+jll_pkg_name = "Clang_unified_jll"
 extract_c_comment = "doxygen"
 fold_single_line_comment = true
 export_symbol_prefixes = ["CX", "clang_"]

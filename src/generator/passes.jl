@@ -1001,6 +1001,9 @@ function (x::CommonPrinter)(dag::ExprDAG, options::Dict)
 
     show_info && @info "[CommonPrinter]: print to $(x.file)"
     open(x.file, "w") do io
+        for def in dag.prologue_defs
+            println(io, def)
+        end
         for node in dag.nodes
             should_exclude_node(node, ignorelist, exclusivelist, isystem_ignorelist) && continue
             (node.type isa AbstractMacroNodeType || node.type isa AbstractFunctionNodeType) && continue
@@ -1040,6 +1043,9 @@ function (x::GeneralPrinter)(dag::ExprDAG, options::Dict)
 
     show_info && @info "[GeneralPrinter]: print to $(x.file)"
     open(x.file, "a") do io
+        for def in dag.prologue_defs
+            println(io, def)
+        end
         for node in dag.nodes
             should_exclude_node(node, ignorelist, exclusivelist, isystem_ignorelist) && continue
             node.type isa AbstractMacroNodeType && continue
@@ -1078,6 +1084,9 @@ function (x::StdPrinter)(dag::ExprDAG, options::Dict)
     isystem_ignorelist = []
     !get(general_options, "generate_isystem_symbols", true) && append!(isystem_ignorelist, string(x.id) for x in dag.sys)
 
+    for def in dag.prologue_defs
+        println(stdout, def)
+    end
     for node in dag.nodes
         should_exclude_node(node, ignorelist, exclusivelist, isystem_ignorelist) && continue
         node.type isa AbstractMacroNodeType && continue

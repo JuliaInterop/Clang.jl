@@ -1008,6 +1008,7 @@ function (x::CommonPrinter)(dag::ExprDAG, options::Dict)
         end
         # print helper macro definitions before regular macros
         for node in dag.nodes
+            should_exclude_node(node, ignorelist, exclusivelist, isystem_ignorelist) && continue
             node.type isa MacroHelperDef || continue
             pretty_print(io, node, options)
         end
@@ -1053,6 +1054,7 @@ function (x::GeneralPrinter)(dag::ExprDAG, options::Dict)
         end
         # print helper macro definitions before regular macros
         for node in dag.nodes
+            should_exclude_node(node, ignorelist, exclusivelist, isystem_ignorelist) && continue
             node.type isa MacroHelperDef || continue
             pretty_print(io, node, options)
         end
@@ -1097,6 +1099,7 @@ function (x::StdPrinter)(dag::ExprDAG, options::Dict)
     end
     # print helper macro definitions before regular macros
     for node in dag.nodes
+        should_exclude_node(node, ignorelist, exclusivelist, isystem_ignorelist) && continue
         node.type isa MacroHelperDef || continue
         pretty_print(stdout, node, options)
     end

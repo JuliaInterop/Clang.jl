@@ -312,9 +312,9 @@ macro_emit!(dag::ExprDAG, node::ExprNode, options::Dict) = dag
 
 function macro_emit!(dag::ExprDAG, node::ExprNode{MacroHelperDef}, options::Dict)
     for line in split(CDIV_DEFINITION, '\n')
-        stripped = strip(line)
-        isempty(stripped) && continue
-        push!(node.exprs, Expr(:block, stripped))
+        trimmed = rstrip(line)
+        isempty(trimmed) && continue
+        push!(node.exprs, Expr(:block, trimmed))
     end
     return dag
 end

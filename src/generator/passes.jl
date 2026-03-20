@@ -1156,7 +1156,7 @@ function (x::ProloguePrinter)(dag::ExprDAG, options::Dict)
                 nbytes = cld(bit_offset + bit_width, 8)
                 u64 = zero(UInt64)
                 for i in 0:(nbytes - 1)
-                    u64 |= UInt64(unsafe_load(ptr + i)) << (8i)
+                    u64 |= UInt64(unsafe_load(ptr + i)) << (8 * i)
                 end
                 return (u64 >> bit_offset) & bitfield_mask(bit_width)
             end
@@ -1168,14 +1168,14 @@ function (x::ProloguePrinter)(dag::ExprDAG, options::Dict)
                 nbytes = cld(bit_offset + bit_width, 8)
                 u64 = zero(UInt64)
                 for i in 0:(nbytes - 1)
-                    u64 |= UInt64(unsafe_load(ptr + i)) << (8i)
+                    u64 |= UInt64(unsafe_load(ptr + i)) << (8 * i)
                 end
                 value_mask = bitfield_mask(bit_width)
                 mask = value_mask << bit_offset
                 u64 &= ~mask
                 u64 |= (UInt64(unsigned(v)) & value_mask) << bit_offset
                 for i in 0:(nbytes - 1)
-                    unsafe_store!(ptr + i, UInt8((u64 >> (8i)) & typemax(UInt8)))
+                    unsafe_store!(ptr + i, UInt8((u64 >> (8 * i)) & typemax(UInt8)))
                 end
                 return v
             end

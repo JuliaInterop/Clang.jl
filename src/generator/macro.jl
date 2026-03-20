@@ -144,9 +144,15 @@ const CDIV_DEFINITION = """
 ⧷(x, y) = (⧷)(promote(x, y)...)
 """
 
+const CDIV_HELPER_ID = Symbol("⧷")
+
 function normalize_punctuation(dag::ExprDAG, text)
     if text == "/"
-        push!(dag.prologue_defs, CDIV_DEFINITION)
+        if !haskey(dag.ids, CDIV_HELPER_ID)
+            helper_node = ExprNode(CDIV_HELPER_ID, MacroHelperDef(), CLCursor(getNullCursor()), Expr[], Int[])
+            push!(dag.nodes, helper_node)
+            dag.ids[CDIV_HELPER_ID] = length(dag.nodes)
+        end
         return "⧷"
     elseif text == "^"
         return "⊻"
@@ -303,6 +309,15 @@ Emit Julia expression for macros.
 function macro_emit! end
 
 macro_emit!(dag::ExprDAG, node::ExprNode, options::Dict) = dag
+
+function macro_emit!(dag::ExprDAG, node::ExprNode{MacroHelperDef}, options::Dict)
+    for line in split(CDIV_DEFINITION, '\n')
+        stripped = strip(line)
+        isempty(stripped) && continue
+        push!(node.exprs, Expr(:block, stripped))
+    end
+    return dag
+end
 
 function macro_emit!(dag::ExprDAG, node::ExprNode{MacroDefinitionOnly}, options::Dict)
     ignore_header_guards = get(options, "ignore_header_guards", true)

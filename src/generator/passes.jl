@@ -1001,18 +1001,21 @@ function (x::CommonPrinter)(dag::ExprDAG, options::Dict)
 
     show_info && @info "[CommonPrinter]: print to $(x.file)"
     open(x.file, "w") do io
-        for def in dag.prologue_defs
-            println(io, def)
-        end
         for node in dag.nodes
             should_exclude_node(node, ignorelist, exclusivelist, isystem_ignorelist) && continue
             (node.type isa AbstractMacroNodeType || node.type isa AbstractFunctionNodeType) && continue
             pretty_print(io, node, general_options)
         end
+        # print helper macro definitions before regular macros
+        for node in dag.nodes
+            node.type isa MacroHelperDef || continue
+            pretty_print(io, node, options)
+        end
         # print macros in the bottom of the file
         for node in dag.nodes
             should_exclude_node(node, ignorelist, exclusivelist, isystem_ignorelist) && continue
             node.type isa AbstractMacroNodeType || continue
+            node.type isa MacroHelperDef && continue
             pretty_print(io, node, options)
         end
     end
@@ -1043,18 +1046,21 @@ function (x::GeneralPrinter)(dag::ExprDAG, options::Dict)
 
     show_info && @info "[GeneralPrinter]: print to $(x.file)"
     open(x.file, "a") do io
-        for def in dag.prologue_defs
-            println(io, def)
-        end
         for node in dag.nodes
             should_exclude_node(node, ignorelist, exclusivelist, isystem_ignorelist) && continue
             node.type isa AbstractMacroNodeType && continue
             pretty_print(io, node, general_options)
         end
+        # print helper macro definitions before regular macros
+        for node in dag.nodes
+            node.type isa MacroHelperDef || continue
+            pretty_print(io, node, options)
+        end
         # print macros in the bottom of the file
         for node in dag.nodes
             should_exclude_node(node, ignorelist, exclusivelist, isystem_ignorelist) && continue
             node.type isa AbstractMacroNodeType || continue
+            node.type isa MacroHelperDef && continue
             isempty(node.exprs)
             pretty_print(io, node, options)
         end
@@ -1084,18 +1090,21 @@ function (x::StdPrinter)(dag::ExprDAG, options::Dict)
     isystem_ignorelist = []
     !get(general_options, "generate_isystem_symbols", true) && append!(isystem_ignorelist, string(x.id) for x in dag.sys)
 
-    for def in dag.prologue_defs
-        println(stdout, def)
-    end
     for node in dag.nodes
         should_exclude_node(node, ignorelist, exclusivelist, isystem_ignorelist) && continue
         node.type isa AbstractMacroNodeType && continue
         pretty_print(stdout, node, general_options)
     end
+    # print helper macro definitions before regular macros
+    for node in dag.nodes
+        node.type isa MacroHelperDef || continue
+        pretty_print(stdout, node, options)
+    end
     # print macros
     for node in dag.nodes
         should_exclude_node(node, ignorelist, exclusivelist, isystem_ignorelist) && continue
         node.type isa AbstractMacroNodeType || continue
+        node.type isa MacroHelperDef && continue
         pretty_print(stdout, node, options)
     end
 

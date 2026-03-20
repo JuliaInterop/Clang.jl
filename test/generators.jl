@@ -430,6 +430,17 @@ end
         @test @invokelatest(m.UNITS_PX) === 72f0 / 96f0
         @test @invokelatest(m.INT_RATIO) === div(10, 3)
         @test @invokelatest(m.NO_DIV) === 1 + 2
+
+        # Regression: ⧷ helper must be defined exactly once and before any macro using it
+        content = read(path, String)
+        helper_positions = findall("⧷(x::T, y::T) where {T <: Integer}", content)
+        @test length(helper_positions) == 1
+        first_helper = first(helper_positions).start
+        for macro_name in ("UNITS_PX", "INT_RATIO")
+            macro_pos = findfirst(macro_name, content)
+            @test !isnothing(macro_pos)
+            @test first_helper < macro_pos.start
+        end
     end
 end
 

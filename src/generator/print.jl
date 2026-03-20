@@ -288,6 +288,14 @@ pretty_print(io, node::ExprNode{<:UnknownDefaults}, options::Dict) = nothing
 pretty_print(io, node::ExprNode{<:DuplicatedTags}, options::Dict) = nothing
 
 ## EXPERIMENTAL
+function pretty_print(io, node::ExprNode{MacroHelperDef}, options::Dict)
+    for expr in node.exprs
+        !isempty(expr.args) && println(io, string(expr.args[1]))
+    end
+    println(io)
+    return nothing
+end
+
 function pretty_print(io, node::ExprNode{<:AbstractMacroNodeType}, options::Dict)
     general_options = get(options, "general", Dict())
     print_documentation(io, node, "", general_options)

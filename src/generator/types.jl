@@ -93,6 +93,12 @@ struct MacroFunctionLike <: AbstractMacroNodeType end
 struct MacroBuiltIn <: AbstractMacroNodeType end
 struct MacroDuplicated <: AbstractMacroNodeType end
 struct MacroDefault <: AbstractMacroNodeType end
+"""
+    MacroHelperDef <: AbstractMacroNodeType
+A synthetic macro node that holds helper function definitions required to support
+certain C-to-Julia translations (e.g. the C-compatible division operator `⧷`).
+"""
+struct MacroHelperDef <: AbstractMacroNodeType end
 
 """
     AbstractStructNodeType <: AbstractTagType
@@ -198,7 +204,6 @@ Base.@kwdef struct ExprDAG
     tags::Dict{Symbol,Int} = Dict{Symbol,Int}()
     ids::Dict{Symbol,Int} = Dict{Symbol,Int}()
     ids_extra::Dict{Symbol,AbstractJuliaType} = EXTRA_DEFINITIONS
-    prologue_defs::Set{String} = Set{String}()
 end
 
 get_nodes(x::ExprDAG) = x.nodes

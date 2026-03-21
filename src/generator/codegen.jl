@@ -6,47 +6,6 @@ function emit! end
 
 emit!(dag::ExprDAG, node::ExprNode, options::Dict; args...) = dag
 
-bitfield_mask(width::Integer) =
-    width >= 64 ? typemax(UInt64) : (UInt64(1) << width) - UInt64(1)
-
-function get_bits(baseptr::Ptr, bit_offset::Integer, bit_width::Integer)
-    bit_width == 0 && return zero(UInt64)
-    @assert bit_width <= 64
-    ptr = convert(Ptr{UInt8}, baseptr)
-    nbytes = cld(bit_offset + bit_width, 8)
-    u64 = zero(UInt64)
-    for i in 0:(nbytes - 1)
-        u64 |= UInt64(unsafe_load(ptr + i)) << (8 * i)
-    end
-    return (u64 >> bit_offset) & bitfield_mask(bit_width)
-end
-
-function set_bits!(baseptr::Ptr, bit_offset::Integer, bit_width::Integer, v)
-    bit_width == 0 && return v
-    @assert bit_width <= 64
-    ptr = convert(Ptr{UInt8}, baseptr)
-    nbytes = cld(bit_offset + bit_width, 8)
-    u64 = zero(UInt64)
-    for i in 0:(nbytes - 1)
-        u64 |= UInt64(unsafe_load(ptr + i)) << (8 * i)
-    end
-    value_mask = bitfield_mask(bit_width)
-    mask = value_mask << bit_offset
-    u64 &= ~mask
-    u64 |= (UInt64(unsigned(v)) & value_mask) << bit_offset
-    for i in 0:(nbytes - 1)
-        unsafe_store!(ptr + i, UInt8((u64 >> (8 * i)) & typemax(UInt8)))
-    end
-    return v
-end
-
-function convert_bits(u64::UInt64, ty::Type, width::Integer)
-    if ty <: Signed && width < 64 && (u64 & (UInt64(1) << (width - 1))) != 0
-        u64 |= ~bitfield_mask(width)
-    end
-    return u64 % ty
-end
-
 ############################### Function ###############################
 
 function _get_func_name(cursor, options)

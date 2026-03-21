@@ -115,6 +115,15 @@ function test_libbitfield()
         pbfz.d = UInt32(513)
         @test LibBitField.toMirrorZero(bfz) == LibBitField.MirrorZero(6, 10, 19, 513)
     end
+    bytes = fill(UInt8(0xa5), 17)
+    value = UInt64(0x0123456789abcdef)
+    GC.@preserve bytes begin
+        ptr = pointer(bytes) + 1
+        LibBitField.set_bits!(ptr, 7, 64, value)
+        @test LibBitField.get_bits(ptr, 7, 64) == value
+        @test all(==(0xa5), bytes[1:1])
+        @test all(==(0xa5), bytes[11:end])
+    end
 end
 
 @testset "Bitfield" begin

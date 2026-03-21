@@ -1113,7 +1113,7 @@ bitfield_byte_shift(nbytes::Integer, i::Integer) =
 function get_bits(baseptr::Ptr, bit_offset::Integer, bit_width::Integer)
     bit_width == 0 && return zero(UInt64)
     @assert bit_width <= 64
-    @assert bit_offset + bit_width <= 128
+    @assert bit_offset + bit_width <= 128 "bitfield operation exceeds 128-bit window"
     ptr = convert(Ptr{UInt8}, baseptr)
     nbytes = cld(bit_offset + bit_width, 8)
     acc = zero(UInt128)
@@ -1126,7 +1126,7 @@ end
 function set_bits!(baseptr::Ptr, bit_offset::Integer, bit_width::Integer, v)
     bit_width == 0 && return v
     @assert bit_width <= 64
-    @assert bit_offset + bit_width <= 128
+    @assert bit_offset + bit_width <= 128 "bitfield operation exceeds 128-bit window"
     ptr = convert(Ptr{UInt8}, baseptr)
     nbytes = cld(bit_offset + bit_width, 8)
     acc = zero(UInt128)

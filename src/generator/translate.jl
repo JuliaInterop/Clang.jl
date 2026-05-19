@@ -73,6 +73,7 @@ translate(jlty::JuliaCint32_t, options=Dict()) = :Int32
 translate(jlty::JuliaCint16_t, options=Dict()) = :Int16
 translate(jlty::JuliaCint8_t, options=Dict()) = :Int8
 translate(jlty::JuliaCuintptr_t, options=Dict()) = :Csize_t
+translate(jlty::JuliaCintptr_t, options=Dict()) = :Cptrdiff_t
 translate(jlty::JuliaCtm, options=Dict()) = :(Libc.TmStruct)
 translate(jlty::JuliaCchar, options=Dict()) = :Cchar
 translate(jlty::JuliaClong, options=Dict()) = :Clong

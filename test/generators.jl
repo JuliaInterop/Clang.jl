@@ -416,6 +416,23 @@ end
     end
 end
 
+# See https://github.com/JuliaInterop/Clang.jl/issues/556
+@testset "Issue 556 - division operator" begin
+    mktemp() do path, io
+        options = Dict("general" => Dict{String, Any}("output_file_path" => path))
+        ctx = create_context(joinpath(@__DIR__, "include/division.h"),
+                             get_default_args(), options)
+        build!(ctx)
+
+        m = Module()
+        Base.include(m, path)
+
+        @test @invokelatest(m.UNITS_PX) === 72f0 / 96f0
+        @test @invokelatest(m.INT_RATIO) === div(10, 3)
+        @test @invokelatest(m.NO_DIV) === 1 + 2
+    end
+end
+
 @testset "parse_headers()" begin
     # Mostly a test of the do-method
     mktempdir() do d

@@ -198,6 +198,7 @@ Base.@kwdef struct ExprDAG
     tags::Dict{Symbol,Int} = Dict{Symbol,Int}()
     ids::Dict{Symbol,Int} = Dict{Symbol,Int}()
     ids_extra::Dict{Symbol,AbstractJuliaType} = EXTRA_DEFINITIONS
+    prologue_defs::Set{String} = Set{String}()
 end
 
 get_nodes(x::ExprDAG) = x.nodes

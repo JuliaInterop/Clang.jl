@@ -311,9 +311,9 @@ function _emit_getproperty_ptr!(body, root_cursor, cursor, options)
         offset = getOffsetOf(getCursorType(root_cursor), n)
         if isBitField(field_cursor)
             w = getFieldDeclBitWidth(field_cursor)
-            @assert w <= 32 # Bit fields should not be larger than int(32 bits)
-            d, r = divrem(offset, 32)
-            ex = :(f === $(QuoteNode(fsym)) && return (Ptr{$ty}(x + $(4d)), $r, $w))
+            @assert w <= 64
+            d, r = divrem(offset, 8)
+            ex = :(f === $(QuoteNode(fsym)) && return (Ptr{$ty}(x + $d), $r, $w))
         else
             d = offset ÷ 8
             ex = :(f === $(QuoteNode(fsym)) && return Ptr{$ty}(x + $d))
@@ -379,10 +379,8 @@ function emit_getproperty!(dag, node, options)
     load_expr = :(GC.@preserve r unsafe_load(fptr))
     load_expr.args[2] = nothing
 
-    load_base_expr = :(GC.@preserve r unsafe_load(baseptr32))
-    load_base_expr.args[2] = nothing
-    load_next_expr = :(GC.@preserve r unsafe_load(baseptr32 + 4))
-    load_next_expr.args[2] = nothing
+    load_bits_expr = :(GC.@preserve r get_bits(baseptr, offset, width))
+    load_bits_expr.args[2] = nothing
 
     if is_bitfield_type(node.type)
         ex = quote
@@ -391,13 +389,8 @@ function emit_getproperty!(dag, node, options)
             else
                 baseptr, offset, width = fptr
                 ty = eltype(baseptr)
-                baseptr32 = convert(Ptr{UInt32}, baseptr)
-                u64 = $load_base_expr
-                if offset + width > 32
-                    u64 |= ($load_next_expr) << 32
-                end
-                u64 = (u64 >> offset) & ((1 << width) - 1)
-                return u64 % ty
+                u64 = $load_bits_expr
+                return convert_bits(u64, ty, width)
             end
         end
     else
@@ -426,19 +419,7 @@ function emit_setproperty!(dag, node, options)
                 $store_expr
             else
                 baseptr, offset, width = fptr
-                baseptr32 = convert(Ptr{UInt32}, baseptr)
-                u64 = unsafe_load(baseptr32)
-                straddle = offset + width > 32
-                if straddle
-                    u64 |= unsafe_load(baseptr32 + 4) << 32
-                end
-                mask = ((1 << width) - 1)
-                u64 &= ~(mask << offset)
-                u64 |= (unsigned(v) & mask) << offset
-                unsafe_store!(baseptr32, u64 & typemax(UInt32))
-                if straddle
-                    unsafe_store!(baseptr32 + 4, u64 >> 32)
-                end
+                set_bits!(baseptr, offset, width, v)
             end
         end
         rm_line_num_node!(body)

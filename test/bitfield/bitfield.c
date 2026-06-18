@@ -21,3 +21,35 @@ struct Mirror toMirror(const struct BitField *src) {
   dst.f = src->f;
   return dst;
 }
+
+struct BitFieldWide toBitfieldWide(const struct MirrorWide *src) {
+  struct BitFieldWide dst;
+  dst.a = src->a;
+  dst.b = src->b;
+  return dst;
+}
+
+struct MirrorWide toMirrorWide(const struct BitFieldWide *src) {
+  struct MirrorWide dst;
+  dst.a = src->a;
+  dst.b = src->b;
+  return dst;
+}
+
+struct BitFieldZero toBitfieldZero(const struct MirrorZero *src) {
+  struct BitFieldZero dst;
+  dst.a = src->a;
+  dst.b = src->b;
+  dst.c = src->c;
+  dst.d = src->d;
+  return dst;
+}
+
+struct MirrorZero toMirrorZero(const struct BitFieldZero *src) {
+  struct MirrorZero dst;
+  dst.a = src->a;
+  dst.b = src->b;
+  dst.c = src->c;
+  dst.d = src->d;
+  return dst;
+}

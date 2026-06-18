@@ -1103,6 +1103,54 @@ mutable struct ProloguePrinter <: AbstractPrinter
 end
 ProloguePrinter(file::AbstractString; info=true) = ProloguePrinter(file, info)
 
+const BITFIELD_HELPERS = """
+bitfield_mask(width::Integer) =
+    width >= 64 ? typemax(UInt64) : (UInt64(1) << width) - UInt64(1)
+
+bitfield_byte_shift(nbytes::Integer, i::Integer) =
+    Base.ENDIAN_BOM == 0x04030201 ? 8 * i : 8 * (nbytes - 1 - i)
+
+function get_bits(baseptr::Ptr, bit_offset::Integer, bit_width::Integer)
+    bit_width == 0 && return zero(UInt64)
+    @assert bit_width <= 64
+    @assert bit_offset + bit_width <= 128 "bitfield operation exceeds 128-bit window"
+    ptr = convert(Ptr{UInt8}, baseptr)
+    nbytes = cld(bit_offset + bit_width, 8)
+    acc = zero(UInt128)
+    for i in 0:(nbytes - 1)
+        acc |= UInt128(unsafe_load(ptr + i)) << bitfield_byte_shift(nbytes, i)
+    end
+    return UInt64((acc >> bit_offset) & UInt128(bitfield_mask(bit_width)))
+end
+
+function set_bits!(baseptr::Ptr, bit_offset::Integer, bit_width::Integer, v)
+    bit_width == 0 && return v
+    @assert bit_width <= 64
+    @assert bit_offset + bit_width <= 128 "bitfield operation exceeds 128-bit window"
+    ptr = convert(Ptr{UInt8}, baseptr)
+    nbytes = cld(bit_offset + bit_width, 8)
+    acc = zero(UInt128)
+    for i in 0:(nbytes - 1)
+        acc |= UInt128(unsafe_load(ptr + i)) << bitfield_byte_shift(nbytes, i)
+    end
+    value_mask = UInt128(bitfield_mask(bit_width))
+    mask = value_mask << bit_offset
+    acc &= ~mask
+    acc |= (UInt128(unsigned(v)) & value_mask) << bit_offset
+    for i in 0:(nbytes - 1)
+        unsafe_store!(ptr + i, UInt8((acc >> bitfield_byte_shift(nbytes, i)) & typemax(UInt8)))
+    end
+    return v
+end
+
+function convert_bits(u64::UInt64, ty::Type, width::Integer)
+    if ty <: Signed && width < 64 && (u64 & (UInt64(1) << (width - 1))) != 0
+        u64 |= ~bitfield_mask(width)
+    end
+    return u64 % ty
+end
+"""
+
 function (x::ProloguePrinter)(dag::ExprDAG, options::Dict)
     general_options = get(options, "general", Dict())
     codegen_options = get(options, "codegen", Dict())
@@ -1142,6 +1190,10 @@ function (x::ProloguePrinter)(dag::ExprDAG, options::Dict)
         if !use_native_enum && print_CEnum
             println(io, "using CEnum: CEnum, @cenum")
             println(io)
+        end
+
+        if any(node -> is_bitfield_type(node.type), dag.nodes)
+            println(io, BITFIELD_HELPERS)
         end
 
         if wrap_variadic_function

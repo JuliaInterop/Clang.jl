@@ -927,7 +927,7 @@ end
     end
 
     # @objcwrapper
-    wrapperexpr = Expr(:macrocall, Symbol("@objcwrapper"), nothing, Expr(:(=), :immutable, :true))
+    wrapperexpr = Expr(:macrocall, Symbol("@objcwrapper"), nothing)
 
     # add availability attribute before type declaration
     if !isnothing(platform_availability) && !isnothing(minsupported) && convert(VersionNumber, platform_availability.Introduced) > minsupported

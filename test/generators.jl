@@ -251,11 +251,11 @@ end
         end
 
         print(output[])
-        @test contains(output[],"@objcwrapper immutable = true TestProtocol <: NSObject") # Protocol
-        @test contains(output[],"@objcwrapper immutable = true TestProtocol2 <: TestProtocol") # Protocol subtyping Protocol
-        @test contains(output[],"@objcwrapper immutable = true TestInterface <: NSObject") # Interface
+        @test contains(output[],"@objcwrapper TestProtocol <: NSObject") # Protocol
+        @test contains(output[],"@objcwrapper TestProtocol2 <: TestProtocol") # Protocol subtyping Protocol
+        @test contains(output[],"@objcwrapper TestInterface <: NSObject") # Interface
 
-        @test contains(output[],"@objcwrapper immutable = true availability = macos(v\"100.11.0\") TestAvailability <: NSObject") # Wrapper Availability
+        @test contains(output[],"@objcwrapper availability = macos(v\"100.11.0\") TestAvailability <: NSObject") # Wrapper Availability
         @test contains(output[],"@autoproperty length::Int32 availability = macos(v\"101.11.0\")") # Property Availability
 
         # Interface Properties

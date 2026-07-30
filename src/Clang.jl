@@ -41,6 +41,8 @@ include("string.jl")
 include("file.jl")
 export CLFile, name, unique_id, get_filename
 
+include("signals.jl")
+
 include("index.jl")
 export Index
 
@@ -91,5 +93,14 @@ export LLVM_VERSION, LLVM_LIBDIR, LLVM_INCLUDE, CLANG_INCLUDE
 
 include("generator/Generators.jl")
 using .Generators
+
+function __init__()
+    try
+        preregister_llvm_signal_handlers()
+    catch ex
+        @warn "Could not pre-register LLVM's signal handlers, this can \
+               cause segfaults when running Julia with multiple threads." exception=(ex, catch_backtrace())
+    end
+end
 
 end

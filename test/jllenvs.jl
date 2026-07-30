@@ -16,6 +16,11 @@
     Clang.JLLEnvs.get_environment_info("x86_64-w64-mingw32")
 end
 
+@testset "Clang resource directory" begin
+    @test isdir(Clang.CLANG_INCLUDE)
+    @test isfile(joinpath(Clang.CLANG_INCLUDE, "stddef.h"))
+end
+
 @testset "darwin __triplet backwards compatibility" begin
     @test Clang.JLLEnvs.__triplet(parse(Clang.JLLEnvs.Platform, "aarch64-apple-darwin")) == "aarch64-apple-darwin20"
     @test Clang.JLLEnvs.__triplet(parse(Clang.JLLEnvs.Platform, "aarch64-apple-darwin20")) == "aarch64-apple-darwin20"

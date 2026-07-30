@@ -86,7 +86,7 @@ end
 const LLVM_VERSION = match(r"[0-9]+.[0-9]+.[0-9]+", version()).match
 const LLVM_DIR = normpath(joinpath(dirname(LibClang.Clang_unified_jll.libclang_path), ".."))
 const LLVM_LIBDIR = joinpath(LLVM_DIR, "lib")
-const LLVM_INCLUDE = joinpath(LLVM_LIBDIR, "clang", LLVM_VERSION, "include")
+const LLVM_INCLUDE = joinpath(LLVM_LIBDIR, "clang", string(VersionNumber(LLVM_VERSION).major), "include")
 const CLANG_INCLUDE = LLVM_INCLUDE
 
 export LLVM_VERSION, LLVM_LIBDIR, LLVM_INCLUDE, CLANG_INCLUDE

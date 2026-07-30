@@ -245,12 +245,7 @@ function get_default_args(triple=get_triple(); is_cxx=false, version=GCC_MIN_VER
     if is_cxx
         env = get_default_env(triple; version, is_cxx)
         args = ["-isystem" * dir for dir in get_system_includes(env)]
-        @static if Base.VERSION <= v"1.10"
-            clang_inc = joinpath(LLVM_LIBDIR, "clang", string(Base.libllvm_version), "include")
-        else
-            clang_inc = joinpath(LLVM_LIBDIR, "clang", string(Base.libllvm_version.major), "include")
-        end
-        push!(args, "-isystem" * clang_inc)
+        push!(args, "-isystem" * LLVM_INCLUDE)
         push!(args, "--target=$(target(env.platform))")
         return args
     else

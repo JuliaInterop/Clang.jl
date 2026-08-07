@@ -262,6 +262,45 @@ the boundary, and a cursor is meaningless there — so it must send extracted fa
 same IR. Phase 0 is therefore on the critical path for every option in the table above except
 "don't build a second frontend at all".
 
+### 3.6 Ordering: what the DAG is actually for, and one option ruled out
+
+The `ExprDAG` exists for a single reason — Julia has no forward declarations, so a generated
+single-file wrapper needs a strict definition order. Measured, order is required for exactly the
+**definition-time type positions**:
+
+| requires order | does NOT require order |
+| --- | --- |
+| `struct A; b::B; end` — field types | `g() = Foo` — ordinary body expressions |
+| `f(a::Foo) = …` — method signatures | `g() = Foo(1)`, `g() = sizeof(Foo)` |
+| `ccall((:f,l), Foo, (Bar,), x)` — **ccall type arguments** | `g() = h()` — calls to later functions |
+| `const A = B` — const right-hand sides | docstrings |
+
+The `ccall` row is the non-obvious one: those types are evaluated when the **method is defined**,
+not when it is called.
+
+**The lever this exposes: no type ever depends on a function.** Emitting all functions and all
+method definitions (`getproperty`, `setproperty!`, `propertynames`, `unsafe_convert`,
+constructors) in a **trailing section** removes them from the ordering problem entirely,
+whatever they reference. On Clang.jl's own generated bindings (543 top-level forms) that is
+**410 of them — 75.5%**. What remains is 46 structs, 53 enums (which have no edges beyond their
+integer type) and 34 consts: roughly **80 nodes with non-trivial edges**, down from 543.
+
+What is left is irreducible. With no forward declaration *and* no redefinition, a genuine cycle
+(`struct A { B *b; }` / `struct B { A *a; }`) can only be broken by degrading one field to an
+opaque pointer plus conversion methods — which is what the generator already does. The
+*machinery* can shrink enormously (Tarjan SCC once, versus `RemoveCircularReference` restarting a
+full DFS on every cycle it breaks, bounded at `MAX_CIRCIR_DETECTION_COUNT = 100000`), but the
+sort itself cannot be dodged.
+
+**Ruled out: blob-everything.** The generator already emits `struct X; data::NTuple{N,UInt8}; end`
+plus generated accessors for unions and for structs with attributes, bitfields or nested
+anonymous members. Generalising that to *every* record would delete record-to-record edges and
+make ordering trivial — and is **rejected**: it optimises the generator's internals at the
+expense of every consumer of its output, losing named typed fields, `isbits`, native field
+access and inference. Selective blobbing stays exactly as it is today; universal blobbing is off
+the table. The consequence is that record-to-record edges remain, so the ordering machinery in
+§3.6 is genuinely required rather than optional.
+
 The macro work in [MACRO-HANDLING.md](MACRO-HANDLING.md) is unaffected — `cxx/CxxMacros.jl`
 depends only on ClangCompiler and is written to be lifted into whichever package ends up
 owning the C++ frontend. What changes is only *where that code lives*, and Phase 0 grows from

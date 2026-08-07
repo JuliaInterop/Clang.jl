@@ -202,13 +202,58 @@ Fuse them into one iterative walk in source order:
   stack is rewound. This is the progress today's pass discards.
 - an unbreakable cycle raises an error naming the path, replacing the fixed iteration budget
 
-`break_cycle!` keeps today's policy verbatim so output does not move: prefer a record whose
-reference is pointer-mediated (retype `StructMutualRef`), else a `TypedefElaborated` whose
-underlying type is a pointer (retype `TypedefMutualRef`).
+A 60-line prototype of the fused walk produced **byte-identical output on clang-c** and
+identical generate-and-load outcomes on all 28 fixtures. Note what that does *not* establish:
+the prototype kept today's `break_cycle!` policy verbatim, so it inherits the libxml2 failure in
+§2.0. **The walk and the policy are separate changes, and only the walk is validated.**
 
-A 60-line prototype of this produced **byte-identical output on clang-c** and identical
-generate-and-load outcomes on all 28 fixtures, including method-ambiguity.h, cycle-detection.h,
-struct-mutual-ref.h and dependency.h.
+### 3.2a The cycle-breaking policy must change too
+
+Today's policy has two tiers and applies them in the wrong order, which is why
+`method-ambiguity.h` costs eight top-level forms and a synthetic type:
+
+```julia
+mutable struct __JL_foo_struct end                       # a placeholder for a type we HAVE
+function Base.unsafe_load(x::Ptr{__JL_foo_struct}) ... end
+function Base.getproperty(x::Ptr{__JL_foo_struct}, f) ... end
+function Base.setproperty!(x::Ptr{__JL_foo_struct}, f, v) ... end
+const foo = Ptr{__JL_foo_struct}
+struct foo_struct
+    bar::foo
+end
+Base.unsafe_convert(::Type{Ptr{__JL_foo_struct}}, x::Base.RefValue{foo_struct}) = ...
+Base.unsafe_convert(::Type{Ptr{__JL_foo_struct}}, x::Ptr{foo_struct}) = ...
+```
+
+**Tier 1 — canonical substitution (preferred, new).** If the field's declared type is a typedef
+whose *canonical* type is a pointer, emit the field with the canonical pointer type. A
+self-referential `Ptr` inside a struct is legal in Julia, so the cycle simply disappears:
+
+```julia
+struct foo_struct
+    bar::Ptr{foo_struct}
+end
+const foo = Ptr{foo_struct}
+```
+
+Measured: loads, `sizeof(foo_struct) == 8` matching C, and `foo === Ptr{foo_struct}` — so the
+public name survives and is now *better* typed than `Ptr{__JL_foo_struct}`. Two forms replace
+eight, and `TypedefMutualRef`, `premature_exprs` and `partially_emitted_nodes` all become
+unnecessary for this shape.
+
+**Tier 2 — opaque placeholder (fallback, today's mechanism).** Substitution cannot break a
+genuine mutual cycle between two *distinct* records: `struct A; b::Ptr{B}; end` before `B` fails
+regardless of how `b`'s type is spelled (measured). Those keep the placeholder plus typed
+repairs, which is what libxml2's `_xmlSchemaType` ↔ `_xmlSchemaFacet` pairs will need.
+
+**Breakability is judged on the canonical spine** — through elaborated types, typedefs and
+arrays — not on the declared type. That is the libxml2 fix (§2.0). It must land *together with*
+the atomicity requirement, because canonicalizing alone re-routes `method-ambiguity.h` into
+Tier 2 with no field degradation and produces unloadable output.
+
+Self-edges need neither tier: `cycle-detection.h` already emits `struct B; x::Ptr{B}; end`, and
+`struct-mutual-ref.h` emits `grad::Ptr{mutualref}` and `src::NTuple{10, Ptr{mutualref}}`, all
+without repair.
 
 ### 3.3 Splice synthesized nodes, don't append
 

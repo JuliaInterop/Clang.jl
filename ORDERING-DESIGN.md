@@ -159,6 +159,13 @@ Every backward edge in `test/include/` — **10 edges across 5 of 28 headers**:
 `dag.nodes` instead of splicing them before their parent. Three more are inert. The genuine
 ordering problem in the entire fixture corpus is **two edges**.
 
+**That number does not generalise, for the same reason clang-c's did not.** The fixtures are
+minimal reproducers, mostly one or two declarations each. On libxml2 the type-to-type graph is
+551 edges (`tag→typedef` 257, `typedef→tag` 141, `typedef→typedef` 107, `tag→tag` 46) of which
+**205 run backwards**. Splicing synthesized nodes (§3.3) is still worth doing — it removes a
+self-inflicted class — but it is a cleanup, not the solution. The ordering machinery has to work
+for 205 backward edges, not two.
+
 With no ordering repair at all, 26 of 28 fixtures load identically; exactly one regression
 (`dependency.h` → `UndefVarError: SECOND`). So **"verify instead of sort" is a viable default
 and an unviable policy** — it must stay a sort.
@@ -278,8 +285,22 @@ names no plain `Expr` walk will see.
 
 ### 3.5 Bands: opt-in, not default
 
-Banding (types → functions → macros) removes 646 of 851 edges from the ordering graph. But it is
-a visible layout change for every downstream package and it collides with the two-file
+Banding (types → functions → macros) removes 646 of 851 edges on clang-c, and the proportion
+holds on libxml2 — 2060 of 2735, **75.3%**, essentially identical to clang-c's 76%. So the
+reduction is a real and general property, not a corpus artifact.
+
+But it does not remove the need for the machinery. After banding, libxml2 still has 551
+type-to-type edges with 205 backward, so the walk, the cycle-breaker and the two-tier policy are
+all still required. **Banding is an optimisation, not an enabler** — which is what settles the
+default.
+
+libxml2 also supplies the empirical case for the band *order*. `edges TARGETING a function: 29`,
+all of them `macro → func`: twenty-nine libxml2 macros expand to a function name, exactly the
+`#define ALIAS c_func` shape from §1. The correction there is not theoretical — put macros
+before functions and libxml2 emits 29 `const`s naming undefined bindings.
+
+Against that, banding is a visible layout change for every downstream package and it collides
+with the two-file
 `output_api_file_path` / `output_common_file_path` split, where `FunctionPrinter` and
 `CommonPrinter` already partition by kind into files the user includes in an order the generator
 does not control.
@@ -323,9 +344,31 @@ Stated plainly, because two earlier drafts overclaimed:
   hold.
 - **It is still superlinear on breaks.** Each broken edge costs another O(V+E) walk — strictly
   better than today (progress kept, no fixed budget), but not linear.
-- **It does not fix `nested-struct.h`**, which fails today and will continue to. The underlying
-  missing edge is `get_nested_tag` returning `nothing` (`resolve_deps.jl:158-163`); the verifier
-  only makes the failure loud.
+- **`nested-struct.h` is not broken.** An earlier draft (and one design agent) claimed it fails
+  both with and without ordering repair. Measured: it generates, **loads, and its accessors
+  work** — `sizeof(test_t) == 8`, and `getproperty(ptr, :s)` returns a
+  `Ptr{var"##Ctag#277"}`. Note its `getproperty` body names `__pthread_mutex_s`, which is
+  defined at the *end* of the file, and that is fine: method bodies are lazy (§2).
+- **`nested-declaration.h` is the genuinely broken fixture** (the `@test_broken` at
+  `test/generators.jl:138-146`), and **ordering has nothing to do with it**:
+
+  ```
+  ERROR: There is no definition for Inner_t's underlying type: [`Inner`]
+  ```
+
+  ```c
+  struct Outer { struct Inner { int i; } inner; };   /* Inner is globally visible in C */
+  typedef struct Inner Inner_t;
+  ```
+
+  `struct Inner` is declared nested inside `Outer` but is visible at file scope.
+  `collect_top_level_nodes!` walks only top-level cursors, and `Outer` lives in a system header
+  so it is routed to `dag.sys` — so `Inner` never becomes a node, and the typedef's
+  name-keyed lookup fails. This is a **collection** gap, not an ordering one. No change in this
+  document fixes it; the verifier in §3.4 would not even see it, because the failure happens
+  during dependency resolution, before emission. It is fixed for free by a frontend that walks
+  `TypedefDecl → getUnderlyingType → getAsTagDecl` to a `RecordDecl` pointer instead of looking
+  a name up in a table ([GENERATORS-REWORK.md](GENERATORS-REWORK.md) §5.3).
 
 ---
 

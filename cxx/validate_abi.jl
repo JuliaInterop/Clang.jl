@@ -123,7 +123,7 @@ function run_corpus(corpus::String, headers::Vector{String}; args::Vector{String
     end
     names, skip = CxxCodegen.assign_names(nodes)
     blobbed = CxxCodegen.blob_set(nodes)
-    env = CxxCodegen.Env(Dict(n.key => n for n in nodes), names, blobbed, skip)
+    env = CxxCodegen.Env(Dict(n.key => n for n in nodes), names, blobbed, skip, options)
 
     m = Module(Symbol("ABI_", replace(corpus, r"[^A-Za-z0-9]" => "_")))
     Core.eval(m, :(using CEnum: CEnum, @cenum))

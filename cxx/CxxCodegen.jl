@@ -55,6 +55,7 @@ struct Env
     name::Dict{Key,Symbol}      # key -> the Julia name actually emitted
     blobbed::Set{Key}
     skip::Set{Key}              # mapped to a Julia builtin; emit nothing for these
+    opts::Any                   # ::Options — declared below, so untyped here
 end
 
 """
@@ -80,6 +81,12 @@ Base.@kwdef struct Options
     macro_mode::String              = "basic"    # "basic" | "disable"
     add_comment_for_skipped_macro::Bool = true
     wrap_variadic_function::Bool    = false
+    use_julia_bool::Bool            = true
+    is_function_strictly_typed::Bool = false
+    opaque_as_mutable_struct::Bool  = true
+    add_record_constructors::Union{Bool,Vector{String}} = false
+    field_access_method_list::Vector{String} = String[]
+    library_names::Dict{String,String} = Dict{String,String}()
 end
 
 "Read the `[general]`/`[codegen]` tables of a parsed `generator.toml` into `Options`."
@@ -102,6 +109,17 @@ function Options(toml::AbstractDict)
         print_using_CEnum        = Bool(pick(g, "print_using_CEnum", true)),
         use_ccall_macro          = Bool(pick(c, "use_ccall_macro", false)),
         wrap_variadic_function   = Bool(pick(c, "wrap_variadic_function", false)),
+        use_julia_bool           = Bool(pick(c, "use_julia_bool", true)),
+        is_function_strictly_typed = Bool(pick(c, "is_function_strictly_typed", false)),
+        opaque_as_mutable_struct = Bool(pick(c, "opaque_as_mutable_struct", true)),
+        add_record_constructors  = (v = pick(c, "add_record_constructors", false);
+                                    v isa Bool ? v : String.(v)),
+        field_access_method_list = String.(pick(c, "field_access_method_list", String[])),
+        # `library_names` lives under [general] in every generator.toml, unlike the rest of the
+        # codegen keys — matching the existing reader rather than tidying it.
+        library_names            = Dict{String,String}(string(k) => string(v)
+                                                       for (k, v) in pick(g, "library_names",
+                                                                          Dict{String,Any}())),
         macro_mode               = string(pick(get(c, "macro", Dict{String,Any}()),
                                                "macro_mode", "basic")),
         add_comment_for_skipped_macro =
@@ -150,6 +168,9 @@ end
 "Translate a `TypeRef` into a Julia type expression."
 function jltype(e::Env, t::TypeRef)
     if t isa BuiltinRef
+        # `_Bool` is one byte, so `Bool` and `UInt8` are ABI-identical; the choice is about
+        # whether the wrapper reads as Julia or as C.
+        t.name === :bool && return e.opts.use_julia_bool ? :Bool : :UInt8
         return get(JL, t.name, :Cvoid)
     elseif t isa PointerRef
         p = t.pointee
@@ -282,14 +303,19 @@ single place a degraded field is realised, so the cut and the emitted type canno
 function emit_record(e::Env, n::Node, cuts::Dict{Int,Cut}, out::Vector{Expr})
     f = n.facts::RecordFacts
     sym = e.name[n.key]
+    o = e.opts
     if !f.complete
-        push!(out, :(mutable struct $sym end))
+        # A mutable struct with no fields is a distinct nominal type, so `Ptr{Foo}` stays
+        # meaningful; `const Foo = Cvoid` collapses every opaque handle to `Ptr{Cvoid}`.
+        push!(out, o.opaque_as_mutable_struct ? :(mutable struct $sym end) :
+                   :(const $sym = Cvoid))
         return
     end
     if n.key in e.blobbed
         unit, count = blob_storage(f)
         push!(out, :(struct $sym; data::NTuple{$count,$unit}; end))
         emit_accessors(e, n, out)
+        wants_constructor(o, sym) && emit_constructor(e, n, out)
         return
     end
     body = Expr(:block)
@@ -298,6 +324,12 @@ function emit_record(e::Env, n::Node, cuts::Dict{Int,Cut}, out::Vector{Expr})
         push!(body.args, Expr(:(::), safe(Symbol(fld.name)), ty))
     end
     push!(out, Expr(:struct, false, sym, body))
+    if String(sym) in o.field_access_method_list
+        # A plain struct already has field access by value; this adds the POINTER accessors, so
+        # a `Ptr{T}` into C-owned memory can be read and written field-wise without a copy.
+        # Emitted AFTER the struct — the methods name `Ptr{$sym}` in their own signature.
+        emit_accessors(e, n, out)
+    end
     # A tier-2 cut erased the field's real type, so give the pointer form back typed.
     for (i, c) in cuts
         c.tier == 2 || continue
@@ -332,8 +364,60 @@ function emit_accessors(e::Env, n::Node, out::Vector{Expr})
     end
     push!(body.args, :(return getfield(x, f)))
     push!(out, Expr(:function, :(Base.getproperty(x::Ptr{$sym}, f::Symbol)), body))
+    # Read-only accessors make a record inspectable but not usable: filling one in from Julia
+    # needs the write side too. Bit-fields are excluded — `getproperty` hands those back as a
+    # (ptr, shift, width) triple, which no single `unsafe_store!` can service.
+    if any(fl -> fl.bitwidth < 0 && !isempty(String(fl.name)), f.fields)
+        push!(out, :(function Base.setproperty!(x::Ptr{$sym}, f::Symbol, v)
+                         unsafe_store!(getproperty(x, f), v)
+                     end))
+    end
     isempty(props) ||
         push!(out, :(Base.propertynames(x::$sym, private::Bool=false) = ($(props...),)))
+end
+
+"Is this record on the `add_record_constructors` list (or is the option simply `true`)?"
+wants_constructor(o::Options, sym::Symbol) =
+    o.add_record_constructors isa Bool ? o.add_record_constructors :
+    String(sym) in o.add_record_constructors
+
+"""
+A by-field constructor for a record stored as opaque bytes.
+
+A plain struct gets Julia's default constructor for free; a blob does not — its only field is
+the byte tuple. This writes the fields through the pointer accessors, which is the one path that
+already knows each field's real offset.
+"""
+function emit_constructor(e::Env, n::Node, out::Vector{Expr})
+    f = n.facts::RecordFacts
+    sym = e.name[n.key]
+    named = [fl for fl in f.fields if !isempty(String(fl.name)) && fl.bitwidth < 0]
+    isempty(named) && return
+    syms = [safe(Symbol(fl.name)) for fl in named]
+    body = Expr(:block, :(ref = Ref{$sym}()),
+                :(ptr = Base.unsafe_convert(Ptr{$sym}, ref)))
+    for s in syms
+        push!(body.args, :(ptr.$s = $s))
+    end
+    push!(body.args, :(ref[]))
+    push!(out, Expr(:function,
+                    Expr(:call, sym,
+                         (Expr(:(::), s, jltype(e, fl.type)) for (s, fl) in zip(syms, named))...),
+                    body))
+end
+
+"""
+The library a function should be `ccall`ed through.
+
+`library_names` maps a filename-suffix regex to a library, so one run can wrap several
+libraries whose headers were parsed together — which is why a `Node` carries its file.
+"""
+function library_for(o::Options, n::Node)
+    isempty(o.library_names) && return o.library_name
+    for (pat, lib) in o.library_names
+        endswith(normpath(n.file), Regex(pat)) && return lib
+    end
+    return o.library_name
 end
 
 "Collect every symbol a type expression mentions."
@@ -388,7 +472,11 @@ function emit_node(e::Env, n::Node, cuts::Dict{Int,Cut}, out::Vector{Expr}, o::O
         tys  = [jltype(e, t) for (_, t) in f.params]
         ret  = jltype(e, f.ret)
         args = argnames(f, tys, ret)
-        lib = Symbol(o.library_name)
+        lib = Symbol(library_for(o, n))
+        # `foo(a::Cint)` instead of `foo(a)`: the ccall converts either way, but the typed form
+        # rejects a wrong argument at the call site rather than inside the C library.
+        sig = o.is_function_strictly_typed ?
+              [Expr(:(::), a, t) for (a, t) in zip(args, tys)] : args
         if f.variadic
             # Only `@ccall` can express varargs, and the call site's types are not known until
             # the call site exists — hence a `@generated` wrapper that splices them in. The
@@ -401,11 +489,11 @@ function emit_node(e::Env, n::Node, cuts::Dict{Int,Cut}, out::Vector{Expr}, o::O
                                           Expr(:parameters,
                                                Expr(:$, :(to_c_type_pairs(va_list)...)))), ret))
             push!(out, Expr(:macrocall, Symbol("@generated"), nothing,
-                            Expr(:function, Expr(:call, sym, args..., :(va_list...)),
+                            Expr(:function, Expr(:call, sym, sig..., :(va_list...)),
                                  Expr(:block, Meta.quot(inner)))))
             return
         end
-        call = Expr(:call, sym, args...)
+        call = Expr(:call, sym, sig...)
         body = if o.use_ccall_macro
             pairs = [Expr(:(::), a, t) for (a, t) in zip(args, tys)]
             Expr(:macrocall, Symbol("@ccall"), nothing,
@@ -502,7 +590,7 @@ function generate(nodes::Vector{Node}; options::Options=Options(), io::IO=stdout
     o = options
     ord = order_nodes(nodes)
     nm, skip = assign_names(nodes)
-    e = Env(Dict(n.key => n for n in nodes), nm, blob_set(nodes), skip)
+    e = Env(Dict(n.key => n for n in nodes), nm, blob_set(nodes), skip, o)
     bycut = Dict{Key,Dict{Int,Cut}}()
     for c in ord.cuts
         get!(Dict{Int,Cut}, bycut, c.node)[c.field] = c

@@ -42,7 +42,84 @@ method signature annotations, `ccall` type arguments, `const` right-hand sides, 
 `abstract type X <: Y`. Ordinary body expressions are lazy (`g() = Foo`, `g() = Foo(1)`,
 `g() = sizeof(Foo)`, `g() = h()` all load with the referent defined later).
 
-### 2.1 On a real corpus the sort is a no-op
+### 2.0 clang-c is NOT representative — libxml2 fails outright today
+
+**The evidence in §2.1 below is real but unrepresentative, and it must not be read as "the sort
+is unnecessary".** clang-c is written in opaque-handle style and barely uses forward
+declarations. Headers that do use them tell a completely different story.
+
+Running the current generator on **libxml2** (a mainstream C library, 2417 nodes):
+
+```
+ERROR: Could not remove circular reference after 100000 trials.
+10 suggested culprits: xmlSchemaType, xmlSchemaTypePtr, _xmlSchemaFacet, xmlSchemaFacet,
+   xmlSchemaFacetPtr, _xmlSchemaAnnot, _xmlSchemaAttribute, ...  (schemasInternals.h)
+```
+
+It does not generate at all. And once the cycle-breaker is made to get past that point, the
+backward-edge count is nothing like clang-c's:
+
+| corpus | backward edges from type/const nodes |
+| --- | --- |
+| clang-c | **2** |
+| libxml2 | **205** |
+
+So the topological sort is genuinely required. Any claim resting on clang-c alone is a claim
+about opaque-handle APIs, not about C headers.
+
+#### Root cause of the libxml2 failure
+
+libxml2 is built on the ubiquitous idiom:
+
+```c
+typedef struct _xmlSchemaType xmlSchemaType;   /* TypedefElaborated */
+typedef xmlSchemaType *xmlSchemaTypePtr;       /* TypedefDefault -- points at a TYPEDEF */
+struct _xmlSchemaType { xmlSchemaTypePtr subtypes; ... };
+```
+
+Both cycle-breaking policies miss it:
+
+- **Policy 1** (`is_non_pointer_ref`, `passes.jl:340-351`) asks
+  `is_jl_pointer(tojulia(fty))`, and `is_jl_pointer` is defined only on `JuliaCpointer`
+  (`jltypes.jl:212-215`) — i.e. **top level only**. A field declared `xmlSchemaTypePtr` is a
+  `JuliaCtypedef`, so the reference is misjudged as by-value and the edge is deemed
+  unbreakable.
+- **Policy 2** (the typedef fallback, `passes.jl:417-435`) requires
+  `is_typedef_elaborated(child)`. `xmlSchemaTypePtr`'s underlying type refers to a *typedef*,
+  not an elaborated tag, so the node is `TypedefDefault` and the branch is skipped.
+
+Nothing changes, the loop spins to `MAX_CIRCIR_DETECTION_COUNT` and aborts.
+
+#### Why the one-line fix is NOT the fix — and what it reveals
+
+Canonicalizing the test (`is_jl_pointer(tojulia(getCanonicalType(fty)))`) makes libxml2 generate.
+It also **breaks `method-ambiguity.h`**, which works today, producing unloadable output:
+
+```julia
+struct foo_struct
+    bar::foo          # foo is not defined yet
+end
+const foo = Ptr{foo_struct}
+```
+
+Because policy 1 now fires where policy 2 used to, the edge `foo_struct → foo` is deleted — but
+the *field* is still emitted as `bar::foo`. Deleting the ordering edge and degrading the field
+are two separate decisions in the current code: the edge goes in `RemoveCircularReference`
+(`passes.jl:390-400`), while whether to erase the field is decided later in codegen by an index
+comparison (`codegen.jl:603`, `node_idx < field_idx`). Once ordering changes, that comparison
+disagrees with the break.
+
+**This is a hard requirement on the new design:**
+
+> Breaking a cycle must remove the edge **and** degrade the referring field atomically, recording
+> *which field* was degraded at the moment of the cut. The cut must not be reconstructed later
+> from node positions.
+
+The two-section-scc design reached the same conclusion independently, via `Edge.site`. It is the
+single most important constraint this analysis produced, and it is why `nested-struct.h` and
+libxml2 are both broken today.
+
+### 2.1 On the clang-c corpus specifically, the sort is a no-op
 
 clang-c, truncating the pipeline after the first `ResolveDependency`:
 
@@ -215,13 +292,18 @@ prototype's `stats = (visited=1176, hoisted=0, broken=0)` says exactly that.
 
 So validation must be fixture-driven:
 
-1. **Byte-identical output on clang-c** — proves no regression on the common path.
-2. **Generate-and-load on all 28 fixtures** — the bar added in `test/macros.jl`, extended.
-3. **A ≥3-node cycle fixture must be added.** Nothing in the corpus currently exercises a cycle
+1. **Byte-identical output on clang-c** — proves no regression on the opaque-handle path.
+2. **libxml2 must generate and load.** It does not today (§2.0). This is the primary
+   forward-declaration-heavy corpus and the acceptance test for the cycle-breaker; clang-c
+   cannot substitute for it. Add it (or an equivalent `typedef T *TPtr`-idiom corpus) to the
+   suite.
+3. **Generate-and-load on all 28 fixtures** — the bar added in `test/macros.jl`, extended.
+   `method-ambiguity.h` is the regression guard for the atomicity requirement in §2.0.
+4. **A ≥3-node cycle fixture must be added.** Nothing in the corpus currently exercises a cycle
    path longer than 2, so the path-orientation fix in §3.2 has no regression test. The cycle
    path must be `reverse(stack[j:end])` with `v` appended, so consecutive pairs satisfy
    "child.adj contains parent" — the orientation `break_cycle!` consumes.
-4. **A cross-TU case**: header `c.h` forward-declares a struct that `a.h` defines later in the
+5. **A cross-TU case**: header `c.h` forward-declares a struct that `a.h` defines later in the
    umbrella. The fixtures do not cover this and source order across TUs is currently an
    assumption, not a verified property.
 

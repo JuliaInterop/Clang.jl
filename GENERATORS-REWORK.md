@@ -292,6 +292,57 @@ opaque pointer plus conversion methods — which is what the generator already d
 full DFS on every cycle it breaks, bounded at `MAX_CIRCIR_DETECTION_COUNT = 100000`), but the
 sort itself cannot be dodged.
 
+#### How much ordering is actually required — measured
+
+Two measurements over the `clang-c` corpus (543 emitted declarations) settle the design.
+
+**What the current pipeline costs in readability:**
+
+```
+pairs out of source order          22,304 / 147,153   (15.2%)
+type/const nodes  n=136  moved=136  median |move| = 42 positions  max 542
+functions         n=407  moved=407  median |move| = 42 positions  max 399
+file-to-file switches                  15   (source order gives 14)
+```
+
+Every declaration moves, by a median of 42 positions. File blocking is preserved, so the output
+is not interleaved chaos — but within that it is thoroughly shuffled, and **407 of the 543 moves
+are functions, which never needed to move.**
+
+**What ordering actually demands:**
+
+```
+dependency edges with both ends located:  287
+edges source order ALREADY satisfies:     277
+violations from FUNCTION nodes:             8   <- irrelevant; functions need not move
+violations from TYPE/CONST nodes:           2   <- the only forced moves
+     time_t     needs __darwin_time_t   (declared later)
+     CXComment  needs CXTranslationUnit (declared later)
+```
+
+**The entire ordering problem on this corpus is two hoists.** The current design relocates all
+543 declarations to solve something that requires moving two.
+
+The reason is structural, not luck: **C itself forbids a non-pointer struct member of an
+incomplete type**, so C source order is already a valid topological order for every non-pointer
+edge. Only four things can violate it — a pointer to a type declared later, a typedef through a
+pointer to an incomplete type, an anonymous record needing to be hoisted to its own definition,
+and a macro constant referring to a later one (`dependency.h`'s `#define FIRST SECOND` before
+`#define SECOND 1`).
+
+#### The design this implies
+
+1. **Functions and methods never move.** They are order-free (fact 2 above), so they stay at
+   their source position. That removes 75% of all displacement.
+2. **Types and constants: stable, minimal-perturbation ordering.** Emit in source order; relocate
+   a declaration only when an edge forces it, and as little as possible.
+3. **Cycles are broken at a pointer edge, with a comment at the degraded field** saying why.
+4. **Every relocation is reportable.** Today nothing explains why a declaration sits where it
+   does; a minimal-perturbation pass can emit its reason.
+
+Readability is a first-class acceptance criterion alongside ABI equivalence: the generated file
+should read like the headers it came from.
+
 **Ruled out: blob-everything.** The generator already emits `struct X; data::NTuple{N,UInt8}; end`
 plus generated accessors for unions and for structs with attributes, bitfields or nested
 anonymous members. Generalising that to *every* record would delete record-to-record edges and

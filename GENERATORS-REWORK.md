@@ -153,7 +153,10 @@ That resolves fine in normal operation (the `gen/` environment picks up the last
 ClangCompiler), but it makes any simultaneous breaking change in both packages a two-step dance,
 and it drags ClangCompiler's `julia = "1.12"` floor onto everyone who installs Clang.jl.
 
-### 3.3 Recommendation: a package extension
+### 3.3 ~~Recommendation: a package extension~~ — RETRACTED, see §3.4
+
+> **This section is wrong and is kept only to record why.** A package extension loads into the
+> *same process* as Clang.jl, and §3.4 shows that is exactly what cannot happen.
 
 ```toml
 # Project.toml
@@ -179,6 +182,40 @@ ClangCompiler = "0.1"
 The C++ frontend becomes the default only when ClangCompiler grows multi-LLVM `lib/` dirs, or
 when the project decides pinning to Julia's LLVM is acceptable. That is a separate decision and
 this plan does not presume it.
+
+### 3.4 The constraint that decides packaging: one LLVM per process
+
+**Clang.jl and ClangCompiler.jl cannot be loaded into the same Julia process.** Measured, in
+both orders; each loads fine alone:
+
+```
+import ClangCompiler; using Clang   ->  CommandLine Error: Option 'sanitizer-early-opt-ep'
+using Clang; import ClangCompiler   ->      registered more than once!
+                                            ERROR: InitError: LLVM error: inconsistency in
+                                            registered CommandLine options
+```
+
+Clang.jl loads libclang from `Clang_unified_jll`; ClangCompiler loads `clang-cpp` through
+`libclangex`. Both statically register LLVM's **global** CommandLine option registry, and the
+second registration aborts.
+
+This is not a version-compat problem that a `[compat]` bound can express, and it rules out the
+whole family of "both in one process" designs — a package extension above all, since an
+extension is by definition loaded alongside its parent.
+
+**What remains viable:**
+
+| Option | Assessment |
+| --- | --- |
+| **Split the frontend-independent core into its own package** | The principled fix. `ExprDAG`, codegen, printers, `jltypes`/`translate` need no libclang once a frontend has produced nodes — which is exactly the Phase 0 seam. `Clang.jl` then provides the libclang frontend and a separate package provides the C++ one; neither process loads both LLVMs. **Recommended.** |
+| **A wholly separate generator package** | Simplest to ship, but duplicates the DAG/codegen/printers or vendors them, and splits the test corpus that defines correctness. |
+| **Out-of-process C++ frontend** | Clang.jl shells out; the subprocess emits a serialized node set. Keeps one package, costs a serialization format and per-run process startup. This is what `test/cxx_macros.jl` does today. |
+| **Fix the double registration upstream** | Two independently-built LLVMs in one process is inherently fragile; not a path this project controls. |
+
+The macro work in [MACRO-HANDLING.md](MACRO-HANDLING.md) is unaffected — `cxx/CxxMacros.jl`
+depends only on ClangCompiler and is written to be lifted into whichever package ends up
+owning the C++ frontend. What changes is only *where that code lives*, and Phase 0 grows from
+"extract a seam" to "extract a seam into a package".
 
 ---
 
@@ -500,7 +537,7 @@ change and it is worth making *before* the frontend swap, so the two are indepen
 bisectable. Expect to re-express the position-anchored assertions (`ctx.dag.nodes[6]`,
 `nodes[end]`) by id.
 
-**Phase 2 — the extension.** Add the weakdep and `ext/ClangCompilerExt.jl` with `CxxFrontend`:
+**Phase 2 — the C++ frontend package.** (Not an extension — see §3.4.) `CxxFrontend`:
 umbrella parse, `-x c`, `decls_in` walk, `isInSystemHeader` partition, `decl_id` identity,
 `getTypedefNameForAnonDecl` naming. Gate on `[general] frontend = "clang-cpp"`.
 
@@ -535,7 +572,8 @@ them for as long as it exists.
 
 | Risk | Severity | Handling |
 | --- | --- | --- |
-| LLVM 18 / Julia 1.12 only | **high** | extension, not dependency; libclang stays default (§3.3) |
+| **Clang.jl and ClangCompiler cannot share a process** | **blocking** | measured, both orders; rules out a package extension. Split the frontend-independent core into its own package (§3.4) |
+| LLVM 18 / Julia 1.12 only | **high** | separate package, not a dependency; libclang stays default (§3.4) |
 | Single umbrella parse ⇒ one bad header kills the run | **high** | pre-flight or bisect; push for `TextDiagnosticBuffer` (§6.4) |
 | ObjC regression | **high** | keep ObjC on libclang until §6.6 closes |
 | Node ordering changes ⇒ position-anchored tests break | medium | re-express by id in Phase 1, before the frontend swap |

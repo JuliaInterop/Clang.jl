@@ -1,8 +1,11 @@
 # Macro handling: what is broken, and the design that fixes it
 
-**Status**: redesigned around clang's AST after the token-level design proved to be the wrong
-shape. Both approaches were prototyped and measured; §4 is the recommendation. Nothing in `src/`
-has changed.
+**Status**: §4 design **implemented** in [`cxx/CxxMacros.jl`](cxx/CxxMacros.jl), tested via
+[`test/cxx_macros.jl`](test/cxx_macros.jl). The M1 guard and load-bar landed in
+[`src/generator/macro.jl`](src/generator/macro.jl) and [`test/macros.jl`](test/macros.jl).
+
+It lives in `cxx/` rather than as a package extension because Clang.jl and ClangCompiler.jl
+cannot share a process — see [GENERATORS-REWORK.md](GENERATORS-REWORK.md) §3.4.
 **Companions**: [CLAUDE.md](CLAUDE.md) (the pipeline today), [GENERATORS-REWORK.md](GENERATORS-REWORK.md) (§5.6 sketched this; this document supersedes that sketch).
 
 ---

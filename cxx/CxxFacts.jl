@@ -116,6 +116,7 @@ struct Node
     system::Bool                  # clang says the decl is in a system header
     anonymous::Bool
     typedef_name::Symbol          # getTypedefNameForAnonDecl, or Symbol("")
+    doc::String                   # raw comment text; "" unless extraction asked for comments
 end
 
 "Dependency edges of a node: `key => pointer_mediated`."
@@ -155,6 +156,7 @@ mutable struct Ctx
     sm
     nodes::Vector{Node}
     seen::Dict{Key,Int}     # key -> index into nodes
+    comments::Bool          # ask clang for each decl's raw comment (off: it is per-decl work)
 end
 
 """
@@ -257,9 +259,14 @@ function visit(c::Ctx, d)::Key
         CC.is_null_handle(t) || (tdn = Symbol(sname(CC.resolve(t))))
     end
 
+    # "ForAnyRedecl" matters: C headers routinely carry the doc comment on the forward
+    # declaration and leave the definition bare, and `canonical` above may have landed on
+    # either one.
+    doc = c.comments ? (try CC.getRawCommentTextForAnyRedecl(c.ctx, d) catch; "" end) : ""
+
     facts = extract_facts(c, d)
     id = anon ? tdn : Symbol(sname(d))
-    node = Node(k, id, facts, file, line, sys, anon, tdn)
+    node = Node(k, id, facts, file, line, sys, anon, tdn, doc)
     push!(c.nodes, node)
     c.seen[k] = length(c.nodes)
     return k
@@ -315,7 +322,8 @@ Parse `headers` as ONE translation unit and walk it. Nodes come back in discover
 is source order for top-level declarations — the starting point the ordering pass perturbs as
 little as possible (`ORDERING-DESIGN.md` §3).
 """
-function extract(headers::Vector{String}; args::Vector{String}=String[], is_cxx::Bool=false)
+function extract(headers::Vector{String}; args::Vector{String}=String[], is_cxx::Bool=false,
+                 comments::Bool=false)
     flags = is_cxx ? copy(args) : String["-x", "c", args...]
     I = create_interpreter(flags; is_cxx)
     try
@@ -324,7 +332,7 @@ function extract(headers::Vector{String}; args::Vector{String}=String[], is_cxx:
         umbrella = join(("#include \"$h\"" for h in headers), '\n') * "\n"
         CC.parse(I, umbrella)
         CC.setTraversalScope(ctx, [CC.getTranslationUnitDecl(ctx)])
-        c = Ctx(I, ctx, CC.getSourceManager(ci), Node[], Dict{Key,Int}())
+        c = Ctx(I, ctx, CC.getSourceManager(ci), Node[], Dict{Key,Int}(), comments)
         for d in CC.decls_in(CC.castToDeclContext(CC.getTranslationUnitDecl(ctx)))
             (d isa CC.AbstractRecordDecl || d isa CC.AbstractEnumDecl ||
              d isa CC.AbstractTypedefNameDecl || d isa CC.AbstractFunctionDecl) || continue

@@ -40,7 +40,9 @@ run that agreed.
 
 ## Option surface
 
-`Options` honours 22 keys, named to match `generator.toml` so a config maps across unchanged:
+`Options` honours 24 keys, named to match `generator.toml` so a config maps across unchanged.
+`Options(TOML.parsefile(path))` reads them straight out of the `[general]`, `[codegen]` and
+`[codegen.macro]` tables.
 
 - `[general]`: library_name, library_names, module_name, prologue_file_path,
   epilogue_file_path, jll_pkg_name, jll_pkg_extra, export_symbol_prefixes, output_ignorelist,
@@ -49,11 +51,16 @@ run that agreed.
   is_function_strictly_typed, opaque_as_mutable_struct, add_record_constructors,
   field_access_method_list
 - `[codegen.macro]`: macro_mode, add_comment_for_skipped_macro
+- doc comments: extract_c_comment_style ("disable" | "raw" | "doxygen"), fold_single_line_comment
 
-`validate_options.jl` asserts each one has an observable effect — 28 checks. Note what it does
+`validate_options.jl` asserts each one has an observable effect — 36 checks. Note what it does
 *not* do: every option is checked in isolation, so no pair is known to compose.
 
-Still unimplemented: doc comments (`extract_c_comment_style` and friends), the two-file
-api/common split, `auto_mutability`, `add_fptr_methods`. See GENERATORS-REWORK.md §0.1.
-`Options(TOML.parsefile(path))` reads the [general] and [codegen] tables directly.
-Everything else in the ~45-key surface is still unimplemented -- GENERATORS-REWORK.md 0.1.
+Still unimplemented: the two-file api/common split, `auto_mutability`, `add_fptr_methods`,
+`show_c_function_prototype`, `callback_documentation`. See GENERATORS-REWORK.md §0.1.
+
+`"doxygen"` renders the commands that carry structure — `\param`, `\return`, `\note`, `\bug`
+and friends — into Markdown sections and bullet lists. It is a much smaller renderer than
+`src/generator/documentation.jl`, so its output is not character-identical to the old pass;
+it carries the same information in the same order. Corpora written in GTK-doc style (libxml2,
+glib) use no such commands, so `"raw"` and `"doxygen"` come out near-identical there.

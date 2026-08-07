@@ -87,6 +87,8 @@ Base.@kwdef struct Options
     add_record_constructors::Union{Bool,Vector{String}} = false
     field_access_method_list::Vector{String} = String[]
     library_names::Dict{String,String} = Dict{String,String}()
+    extract_c_comment_style::String = "disable"   # "disable" | "raw" | "doxygen"
+    fold_single_line_comment::Bool  = false
 end
 
 "Read the `[general]`/`[codegen]` tables of a parsed `generator.toml` into `Options`."
@@ -122,6 +124,8 @@ function Options(toml::AbstractDict)
                                                                           Dict{String,Any}())),
         macro_mode               = string(pick(get(c, "macro", Dict{String,Any}()),
                                                "macro_mode", "basic")),
+        extract_c_comment_style  = string(pick(c, "extract_c_comment_style", "disable")),
+        fold_single_line_comment = Bool(pick(c, "fold_single_line_comment", false)),
         add_comment_for_skipped_macro =
             Bool(pick(get(c, "macro", Dict{String,Any}()),
                       "add_comment_for_skipped_macro", true)))
@@ -506,6 +510,106 @@ function emit_node(e::Env, n::Node, cuts::Dict{Int,Cut}, out::Vector{Expr}, o::O
 end
 
 # ------------------------------------------------------------------------------------------
+# Doc comments
+# ------------------------------------------------------------------------------------------
+"""
+Strip C comment markers, leaving the text.
+
+clang hands back the comment exactly as written, markers and all, and may concatenate several
+consecutive comments into one block — so this has to cope with `//`, `///`, `/**`, a leading `*`
+on continuation lines, and a trailing `*/`, in any combination.
+"""
+function strip_comment_markers(s::AbstractString)
+    out = String[]
+    for line in split(s, '\n')
+        t = strip(line)
+        # The single optional space after each marker is the separator, not indentation:
+        # `/// One line.` is "One line.", never " One line.".
+        t = replace(t, r"^/\*+!?<?\s?" => "")   # /*  /**  /*!  /**<
+        t = replace(t, r"\*+/\s*$" => "")       # */
+        t = replace(t, r"^/{2,}!?<?\s?" => "")  # //  ///  //!  ///<
+        t = replace(t, r"^\*\s?" => "")         #  * continuation
+        push!(out, rstrip(t))
+    end
+    while !isempty(out) && isempty(first(out)); popfirst!(out); end
+    while !isempty(out) && isempty(last(out)); pop!(out); end
+    return out
+end
+
+"Doxygen commands that map onto a Markdown section heading."
+const DOXYGEN_SECTIONS = Dict("brief" => "", "details" => "", "return" => "### Returns",
+                              "returns" => "### Returns", "note" => "!!! note",
+                              "warning" => "!!! warning", "see" => "### See also",
+                              "sa" => "### See also", "bug" => "!!! warning \"Bug\"",
+                              "deprecated" => "!!! warning \"Deprecated\"",
+                              "todo" => "!!! info \"TODO\"", "since" => "### Since")
+
+"""
+Render a doc comment as Markdown lines.
+
+`"raw"` strips the markers and stops. `"doxygen"` additionally turns the commands that carry
+structure into Markdown: `\\param` becomes a bullet list, `\\return` and `\\note` become
+sections. This is a smaller renderer than `src/generator/documentation.jl`, so a `"doxygen"`
+docstring will not be character-identical to the old pass — it carries the same information in
+the same order.
+"""
+function format_doc(raw::AbstractString, style::AbstractString)
+    isempty(strip(raw)) && return String[]
+    lines = strip_comment_markers(raw)
+    style == "doxygen" || return lines
+    out = String[]
+    params = String[]
+    admonition = false          # inside a `!!!` block, whose body must stay indented
+    for line in lines
+        m = match(r"^[\\@](\w+)\s*(.*)$", line)
+        if m !== nothing && (m[1] == "param" || m[1] == "tparam")
+            admonition = false
+            p = match(r"^(\[[^\]]*\]\s*)?(\S+)\s*(.*)$", m[2])
+            p === nothing || push!(params, "* `$(p[2])`:$(isempty(p[3]) ? "" : " " * p[3])")
+            continue
+        elseif m !== nothing && haskey(DOXYGEN_SECTIONS, m[1])
+            head = DOXYGEN_SECTIONS[m[1]]
+            # A Documenter admonition's body is the INDENTED block under it. Emitted flush
+            # left, `!!! warning "Bug"` renders as an empty admonition followed by an unrelated
+            # paragraph — which is how it first came out.
+            admonition = startswith(head, "!!!")
+            isempty(head) || (push!(out, ""); push!(out, head))
+            isempty(m[2]) || push!(out, admonition ? "    " * m[2] : m[2])
+            continue
+        elseif m !== nothing
+            admonition = false      # an unrecognised command ends the block
+        end
+        push!(out, admonition && !isempty(line) ? "    " * line : line)
+    end
+    if !isempty(params)
+        push!(out, ""); push!(out, "### Parameters"); append!(out, params)
+    end
+    # Doxygen convention puts a blank line between every command; once the commands become
+    # headings those blanks stack up two and three deep.
+    out = [l for (i, l) in enumerate(out) if !isempty(l) || (i > 1 && !isempty(out[i - 1]))]
+    while !isempty(out) && isempty(first(out)); popfirst!(out); end
+    while !isempty(out) && isempty(last(out)); pop!(out); end
+    return out
+end
+
+"`\$` and `\\` are interpolation and escape inside a Julia string; so is `\"` before `\"\"`."
+const DOC_ESCAPE = r"""(\$|\\|"(?=""))"""
+escape_doc(line) = replace(line, DOC_ESCAPE => s"\\\1")
+
+"Write a docstring immediately before the definition it documents."
+function print_doc(io::IO, lines::Vector{String}, o::Options)
+    isempty(lines) && return
+    lines = escape_doc.(lines)
+    if length(lines) == 1 && o.fold_single_line_comment
+        println(io, "\"\"\"", only(lines), "\"\"\"")
+        return
+    end
+    println(io, "\"\"\"")
+    for l in lines; println(io, l); end
+    println(io, "\"\"\"")
+end
+
+# ------------------------------------------------------------------------------------------
 # Macros
 # ------------------------------------------------------------------------------------------
 "Rewrite every C name in `ex` to the name codegen actually emitted for it."
@@ -582,7 +686,9 @@ function generate(headers::Vector{String}; args::Vector{String}=String[],
     # result.
     macros = options.macro_mode == "disable" ? [] :
              CxxMacros.translate_macros(headers, args)
-    return generate(extract(headers; args=args); options, macros, kw...)
+    nodes = extract(headers; args=args,
+                    comments=options.extract_c_comment_style != "disable")
+    return generate(nodes; options, macros, kw...)
 end
 
 function generate(nodes::Vector{Node}; options::Options=Options(), io::IO=stdout,
@@ -626,7 +732,11 @@ function generate(nodes::Vector{Node}; options::Options=Options(), io::IO=stdout
         emit_node(e, n, get(bycut, k, Dict{Int,Cut}()), out, o)
         isempty(out) || push!(bound, unescape_name(e.name[k]))
         n.facts isa EnumFacts && for (cn, _) in n.facts.constants; push!(bound, cn); end
-        for ex in out
+        for (i, ex) in enumerate(out)
+            # The docstring goes on the node's FIRST expression — the definition itself. The
+            # accessors and constructors that follow are machinery, not separate API.
+            i == 1 && o.extract_c_comment_style != "disable" &&
+                print_doc(io, format_doc(n.doc, o.extract_c_comment_style), o)
             println(io, string(ex)); println(io)
             emitted += 1
         end

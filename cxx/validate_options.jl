@@ -106,6 +106,49 @@ let sysh = joinpath(d, "sys.h")
     check("...and the API itself survives", occursin("function widen", b))
 end
 
+# --- doc comments ---
+let R = dirname(@__DIR__), doch = joinpath(R, "test", "include", "documentation.h")
+    plain = IOBuffer(); CxxCodegen.generate([doch]; io=plain, options=CxxCodegen.Options())
+    check("no docstring by default", !occursin("\"\"\"", String(take!(plain))))
+
+    raw = IOBuffer()
+    CxxCodegen.generate([doch]; io=raw,
+                        options=CxxCodegen.Options(extract_c_comment_style="raw"))
+    r = String(take!(raw))
+    check("raw: markers stripped", occursin("@brief Dummy function.", r) && !occursin("/**", r))
+
+    dox = IOBuffer()
+    CxxCodegen.generate([doch]; io=dox,
+                        options=CxxCodegen.Options(extract_c_comment_style="doxygen"))
+    x = String(take!(dox))
+    check("doxygen: brief becomes body text", occursin("Dummy function.", x) &&
+                                              !occursin("@brief", x))
+    check("doxygen: @return becomes a section", occursin("### Returns", x))
+    check("doxygen: @param becomes a bullet",
+          occursin("### Parameters", x) && occursin("* `foo`: A parameter.", x))
+    # A Documenter admonition's body is the indented block under it; flush left it renders as
+    # an empty admonition followed by an unrelated paragraph.
+    check("doxygen: admonition body is indented",
+          occursin("!!! warning \"Bug\"\n    May wipe your disk.", x))
+
+    # The docstring has to actually attach, which a bare `occursin` cannot tell you.
+    p = tempname() * ".jl"; write(p, x)
+    m = Module(:DocCheck); Core.eval(m, :(using CEnum: CEnum, @cenum))
+    Core.eval(m, :(const libfoo = "libfoo"))
+    Base.include(m, p)
+    attached = Base.invokelatest() do
+        occursin("Dummy function", string(Base.Docs.doc(Base.Docs.Binding(m, :doxygen_func))))
+    end
+    check("doxygen: docstring attaches to the method", attached)
+
+    fold = IOBuffer()
+    write(joinpath(d, "one.h"), "/// One line.\nint one(void);\n")
+    CxxCodegen.generate([joinpath(d, "one.h")]; io=fold,
+                        options=CxxCodegen.Options(extract_c_comment_style="raw",
+                                                   fold_single_line_comment=true))
+    check("fold_single_line_comment", occursin("\"\"\"One line.\"\"\"", String(take!(fold))))
+end
+
 println()
 println("options: $pass passed, $fail failed")
 exit(fail == 0 ? 0 : 1)

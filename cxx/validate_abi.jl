@@ -112,9 +112,14 @@ function run_corpus(corpus::String, headers::Vector{String}; args::Vector{String
                     options::CxxCodegen.Options=CxxCodegen.Options())
     t0 = time()
     nodes = extract(headers; args=args)
+    # Macros must be translated here too. `generate(nodes)` defaults to none, so emitting from
+    # pre-extracted nodes would silently skip the whole macro path — and one macro that names
+    # something undefined fails the entire file, which is very much this harness's business.
+    macros = options.macro_mode == "disable" ? [] :
+             CxxCodegen.CxxMacros.translate_macros(headers, args)
     path = tempname() * ".jl"
     st = open(path, "w") do io
-        CxxCodegen.generate(nodes; options=options, io=io)
+        CxxCodegen.generate(nodes; options=options, macros=macros, io=io)
     end
     names, skip = CxxCodegen.assign_names(nodes)
     blobbed = CxxCodegen.blob_set(nodes)
@@ -134,7 +139,8 @@ function run_corpus(corpus::String, headers::Vector{String}; args::Vector{String
         return [Finding(corpus, "<module>", "load", msg, "")], nothing
     end
     found, counts = Base.invokelatest(compare, m, nodes, env, names, blobbed, skip, corpus)
-    println("  nodes=$(st.nodes) emitted=$(st.emitted) cuts=$(st.cuts) hoisted=$(st.hoisted)  ",
+    println("  nodes=$(st.nodes) emitted=$(st.emitted) cuts=$(st.cuts) hoisted=$(st.hoisted) ",
+            "macros=$(st.macros)/$(st.macros_seen)  ",
             "checked: $(counts.records) records / $(counts.offsets) field offsets  ",
             "[$(round(time()-t0, digits=1))s]")
     return found, counts

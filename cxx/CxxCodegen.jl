@@ -19,7 +19,9 @@ Two rules decide the shape of a record:
 module CxxCodegen
 
 include(joinpath(@__DIR__, "CxxOrder.jl"))
+include(joinpath(@__DIR__, "CxxMacros.jl"))
 using .CxxOrder
+using .CxxMacros
 using .CxxOrder.CxxFacts
 import .CxxOrder.CxxFacts: Key, Node, TypeRef, RecordFacts, TypedefFacts, EnumFacts,
                            FunctionFacts, PointerRef, RecordRef, TypedefRef, EnumRef,
@@ -75,6 +77,8 @@ Base.@kwdef struct Options
     use_julia_native_enum_type::Bool = false
     print_using_CEnum::Bool         = true
     use_ccall_macro::Bool           = false
+    macro_mode::String              = "basic"    # "basic" | "disable"
+    add_comment_for_skipped_macro::Bool = true
 end
 
 "Read the `[general]`/`[codegen]` tables of a parsed `generator.toml` into `Options`."
@@ -95,7 +99,12 @@ function Options(toml::AbstractDict)
         skip_static_functions    = Bool(pick(g, "skip_static_functions", false)),
         use_julia_native_enum_type = Bool(pick(g, "use_julia_native_enum_type", false)),
         print_using_CEnum        = Bool(pick(g, "print_using_CEnum", true)),
-        use_ccall_macro          = Bool(pick(c, "use_ccall_macro", false)))
+        use_ccall_macro          = Bool(pick(c, "use_ccall_macro", false)),
+        macro_mode               = string(pick(get(c, "macro", Dict{String,Any}()),
+                                               "macro_mode", "basic")),
+        add_comment_for_skipped_macro =
+            Bool(pick(get(c, "macro", Dict{String,Any}()),
+                      "add_comment_for_skipped_macro", true)))
 end
 
 "`output_ignorelist` entries are regexes that must match the WHOLE name, as today."
@@ -123,6 +132,17 @@ function safe(nm::Symbol)
     isempty(s) && return nm
     (nm in RESERVED || !Base.isidentifier(s)) && return Symbol("var\"", s, "\"")
     return nm
+end
+
+"""
+The binding name `safe` actually creates: `var"end"` parses to the identifier `end`.
+
+Anything asking "does this file define X?" — the macro guards, the ABI verifier — must ask
+under the binding name, not the escaped spelling.
+"""
+function unescape_name(s::Symbol)
+    t = String(s)
+    startswith(t, "var\"") && endswith(t, "\"") ? Symbol(t[5:(end - 1)]) : s
 end
 
 "Translate a `TypeRef` into a Julia type expression."
@@ -380,6 +400,65 @@ function emit_node(e::Env, n::Node, cuts::Dict{Int,Cut}, out::Vector{Expr}, o::O
     end
 end
 
+# ------------------------------------------------------------------------------------------
+# Macros
+# ------------------------------------------------------------------------------------------
+"Rewrite every C name in `ex` to the name codegen actually emitted for it."
+function rename_symbols(@nospecialize(ex), map::Dict{Symbol,Symbol})
+    ex isa Symbol && return get(map, ex, ex)
+    ex isa Expr || return ex
+    return Expr(ex.head, (a isa QuoteNode || a isa LineNumberNode ? a :
+                          rename_symbols(a, map) for a in ex.args)...)
+end
+
+"""
+Emit translated macros as `const` definitions.
+
+Two guards, both of which the libclang generator learned the hard way (`test/macros.jl`):
+
+  * **A name it will not define is never emitted.** `test/include/macro.h` defined
+    `GINTBIG_MAX` in terms of `CPL_STATIC_CAST`, which nothing declares; the generated file
+    raised `UndefVarError` at load and the suite did not notice for a long time, because the
+    only assertion was that the build logged "Done!".
+  * **A macro never shadows a declaration.** `#define FOO 1` beside `struct FOO` would emit
+    `const FOO = 1` after `struct FOO`, and Julia rejects redefining the binding.
+
+Names are first rewritten through codegen's own map, so a macro naming `uint32_t` becomes
+`UInt32` and one naming a field escaped to `var"end"` follows it, rather than being dropped as
+unresolvable.
+"""
+function emit_macros(io::IO, macros, emitted::Set{Symbol}, renames::Dict{Symbol,Symbol},
+                     o::Options)
+    n_emitted = 0
+    for r in macros
+        if r isa CxxMacros.MacroSkipped
+            o.add_comment_for_skipped_macro &&
+                println(io, "# Skipping MacroDefinition: ", r.name, "  (", r.reason, ")\n")
+            continue
+        end
+        nm = safe(r.name)
+        if r.name in emitted
+            o.add_comment_for_skipped_macro &&
+                println(io, "# Skipping MacroDefinition: ", r.name,
+                        "  (a declaration of the same name is already emitted)\n")
+            continue
+        end
+        ex = rename_symbols(r.expr, renames)
+        unresolved = Set(s for s in symbols_in!(Set{Symbol}(), ex)
+                         if !(s in emitted || isdefined(Base, s) || isdefined(Core, s)))
+        if !isempty(unresolved)
+            o.add_comment_for_skipped_macro &&
+                println(io, "# Skipping MacroDefinition: ", r.name, "  (names nothing we define: ",
+                        join(sort!(String.(collect(unresolved))), ", "), ")\n")
+            continue
+        end
+        println(io, string(:(const $nm = $ex))); println(io)
+        push!(emitted, r.name)
+        n_emitted += 1
+    end
+    return n_emitted
+end
+
 """
     generate(headers; args=String[], options=Options(), io=stdout)
     generate(nodes;   options=Options(), io=stdout)
@@ -391,10 +470,18 @@ the only clang handles, so a caller that needs the facts as well — the ABI ver
 each emitted type against the `ASTRecordLayout` the facts carry — parses once and emits from the
 same node vector rather than parsing twice and hoping the two agree.
 """
-generate(headers::Vector{String}; args::Vector{String}=String[], kw...) =
-    generate(extract(headers; args=args); kw...)
+function generate(headers::Vector{String}; args::Vector{String}=String[],
+                  options::Options=Options(), kw...)
+    # Macros need the preprocessor, which `extract` discards, so they are translated in their
+    # own parse. Only this method has the headers to do it with; `generate(nodes)` takes the
+    # result.
+    macros = options.macro_mode == "disable" ? [] :
+             CxxMacros.translate_macros(headers, args)
+    return generate(extract(headers; args=args); options, macros, kw...)
+end
 
-function generate(nodes::Vector{Node}; options::Options=Options(), io::IO=stdout)
+function generate(nodes::Vector{Node}; options::Options=Options(), io::IO=stdout,
+                  macros=[])
     o = options
     ord = order_nodes(nodes)
     nm, skip = assign_names(nodes)
@@ -416,18 +503,28 @@ function generate(nodes::Vector{Node}; options::Options=Options(), io::IO=stdout
     isempty(o.prologue_file_path) || (println(io, read(o.prologue_file_path, String)); println(io))
 
     emitted = 0
+    bound = Set{Symbol}()          # names this file actually defines, for the macro guards
+    renames = Dict{Symbol,Symbol}()
     for k in ord.order
         n = e.bykey[k]
+        isempty(String(n.id)) || (renames[n.id] = e.name[k])
         k in e.skip && continue                          # a system typedef Julia already names
         (n.system && !o.generate_isystem_symbols) && continue
         excluded(o, e.name[k]) && continue
         out = Expr[]
         emit_node(e, n, get(bycut, k, Dict{Int,Cut}()), out, o)
+        isempty(out) || push!(bound, unescape_name(e.name[k]))
+        n.facts isa EnumFacts && for (cn, _) in n.facts.constants; push!(bound, cn); end
         for ex in out
             println(io, string(ex)); println(io)
             emitted += 1
         end
     end
+
+    # Macros last. Nothing declared can refer to a macro — clang expands them before anything
+    # reaches the AST — so this is the only position that needs no ordering analysis, and it is
+    # the one position where every name a macro might reference is already bound.
+    n_macros = emit_macros(io, macros, bound, renames, o)
 
     isempty(o.epilogue_file_path) || (println(io, read(o.epilogue_file_path, String)); println(io))
     if !isempty(o.export_symbol_prefixes)
@@ -440,7 +537,8 @@ function generate(nodes::Vector{Node}; options::Options=Options(), io::IO=stdout
         println(io)
     end
     isempty(o.module_name) || println(io, "end # module")
-    return (; nodes=length(nodes), emitted, cuts=length(ord.cuts), hoisted=ord.hoisted)
+    return (; nodes=length(nodes), emitted, cuts=length(ord.cuts), hoisted=ord.hoisted,
+              macros=n_macros, macros_seen=length(macros))
 end
 
 end # module

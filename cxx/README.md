@@ -25,6 +25,7 @@ build and symbols fail at call time:
     julia --project=/tmp/cxxenv cxx/validate_e2e.jl            # generate + load + ABI compare
     julia --project=/tmp/cxxenv cxx/validate_options.jl        # each option has an observable effect
     julia --project=/tmp/cxxenv cxx/validate_abi.jl fixtures libxml2 glib pango
+    julia --project=/tmp/cxxenv cxx/validate_macros.jl        # macro values vs C semantics
 
 `validate_abi.jl` is the strongest of these and the one to run before claiming anything. The
 others compare against the old generator's recorded output; this one compares every emitted type
@@ -39,9 +40,10 @@ run that agreed.
 
 ## Option surface
 
-`Options` honours 13 keys, named to match `generator.toml` so a config maps across unchanged:
+`Options` honours 15 keys, named to match `generator.toml` so a config maps across unchanged:
 library_name, module_name, prologue_file_path, epilogue_file_path, jll_pkg_name,
 jll_pkg_extra, export_symbol_prefixes, output_ignorelist, generate_isystem_symbols,
-skip_static_functions, use_julia_native_enum_type, print_using_CEnum, use_ccall_macro.
+skip_static_functions, use_julia_native_enum_type, print_using_CEnum, use_ccall_macro,
+and from `[codegen.macro]`: macro_mode, add_comment_for_skipped_macro.
 `Options(TOML.parsefile(path))` reads the [general] and [codegen] tables directly.
 Everything else in the ~45-key surface is still unimplemented -- GENERATORS-REWORK.md 0.1.

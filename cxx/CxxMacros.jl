@@ -98,7 +98,24 @@ const BINOPS = Dict("+" => :+, "-" => :-, "*" => :*, "%" => :rem,
                     "==" => :(==), "!=" => :!=, "<" => :<, ">" => :>,
                     "<=" => :<=, ">=" => :>=, "&&" => :&&, "||" => :||)
 
-const UO_PLUS, UO_MINUS, UO_NOT, UO_LNOT = 6, 7, 8, 9
+"""
+Unary opcodes, by name.
+
+These were once written as the bare integers 6–9, which are the right *values* — and never
+matched, because `getOpcode` returns a `CXUnaryOperatorKind`, and a Julia `@enum` does not
+compare equal to an `Integer`. Every unary operator therefore fell through to
+`Untranslatable`, so **every negative constant in every corpus was silently skipped**:
+glib's `G_MININT`, `G_MINLONG`, `G_MININT64` and friends all vanished, and the only symptom was
+a slightly lower translation count. Naming them makes the mismatch a load error rather than a
+silent no-op.
+"""
+const UO_PLUS  = CC.LibClangEx.CXUnaryOperatorKind_UO_Plus
+const UO_MINUS = CC.LibClangEx.CXUnaryOperatorKind_UO_Minus
+const UO_NOT   = CC.LibClangEx.CXUnaryOperatorKind_UO_Not
+const UO_LNOT  = CC.LibClangEx.CXUnaryOperatorKind_UO_LNot
+# GNU `__extension__`, which is how glib writes its 64-bit constants. It only suppresses a
+# pedantic diagnostic, so it is transparent here.
+const UO_EXTENSION = CC.LibClangEx.CXUnaryOperatorKind_UO_Extension
 
 "Map a clang builtin type spelling to the Julia type to annotate a literal with."
 const CTYPE_TO_JL = Dict(
@@ -121,20 +138,25 @@ function generic_int(gv)
 end
 
 """
-An integer literal's value, read at the signedness clang gave it.
+Re-read a value at the signedness clang gave its type.
 
-`GenericValue` hands back a signed reading of the APInt, so `0x8c000000` -- an `unsigned int`
-whose value is 2348810240 -- arrives as -1946157056. Emitting `Cuint(-1946157056)` would throw.
-Re-widen using the literal's own type.
+`GenericValue` hands back a signed reading of the APInt, so `0x8c000000` — an `unsigned int`
+whose value is 2348810240 — arrives as -1946157056. Emitting `Cuint(-1946157056)` would throw.
+
+This applies to **both** ends of the verification, which is the part that was easy to miss:
+`glib`'s `G_MAXUINT` translated correctly to 4294967295, but the fold it was checked against
+came back as -1, so the verifier rejected eight correct macros. A skipped-but-correct macro is
+the safe failure direction, which is exactly why it stayed invisible until the skip reasons
+were counted.
 """
-function literal_int(r, ctx)
-    raw = generic_int(CC.getValue(r))
-    qt = CC.getType(r)
+function at_signedness(raw::Integer, qt, ctx)
     if CC.isUnsignedIntegerType(CC.getTypePtr(qt)) && raw < 0
         return raw + (big(1) << Int(CC.getTypeSize(ctx, qt)))
     end
     return raw
 end
+
+literal_int(r, ctx) = at_signedness(generic_int(CC.getValue(r)), CC.getType(r), ctx)
 
 """
     translate_expr(e, ctx) -> Julia expression
@@ -166,12 +188,18 @@ function translate_expr(@nospecialize(e), ctx)
         return CC.getString(r)
 
     elseif r isa CC.AbstractCharacterLiteral
-        return Expr(:call, :Cchar, generic_int(CC.getValue(r)))
+        # Unlike `IntegerLiteral::getValue`, this returns the code point directly rather than an
+        # APInt behind an LLVMGenericValueRef — passing it through `generic_int` threw on the
+        # first header that used a character macro.
+        v = Int(CC.getValue(r))
+        # A plain C character literal has type `int`; `Cchar` says what it MEANT, and is what
+        # the existing generator emits. A wide literal will not fit, so keep it numeric.
+        return 0 <= v <= 127 ? Expr(:call, :Cchar, v) : v
 
     elseif r isa CC.AbstractUnaryOperator
         op = CC.getOpcode(r); sub = translate_expr(CC.getSubExpr(r), ctx)
         op == UO_MINUS && return Expr(:call, :-, sub)
-        op == UO_PLUS && return sub
+        (op == UO_PLUS || op == UO_EXTENSION) && return sub
         op == UO_NOT && return Expr(:call, :~, sub)
         op == UO_LNOT && return Expr(:call, :!, sub)
         throw(Untranslatable("unary operator $op"))
@@ -203,9 +231,13 @@ function translate_expr(@nospecialize(e), ctx)
         qt = CC.getType(r); tp = CC.getTypePtr(qt)
         spelling = CC.getAsString(qt)
         if CC.isPointerType(tp)
-            # Any pointer cast of a constant is a pointer literal; the only one that occurs in
-            # practice is the null pointer.
-            return :(Ptr{Cvoid}($sub))
+            # A cast to pointer is either a string decaying to `char *` or a numeric address.
+            # libxml2 writes `#define XML_XML_NAMESPACE (const xmlChar *) "http://…"`; wrapping
+            # that gave `Ptr{Cvoid}("http://…")`, a MethodError at load. The string itself is
+            # the right Julia value — `ccall` decays it exactly as C does.
+            sub isa AbstractString && return sub
+            sub isa Integer && return :(Ptr{Cvoid}($sub))
+            throw(Untranslatable("cast to pointer of a non-constant"))
         elseif CC.isIntegerType(tp)
             # A C cast TRUNCATES. `T(x)` is a checked conversion that throws, which is
             # Clang.jl issue #382; `%` is the operation C actually performs.
@@ -269,16 +301,23 @@ function referenced_symbols!(out::Set{Symbol}, @nospecialize(ex))
 end
 
 """
-Check a translated expression against clang's own constant folding.
+Check a translated expression by evaluating it, and against clang's fold when there is one.
 
 Returns `:ok`, `:unchecked` (the expression names something only the generated module will
 define, so it cannot be evaluated here), or a `Pair` describing the disagreement.
 
-The distinction that matters: an expression which **throws** is a FAILURE, not an unchecked
-case. `MPI_Datatype(0x8c000000)` raising `InexactError` is precisely the defect this exists to
-catch — treating a throw as "could not check" is how a verifier becomes vacuous.
+Two distinctions matter, and both were learned by getting them wrong:
+
+  * An expression which **throws** is a FAILURE, not an unchecked case. `MPI_Datatype(0x8c000000)`
+    raising `InexactError` is precisely the defect this exists to catch — treating a throw as
+    "could not check" is how a verifier becomes vacuous.
+  * The evaluation runs **whether or not clang folded the macro**. Gating it on a fold meant
+    every non-integer macro went out unverified, and libxml2's `XML_XML_NAMESPACE` — a string
+    cast to `const xmlChar *` — was emitted as `Ptr{Cvoid}("http://…")`, which fails at load.
+    A fold is extra evidence when available, not the precondition for looking.
 """
-function check_against_fold(@nospecialize(ex), folded::Integer, binds::Dict{Symbol,Any})
+function check_translation(@nospecialize(ex), folded::Union{Nothing,Integer},
+                           binds::Dict{Symbol,Any})
     syms = referenced_symbols!(Set{Symbol}(), ex)
     for s in syms
         haskey(binds, s) && continue
@@ -292,8 +331,9 @@ function check_against_fold(@nospecialize(ex), folded::Integer, binds::Dict{Symb
     v = try
         Core.eval(m, ex)
     catch err
-        return :threw => sprint(showerror, err)
+        return :threw => first(split(sprint(showerror, err), "\n"))
     end
+    folded === nothing && return :ok
     v isa Number || return :ok     # strings and pointers do not compare against an integer fold
     return v == folded ? :ok : (:mismatch => "got $v, clang folded to $folded")
 end
@@ -368,7 +408,7 @@ function translate_macros(headers::Vector{String}, args::Vector{String}=String[]
             # NOTE: evaluateValue segfaults on a decl with no initializer -- guarded above.
             av = CC.evaluateValue(d)
             if !CC.is_null_handle(av) && CC.isInt(av)
-                folded = generic_int(CC.getInt(av))
+                folded = at_signedness(generic_int(CC.getInt(av)), CC.getType(d), ctx)
             end
             ex = try
                 translate_expr(CC.getInit(d), ctx)
@@ -384,13 +424,11 @@ function translate_macros(headers::Vector{String}, args::Vector{String}=String[]
                 continue
             end
             # The check the token-based translator could not make: does our Julia mean what
-            # clang says the macro means? A mismatch is never emitted.
-            if folded !== nothing
-                verdict = check_against_fold(ex, folded, typedefs)
-                if verdict isa Pair
-                    push!(results, MacroSkipped(nm, "translation rejected ($(verdict[1])): $(verdict[2])"))
-                    continue
-                end
+            # clang says the macro means, and does it even evaluate? A failure is never emitted.
+            verdict = check_translation(ex, folded, typedefs)
+            if verdict isa Pair
+                push!(results, MacroSkipped(nm, "translation rejected ($(verdict[1])): $(verdict[2])"))
+                continue
             end
             push!(results, MacroTranslated(nm, ex, ctype, folded))
         end

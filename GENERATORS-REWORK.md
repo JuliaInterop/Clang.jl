@@ -184,6 +184,41 @@ Defects 1–3 are ABI-silent: the file loads, every call type-checks, and the me
 Nothing short of comparing against the compiler's own layout would have caught them, which is
 the argument for keeping `validate_abi.jl` as the release gate rather than the baseline.
 
+#### S-B: done
+
+`CxxMacros` is wired into `generate` behind `macro_mode` (`"basic"` | `"disable"`), emitted after
+every declaration — nothing declared can name a macro, since clang expands them before anything
+reaches the AST, so that is the one position needing no ordering analysis. Two guards apply:
+a macro naming something the file will not define is skipped (the `UndefVarError` class
+`test/macros.jl` pins), and a macro is never emitted over a declaration of the same name.
+Symbols are first rewritten through codegen's own name map, so a macro mentioning `uint32_t`
+becomes `UInt32` rather than being dropped as unresolvable.
+
+`cxx/validate_macros.jl` is `test/macros.jl` run through the new backend: 25 assertions, all
+passing, **including the two `@test_broken`s**. `((INT) 4+1)` is 5 and `((MPI_Datatype)0x8c000000)`
+is -1946157056, which is what `cc` gives. Those flip to Unexpected Pass in the suite at S-D.
+
+Running it over the corpora found four more defects, three of them silent:
+
+1. **`(const xmlChar *) "http://…"` became `Ptr{Cvoid}("http://…")`** — a `MethodError` at load,
+   which took libxml2 down entirely. A string cast to a pointer is just the string.
+2. **The verifier only ran when clang folded to an integer**, so every string- and pointer-valued
+   macro went out unchecked — including the one above. It now evaluates every translation and
+   rejects any that throws; a fold is extra evidence when available, not the precondition.
+3. **Unary opcodes were compared as bare integers.** The values were right, but `getOpcode`
+   returns a `CXUnaryOperatorKind` and a Julia `@enum` does not compare equal to an `Integer`,
+   so *every negative constant in every corpus was silently skipped*. glib's `G_MININT`,
+   `G_MINLONG`, `G_MININT64` all vanished with no symptom but a lower count.
+4. **The fold was read at the wrong signedness.** `G_MAXUINT` translated correctly to 4294967295
+   and was compared against a fold of -1, so the verifier rejected eight correct macros. Skipping
+   a correct macro is the safe failure direction, which is precisely why it stayed invisible
+   until the skip reasons were counted rather than just totalled.
+
+Translation rates: libxml2 132/207, glib 268/629, pango 370/1214. The remainder is dominated by
+two buckets that are correct to skip — availability/attribute macros that are not C expressions
+at all (695 in pango), and macros that expand to a function call (165), which cannot be a `const`
+without calling the library at load time.
+
 ---
 
 ## 1. The thesis

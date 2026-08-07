@@ -149,6 +149,20 @@ let R = dirname(@__DIR__), doch = joinpath(R, "test", "include", "documentation.
     check("fold_single_line_comment", occursin("\"\"\"One line.\"\"\"", String(take!(fold))))
 end
 
+# --- the api/common split ---
+let api = IOBuffer(), com = IOBuffer()
+    CxxCodegen.generate([joinpath(d, "h.h")]; io=com, api_io=api,
+                        options=CxxCodegen.Options(library_name="libs", module_name="Ignored"))
+    a, cm = String(take!(api)), String(take!(com))
+    check("split: functions to api", occursin("function fn_keep", a))
+    check("split: types not in api", !occursin("struct Keep", a))
+    check("split: types to common", occursin("struct Keep", cm))
+    # Neither file gets a module wrapper or `using CEnum` — a caller who splits the output is
+    # assembling the module and would otherwise get two of each.
+    check("split: no module wrapper", !occursin("module Ignored", a * cm))
+    check("split: no using CEnum", !occursin("using CEnum", cm))
+end
+
 println()
 println("options: $pass passed, $fail failed")
 exit(fail == 0 ? 0 : 1)

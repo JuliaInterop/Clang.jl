@@ -669,8 +669,8 @@ function emit_macros(io::IO, macros, emitted::Set{Symbol}, renames::Dict{Symbol,
 end
 
 """
-    generate(headers; args=String[], options=Options(), io=stdout)
-    generate(nodes;   options=Options(), io=stdout)
+    generate(headers; args=String[], options=Options(), io=stdout, api_io=nothing)
+    generate(nodes;   options=Options(), io=stdout, api_io=nothing)
 
 Run extract → order → codegen and write a loadable Julia module body.
 
@@ -678,6 +678,9 @@ The second method takes already-extracted nodes. Extraction is the expensive sta
 the only clang handles, so a caller that needs the facts as well — the ABI verifier compares
 each emitted type against the `ASTRecordLayout` the facts carry — parses once and emits from the
 same node vector rather than parsing twice and hoping the two agree.
+
+Passing `api_io` splits the output the way `output_api_file_path` /
+`output_common_file_path` do: function wrappers there, everything else to `io`.
 """
 function generate(headers::Vector{String}; args::Vector{String}=String[],
                   options::Options=Options(), kw...)
@@ -692,7 +695,7 @@ function generate(headers::Vector{String}; args::Vector{String}=String[],
 end
 
 function generate(nodes::Vector{Node}; options::Options=Options(), io::IO=stdout,
-                  macros=[])
+                  macros=[], api_io::Union{Nothing,IO}=nothing)
     o = options
     ord = order_nodes(nodes)
     nm, skip = assign_names(nodes)
@@ -701,6 +704,13 @@ function generate(nodes::Vector{Node}; options::Options=Options(), io::IO=stdout
     for c in ord.cuts
         get!(Dict{Int,Cut}, bycut, c.node)[c.field] = c
     end
+
+    # Split mode: function wrappers to `api_io`, everything else (macros included) to `io`.
+    # As in the existing `FunctionPrinter`/`CommonPrinter` pair, neither file gets a module
+    # wrapper, `using CEnum`, prologue or epilogue — a caller who splits the output is
+    # assembling the module themselves and would otherwise get two of each.
+    split = api_io !== nothing
+    if !split
 
     isempty(o.module_name) || (println(io, "module ", o.module_name); println(io))
     if !isempty(o.jll_pkg_name)
@@ -719,6 +729,8 @@ function generate(nodes::Vector{Node}; options::Options=Options(), io::IO=stdout
         """)
     isempty(o.prologue_file_path) || (println(io, read(o.prologue_file_path, String)); println(io))
 
+    end # if !split
+
     emitted = 0
     bound = Set{Symbol}()          # names this file actually defines, for the macro guards
     renames = Dict{Symbol,Symbol}()
@@ -732,12 +744,13 @@ function generate(nodes::Vector{Node}; options::Options=Options(), io::IO=stdout
         emit_node(e, n, get(bycut, k, Dict{Int,Cut}()), out, o)
         isempty(out) || push!(bound, unescape_name(e.name[k]))
         n.facts isa EnumFacts && for (cn, _) in n.facts.constants; push!(bound, cn); end
+        dest = (split && n.facts isa FunctionFacts) ? api_io : io
         for (i, ex) in enumerate(out)
             # The docstring goes on the node's FIRST expression — the definition itself. The
             # accessors and constructors that follow are machinery, not separate API.
             i == 1 && o.extract_c_comment_style != "disable" &&
-                print_doc(io, format_doc(n.doc, o.extract_c_comment_style), o)
-            println(io, string(ex)); println(io)
+                print_doc(dest, format_doc(n.doc, o.extract_c_comment_style), o)
+            println(dest, string(ex)); println(dest)
             emitted += 1
         end
     end
@@ -746,6 +759,11 @@ function generate(nodes::Vector{Node}; options::Options=Options(), io::IO=stdout
     # reaches the AST — so this is the only position that needs no ordering analysis, and it is
     # the one position where every name a macro might reference is already bound.
     n_macros = emit_macros(io, macros, bound, renames, o)
+
+    if split
+        return (; nodes=length(nodes), emitted, cuts=length(ord.cuts), hoisted=ord.hoisted,
+                  macros=n_macros, macros_seen=length(macros))
+    end
 
     isempty(o.epilogue_file_path) || (println(io, read(o.epilogue_file_path, String)); println(io))
     if !isempty(o.export_symbol_prefixes)

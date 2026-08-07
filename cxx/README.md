@@ -53,11 +53,15 @@ run that agreed.
 - `[codegen.macro]`: macro_mode, add_comment_for_skipped_macro
 - doc comments: extract_c_comment_style ("disable" | "raw" | "doxygen"), fold_single_line_comment
 
-`validate_options.jl` asserts each one has an observable effect — 36 checks. Note what it does
+`validate_options.jl` asserts each one has an observable effect — 41 checks. Note what it does
 *not* do: every option is checked in isolation, so no pair is known to compose.
 
-Still unimplemented: the two-file api/common split, `auto_mutability`, `add_fptr_methods`,
-`show_c_function_prototype`, `callback_documentation`. See GENERATORS-REWORK.md §0.1.
+The api/common split is `generate(...; api_io=...)`: function wrappers there, everything else
+(macros included) to `io`, and neither file gets a module wrapper, `using CEnum`, prologue or
+epilogue -- matching the existing FunctionPrinter/CommonPrinter pair.
+
+Still unimplemented: `auto_mutability`, `add_fptr_methods`, `show_c_function_prototype`,
+`callback_documentation`. See GENERATORS-REWORK.md §0.1.
 
 `"doxygen"` renders the commands that carry structure — `\param`, `\return`, `\note`, `\bug`
 and friends — into Markdown sections and bullet lists. It is a much smaller renderer than

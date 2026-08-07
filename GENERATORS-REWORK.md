@@ -97,26 +97,48 @@ contract and it is the bulk of the remaining work.
 
 **Skipped, not translated:** variadic functions, `static` functions, docstrings.
 
-#### The bootstrap makes self-hosting a release gate, not a nice-to-have
+#### The bootstrap is not a gate — ClangCompiler pins the old generator
 
-ClangCompiler's own 43k-line `lib/18/LibClangEx.jl` is generated **by this generator**. So a
-Clang.jl that cannot regenerate it leaves ClangCompiler unmaintainable — and the new Clang.jl
-depends on ClangCompiler. Regenerating both packages' own bindings with the new path, and
-diffing, is therefore the acceptance test for the switchover, not an optional extra. It also
-exercises the option surface end-to-end, which the fixture corpus does not.
+An earlier draft of this section claimed that regenerating ClangCompiler's own
+`lib/18/LibClangEx.jl` was a release gate for the switchover, because the new Clang.jl depends
+on ClangCompiler. **That was wrong.**
+
+`ClangCompiler/gen/generator.jl` loads only `Clang.Generators` — never `ClangCompiler` itself —
+and its `gen/Project.toml` has exactly two dependencies, `BinaryBuilderBase` and `Clang`. So
+that environment can pin `Clang = "0.19"`, the last libclang-based release, indefinitely:
+
+- the gen process loads libclang **alone**, so there is no LLVM CommandLine conflict (§3.4);
+- ClangCompiler stays regenerable forever, independent of what Clang.jl does next;
+- and there is no circularity to manage at release time.
+
+The same reasoning removes Clang.jl's *own* self-hosting from the picture. That exists solely to
+produce `lib/<n>/LibClang.jl` — its libclang bindings. Once libclang goes, those bindings go
+with it, and `gen/generator.jl` and `gen/generator.toml` are deleted alongside `lib/16…21/`.
+**Neither package needs the new generator to bootstrap itself.**
+
+#### What that leaves as the acceptance test
+
+Not self-hosting — there is nothing left to self-host. The question is whether the new pipeline
+still serves *downstream* users' `generator.toml` files, and the only honest test is real
+third-party header sets run end-to-end and loaded. libxml2 already orders (§ORDERING-DESIGN);
+glib and pango are the other forward-declaration-heavy corpora available locally.
+
+This also redirects the option work: its priority order should come from surveying what real
+downstream generator scripts set, not from ClangCompiler's ten keys, which now gate nothing.
 
 #### Sequence
 
 | step | gate |
 | --- | --- |
-| S-A | option surface: the 40 keys, starting with the 10 ClangCompiler needs | `test/abi_baseline.jl` stays green |
-| S-B | wire `CxxMacros` into `generate` | `test/macros.jl` bar; the #510/#382 `@test_broken`s should flip to passing |
-| S-C | self-host: regenerate Clang.jl's `lib/N/LibClang.jl` and ClangCompiler's `lib/18/LibClangEx.jl`, and diff | both packages still build and test |
+| S-A | option surface, prioritised by what downstream `.toml` files actually set | `test/abi_baseline.jl` stays green |
+| S-B | wire `CxxMacros` into `generate` | `test/macros.jl`; the #510/#382 `@test_broken`s should flip to passing |
+| S-C | third-party corpora — libxml2, glib, pango — generate **and load** | broader than the fixture corpus |
 | S-D | switch `src/` to the new frontend | full suite green |
-| S-E | delete `src/cursor.jl`, `src/type.jl`, `cltypes.jl`, `lib/16…21/`, and the 44 libclang exports | major version bump |
+| S-E | delete `src/cursor.jl`, `src/type.jl`, `cltypes.jl`, `lib/16…21/`, `gen/`, and the 44 libclang exports | major version bump |
 
-S-E is the only irreversible step and it must come last. Deleting the live path before S-C
-passes would leave no fallback and no way to regenerate either package's bindings.
+S-E is the only irreversible step and it must come last — but the reason is narrower than the
+earlier draft claimed. It is not that bindings become unregenerable; it is simply that once the
+libclang path is gone there is no fallback if S-C turns up something the fixtures missed.
 
 ---
 

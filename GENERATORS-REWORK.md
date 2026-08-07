@@ -81,6 +81,43 @@ rather than being replaced. What does *not* carry over is anything libclang-spec
 15→11 pass reduction, the splicing fix (§3.3 — the AST walk never appends), and the
 `IndexDefinition` split. Those should not be built.
 
+### §0.1 Switchover: what must land first
+
+The new pipeline is ABI-correct on the fixture corpus but **not feature-equivalent**, and the
+gap is breadth rather than depth. Switching `src/` over now would break both real consumers.
+
+**Option surface — 0 of 40 implemented.** `gen/generator.toml` (Clang.jl's own) sets 40 keys;
+ClangCompiler's `gen/option.toml` sets 10. The new emitter honours none: it hardcodes the
+library name, always writes `using CEnum`, and has no module wrapper, prologue, epilogue,
+ignorelist, export prefixes, record constructors or comment styles. This is the compatibility
+contract and it is the bulk of the remaining work.
+
+**Macros are not wired in.** `CxxMacros` works standalone; `generate` never calls it, so no
+`#define` reaches the output.
+
+**Skipped, not translated:** variadic functions, `static` functions, docstrings.
+
+#### The bootstrap makes self-hosting a release gate, not a nice-to-have
+
+ClangCompiler's own 43k-line `lib/18/LibClangEx.jl` is generated **by this generator**. So a
+Clang.jl that cannot regenerate it leaves ClangCompiler unmaintainable — and the new Clang.jl
+depends on ClangCompiler. Regenerating both packages' own bindings with the new path, and
+diffing, is therefore the acceptance test for the switchover, not an optional extra. It also
+exercises the option surface end-to-end, which the fixture corpus does not.
+
+#### Sequence
+
+| step | gate |
+| --- | --- |
+| S-A | option surface: the 40 keys, starting with the 10 ClangCompiler needs | `test/abi_baseline.jl` stays green |
+| S-B | wire `CxxMacros` into `generate` | `test/macros.jl` bar; the #510/#382 `@test_broken`s should flip to passing |
+| S-C | self-host: regenerate Clang.jl's `lib/N/LibClang.jl` and ClangCompiler's `lib/18/LibClangEx.jl`, and diff | both packages still build and test |
+| S-D | switch `src/` to the new frontend | full suite green |
+| S-E | delete `src/cursor.jl`, `src/type.jl`, `cltypes.jl`, `lib/16…21/`, and the 44 libclang exports | major version bump |
+
+S-E is the only irreversible step and it must come last. Deleting the live path before S-C
+passes would leave no fallback and no way to regenerate either package's bindings.
+
 ---
 
 ## 1. The thesis

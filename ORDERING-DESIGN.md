@@ -1,6 +1,15 @@
 # Settled design: emission ordering
 
 **Status**: for review. No code changes yet.
+
+> **Scoped by [GENERATORS-REWORK.md](GENERATORS-REWORK.md) §0**: libclang is being dropped, so
+> Clang.jl will have a single ClangCompiler-backed frontend. What survives from this document is
+> the part that is frontend-independent — the ordering walk (§3.2), the two-tier cycle policy
+> (§3.2a), the atomicity requirement (§2.0) and the verifier (§3.4) — because Julia's lack of
+> forward declarations does not care where the facts came from, and `decl_id` *is* the stable key
+> §3.2b asks for. What does **not** survive, and should not be built: the 15→11 pass reduction,
+> §3.3's splicing fix, and the `IndexDefinition` split. Passes 2-8 are libclang compensation and
+> are deleted outright by the AST walk.
 **Supersedes**: [GENERATORS-REWORK.md](GENERATORS-REWORK.md) §3.6, which contains an error
 corrected in §1 below.
 
@@ -472,7 +481,7 @@ So validation must be fixture-driven:
 | --- | --- | --- |
 | S1 | `dag.order`/`dag.rank`; stop permuting `dag.nodes` | byte-identical clang-c; #529/#535/#536 index a source-ordered vector |
 | S2 | fuse `RemoveCircularReference` + `TopologicalSort` into one iterative walk | byte-identical clang-c; 28 fixtures load; **new ≥3-cycle fixture** |
-| S3 | splice synthesized nodes instead of appending | `__JL_Ctag_N` renumbering expected — re-pin |
+| ~~S3~~ | ~~splice synthesized nodes instead of appending~~ | **DROPPED** — libclang-only, and the AST walk never appends. It was also the step forcing `__JL_Ctag_N` renumbering across every generated file, so this removes the worst compatibility cost for no loss. |
 | S4 | post-emission verifier over the printed set | `nested-struct.h` fails loudly instead of silently |
 | S5 | bands behind an option, default off | opt-in only; two-file split unaffected |
 

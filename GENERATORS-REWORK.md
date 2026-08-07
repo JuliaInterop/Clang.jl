@@ -1,10 +1,85 @@
 # Reworking `Generators` on Clang's C++ API
 
-**Status**: design settled; the macro slice is implemented (see
-[MACRO-HANDLING.md](MACRO-HANDLING.md)). §9's decisions are resolved **except decision 1, which
-measurement overturned** — a package extension is impossible (§3.4), so the frontend-independent
-core must be split into its own package instead.
+**Status**: libclang is being dropped entirely — see §0, which supersedes §3. The macro slice is
+implemented ([MACRO-HANDLING.md](MACRO-HANDLING.md)); the ordering design is settled
+([ORDERING-DESIGN.md](ORDERING-DESIGN.md)).
 **Companion**: [CLAUDE.md](CLAUDE.md) describes the pipeline as it stands today.
+
+---
+
+## 0. DECISION: libclang is dropped; ClangCompiler is the only backend
+
+Taken 2026-08-07. **Clang.jl depends on ClangCompiler exclusively.** There is no second
+frontend, no package extension, no package split, and no out-of-process arrangement.
+
+This retires most of §3 below, which was written to reconcile two coexisting backends:
+
+| section | status |
+| --- | --- |
+| §3.1 version reach | **accepted as a cost**, not a constraint to design around |
+| §3.2 bootstrap relationship | still real, but simpler — see below |
+| §3.3 package extension | already retracted; now moot |
+| §3.4 one LLVM per process | **resolved** — only ClangCompiler loads an LLVM |
+| §3.5 why this is a refactor not a repackaging | moot; there is nothing to separate |
+
+### What it resolves
+
+The blocking constraint was that Clang.jl and ClangCompiler cannot share a process, because
+both statically register LLVM's global CommandLine options. With libclang gone there is one
+LLVM in the process and the conflict disappears. ClangCompiler's own `gen/` environment then
+loads `Clang` → `ClangCompiler`, a single LLVM, and works.
+
+The bootstrap relationship survives in a milder form: regenerating ClangCompiler's bindings
+needs Clang.jl, which needs a *released* ClangCompiler. Routine, but a simultaneous breaking
+change in both packages is a two-step release.
+
+### What it costs — accepted, not solved
+
+1. **LLVM 18 only.** Clang.jl currently spans LLVM 16–21 through six `lib/` directories and
+   `Clang_unified_jll`'s own libclang. ClangCompiler is pinned to the LLVM Julia itself is built
+   against. Users lose the ability to choose the parsing clang version independently of their
+   Julia.
+2. **Julia 1.12+**, up from 1.11.
+3. **The exported libclang API goes.** Not just the generator: 44 exported names —
+   `CLCursor`, `CLType`, `CLToken`, `Index`, `TranslationUnit`, `parse_header`, `parse_headers`,
+   `tokenize`, `TokenList`, `CLCompilationDatabase`, `children`, `search`, `spelling`, `kind`,
+   `fields`, … — are public surface today. Anyone using Clang.jl *as a libclang binding* rather
+   than as a generator is broken by this. It is a major version bump.
+4. **Objective-C stops working** until [ClangCompiler#49](https://github.com/Gnimuc/ClangCompiler.jl/issues/49).
+   `clang/AST/DeclObjC.h` is unwrapped in full — no ObjC `Decl` carriers exist at all, and
+   `src/clang/DeclKindMap.jl:3` says so. The macOS-only ObjC testset must be disabled in the
+   interim.
+
+### What it deletes
+
+| | lines |
+| --- | --- |
+| hand-written libclang object layer (`cursor.jl`, `type.jl`, `cltypes.jl`, `trans_unit.jl`, `token.jl`, `index.jl`, `file.jl`, `module.jl`, `compiledb.jl`, `dump.jl`, `string.jl`) | ~2,060 |
+| generated bindings `lib/16…21/LibClang.jl` | ~45,600 |
+
+### What it does to the pipeline
+
+Passes 2–8 of [ORDERING-DESIGN.md](ORDERING-DESIGN.md) §3.2b exist only to reconstruct, by name,
+what libclang cannot hand over: the typedef↔anonymous-tag link, a Symbol index, cross-TU
+duplicate marking, dependent system nodes, nested-record discovery, and opaque detection. Every
+one is answered directly by the AST — demonstrated by a reachability walk that finds a nested
+`struct Inner`, an anonymous record named by its typedef, and an undefined forward declaration,
+keyed on `decl_id` with no index and no duplicates.
+
+**The pipeline becomes roughly five passes:**
+
+```
+1  Extract    one reachability walk over the AST -> nodes (facts) + edges (decl_id)
+2  Order      DFS -> emission order + cut set          (ORDERING-DESIGN.md §3.2)
+3  Codegen    + CodegenMacro, AddFPtrMethods, TweakMutability
+4  Verify     definition-time symbol check             (ORDERING-DESIGN.md §3.4)
+5  Print
+```
+
+`decl_id` **is** the stable key ORDERING-DESIGN.md §3.2b asks for, so that design converges
+rather than being replaced. What does *not* carry over is anything libclang-specific: the
+15→11 pass reduction, the splicing fix (§3.3 — the AST walk never appends), and the
+`IndexDefinition` split. Those should not be built.
 
 ---
 

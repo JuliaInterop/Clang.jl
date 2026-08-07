@@ -262,6 +262,74 @@ Self-edges need neither tier: `cycle-detection.h` already emits `struct B; x::Pt
 `struct-mutual-ref.h` emits `grad::Ptr{mutualref}` and `src::NTuple{10, Ptr{mutualref}}`, all
 without repair.
 
+### 3.2b The resulting pipeline
+
+Today's pre-codegen stretch is 15 unconditional passes; the new one is 11. Nothing in the emit
+stretch changes.
+
+```
+COLLECT
+   1  CollectTopLevelNode              source order; assigns each node a STABLE KEY
+   2  LinkTypedefToAnonymousTagType    (dag.nodes)
+   3  LinkTypedefToAnonymousTagType    (dag.sys)
+   4  IndexDefinition                  tags/ids : Symbol -> KEY;  marks *Duplicated
+   5  CollectDependentSystemNode       pulls sys nodes in;  indexes each as it inserts
+   6  CollectNestedRecord              SPLICES before parent; indexes each as it inserts
+   7  FindOpaques                      rewrites in place
+   8  CatchDuplicatedAnonymousTags
+
+RESOLVE
+   9  ResolveDependency                adj : KEY edges carrying kind + field site.
+                                       Built ONCE. Never pruned.
+
+ORDER
+  10  OrderDefinitions                 one iterative DFS. Produces `dag.order` and a CUT SET;
+                                       a cut records the edge AND the degraded field together.
+
+EMIT  (unchanged except where noted)
+  11  CodegenPreprocessing
+  12  [DeAnonymize]  [Audit | LinkEnumAlias]
+  13  Codegen                          consults the cut set for degraded fields
+  14  CodegenMacro
+  15  [AddFPtrMethods]
+  16  [TweakMutability]                reads the FULL adj — see below
+  17  VerifyOrder                      NEW (§3.4)
+  18  printers
+```
+
+**What disappears, and why each one is now safe to remove:**
+
+| removed | today's reason for existing | why it goes |
+| --- | --- | --- |
+| `IndexDefinition` #2 | `CollectDependentSystemNode` `prepend!`s, shifting every index | keys are stable; insertion shifts nothing |
+| `IndexDefinition` #3 | `TopologicalSort` permutes `dag.nodes` | nothing permutes `dag.nodes` (§3.1) |
+| `ResolveDependency` #2 | rebuilds the `adj` that #3 cleared | `adj` is built once and never cleared |
+| `RemoveCircularReference` + `TopologicalSort` | two DFSs over the same graph | fused into `OrderDefinitions` (§3.2) |
+
+**Two things make that possible, and neither is optional.**
+
+*Stable keys.* Splicing (§3.3) inserts into the middle of `dag.nodes`, which shifts positions
+just as `prepend!` and `dag.nodes .= list` do today. Position-keyed `adj`/`tags`/`ids` would be
+invalidated by the very change meant to reduce churn. So each node gets an integer key at
+creation, never reused, and `adj`, `tags`, `ids` and `dag.order` are all key-based. §3.1's
+"don't permute" is really the weaker half of this.
+
+*Non-destructive cuts.* Today `RemoveCircularReference` does `deleteat!(child.adj, idx)`
+(`passes.jl:398`) and `ResolveDependency` #2 then silently rebuilds the deleted edge — which is
+what `TweakMutability` reads (`mutability.jl:1-21`). The restoration is accidental and
+undocumented. In the new design `OrderDefinitions` mutates nothing: it returns an order plus a
+cut set, `adj` stays complete, and `TweakMutability` reads the full graph directly. **This is
+what retires §5's "the second `ResolveDependency` cannot be deleted".** It could not be deleted
+while cuts were destructive; once they are data, it can.
+
+**One refactor this forces.** `IndexDefinition` currently does two jobs in one sweep — build the
+Symbol→node index, and mark duplicates. Because the collectors at steps 5 and 6 add nodes
+*after* it runs, it has to split into `index!(dag, node)` (one node: register or mark duplicate)
+and `index!(dag)` (all of them), with the collectors calling the single-node form as they
+insert. `CollectNestedRecord` already approximates this with its `new_tags` dict
+(`nested.jl:20,28,36`); the difference is that the single-node form must also run the duplicate
+check, which today only the whole-DAG sweep does.
+
 ### 3.3 Splice synthesized nodes, don't append
 
 `collect_nested_record!` (`nested.jl:19,27,35`) appends hoisted anonymous records and
@@ -338,10 +406,11 @@ Stated plainly, because two earlier drafts overclaimed:
 - **It does not remove the DAG.** The walk needs edges, `break_cycle!` needs
   `is_non_pointer_ref` (which re-queries cursors), and `adj` has three other consumers: skip
   propagation, layout propagation and `TweakMutability`.
-- **It does not delete the second `ResolveDependency`.** That pass restores the edges
-  `RemoveCircularReference` pruned, and `TweakMutability` depends on the restored content. It
-  can be narrowed to mutual-ref nodes, but not dropped. The "15 passes → 13" saving does not
-  hold.
+- **The second `ResolveDependency` *can* now be dropped** — but only because cuts became data
+  rather than mutations (§3.2b). While `RemoveCircularReference` destructively pruned `adj`,
+  that pass was silently restoring the edges `TweakMutability` reads, and dropping it would have
+  been a regression. An earlier draft of this document said it could not be removed; that was
+  true of the design as then written.
 - **It is still superlinear on breaks.** Each broken edge costs another O(V+E) walk — strictly
   better than today (progress kept, no fixed budget), but not linear.
 - **`nested-struct.h` is not broken.** An earlier draft (and one design agent) claimed it fails

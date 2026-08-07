@@ -213,6 +213,55 @@ extension is by definition loaded alongside its parent.
 | **Out-of-process C++ frontend** | Clang.jl shells out; the subprocess emits a serialized node set. Keeps one package, costs a serialization format and per-run process startup. This is what `test/cxx_macros.jl` does today. |
 | **Fix the double registration upstream** | Two independently-built LLVMs in one process is inherently fragile; not a path this project controls. |
 
+### 3.5 Why this is a refactor and not a repackaging
+
+Splitting packages only helps if the two halves can be separated, and today they cannot:
+
+```julia
+struct ExprNode{T<:AbstractExprNodeType,S<:CLCursor}   # <- the node type is PARAMETERIZED
+    id::Symbol                                          #    on a libclang cursor
+    type::T
+    cursor::S
+    ...
+```
+
+The DAG does not hold extracted data. It holds **pointers into libclang's AST**, and every
+downstream pass re-queries through them. Occurrences of a cursor or `CL*` type per file:
+
+| file | sites | | file | sites |
+| --- | --- | --- | --- | --- |
+| `codegen.jl` | 96 | | `documentation.jl` | 22 |
+| `jltypes.jl` | 74 | | `audit.jl` | 21 |
+| `passes.jl` | 53 | | `system_deps.jl` | 16 |
+| `resolve_deps.jl` | 42 | | `print.jl` | 15 |
+| `top_level.jl` | 39 | | `nested.jl` | 9 |
+| `preprocessing.jl` | 23 | | `macro.jl` | 23 |
+
+Only `translate.jl`, `option.jl` and `definitions.jl` are genuinely frontend-free. So the
+frontend is not a seam at the front of the pipeline — it runs through all of it.
+
+The good news is that the surface is **bounded and small**. Across the downstream passes
+(`codegen`, `print`, `preprocessing`, `mutability`, `documentation`) there are just **34 distinct
+questions**, dominated by:
+
+```
+ 24 getCursorType     8 getTypedefDeclUnderlyingType    3 hasAttrs        2 isBitField
+ 21 children          8 fields                          3 getTypeDeclaration
+ 17 spelling          7 name                            3 getNumArguments / getArgType
+```
+
+Eight of the 34 are doxygen comment accessors, which is a separable slice.
+
+This also explains a finding from the original triage: `fields(getCursorType(node.cursor))`
+appears in five different files, with a `children()` fallback in four of them, because there is
+no extracted representation for a pass to consult — each one re-derives from the AST and they
+disagree about what a "field" is.
+
+**Out-of-process is not an escape hatch.** A subprocess frontend must send something back across
+the boundary, and a cursor is meaningless there — so it must send extracted facts, which is the
+same IR. Phase 0 is therefore on the critical path for every option in the table above except
+"don't build a second frontend at all".
+
 The macro work in [MACRO-HANDLING.md](MACRO-HANDLING.md) is unaffected — `cxx/CxxMacros.jl`
 depends only on ClangCompiler and is written to be lifted into whichever package ends up
 owning the C++ frontend. What changes is only *where that code lives*, and Phase 0 grows from
@@ -528,8 +577,12 @@ as a dependency.
 
 Each phase ends green on the existing suite. The libclang frontend stays default throughout.
 
-**Phase 0 — seam.** Extract the two places the pipeline touches libclang directly
-(`create_context`'s parse, `CollectTopLevelNode`'s cursor walk) behind a frontend interface.
+**Phase 0 — a frontend-neutral node IR.** *(This phase was originally described as "extract the
+two places the pipeline touches libclang". That was wrong by two orders of magnitude — see
+§3.5.)* `ExprNode` must carry **extracted facts** instead of a cursor: for a record, its fields
+with their types, bit offsets, widths and anonymity, plus size, alignment and attributes; for a
+function, its parameters, return type, variadic-ness and linkage. The surface is bounded — 34
+distinct questions, listed in §3.5 — but it touches 12 of the 20 files in `src/generator`.
 No behaviour change; the existing suite is the check.
 
 **Phase 1 — identity.** Re-key `ExprDAG` on an opaque node identity instead of `Symbol`, keeping

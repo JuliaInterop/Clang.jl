@@ -1,0 +1,626 @@
+# Reworking `Generators` on Clang's C++ API
+
+**Status**: design settled, implementation not started. Nothing in `src/` has changed yet.
+All four decisions in §9 are resolved; §9's appendix lists the six ClangCompiler filings, none
+of which block Phase 0–2.
+**Companion**: [CLAUDE.md](CLAUDE.md) describes the pipeline as it stands today.
+
+---
+
+## 1. The thesis
+
+The `Generators` module spends most of its complexity reconstructing facts that Clang's AST
+already holds, because libclang cannot express them. Three in particular:
+
+| The question | libclang's answer | Clang's C++ answer |
+| --- | --- | --- |
+| Are these two cursors the same C entity? | *No such primitive.* Compare file/line/column, then token text. | They are the same `Decl*`. |
+| Is this record anonymous, and what typedef names it? | `occursin("(anonymous", spelling(ty))`, then a positional scan of neighbouring nodes. | `getIdentifier(d) == null` and `getTypedefNameForAnonDecl(d)`. |
+| Where does this field live, and how wide is it? | `getOffsetOf(type, "name")` — by name, so unnamed fields are unaddressable; alignment unavailable. | `ASTRecordLayout::getFieldOffset(index)` in bits, plus size, alignment, data size, base offsets. |
+
+ClangCompiler.jl wraps the C++ side of all three. The rework is therefore not "port the passes
+to a new API" — it is **delete the passes that exist only to pay libclang's tax**, and keep the
+ones that encode genuine Julia-codegen judgement.
+
+---
+
+## 2. What was verified, not assumed
+
+Every claim below was checked by running Julia against the local ClangCompiler checkout
+(Julia 1.12.6, LLVM 18.1.7, `arm64-apple-macosx11.0.0`). The probes live in this session's
+scratchpad; the results are reproduced here because they are what the plan rests on.
+
+### 2.1 One `ASTContext` for many headers — via an umbrella parse
+
+Three headers, where `a.h` is `#include`d by **both** `b.h` and `c.h` (with header guards),
+written into a temp dir and pulled in by a single `parse` of an umbrella source:
+
+```
+umbrella parse non-null                       true
+errors                                        0
+top-level decls (total / system / user)       7 / 0 / 7
+      RecordDecl            Widget      a.h:3
+      TypedefDecl           Widget_t    a.h:4
+      RecordDecl            Holder      b.h:4
+      FunctionDecl          use_widget  b.h:5
+      RecordDecl                        b.h:6      <- the anonymous record
+      TypedefDecl           Point       b.h:6
+      FunctionDecl          widget_count c.h:4
+distinct decl_ids == decl count               true
+`struct Widget` top-level nodes               1
+```
+
+**`struct Widget` appears exactly once.** There are no duplicates to detect, so there is nothing
+for `is_same`, `IndexDefinition`'s duplicate marking, `CatchDuplicatedAnonymousTags` or the seven
+`*Duplicated` markers to do. Source-file attribution survives (`a.h:3`, `b.h:4`, `c.h:4`), so
+per-header routing (`library_names`, `is_local_header_only`) still has a basis.
+
+**The umbrella is not a convenience — it is required.** Incremental parsing does *not* accumulate
+into the TU's direct decl list. After three separate `parse` calls, `decls_in(TU)` returned only
+the **last** increment's decls (1 of 5). The AST is genuinely shared — the redeclaration chain
+spans increments (`input_line_2` forward decl → `input_line_1` definition), and a field type in
+increment 2 resolves to the definition from increment 1 — but *enumeration* is per-increment.
+So: **all headers must go into one `parse` call.**
+
+### 2.2 C stays C
+
+`create_interpreter` always calls `CreateCpp`, so the default parses C headers as C++
+(`Widget` came back as a `CXXRecordDecl`). Passing `-x c` fixes it completely:
+
+```
+A. default            Widget C-mode carrier   CXXRecordDecl
+B. -x c               Widget C-mode carrier   RecordDecl
+C. -x c -std=c11      Widget C-mode carrier   RecordDecl
+```
+
+The `is_cxx=false` keyword is a *different* switch — it selects the GCC shard and include set.
+Both are needed.
+
+One consequence, found the hard way: **in C mode `find_decl` cannot see `struct` tags.**
+`DeclFinder` runs an ordinary C++ name lookup, and in C a tag lives in the tag namespace, so
+`find_decl(I, "Widget")` returns `nothing` while `find_decl(I, "Point")` (a typedef, hence the
+identifier namespace) succeeds. The frontend must therefore **enumerate** `decls_in(TU)` and
+never fall back to lookup-by-name — which the umbrella design does anyway, but it rules out
+using lookup as a shortcut anywhere in the pipeline.
+
+### 2.3 The anonymous-typedef link is native
+
+```
+Point underlying record anonymous?            true
+  getTypedefNameForAnonDecl round-trip        Point
+```
+
+Clang tracks the `typedef struct { … } Point;` link itself. That one accessor replaces
+`LinkTypedefToAnonymousTagType` (both instances), `DeAnonymize`, the `gensym("Ctag")` naming
+scheme, the `##Ctag` / `__JL_Ctag` prefix sniffing in four files, and the positional
+"keep searching until we hit a non-typedef node" heuristic.
+
+### 2.4 System headers, layout, macros, enum values
+
+```
+after #include <stdint.h>:  sys / user        105 / 1        # isInSystemHeader, from clang
+enum underlying integer type                  unsigned int   # getIntegerType(EnumDecl)
+   RED = 1   GREEN = 2   BLUE = 7                            # getInitVal
+#define WIDGET_MAX    fnlike=false  body=[("64", 0x07)]
+#define WIDGET_SCALE  fnlike=true   params=["x"]
+                      body=[("(",0x15),("(",0x15),("x",0x05),(")",0x16),("*",0x1e),("2",0x07),(")",0x16)]
+resolve(field type)                           ElaboratedType
+getAsRecordDecl -> decl                       RecordDecl Widget    (same decl_id as the definition)
+createPreprocessingRecord before parse        OK
+```
+
+Note three things in that block:
+
+- `isInSystemHeader(sm, getBeginLoc(d))` partitions correctly. No `-isystem` string-prefix
+  matching.
+- Macro **token kinds are available** as raw `UInt32` (`0x07` numeric_constant, `0x15`/`0x16`
+  parens, `0x1e` star). ClangCompiler does not mirror `tok::TokenKind` as a named enum, but the
+  values are usable — this downgrades the macro gap from "blocking" to "vendor the names".
+- Field types arrive as **sugar** (`ElaboratedType` for `struct Widget`). `getAsRecordDecl` /
+  `getAsTagDecl` look through it. Any port must go through those rather than `getDecl`, which is
+  declared on the canonical classes only.
+
+---
+
+## 3. Two hard constraints that decide the architecture
+
+These are not solvable by writing better code, and they are why the recommendation below is
+*additive*.
+
+### 3.1 Version reach
+
+| | Julia | LLVM / clang |
+| --- | --- | --- |
+| **Clang.jl** | ≥ 1.11 | 16, 17, 18, 19, 20, 21 — six `lib/` dirs, libclang from `Clang_unified_jll` |
+| **ClangCompiler.jl** | ≥ 1.12 | **18 only** — `lib/18/`, chosen from `Base.libllvm_version` |
+
+ClangCompiler is pinned to the LLVM that *Julia itself* is built against, because `libclangex`
+links `clang-cpp` from that LLVM. Clang.jl is not: `Clang_unified_jll` ships its own libclang,
+so a user can generate bindings with a clang version chosen to match the library they are
+wrapping, independently of their Julia. `gen/generator.jl` in this repo is built around exactly
+that (a loop over `(llvm_version, julia_version)` pairs).
+
+**A ClangCompiler-backed generator gives that up.** For a binding generator, losing control of
+the parsing clang version is a real regression, not a detail.
+
+### 3.2 The bootstrap relationship
+
+`ClangCompiler/gen/Project.toml` depends on `Clang`. ClangCompiler's own 43k-line bindings are
+produced by *this* generator. If `Clang.Generators` gains a hard dependency on ClangCompiler,
+then regenerating ClangCompiler requires a Clang.jl that requires ClangCompiler.
+
+That resolves fine in normal operation (the `gen/` environment picks up the last released
+ClangCompiler), but it makes any simultaneous breaking change in both packages a two-step dance,
+and it drags ClangCompiler's `julia = "1.12"` floor onto everyone who installs Clang.jl.
+
+### 3.3 Recommendation: a package extension
+
+```toml
+# Project.toml
+[weakdeps]
+ClangCompiler = "06fc9500-c033-43bc-8ca2-e20da63309d9"
+
+[extensions]
+ClangCompilerExt = "ClangCompiler"
+
+[compat]
+ClangCompiler = "0.1"
+```
+
+- Clang.jl keeps `julia = "1.11"` and its six LLVM directories. The libclang frontend is
+  untouched and remains the default.
+- `ext/ClangCompilerExt.jl` provides the C++ frontend. It loads only when the user has
+  ClangCompiler installed — which on Julia 1.11 they cannot, so the extension simply never
+  loads there.
+- No bootstrap cycle: ClangCompiler's `gen/` env gets a Clang.jl whose extension may load, but
+  the gen script uses the libclang path regardless.
+- Selection is one option key: `[general] frontend = "libclang" | "clang-cpp"`.
+
+The C++ frontend becomes the default only when ClangCompiler grows multi-LLVM `lib/` dirs, or
+when the project decides pinning to Julia's LLVM is acceptable. That is a separate decision and
+this plan does not presume it.
+
+---
+
+## 4. What the rework deletes
+
+Passes and helpers that exist *only* to pay libclang's tax, and have no counterpart in a
+single-`ASTContext` world:
+
+| Deleted | Why it existed | Replaced by |
+| --- | --- | --- |
+| `is_same`, `is_same_loc` | cross-TU entity identity | `decl_id(d)` / pointer equality |
+| `IndexDefinition` ×3 | name→index tables, duplicate marking, `adj` clearing | a `Dict{UInt,Int}` keyed on `decl_id`, built once |
+| `CatchDuplicatedAnonymousTags` | anonymous tags gensym'd per TU | nothing — there is one node |
+| `LinkTypedefToAnonymousTagType` ×2 | positional typedef↔anon-tag linking | `getTypedefNameForAnonDecl` |
+| `DeAnonymize` + `smart_de_anonymize` machinery | naming `typedef struct {…} X;` | same accessor, at collection time |
+| `CollectDependentSystemNode` + `dag.sys` | pulling in `-isystem` decls by name-scan | the AST already points at them; `isInSystemHeader` classifies |
+| `find_dependent_headers` | discovering transitively included headers by re-parsing each header | the umbrella parse pulls them in; `source_location` attributes them |
+| the 7 `*Duplicated` markers | first-wins collision marking | — |
+| `##Ctag` / `__JL_Ctag` prefix sniffing (4 files) | recovering "this is a synthesized anon tag" | `isAnonymousStructOrUnion` / null `getIdentifier` |
+| `occursin("(anonymous", …)` (5 sites) | anonymity | same |
+| `gensym_deterministic` + the global atomic counter | stable names for anon tags | ids derived from the naming typedef, or from `decl_id` |
+
+Second-order deletions that follow: `TopologicalSort` no longer needs to invalidate the index
+(nodes are keyed by `decl_id`, not position), so the second `ResolveDependency` goes too; and
+`resolve_dependency!`'s three-table name lookup with its repeated
+`# FIXME: in some cases, this system-header symbol is in dag.tags` fallback collapses into a
+single pointer dereference.
+
+**What survives, and should**: the `AbstractJuliaType` lattice and `translate` (Julia-side
+judgement, and ClangCompiler deliberately has no `clty_to_jlty`); the node-type markers for
+layout (`StructLayout{Attribute,NestedAnonymous,Bitfield}`); `codegen.jl`'s `Expr` emission;
+`print.jl`; every printer; the entire option surface; `audit.jl`; `mutability.jl`;
+`RemoveCircularReference` (mutual references are a real C phenomenon, not a libclang artifact).
+
+---
+
+## 5. The new shape
+
+### 5.1 Frontend
+
+```julia
+# ext/ClangCompilerExt.jl
+struct CxxFrontend
+    interp::CC.CxxInterpreter
+    ctx                 # ASTContext
+    sm                  # SourceManager
+    pp                  # Preprocessor
+    headers::Vector{String}
+end
+
+function CxxFrontend(headers, args; is_cxx=false)
+    # -x c unless the caller asked for C++; is_cxx selects the GCC shard/include env
+    flags = is_cxx ? args : ["-x", "c", args...]
+    I = CC.create_interpreter(flags; is_cxx)
+    pp = CC.getPreprocessor(CC.get_instance(I))
+    CC.createPreprocessingRecord(pp)          # must precede the parse
+    umbrella = join(("#include \"$h\"" for h in headers), '\n') * '\n'
+    ptu = CC.parse(I, umbrella)
+    ptu.ptr == C_NULL && error(...)           # see §6.4 on diagnostics
+    ...
+end
+```
+
+### 5.2 The node table, keyed by identity
+
+```julia
+struct ExprNode{T<:AbstractExprNodeType,D}
+    id::Symbol            # still the emitted Julia name
+    type::T
+    decl::D               # a resolved ClangCompiler carrier, not a CXCursor
+    exprs::Vector{Expr}
+    premature_exprs::Vector{Expr}
+    adj::Vector{Int}
+end
+
+struct ExprDAG
+    nodes::Vector{ExprNode}
+    index::Dict{UInt,Int}            # decl_id  -> position.  THE index. One namespace.
+    ids_extra::Dict{Symbol,AbstractJuliaType}
+    ...
+end
+```
+
+`dag.tags` and `dag.ids` merge into one `Dict{UInt,Int}` because C's two namespaces stop
+mattering once edges are pointers rather than names. (`dag.ids_extra` stays name-keyed — it is a
+user-facing table of hand-supplied types, and `@add_def` is part of the public API.)
+
+### 5.3 Dependency resolution becomes a dereference
+
+Today:
+
+```julia
+jlty = tojulia(ty); leaf = get_jl_leaf_type(jlty)
+hasref = has_elaborated_tag_reference(ty)
+if hasref && haskey(dag.tags, leaf.sym)      push!(node.adj, dag.tags[leaf.sym])
+elseif !hasref && haskey(dag.ids, leaf.sym)  push!(node.adj, dag.ids[leaf.sym])
+elseif haskey(dag.ids_extra, leaf.sym)       # pass
+elseif !hasref && haskey(dag.tags, leaf.sym) # FIXME: system-header symbol in dag.tags
+...
+```
+
+After:
+
+```julia
+d = CC.getAsTagDecl(strip_to_leaf(ty))       # looks through Elaborated/Typedef/Pointer/Array
+d === nothing || push!(node.adj, dag.index[CC.decl_id(CC.resolve(d))])
+```
+
+No name, no namespace guess, no fallback chain, no `error("There is no definition for …")` —
+a type either points at a decl or it does not, and if it does, that decl is in the table because
+the AST is closed under reference.
+
+### 5.4 The pipeline, after
+
+```
+CollectDecls          # one walk of decls_in(TU); classify; partition user/system by isInSystemHeader
+ResolveDependency     # pointer edges
+RemoveCircularReference
+TopologicalSort
+CodegenPreprocessing  # skip / attribute / nested-anonymous / bitfield  (see §6.1)
+Audit
+Codegen
+CodegenMacro
+<printers>
+```
+
+Fifteen unconditional passes become eight, and the ones that remain each run once.
+
+### 5.5 Layout, properly
+
+`codegen.jl`'s `_emit_getproperty_ptr!` currently walks fields recursively because
+`getOffsetOf(type, name)` cannot address an unnamed one, and never asks about alignment. Against
+`ASTRecordLayout` it is a flat loop:
+
+```julia
+layout = CC.get_record_layout(ctx, rd)
+size   = Int(CC.getSize(layout))          # bytes
+align  = Int(CC.getAlignment(layout))     # bytes  — currently never queried at all
+for f in CC.getFields(rd)
+    off = CC.getFieldOffset(layout, CC.getFieldIndex(f))     # BITS, unnamed fields included
+    w   = CC.isBitField(f) ? Int(CC.getBitWidthValue(f, ctx)) : nothing
+end
+```
+
+This also removes the `@assert w <= 32` bitfield cap: `getBitWidthValue` is exact, and the
+storage-unit arithmetic can be driven from real offsets rather than assumed 32-bit words.
+
+Attributes stop being a cliff. Today `hasAttrs` degrades any attributed record to padded bytes;
+`hasAttrOfKind(d, CXAttrKind_Packed)` and `AlignedAttr`'s payload are precise — and mostly
+unnecessary, because `ASTRecordLayout` has *already applied* them.
+
+### 5.6 Macros, from the preprocessor rather than from text
+
+> **Superseded in detail by [MACRO-HANDLING.md](MACRO-HANDLING.md)**, which triages all 41
+> macro-tagged issues, gives the design, and reports a working prototype. The sketch below is
+> kept because the rest of §5 refers to it. Two corrections it makes: a cast emits `%` but an
+> integer *literal* must instead be typed by C11 6.4.4.1p5 against the target's widths (the two
+> rules are different, and conflating them is a live trap); and filtering macro origins needs
+> `isWrittenInBuiltinFile`/`isWrittenInCommandLineFile` as well as `isInSystemHeader`.
+
+`macro.jl` today re-lexes token text: literal suffixes hand-parsed longest-first, `/` rewritten
+to `÷` and `^` to `xor` unconditionally, casts detected by re-implementing C's typedef symbol
+table, adjacent string literals merged by round-tripping through `Meta.parse`.
+
+The replacement reads the preprocessor's own token list, which arrives **already classified**:
+
+```julia
+for ii in CC.getMacros(pp)
+    mi = CC.getMacroInfo(pp, ii); mi.ptr == C_NULL && continue
+    CC.isBuiltinMacro(mi) && continue
+    toks = [(CC.getSpelling(pp, t), CC.getKind(t)) for t in replacement_tokens(mi)]
+    params = CC.isFunctionLike(mi) ? [CC.getName(CC.getParam(mi,i)) for i in 0:CC.getNumParams(mi)-1] : String[]
+end
+```
+
+A `numeric_constant` is tagged as one, so suffix handling becomes a small typed function instead
+of an ordered suffix list; `##` (`hashhash`) and `#` (`hash`) are distinct kinds; a
+`string_literal` is known to be one without a `Meta.parse` probe, and `wide_string_literal` is
+its own kind rather than an `L"` regex. Verified on a 12-macro corpus (§6.1).
+
+Header-guard detection stops being `endswith(id, "_H")` and becomes `isUsedForHeaderGuard(mi)`,
+which clang tracks natively. Measured against two real guarded headers:
+
+```
+G_H                    isUsedForHeaderGuard=true   ntokens=0
+REAL_CONST             isUsedForHeaderGuard=false  ntokens=1
+HDR_NOT_SUFFIXED       isUsedForHeaderGuard=true   ntokens=0
+```
+
+`HDR_NOT_SUFFIXED` is the point: today's heuristic hard-codes the `_H` suffix plus a
+user-supplied `ignore_header_guards_with_suffixes` list, so a guard named anything else leaks
+into the output as a spurious `const`. Note the predicate needs the real `#ifndef/#define/#endif`
+structure — a bare `#define G_H` in a snippet reports `false`.
+
+### 5.7 What is allowed to change — and the rule that decides
+
+**Decision taken: the C++ path may improve on the libclang path's output from the start.** It is
+not held to byte-identical emission. That makes textual diffing useless as an acceptance test,
+so acceptance moves to a stronger criterion:
+
+> **The ABI is the contract, not the text.** For every emitted type, the generated Julia
+> `sizeof`, field byte-offsets and bit-field extents must equal what **clang** reports for the
+> same record on the same target. For every emitted function, the `ccall` signature must match
+> the declaration's type. Anything else — names, ordering, formatting, which construct is chosen
+> to express a layout — is free to differ.
+
+This is checkable mechanically, because clang is *in process*: `get_record_layout` /
+`getFieldOffset` / `getBitWidthValue` are the oracle, and Julia's own `sizeof` / `fieldoffset`
+are the subject. ClangCompiler's `examples/04_record_layout.jl` already runs exactly this
+cross-check and asserts on it.
+
+Triage for any diff between the two frontends then has a rule rather than a judgement:
+
+| Diff touches | Verdict |
+| --- | --- |
+| a size, offset, alignment or bit-field extent | **bug**, unless it is on the register below |
+| a `ccall` signature or return type | **bug** |
+| an enum constant's value | **bug** |
+| a name, an ordering, formatting, a docstring | **acceptable** — record it, move on |
+| a construct choice that preserves the ABI | **acceptable** |
+
+#### The register: improvements that *must* change, with pinned values
+
+Each row was measured against clang (Julia 1.12.6, LLVM 18.1.7, `arm64-apple-macosx11.0.0`)
+and is a case the current generator cannot express. These become test assertions in their own
+right — they are what the C++ path is *for*.
+
+```c
+struct Wide     { unsigned long long lo : 40; unsigned long long hi : 24; };
+struct Over     { char h; _Alignas(32) int payload; };
+struct __attribute__((packed)) Packed { char c; int i; double d; };
+struct Mixed    { char flag; union { float f; int i; }; unsigned : 0; unsigned tail : 5; };
+```
+
+| Case | clang says | today |
+| --- | --- | --- |
+| `Wide` | size 8, `lo` @ bit 0 w=40, `hi` @ bit 40 w=24 | **aborts** — `@assert w <= 32` ([codegen.jl:314](src/generator/codegen.jl:314)) |
+| `Over` | **size 64, align 32**, `payload` @ byte 32 | alignment is never queried, so this cannot be emitted correctly by construction |
+| `Packed` | **size 13, align 1**, fields @ 0, 1, 5; `hasAttrOfKind(d, Packed)` = `true` | `hasAttrs` only ⇒ degrades to an opaque padded-bytes struct |
+| `Mixed` | anonymous union member flagged; `unsigned : 0` present as a width-0 field @ bit 64 | the unnamed field has no name for `getOffsetOf(type, name)` to key on |
+
+One more measured improvement, ABI-neutral but a correctness fix in its own right:
+
+| Case | clang says | today |
+| --- | --- | --- |
+| a header guard not ending in `_H` | `isUsedForHeaderGuard` = `true` | leaks into the output as a spurious `const`, unless the user lists the suffix by hand |
+
+Two further intended changes are user-visible but ABI-neutral, so they fall under "acceptable"
+and should be *announced* rather than tested against the old output:
+
+- **Anonymous tags get meaningful, stable names.** `getTypedefNameForAnonDecl` yields `Point`
+  where the libclang path emits `##Ctag#347`. This makes `use_deterministic_symbol` obsolete on
+  the C++ path — the names are stable because they come from the source, not from a counter.
+- **Duplicate-suppression disappears from the output.** There is one canonical decl, so nothing
+  is emitted-then-skipped.
+
+---
+
+## 6. Gaps to close first
+
+Ordered by how much they block. Items marked **[CC]** need work in ClangCompiler; per its
+`AGENTS.md`, C++ shim changes are out of scope for a Julia-side contributor and must be raised
+as a dependency.
+
+1. ~~**Token-kind names.**~~ **Not a gap — closed on inspection.** `getKind(::Token)` does return a
+   bare `UInt32`, but `src/clang/api/Basic/TokenKinds.jl` already wraps the `clang::tok` free
+   functions that consume one: `getTokenName`, `getPunctuatorSpelling`, `getKeywordSpelling`,
+   `getPPKeywordSpelling`, `isLiteral`, `isAnyIdentifier`, `isStringLiteral`, `isAnnotation`,
+   `isPragmaAnnotation`. Verified end-to-end against a macro corpus — `##` comes back
+   `hashhash` and `#` comes back `hash`; `L"wide"` is `wide_string_literal`, distinct from
+   `string_literal`; `1.5f`, `0xDEADul` and `64` are all `numeric_constant` with `isLiteral`
+   true; keywords arrive named (`unsigned`, `long`). Nothing needs to be vendored and no
+   ClangCompiler change is required.
+2. **Array extents.** `getSize(::ConstantArrayType)` returns an `LLVMGenericValueRef` the caller
+   must free via LLVM-C. An array extent is the single most common thing a generator asks for.
+   *Mitigation*: a helper that round-trips and disposes. **[CC]** an `Int`-returning accessor.
+3. **Enum constant values.** Same shape — `getInitVal` returns an owned `LLVMGenericValueRef`
+   (verified working, values correct). Needs disposal per enumerator or it leaks. Same
+   mitigation.
+4. **Structured diagnostics.** On the interpreter route, failure is a NULL
+   `PartialTranslationUnit` plus text on stderr; only `getNumErrors` is in-band. Today
+   `find_dependent_headers` catches per-header parse failures and warns with the header name.
+   With one umbrella parse, a single bad header fails everything with no attribution.
+   *Mitigation*: pre-flight each header with its own throwaway interpreter (costly), or parse
+   the umbrella and, on failure, bisect. **[CC]** wrap `TextDiagnosticBuffer`.
+5. **`#pragma pack(n)`.** `MaxFieldAlignmentAttr` has a carrier and a cast but no payload
+   accessor. Largely moot — the layout already reflects it — but it cannot be *reported*.
+6. **Objective-C.** `clang::ObjCInterfaceType` and `ObjCTypeParamType` have **no carrier struct
+   and no `TypeClassMap` entry** — only `ObjCObject` and `ObjCObjectPointer` are mapped
+   (`src/TypeClassMap.jl:34-35`), so the two classes that actually *name* an interface resolve
+   to `UnexposedType`. `AvailabilityAttr` has a carrier and a cast but no payload accessor, so
+   `minimum_macos_supported` cannot be reproduced. **The ObjC path should stay on the libclang
+   frontend** until **[CC]** closes this. The macOS-only ObjC testset pins exact emitted text,
+   so this is a hard gate.
+7. **Public API surface.** ClangCompiler declares 20 `public` lines and no `export`s; almost
+   everything the generator needs (`getASTRecordLayout`, `getFields`, `getMacros`,
+   `isInSystemHeader`, the carriers) is reached as `ClangCompiler.X` with no stability promise.
+   Worth agreeing a `public` list with that package before depending on it.
+8. **Per-node ccall cost.** `getNumParams` + `getParamDecl` per parameter; `getAttrs` one ccall
+   per attribute; `getBases` per base. `getFields`/`getMethods`/`getEnumerators` already use
+   count+fill. Fine at header scale; measure before optimising.
+9. **`getName` aborts on non-identifier names**, and `resolve` is type-unstable
+   (`Dict{<:Enum,Any}`). Use the null-`getIdentifier` guard everywhere (as the probe does) and
+   expect dynamic dispatch on every node.
+
+---
+
+## 7. Phasing
+
+Each phase ends green on the existing suite. The libclang frontend stays default throughout.
+
+**Phase 0 — seam.** Extract the two places the pipeline touches libclang directly
+(`create_context`'s parse, `CollectTopLevelNode`'s cursor walk) behind a frontend interface.
+No behaviour change; the existing suite is the check.
+
+**Phase 1 — identity.** Re-key `ExprDAG` on an opaque node identity instead of `Symbol`, keeping
+the libclang frontend (where identity stays "file:line:col + tokens"). This is the disruptive
+change and it is worth making *before* the frontend swap, so the two are independently
+bisectable. Expect to re-express the position-anchored assertions (`ctx.dag.nodes[6]`,
+`nodes[end]`) by id.
+
+**Phase 2 — the extension.** Add the weakdep and `ext/ClangCompilerExt.jl` with `CxxFrontend`:
+umbrella parse, `-x c`, `decls_in` walk, `isInSystemHeader` partition, `decl_id` identity,
+`getTypedefNameForAnonDecl` naming. Gate on `[general] frontend = "clang-cpp"`.
+
+**Phase 3 — ABI-equivalence testing.** Since the output is allowed to improve (§5.7), the
+acceptance test is not a text diff. Build a harness that, for each header in `test/include/`:
+
+1. generates with the C++ frontend and `include`s the result into a fresh module;
+2. asks clang, through the same interpreter, for each record's `getSize` / `getAlignment` /
+   `getFieldOffset` / `getBitWidthValue`;
+3. asserts Julia's `sizeof` and `fieldoffset` on the generated type agree, field for field.
+
+That is a **stronger** test than the current suite, which mostly asserts `build!` reached
+`"Done!"`. It also subsumes `test_bitfield.jl`'s round-trip against a real compiled library, and
+unlike a text diff it does not need the libclang path to be correct — it checks against clang
+itself.
+
+Run the text diff too, but only as a *change report* for triage under §5.7's table, not as a
+gate. The self-hosting run over `clang-c` is the large case; `test/include/` gives ~30 small
+ones plus the four register cases, which should fail loudly on the libclang path and pass on the
+C++ one.
+
+**Phase 4 — layout and macros.** Switch `codegen.jl`'s layout queries to `ASTRecordLayout` and
+rewrite `macro.jl` against `MacroInfo`. `test_bitfield.jl` (a real compiled C library) and the
+`large-integer-literals.h` exact-`Expr` assertions are the bar.
+
+**Phase 5 — delete.** Remove the passes from §4 *from the C++ path only*. The libclang path keeps
+them for as long as it exists.
+
+---
+
+## 8. Risks
+
+| Risk | Severity | Handling |
+| --- | --- | --- |
+| LLVM 18 / Julia 1.12 only | **high** | extension, not dependency; libclang stays default (§3.3) |
+| Single umbrella parse ⇒ one bad header kills the run | **high** | pre-flight or bisect; push for `TextDiagnosticBuffer` (§6.4) |
+| ObjC regression | **high** | keep ObjC on libclang until §6.6 closes |
+| Node ordering changes ⇒ position-anchored tests break | medium | re-express by id in Phase 1, before the frontend swap |
+| `create_interpreter` starts a JIT for a parse-only job | low | one-time cost; measure |
+| Bootstrap coupling with ClangCompiler | medium | extension keeps it a soft edge (§3.2) |
+| ClangCompiler's surface is not `public` | medium | agree a list up front (§6.7) |
+
+---
+
+## 9. Decisions — all settled
+
+1. **Packaging → package extension.** `[weakdeps] ClangCompiler` + `ext/ClangCompilerExt.jl`,
+   selected by `[general] frontend = "libclang" | "clang-cpp"`. Rationale in §3.3: it keeps
+   Clang.jl at `julia = "1.11"` with six LLVM directories, keeps libclang the default, and keeps
+   the ClangCompiler bootstrap a soft edge. A separate `ClangGenerators.jl` was the alternative;
+   it decouples version reach completely but costs a release channel and splits the test suite
+   away from the corpus that defines correctness. Revisit only if the weakdep proves awkward in
+   ClangCompiler's own `gen/` environment.
+2. **Objective-C → stays on libclang for the first release.** `clang::ObjCInterfaceType` and
+   `ObjCTypeParamType` have no carrier and no `TypeClassMap` entry, so they resolve to
+   `UnexposedType`; `AvailabilityAttr` has no payload accessor, so `minimum_macos_supported`
+   cannot be reproduced. The C++ frontend should **reject ObjC input with a clear diagnostic**
+   naming the libclang frontend, rather than emitting quietly degraded wrappers. Filing 5 below
+   is what lifts this.
+3. **Output fidelity → allowed to improve.** Acceptance is ABI equivalence against clang, not
+   text equivalence. Rule and register in §5.7; harness in §7 Phase 3.
+4. **Filings → the five below.** §6.1 turned out not to be a gap at all (the `clang::tok` free
+   functions are already wrapped), which removes the item that would have blocked the macro
+   rewrite. Nothing remaining blocks Phase 0–2.
+
+### Appendix: ClangCompiler filings
+
+Ordered by effect. Each names the clang entity, so the shim work is specified rather than
+described. Per `deps/ClangExtra/CLAUDE.md`, every one needs: a C shim entry point, regenerated
+`lib/18/LibClangEx.jl`, a Julia wrapper in the matching `src/clang/api/` file, and a
+`libclangex_jll` bump before release. Note that file's rule about checking the *pinned artifact
+header* for access and partiality before writing a signature, and `nm -gU` against the shipped
+`libclang-cpp` to confirm the symbol is actually exported.
+
+**Filing 1 — `Int`-returning array extent.** `clang::ConstantArrayType::getSize()` returns an
+`llvm::APInt`; the current wrapper hands back an `LLVMGenericValueRef` the caller must free
+through LLVM-C. Add a narrowed accessor returning `uint64_t` (mirroring how
+`getEnumConstantDeclValue` already narrows). *Effect*: array extents are the single most common
+generator query; today every one costs an LLVM.jl round trip plus a manual dispose, and a missed
+dispose leaks per array field.
+
+**Filing 2 — `Int`-returning enumerator value.** `clang::EnumConstantDecl::getInitVal()` returns
+`const llvm::APSInt&`; same `LLVMGenericValueRef` problem. Verified working but leak-prone
+(§2.4 read `RED=1 GREEN=2 BLUE=7` correctly). Signedness matters here — an `int64_t` accessor
+plus `isSigned` is the minimum; unsigned 64-bit enumerators need `uint64_t` too. Note the
+existing `getInitVal` docstring points at a helper `get_enum_constant_decl_value` that does not
+exist anywhere in `src/`.
+
+**Filing 3 — `TextDiagnosticBuffer`.** Currently the available consumers are
+`TextDiagnosticPrinter` (stderr) and `IgnoringDiagConsumer`, so on the interpreter route a
+failure is a NULL `PartialTranslationUnit` plus text the Julia side never sees; only
+`getNumErrors` is in-band. *Effect*: this decides whether a failed **umbrella** parse can be
+attributed to a header at all — see Risk row 2. Without it the fallback is bisecting the
+umbrella, which costs one full frontend run per bisection step.
+
+**Filing 4 — `MaxFieldAlignmentAttr` payload.** The carrier, the checked cast and the kind-map
+entry exist; `clang::MaxFieldAlignmentAttr::getAlignment()` is not exposed, so the `n` in
+`#pragma pack(n)` is unreadable. Low urgency — `ASTRecordLayout` has already applied it, so this
+is about *reporting* rather than *correctness*.
+
+**Filing 5 — Objective-C carriers and `AvailabilityAttr` payload.** Two parts: (a) carriers plus
+`TypeClassMap` entries for `clang::ObjCInterfaceType` and `clang::ObjCTypeParamType`, which today
+fall through to `UnexposedType` (`src/TypeClassMap.jl:34-35` maps only `ObjCObject` and
+`ObjCObjectPointer`); (b) accessors on `clang::AvailabilityAttr` for platform, introduced,
+deprecated, obsoleted, unavailable. *Effect*: this is the whole of decision 2 — until it lands,
+ObjC headers must go through the libclang frontend.
+
+**Filing 6 (not a shim change) — agree a `public` surface.** ClangCompiler declares 20 `public`
+lines and no `export`s, so the generator would reach `getASTRecordLayout`, `getFields`,
+`getMacros`, `getFieldOffset`, `isInSystemHeader`, `getTypedefNameForAnonDecl`, `decls_in`,
+`resolve` and every carrier type as `ClangCompiler.X` — names carrying no stability promise and
+no lint coverage. Worth agreeing the list before Phase 2 rather than after.
+
+### Consequences of decision 3 already folded in
+
+- Acceptance harness is ABI-based (§7 Phase 3), which is strictly stronger than the current
+  suite's "reached `Done!`" assertions.
+- The four register cases in §5.7 become tests that *should* fail on the libclang path.
+- `use_deterministic_symbol` becomes a no-op on the C++ path; anonymous tags take their names
+  from `getTypedefNameForAnonDecl`.
+- Position-anchored assertions (`ctx.dag.nodes[6]`, `nodes[end]`) are re-expressed by id in
+  Phase 1 regardless — but with output free to change, there is no reason to preserve the old
+  ordering at all.

@@ -276,6 +276,64 @@ function get_comment_expr(tokens)
     return Expr(:block, "# Skipping MacroDefinition: " * replace(code, "\n" => "\n#"))
 end
 
+"""
+    known_symbols(dag::ExprDAG) -> Set{Symbol}
+Every name the generated module will have a binding for.
+
+Tags and identifiers come straight from the DAG index, but **enum constants do not**: they are
+emitted inside their enum's own expression rather than as nodes of their own, so a macro
+referring to one would otherwise look unresolvable.
+"""
+function known_symbols(dag::ExprDAG)
+    known = Set{Symbol}()
+    union!(known, keys(dag.ids))
+    union!(known, keys(dag.tags))
+    union!(known, keys(dag.ids_extra))
+    for node in dag.nodes
+        node.type isa AbstractEnumNodeType || continue
+        for c in children(node.cursor)
+            c isa CLEnumConstantDecl && push!(known, Symbol(name(c)))
+        end
+    end
+    return known
+end
+
+"Collect every symbol in `ex` that would be looked up as a binding when the file is loaded."
+function collect_referenced_symbols!(out::Set{Symbol}, @nospecialize(ex))
+    if ex isa Symbol
+        push!(out, ex)
+    elseif ex isa Expr
+        # A QuoteNode is data, and a `.` field name arrives as one, so it is never a lookup.
+        for arg in ex.args
+            arg isa QuoteNode && continue
+            arg isa LineNumberNode && continue
+            collect_referenced_symbols!(out, arg)
+        end
+    end
+    return out
+end
+
+"""
+    unresolved_reference(ex, known::Set{Symbol}) -> Union{Symbol,Nothing}
+Return the first name in `ex` that the generated module will not have a binding for, or
+`nothing` if every name resolves.
+
+This is what stops the generator emitting a `const` that throws `UndefVarError` the moment the
+file is loaded — the failure mode behind the `CPL_STATIC_CAST` line in `test/include/macro.h`,
+which the suite could not see because it only asserted that `build!` finished.
+
+`Base`/`Core` names are resolvable because the emitted code is allowed to use them: the
+translator itself produces `Cint`, `Ptr`, `Cvoid` and the operators.
+"""
+function unresolved_reference(@nospecialize(ex), known::Set{Symbol})
+    for s in collect_referenced_symbols!(Set{Symbol}(), ex)
+        s in known && continue
+        (isdefined(Base, s) || isdefined(Core, s)) && continue
+        return s
+    end
+    return nothing
+end
+
 
 """
     macro_emit!
@@ -364,7 +422,15 @@ function macro_emit!(dag::ExprDAG, node::ExprNode{MacroDefault}, options::Dict)
     if isnothing(ex)
         print_comment && push!(node.exprs, get_comment_expr(toks))
     else
-        push!(node.exprs, Expr(:const, Expr(:(=), sym, ex)))
+        known = get(options, "__known_symbols", nothing)
+        bad = known === nothing ? nothing : unresolved_reference(ex, known)
+        if bad !== nothing
+            # Emitting this would produce a `const` that raises UndefVarError on load.
+            @warn "[CodegenMacro]: skipping macro $(node.id): it refers to `$bad`, which is not defined in the generated module"
+            print_comment && push!(node.exprs, get_comment_expr(toks))
+        else
+            push!(node.exprs, Expr(:const, Expr(:(=), sym, ex)))
+        end
     end
 
     return dag
@@ -393,7 +459,17 @@ function macro_emit!(dag::ExprDAG, node::ExprNode{MacroFunctionLike}, options::D
         txts = [tok.text for tok in body_toks]
         str = reduce(add_spaces_for_macros, txts)
         try
-            push!(node.exprs, Expr(:(=), sig_ex, Meta.parse(str)))
+            body_ex = Meta.parse(str)
+            known = get(options, "__known_symbols", nothing)
+            # The macro's own parameters are bound by the signature, so they are in scope.
+            params = Set{Symbol}(a isa Symbol ? a : Symbol("") for a in sig_ex.args[2:end])
+            bad = known === nothing ? nothing : unresolved_reference(body_ex, union(known, params))
+            if bad !== nothing
+                @warn "[CodegenMacro]: skipping function-like macro $(node.id): it refers to `$bad`, which is not defined in the generated module"
+                print_comment && push!(node.exprs, get_comment_expr(toks))
+            else
+                push!(node.exprs, Expr(:(=), sig_ex, body_ex))
+            end
         catch err
             print_comment && push!(node.exprs, get_comment_expr(toks))
         end

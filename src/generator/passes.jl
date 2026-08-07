@@ -1227,12 +1227,19 @@ function (x::CodegenMacro)(dag::ExprDAG, options::Dict)
 
     (macro_mode == "none" || macro_mode == "disable") && return dag
 
+    # Computed once for the whole DAG, not per macro: the emitters use it to refuse a macro
+    # that would raise UndefVarError on load. Shares the options dict with user keys, as the
+    # other inter-pass scratch entries in this file do.
+    macro_options["__known_symbols"] = known_symbols(dag)
+
     for node in dag.nodes
         node.type isa AbstractMacroNodeType || continue
         !isempty(node.exprs) && empty!(node.exprs)
         macro_emit!(dag, node, macro_options)
         show_info && @info "[CodegenMacro]: emit Julia expression for $(node.id)"
     end
+
+    delete!(macro_options, "__known_symbols")
 
     return dag
 end

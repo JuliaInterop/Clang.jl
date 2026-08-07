@@ -330,6 +330,13 @@ pointer to an incomplete type, an anonymous record needing to be hoisted to its 
 and a macro constant referring to a later one (`dependency.h`'s `#define FIRST SECOND` before
 `#define SECOND 1`).
 
+> **§3.6 below contains an error, corrected in [ORDERING-DESIGN.md](ORDERING-DESIGN.md) §1:**
+> "no type ever depends on a function" is FALSE. A `const` can name a function
+> (`#define ALIAS c_func`, `#define V ENC(1,2)`), `@objcwrapper` expands to
+> `abstract type P2 <: P1`, and `emit_constructor!` emits a definition-position `const` naming
+> a union's field types. The correct band order is types → functions → **macros**, which is what
+> today's printers already do. Read ORDERING-DESIGN.md for the settled design.
+
 #### The design this implies
 
 1. **Functions and methods never move.** They are order-free (fact 2 above), so they stay at

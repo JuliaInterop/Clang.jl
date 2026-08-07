@@ -23,3 +23,13 @@ build and symbols fail at call time:
     julia --project=/tmp/cxxenv cxx/validate_order.jl          # ordering on the cycle fixtures
     julia --project=/tmp/cxxenv cxx/validate_order_libxml2.jl  # ordering at scale
     julia --project=/tmp/cxxenv cxx/validate_e2e.jl            # generate + load + ABI compare
+    julia --project=/tmp/cxxenv cxx/validate_options.jl        # each option has an observable effect
+
+## Option surface
+
+`Options` honours 13 keys, named to match `generator.toml` so a config maps across unchanged:
+library_name, module_name, prologue_file_path, epilogue_file_path, jll_pkg_name,
+jll_pkg_extra, export_symbol_prefixes, output_ignorelist, generate_isystem_symbols,
+skip_static_functions, use_julia_native_enum_type, print_using_CEnum, use_ccall_macro.
+`Options(TOML.parsefile(path))` reads the [general] and [codegen] tables directly.
+Everything else in the ~45-key surface is still unimplemented -- GENERATORS-REWORK.md 0.1.

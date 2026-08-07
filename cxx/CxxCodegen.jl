@@ -26,7 +26,7 @@ import .CxxOrder.CxxFacts: Key, Node, TypeRef, RecordFacts, TypedefFacts, EnumFa
                            ArrayRef, BuiltinRef, FunctionRef, UnknownRef, FieldFacts
 import .CxxOrder: Cut, Ordering
 
-export generate
+export generate, Options
 
 const JL = Dict(:void=>:Cvoid, :bool=>:Bool, :char=>:Cchar, :schar=>:Int8, :uchar=>:Cuchar,
                 :short=>:Cshort, :ushort=>:Cushort, :int=>:Cint, :uint=>:Cuint,
@@ -54,6 +54,54 @@ struct Env
     blobbed::Set{Key}
     skip::Set{Key}              # mapped to a Julia builtin; emit nothing for these
 end
+
+"""
+The subset of the TOML option surface this emitter honours.
+
+Named after the existing keys so a `generator.toml` maps across unchanged. Everything absent
+here is still unimplemented — see `GENERATORS-REWORK.md` §0.1.
+"""
+Base.@kwdef struct Options
+    library_name::String            = "libfoo"
+    module_name::String             = ""
+    prologue_file_path::String      = ""
+    epilogue_file_path::String      = ""
+    jll_pkg_name::String            = ""
+    jll_pkg_extra::Vector{String}   = String[]
+    export_symbol_prefixes::Vector{String} = String[]
+    output_ignorelist::Vector{String}      = String[]
+    generate_isystem_symbols::Bool  = true
+    skip_static_functions::Bool     = false
+    use_julia_native_enum_type::Bool = false
+    print_using_CEnum::Bool         = true
+    use_ccall_macro::Bool           = false
+end
+
+"Read the `[general]`/`[codegen]` tables of a parsed `generator.toml` into `Options`."
+function Options(toml::AbstractDict)
+    g = get(toml, "general", Dict{String,Any}())
+    c = get(toml, "codegen", Dict{String,Any}())
+    pick(d, k, dflt) = haskey(d, k) ? d[k] : dflt
+    return Options(
+        library_name             = string(pick(g, "library_name", "libfoo")),
+        module_name              = string(pick(g, "module_name", "")),
+        prologue_file_path       = string(pick(g, "prologue_file_path", "")),
+        epilogue_file_path       = string(pick(g, "epilogue_file_path", "")),
+        jll_pkg_name             = string(pick(g, "jll_pkg_name", "")),
+        jll_pkg_extra            = String.(pick(g, "jll_pkg_extra", String[])),
+        export_symbol_prefixes   = String.(pick(g, "export_symbol_prefixes", String[])),
+        output_ignorelist        = String.(pick(g, "output_ignorelist", String[])),
+        generate_isystem_symbols = Bool(pick(g, "generate_isystem_symbols", true)),
+        skip_static_functions    = Bool(pick(g, "skip_static_functions", false)),
+        use_julia_native_enum_type = Bool(pick(g, "use_julia_native_enum_type", false)),
+        print_using_CEnum        = Bool(pick(g, "print_using_CEnum", true)),
+        use_ccall_macro          = Bool(pick(c, "use_ccall_macro", false)))
+end
+
+"`output_ignorelist` entries are regexes that must match the WHOLE name, as today."
+excluded(o::Options, nm::Symbol) =
+    any(r -> (m = match(Regex(r), String(nm)); m !== nothing && m.match == String(nm)),
+        o.output_ignorelist)
 
 "Translate a `TypeRef` into a Julia type expression."
 function jltype(e::Env, t::TypeRef)
@@ -205,7 +253,7 @@ function emit_accessors(e::Env, n::Node, out::Vector{Expr})
         push!(out, :(Base.propertynames(x::$sym, private::Bool=false) = ($(props...),)))
 end
 
-function emit_node(e::Env, n::Node, cuts::Dict{Int,Cut}, out::Vector{Expr})
+function emit_node(e::Env, n::Node, cuts::Dict{Int,Cut}, out::Vector{Expr}, o::Options)
     f = n.facts
     sym = e.name[n.key]
     if f isa RecordFacts
@@ -216,17 +264,25 @@ function emit_node(e::Env, n::Node, cuts::Dict{Int,Cut}, out::Vector{Expr})
         for (nm, v) in f.constants
             push!(blk.args, Expr(:(=), Symbol(nm), v))
         end
-        push!(out, Expr(:macrocall, Symbol("@cenum"), nothing, Expr(:(::), sym, ity), blk))
+        mac = o.use_julia_native_enum_type ? Symbol("@enum") : Symbol("@cenum")
+        push!(out, Expr(:macrocall, mac, nothing, Expr(:(::), sym, ity), blk))
     elseif f isa TypedefFacts
         push!(out, :(const $sym = $(jltype(e, f.underlying))))
     elseif f isa FunctionFacts
-        f.internal && return                       # `static` has no external symbol
+        (f.internal && o.skip_static_functions) && return   # `static` has no external symbol
         args = [Symbol(isempty(String(p)) ? "arg$i" : String(p)) for (i, (p, _)) in enumerate(f.params)]
         tys  = [jltype(e, t) for (_, t) in f.params]
         ret  = jltype(e, f.ret)
         f.variadic && return                       # needs the va-list machinery; skipped
         call = Expr(:call, sym, args...)
-        body = :(ccall(($(QuoteNode(sym)), libclangjl), $ret, ($(tys...),), $(args...)))
+        lib = Symbol(o.library_name)
+        body = if o.use_ccall_macro
+            pairs = [Expr(:(::), a, t) for (a, t) in zip(args, tys)]
+            Expr(:macrocall, Symbol("@ccall"), nothing,
+                 Expr(:(::), Expr(:call, Expr(:., lib, QuoteNode(sym)), pairs...), ret))
+        else
+            :(ccall(($(QuoteNode(sym)), $lib), $ret, ($(tys...),), $(args...)))
+        end
         push!(out, Expr(:function, call, Expr(:block, body)))
     end
 end
@@ -237,7 +293,8 @@ end
 Run extract → order → codegen and write a loadable Julia module body.
 """
 function generate(headers::Vector{String}; args::Vector{String}=String[],
-                  library::Symbol=:libclangjl, io::IO=stdout)
+                  options::Options=Options(), io::IO=stdout)
+    o = options
     nodes = extract(headers; args=args)
     ord = order_nodes(nodes)
     nm, skip = assign_names(nodes)
@@ -247,19 +304,43 @@ function generate(headers::Vector{String}; args::Vector{String}=String[],
         get!(Dict{Int,Cut}, bycut, c.node)[c.field] = c
     end
 
-    println(io, "using CEnum: CEnum, @cenum")
-    println(io)
+    isempty(o.module_name) || (println(io, "module ", o.module_name); println(io))
+    if !isempty(o.jll_pkg_name)
+        println(io, "using ", o.jll_pkg_name); println(io, "export ", o.jll_pkg_name); println(io)
+    end
+    for j in o.jll_pkg_extra
+        println(io, "using ", j); println(io, "export ", j); println(io)
+    end
+    (!o.use_julia_native_enum_type && o.print_using_CEnum) &&
+        (println(io, "using CEnum: CEnum, @cenum"); println(io))
+    isempty(o.prologue_file_path) || (println(io, read(o.prologue_file_path, String)); println(io))
+
+    emitted = 0
     for k in ord.order
         n = e.bykey[k]
-        k in e.skip && continue                    # a system typedef Julia already names
+        k in e.skip && continue                          # a system typedef Julia already names
+        (n.system && !o.generate_isystem_symbols) && continue
+        excluded(o, e.name[k]) && continue
         out = Expr[]
-        emit_node(e, n, get(bycut, k, Dict{Int,Cut}()), out)
+        emit_node(e, n, get(bycut, k, Dict{Int,Cut}()), out, o)
         for ex in out
-            println(io, string(ex))
-            println(io)
+            println(io, string(ex)); println(io)
+            emitted += 1
         end
     end
-    return (; nodes=length(nodes), cuts=length(ord.cuts), hoisted=ord.hoisted)
+
+    isempty(o.epilogue_file_path) || (println(io, read(o.epilogue_file_path, String)); println(io))
+    if !isempty(o.export_symbol_prefixes)
+        println(io, "const PREFIXES = ", repr(o.export_symbol_prefixes))
+        println(io, "for name in names(@__MODULE__; all=true), prefix in PREFIXES")
+        println(io, "    if startswith(string(name), prefix)")
+        println(io, "        @eval export \$name")
+        println(io, "    end")
+        println(io, "end")
+        println(io)
+    end
+    isempty(o.module_name) || println(io, "end # module")
+    return (; nodes=length(nodes), emitted, cuts=length(ord.cuts), hoisted=ord.hoisted)
 end
 
 end # module

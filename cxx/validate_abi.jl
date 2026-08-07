@@ -173,6 +173,32 @@ CORPORA["pango"] = () -> begin
                options=CxxCodegen.Options(library_name="libpango"))
 end
 
+"""
+Cases the real corpora happen not to contain.
+
+libxml2, glib and pango between them have 1457 checked field offsets and not one
+qualifier-qualified struct field, so `const int x` silently becoming a ZERO-SIZED `Cvoid` field
+survived every check. A corpus is evidence about what it contains; this covers the rest.
+"""
+CORPORA["synthetic"] = () -> begin
+    dir = mktempdir()
+    h = joinpath(dir, "synthetic.h")
+    write(h, """
+    // cvr-qualified members: `getAsString` on a QualType includes the qualifier, so these
+    // missed the builtin table entirely and became Cvoid -- occupying no bytes at all.
+    struct Qual { const int ci; volatile double vd; unsigned const int uci;
+                  const char *cs; char *const sc; };
+    // a pointer-to-function member, whose parameter types must NOT constrain emission order
+    struct FnPtr { int (*cb)(struct FnPtr *, const char *); int n; };
+    // arrays, including a multidimensional one
+    struct Arrs { char a[7]; int m[3][4]; double *pd[2]; };
+    // an enum with an explicitly non-int underlying type
+    enum Wide { W_LO = 0, W_HI = 0x7fffffffffffffffLL };
+    struct HasEnum { enum Wide w; char pad; };
+    """)
+    run_corpus("synthetic", [h]; options=CxxCodegen.Options(library_name="libsyn"))
+end
+
 CORPORA["fixtures"] = () -> begin
     needs_sys = Set(["nested-struct.h", "nested-declaration.h", "struct-in-union.h", "test.h"])
     all = Finding[]
@@ -192,7 +218,7 @@ CORPORA["fixtures"] = () -> begin
 end
 
 # ------------------------------------------------------------------------------------------
-sel = isempty(ARGS) ? ["fixtures", "libxml2"] : ARGS
+sel = isempty(ARGS) ? ["synthetic", "fixtures", "libxml2"] : ARGS
 allfound = Finding[]
 for s in sel
     haskey(CORPORA, s) || (println("unknown corpus: $s"); continue)

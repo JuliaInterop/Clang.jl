@@ -157,8 +157,19 @@ mutable struct Ctx
     seen::Dict{Key,Int}     # key -> index into nodes
 end
 
-"Translate a clang type into a `TypeRef`, registering any declaration it names."
+"""
+Translate a clang type into a `TypeRef`, registering any declaration it names.
+
+Qualifiers come off first. `getAsString` on a `QualType` includes them, so the builtin table
+was being probed with `"const int"` and `"unsigned const int"` — neither of which is a key, so
+both fell to `:unknown` and then to `Cvoid`. That made `const char *` into `Ptr{Cvoid}` (every
+string parameter in glib) and, far worse, a `const int` struct field into a ZERO-SIZED one.
+Stripping here rather than at each call site means the recursion handles every level:
+`const char *` is an unqualified pointer whose pointee arrives as `const char` and is stripped
+in turn.
+"""
 function typeref(c::Ctx, qt, depth::Int=0)
+    qt = CC.getUnqualifiedType(qt)
     tp = CC.getTypePtr(qt)
     r = CC.resolve(tp)
     if r isa CC.AbstractBuiltinType

@@ -79,6 +79,7 @@ Base.@kwdef struct Options
     use_ccall_macro::Bool           = false
     macro_mode::String              = "basic"    # "basic" | "disable"
     add_comment_for_skipped_macro::Bool = true
+    wrap_variadic_function::Bool    = false
 end
 
 "Read the `[general]`/`[codegen]` tables of a parsed `generator.toml` into `Options`."
@@ -100,6 +101,7 @@ function Options(toml::AbstractDict)
         use_julia_native_enum_type = Bool(pick(g, "use_julia_native_enum_type", false)),
         print_using_CEnum        = Bool(pick(g, "print_using_CEnum", true)),
         use_ccall_macro          = Bool(pick(c, "use_ccall_macro", false)),
+        wrap_variadic_function   = Bool(pick(c, "wrap_variadic_function", false)),
         macro_mode               = string(pick(get(c, "macro", Dict{String,Any}()),
                                                "macro_mode", "basic")),
         add_comment_for_skipped_macro =
@@ -386,9 +388,24 @@ function emit_node(e::Env, n::Node, cuts::Dict{Int,Cut}, out::Vector{Expr}, o::O
         tys  = [jltype(e, t) for (_, t) in f.params]
         ret  = jltype(e, f.ret)
         args = argnames(f, tys, ret)
-        f.variadic && return                       # needs the va-list machinery; skipped
-        call = Expr(:call, sym, args...)
         lib = Symbol(o.library_name)
+        if f.variadic
+            # Only `@ccall` can express varargs, and the call site's types are not known until
+            # the call site exists — hence a `@generated` wrapper that splices them in. The
+            # `to_c_type_pairs` helper it needs is emitted by `generate` under the same option.
+            # Off by default, matching the existing generator, which emits nothing at all here.
+            o.wrap_variadic_function || return
+            fixed = [Expr(:(::), a, t) for (a, t) in zip(args, tys)]
+            inner = Expr(:macrocall, Symbol("@ccall"), nothing,
+                         Expr(:(::), Expr(:call, Expr(:., lib, QuoteNode(sym)), fixed...,
+                                          Expr(:parameters,
+                                               Expr(:$, :(to_c_type_pairs(va_list)...)))), ret))
+            push!(out, Expr(:macrocall, Symbol("@generated"), nothing,
+                            Expr(:function, Expr(:call, sym, args..., :(va_list...)),
+                                 Expr(:block, Meta.quot(inner)))))
+            return
+        end
+        call = Expr(:call, sym, args...)
         body = if o.use_ccall_macro
             pairs = [Expr(:(::), a, t) for (a, t) in zip(args, tys)]
             Expr(:macrocall, Symbol("@ccall"), nothing,
@@ -500,6 +517,12 @@ function generate(nodes::Vector{Node}; options::Options=Options(), io::IO=stdout
     end
     (!o.use_julia_native_enum_type && o.print_using_CEnum) &&
         (println(io, "using CEnum: CEnum, @cenum"); println(io))
+    o.wrap_variadic_function && println(io, """
+        to_c_type(t::Type) = t
+        to_c_type_pairs(va_list) = map(enumerate(to_c_type.(va_list))) do (ind, type)
+            :(va_list[\$ind]::\$type)
+        end
+        """)
     isempty(o.prologue_file_path) || (println(io, read(o.prologue_file_path, String)); println(io))
 
     emitted = 0

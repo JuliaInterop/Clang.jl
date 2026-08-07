@@ -1,21 +1,36 @@
 using Test
-import Clang
+using Clang
 
 # Temporary hack to make @doc work in 1.11 for the documentation tests. See:
 # https://github.com/JuliaLang/julia/issues/54664
 using REPL
 
-include("jllenvs.jl")
-include("file.jl")
-include("generators.jl")
-include("macros.jl")
-include("cxx_macros.jl")
-include("abi_baseline.jl")
-include("module.jl")
-
-include("test_mpi.jl")
-include("test_bitfield.jl")
-
-# ReTest.jl is disabled for now because it doesn't support Julia 1.13
-# include("ClangTests.jl")
-# retest(Clang, ClangTests; stats=true)
+@testset verbose=true "Clang.jl" begin
+    @testset "JLLEnvs" begin
+        include("jllenvs.jl")
+    end
+    @testset "Generators" begin
+        include("generators.jl")
+    end
+    @testset "Ordering" begin
+        include("ordering.jl")
+    end
+    @testset "Macros" begin
+        include("macros.jl")
+    end
+    @testset "Options" begin
+        include("options.jl")
+    end
+    # The strongest check in the suite: every emitted type against the `ASTRecordLayout` clang
+    # computed for the same declaration. Third-party corpora run only where their artifacts
+    # exist, and say so out loud when they do not.
+    @testset "ABI" begin
+        include("abi.jl")
+    end
+    @testset "MPI" begin
+        include("test_mpi.jl")
+    end
+    @testset "Bitfields" begin
+        include("test_bitfield.jl")
+    end
+end

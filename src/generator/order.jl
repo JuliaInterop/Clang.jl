@@ -23,10 +23,9 @@ Two other properties this keeps, both measured:
 """
 module CxxOrder
 
-include(joinpath(@__DIR__, "CxxFacts.jl"))
-using .CxxFacts
-import .CxxFacts: Key, Node, TypeRef, RecordFacts, TypedefFacts, EnumFacts, FunctionFacts,
-                  PointerRef, RecordRef, TypedefRef, EnumRef, ArrayRef, BuiltinRef, FieldFacts
+using ..CxxFacts
+import ..CxxFacts: Key, Node, TypeRef, RecordFacts, TypedefFacts, EnumFacts, FunctionFacts,
+                   PointerRef, RecordRef, TypedefRef, EnumRef, ArrayRef, BuiltinRef, FieldFacts
 
 export order_nodes, Ordering, Cut
 

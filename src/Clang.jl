@@ -1,95 +1,34 @@
+"""
+    Clang
+
+A C-header-to-Julia binding generator, built on Clang's C++ API through ClangCompiler.jl.
+
+    ctx = create_context(headers, get_default_args(), load_options("generator.toml"))
+    build!(ctx)
+
+## What changed in this version
+
+The package used to be two things: a libclang binding (`CXCursor`/`CXType` plus a hand-written
+object layer of ~300 `CLCursor` subtypes) and a generator built on top of it. The libclang layer
+is gone. Everything the generator needed from it — record layouts, canonical declarations,
+anonymity, comments, macro definitions — Clang's C++ API answers directly, and most of the old
+pipeline existed only to reconstruct those answers from what libclang could express.
+
+The two cannot coexist in one process: libclang and clang-cpp each register LLVM's global
+command-line options statically, so loading the second aborts with
+`Option 'sanitizer-early-opt-ep' registered more than once!`. Dropping libclang is what makes
+the C++ frontend usable at all, not a tidy-up.
+
+`Clang.LibClang`, `CLCursor`, `CLType`, `parse_headers`, `children`, `spelling` and the rest of
+the object layer no longer exist. Code that used Clang.jl to *walk an AST* rather than to
+generate bindings should pin `Clang@0.19` or move to ClangCompiler.jl directly.
+"""
 module Clang
 
 include("platform/JLLEnvs.jl")
 using .JLLEnvs
 
-# LLVM 16 is used in Julia 1.11.
-# Change this value when increasing
-# minimum supported version
-EARLIEST_LLVM_VERSION = 16
-
-# Change this value when adding
-# new supported wrapper version
-LATEST_LLVM_VERSION = 20
-
-llvm_version = if Base.libllvm_version < VersionNumber(EARLIEST_LLVM_VERSION+1)
-    string(EARLIEST_LLVM_VERSION)
-elseif Base.libllvm_version >= VersionNumber(LATEST_LLVM_VERSION+1)
-    string(LATEST_LLVM_VERSION+1)
-else
-    string(Base.libllvm_version.major)
-end
-
-libdir = joinpath(@__DIR__, "..", "lib")
-
-include(joinpath(libdir, llvm_version, "LibClang.jl"))
-using .LibClang
-
-include("cltypes.jl")
-export CLCursor, CLType, CLToken
-foreach(names(@__MODULE__; all=true)) do s
-    x = getfield(@__MODULE__, s)
-    if x isa DataType && supertype(x) in [CLCursor, CLType, CLToken]
-        @eval export $s
-    end
-end
-export CLVersion, CLPlatformAvailability
-
-
-include("string.jl")
-
-include("file.jl")
-export CLFile, name, unique_id, get_filename
-
-include("index.jl")
-export Index
-
-include("trans_unit.jl")
-export TranslationUnit, spelling, parse_header, parse_headers
-
-include("module.jl")
-export get_module, ast_file, name
-export parent_module, full_name, is_system
-export toplevel_headers
-
-include("cursor.jl")
-export kind, name, spelling, value
-export file, file_line_column
-export get_filename, get_file_line_column, get_function_args
-export is_typedef_anon, is_forward_declaration, is_inclusion_directive
-export search, children, getCursorPlatformAvailability
-
-include("type.jl")
-export has_elaborated_reference, has_elaborated_tag_reference, get_elaborated_cursor
-export has_function_reference
-export fields
-
-include("token.jl")
-export TokenList, tokenize
-
-include("dump.jl")
-export dumpobj
-
-include("compiledb.jl")
-export CLCompilationDatabase
-
-function version()
-    cxstr = clang_getClangVersion()
-    ptr = clang_getCString(cxstr)
-    s = unsafe_string(ptr)
-    clang_disposeString(cxstr)
-    return s
-end
-
-const LLVM_VERSION = match(r"[0-9]+.[0-9]+.[0-9]+", version()).match
-const LLVM_DIR = normpath(joinpath(dirname(LibClang.Clang_unified_jll.libclang_path), ".."))
-const LLVM_LIBDIR = joinpath(LLVM_DIR, "lib")
-const LLVM_INCLUDE = joinpath(LLVM_LIBDIR, "clang", LLVM_VERSION, "include")
-const CLANG_INCLUDE = LLVM_INCLUDE
-
-export LLVM_VERSION, LLVM_LIBDIR, LLVM_INCLUDE, CLANG_INCLUDE
-
 include("generator/Generators.jl")
 using .Generators
 
-end
+end # module

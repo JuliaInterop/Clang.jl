@@ -11,18 +11,21 @@
 # That is the actual contract a binding generator has to meet, and it scales to any corpus
 # without a recorded baseline.
 #
-#   julia --project=cxx cxx/validate_abi.jl fixtures libxml2 glib pango
+#   julia --project -e 'using Pkg; Pkg.test()'      -- or include this file directly
 
-include(joinpath(@__DIR__, "CxxCodegen.jl"))
-using .CxxCodegen
-using .CxxCodegen.CxxOrder.CxxFacts
-import .CxxCodegen.CxxOrder.CxxFacts: Node, Key, RecordFacts, EnumFacts, TypedefFacts,
-                                      ArrayRef, BuiltinRef, PointerRef, TypedefRef, RecordRef
+using Test
+using Clang
+using Clang.Generators
+import Clang.Generators.CxxFacts: Node, Key, RecordFacts, EnumFacts, TypedefFacts,
+                                  ArrayRef, BuiltinRef, PointerRef, TypedefRef, RecordRef, extract
+using Clang.Generators.CxxEmit: Options
+const E = Clang.Generators.CxxEmit
+const M = Clang.Generators.CxxMacros
 
 const R = dirname(@__DIR__)
 const ART = joinpath(homedir(), ".julia", "artifacts")
 
-"Undo `CxxCodegen.safe`: the binding `var\"end\"` creates is named `end`, not `var\"end\"`."
+"Undo `E.safe`: the binding `var\"end\"` creates is named `end`, not `var\"end\"`."
 function unescape(s::Symbol)
     t = String(s)
     startswith(t, "var\"") && endswith(t, "\"") ? Symbol(t[5:end-1]) : s
@@ -98,7 +101,7 @@ function compare(m::Module, nodes::Vector{Node}, env, names::Dict{Key,Symbol},
             T isa DataType && isconcretetype(T) || continue
             # An enum's ABI is the width clang chose for it, which C leaves to the
             # implementation — so this must come from `getIntegerType`, never assumed to be int.
-            want = try sizeof(Core.eval(m, CxxCodegen.jltype(env, f.integer_type))) catch; continue end
+            want = try sizeof(Core.eval(m, E.jltype(env, f.integer_type))) catch; continue end
             n_enum += 1
             sizeof(T) == want ||
                 push!(found, Finding(corpus, String(sym), "size",
@@ -109,21 +112,21 @@ function compare(m::Module, nodes::Vector{Node}, env, names::Dict{Key,Symbol},
 end
 
 function run_corpus(corpus::String, headers::Vector{String}; args::Vector{String}=String[],
-                    options::CxxCodegen.Options=CxxCodegen.Options())
+                    options::Options=Options())
     t0 = time()
     nodes = extract(headers; args=args)
     # Macros must be translated here too. `generate(nodes)` defaults to none, so emitting from
     # pre-extracted nodes would silently skip the whole macro path — and one macro that names
     # something undefined fails the entire file, which is very much this harness's business.
     macros = options.macro_mode == "disable" ? [] :
-             CxxCodegen.CxxMacros.translate_macros(headers, args)
+             M.translate_macros(headers, args)
     path = tempname() * ".jl"
     st = open(path, "w") do io
-        CxxCodegen.generate(nodes; options=options, macros=macros, io=io)
+        E.generate(nodes; options=options, macros=macros, io=io)
     end
-    names, skip = CxxCodegen.assign_names(nodes)
-    blobbed = CxxCodegen.blob_set(nodes)
-    env = CxxCodegen.Env(Dict(n.key => n for n in nodes), names, blobbed, skip, options)
+    names, skip = E.assign_names(nodes)
+    blobbed = E.blob_set(nodes)
+    env = E.Env(Dict(n.key => n for n in nodes), names, blobbed, skip, options)
 
     m = Module(Symbol("ABI_", replace(corpus, r"[^A-Za-z0-9]" => "_")))
     Core.eval(m, :(using CEnum: CEnum, @cenum))
@@ -154,14 +157,14 @@ CORPORA["libxml2"] = () -> begin
     hs = sort!([joinpath(inc, "libxml", f) for f in readdir(joinpath(inc, "libxml"))
                 if endswith(f, ".h")])
     run_corpus("libxml2", hs; args=["-I$inc"],
-               options=CxxCodegen.Options(library_name="libxml2"))
+               options=Options(library_name="libxml2"))
 end
 
 CORPORA["glib"] = () -> begin
     inc = joinpath(ART, "d3c452363ecbfffb1b5e29644395f7016c0ec781", "include", "glib-2.0")
     lib = joinpath(ART, "d3c452363ecbfffb1b5e29644395f7016c0ec781", "lib", "glib-2.0", "include")
     run_corpus("glib", [joinpath(inc, "glib.h")]; args=["-I$inc", "-I$lib"],
-               options=CxxCodegen.Options(library_name="libglib"))
+               options=Options(library_name="libglib"))
 end
 
 CORPORA["pango"] = () -> begin
@@ -170,7 +173,7 @@ CORPORA["pango"] = () -> begin
     gl  = joinpath(ART, "d3c452363ecbfffb1b5e29644395f7016c0ec781", "lib", "glib-2.0", "include")
     run_corpus("pango", [joinpath(inc, "pango", "pango.h")];
                args=["-I$inc", "-I$g", "-I$gl"],
-               options=CxxCodegen.Options(library_name="libpango"))
+               options=Options(library_name="libpango"))
 end
 
 """
@@ -196,7 +199,8 @@ CORPORA["synthetic"] = () -> begin
     enum Wide { W_LO = 0, W_HI = 0x7fffffffffffffffLL };
     struct HasEnum { enum Wide w; char pad; };
     """)
-    run_corpus("synthetic", [h]; options=CxxCodegen.Options(library_name="libsyn"))
+    run_corpus("synthetic", [h]; args=get_default_args(),
+               options=Options(library_name="libsyn"))
 end
 
 CORPORA["fixtures"] = () -> begin
@@ -205,7 +209,8 @@ CORPORA["fixtures"] = () -> begin
     for f in sort!(readdir(joinpath(R, "test", "include")))
         endswith(f, ".h") || continue
         f == "objectiveC.h" && continue          # ObjC is out of scope until ClangCompiler#49
-        args = f in needs_sys ? ["-isystem" * joinpath(R, "test", "sys")] : String[]
+        args = get_default_args()
+        f in needs_sys && push!(args, "-isystem" * joinpath(R, "test", "sys"))
         print("  ", rpad(f, 32))
         try
             fd, _ = run_corpus(f, [joinpath(R, "test", "include", f)]; args=args)
@@ -218,28 +223,34 @@ CORPORA["fixtures"] = () -> begin
 end
 
 # ------------------------------------------------------------------------------------------
-sel = isempty(ARGS) ? ["synthetic", "fixtures", "libxml2"] : ARGS
-allfound = Finding[]
-for s in sel
-    haskey(CORPORA, s) || (println("unknown corpus: $s"); continue)
-    println("== $s")
-    fd, _ = CORPORA[s]()
-    append!(allfound, fd)
-end
+# `synthetic` and `fixtures` are always available. The third-party corpora need JLL artifacts
+# that a CI runner may not have, so they run when present and are skipped when not — never
+# silently, since a corpus that quietly disappears is how a suite stops testing what it claims.
+"Is this corpus's input actually on this machine?"
+available(s) = s in ("synthetic", "fixtures") ||
+               (s == "libxml2" && isdir(joinpath(ART, "c99c0e2b61a41b4b2294b30e9f7f26e50c2e38eb"))) ||
+               (s == "glib" && isdir(joinpath(ART, "d3c452363ecbfffb1b5e29644395f7016c0ec781"))) ||
+               (s == "pango" && isdir(joinpath(ART, "3f72ac459eb33379a85dc4acdd35ab8bf0ac8c05")))
 
-println()
-if isempty(allfound)
-    println("ABI: all emitted types match clang's layout.")
-else
-    bykind = Dict{String,Int}()
-    for f in allfound; bykind[f.kind] = get(bykind, f.kind, 0) + 1; end
-    println("ABI mismatches: ", join(("$k=$v" for (k, v) in sort(collect(bykind))), "  "))
-    byhint = Dict{String,Int}()
-    for f in allfound; byhint[f.hint] = get(byhint, f.hint, 0) + 1; end
-    println("by hint: ", join(("$(isempty(k) ? "(none)" : k)=$v" for (k, v) in sort(collect(byhint); by=x->-x[2])), "  "))
-    println()
-    for f in allfound[1:min(end, 40)]
-        println("  $(rpad(f.kind,7)) $(rpad(f.corpus,12)) $(rpad(f.name,44)) $(f.detail)  $(f.hint)")
+@testset "ABI vs clang's own layout" begin
+    for s in (isempty(ARGS) ? ["synthetic", "fixtures", "libxml2", "glib", "pango"] : ARGS)
+        if !haskey(CORPORA, s)
+            @warn "unknown corpus" corpus = s
+            continue
+        end
+        if !available(s)
+            @info "corpus not present on this machine; skipping" corpus = s
+            @test_skip false
+            continue
+        end
+        @testset "$s" begin
+            println("== $s")
+            found, _ = CORPORA[s]()
+            for f in found
+                println("  $(rpad(f.kind,7)) $(rpad(f.corpus,12)) $(rpad(f.name,44)) ",
+                        "$(f.detail)  $(f.hint)")
+            end
+            @test isempty(found)
+        end
     end
-    length(allfound) > 40 && println("  ... and $(length(allfound)-40) more")
 end

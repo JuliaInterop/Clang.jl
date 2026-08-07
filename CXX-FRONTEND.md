@@ -47,9 +47,10 @@ run that agreed.
 - `[general]`: library_name, library_names, module_name, prologue_file_path,
   epilogue_file_path, jll_pkg_name, jll_pkg_extra, export_symbol_prefixes, output_ignorelist,
   generate_isystem_symbols, use_julia_native_enum_type, print_using_CEnum, add_fptr_methods,
+  skip_static_functions,
   auto_mutability, auto_mutability_with_new, auto_mutability_includelist,
   auto_mutability_ignorelist
-- `[codegen]`: skip_static_functions, use_ccall_macro, wrap_variadic_function, use_julia_bool,
+- `[codegen]`: use_ccall_macro, wrap_variadic_function, use_julia_bool,
   is_function_strictly_typed, opaque_as_mutable_struct, add_record_constructors,
   field_access_method_list, extract_c_comment_style, fold_single_line_comment,
   show_c_function_prototype

@@ -3,8 +3,11 @@
 # This is deliberately a per-option check, not an interaction check: it proves each key is wired
 # up, not that any pair of them composes. Interactions are still untested.
 
-include(joinpath(@__DIR__, "CxxCodegen.jl"))
-using .CxxCodegen
+using Test
+using Clang
+using Clang.Generators
+
+using Clang.Generators.CxxEmit: Options, generate
 
 const d = mktempdir()
 write(joinpath(d, "h.h"), """
@@ -25,15 +28,12 @@ write(joinpath(d, "epi.jl"), "# EPILOGUE MARKER")
 "Generate `h.h` under `opts` and return the source text."
 function gen(; kw...)
     buf = IOBuffer()
-    CxxCodegen.generate([joinpath(d, "h.h")]; io=buf, options=CxxCodegen.Options(; kw...))
+    generate([joinpath(d, "h.h")]; io=buf, options=Options(; kw...))
     return String(take!(buf))
 end
 
-pass = fail = 0
-function check(label, ok)
-    global pass, fail
-    ok ? (pass += 1) : (fail += 1)
-    println(rpad(label, 34), ok ? "OK" : "FAILED")
+check(label, ok) = @testset "$label" begin
+    @test ok
 end
 
 # --- the original batch, all at once ---
@@ -97,10 +97,10 @@ check("print_using_CEnum=false", !occursin("using CEnum", gen(print_using_CEnum=
 # real system record with no Julia counterpart.
 let sysh = joinpath(d, "sys.h")
     write(sysh, "#include <stdio.h>\nint widen(FILE *f);\n")
-    with = IOBuffer(); CxxCodegen.generate([sysh]; io=with, options=CxxCodegen.Options())
+    with = IOBuffer(); generate([sysh]; io=with, options=Options())
     without = IOBuffer()
-    CxxCodegen.generate([sysh]; io=without,
-                        options=CxxCodegen.Options(generate_isystem_symbols=false))
+    generate([sysh]; io=without,
+                        options=Options(generate_isystem_symbols=false))
     a, b = String(take!(with)), String(take!(without))
     check("generate_isystem_symbols=false shrinks output", length(b) < length(a))
     check("...and the API itself survives", occursin("function widen", b))
@@ -108,18 +108,18 @@ end
 
 # --- doc comments ---
 let R = dirname(@__DIR__), doch = joinpath(R, "test", "include", "documentation.h")
-    plain = IOBuffer(); CxxCodegen.generate([doch]; io=plain, options=CxxCodegen.Options())
+    plain = IOBuffer(); generate([doch]; io=plain, options=Options())
     check("no docstring by default", !occursin("\"\"\"", String(take!(plain))))
 
     raw = IOBuffer()
-    CxxCodegen.generate([doch]; io=raw,
-                        options=CxxCodegen.Options(extract_c_comment_style="raw"))
+    generate([doch]; io=raw,
+                        options=Options(extract_c_comment_style="raw"))
     r = String(take!(raw))
     check("raw: markers stripped", occursin("@brief Dummy function.", r) && !occursin("/**", r))
 
     dox = IOBuffer()
-    CxxCodegen.generate([doch]; io=dox,
-                        options=CxxCodegen.Options(extract_c_comment_style="doxygen"))
+    generate([doch]; io=dox,
+                        options=Options(extract_c_comment_style="doxygen"))
     x = String(take!(dox))
     check("doxygen: brief becomes body text", occursin("Dummy function.", x) &&
                                               !occursin("@brief", x))
@@ -143,8 +143,8 @@ let R = dirname(@__DIR__), doch = joinpath(R, "test", "include", "documentation.
 
     fold = IOBuffer()
     write(joinpath(d, "one.h"), "/// One line.\nint one(void);\n")
-    CxxCodegen.generate([joinpath(d, "one.h")]; io=fold,
-                        options=CxxCodegen.Options(extract_c_comment_style="raw",
+    generate([joinpath(d, "one.h")]; io=fold,
+                        options=Options(extract_c_comment_style="raw",
                                                    fold_single_line_comment=true))
     check("fold_single_line_comment", occursin("\"\"\"One line.\"\"\"", String(take!(fold))))
 end
@@ -176,10 +176,10 @@ let mh = joinpath(d, "mut.h")
     int use_pinned(struct Pinned *p, int n);
     int use_loose(struct Loose f);
     """)
-    b1 = IOBuffer(); CxxCodegen.generate([mh]; io=b1, options=CxxCodegen.Options())
+    b1 = IOBuffer(); generate([mh]; io=b1, options=Options())
     check("no mutable structs by default", !occursin("mutable struct", String(take!(b1))))
     b2 = IOBuffer()
-    CxxCodegen.generate([mh]; io=b2, options=CxxCodegen.Options(auto_mutability=true))
+    generate([mh]; io=b2, options=Options(auto_mutability=true))
     s = String(take!(b2))
     # Pointer + integer is the array-and-length shape; those must stay immutable.
     check("auto_mutability keeps pointer+int immutable", occursin("struct Pinned", s) &&
@@ -187,21 +187,21 @@ let mh = joinpath(d, "mut.h")
     check("auto_mutability promotes the rest", occursin("mutable struct Loose", s))
     check("auto_mutability_with_new adds a constructor", occursin("Loose(d) = new(d)", s))
     b3 = IOBuffer()
-    CxxCodegen.generate([mh]; io=b3,
-                        options=CxxCodegen.Options(auto_mutability=true,
+    generate([mh]; io=b3,
+                        options=Options(auto_mutability=true,
                                                    auto_mutability_ignorelist=["Loose"]))
     check("auto_mutability_ignorelist", !occursin("mutable struct Loose", String(take!(b3))))
     b4 = IOBuffer()
-    CxxCodegen.generate([mh]; io=b4,
-                        options=CxxCodegen.Options(auto_mutability=true,
+    generate([mh]; io=b4,
+                        options=Options(auto_mutability=true,
                                                    auto_mutability_includelist=["Pinned"]))
     check("auto_mutability_includelist", occursin("mutable struct Pinned", String(take!(b4))))
 end
 
 # --- the api/common split ---
 let api = IOBuffer(), com = IOBuffer()
-    CxxCodegen.generate([joinpath(d, "h.h")]; io=com, api_io=api,
-                        options=CxxCodegen.Options(library_name="libs", module_name="Ignored"))
+    generate([joinpath(d, "h.h")]; io=com, api_io=api,
+                        options=Options(library_name="libs", module_name="Ignored"))
     a, cm = String(take!(api)), String(take!(com))
     check("split: functions to api", occursin("function fn_keep", a))
     check("split: types not in api", !occursin("struct Keep", a))
@@ -212,6 +212,3 @@ let api = IOBuffer(), com = IOBuffer()
     check("split: no using CEnum", !occursin("using CEnum", cm))
 end
 
-println()
-println("options: $pass passed, $fail failed")
-exit(fail == 0 ? 0 : 1)

@@ -21,6 +21,7 @@ import ClangCompiler as CC
 using ClangCompiler: create_interpreter, dispose
 
 export extract, Node, RecordFacts, EnumFacts, TypedefFacts, FunctionFacts, FieldFacts
+export builtin_include_dir, included_files
 export TypeRef, BuiltinRef, PointerRef, ArrayRef, RecordRef, EnumRef, TypedefRef,
        FunctionRef, UnknownRef, deps, Key
 
@@ -343,6 +344,90 @@ function extract(headers::Vector{String}; args::Vector{String}=String[], is_cxx:
     finally
         dispose(I)
     end
+end
+
+# ------------------------------------------------------------------------------------------
+# Toolchain queries
+# ------------------------------------------------------------------------------------------
+const BUILTIN_INCLUDE = Ref{Union{Nothing,String}}(nothing)
+
+"""
+    builtin_include_dir() -> String
+
+Clang's own resource include directory (`stddef.h`, `stdarg.h`, …), asked of the running
+frontend rather than derived from a JLL's artifact path. `""` if it cannot be determined.
+
+Cached: it needs an interpreter to answer, and the answer cannot change within a session.
+"""
+function builtin_include_dir()
+    BUILTIN_INCLUDE[] === nothing || return BUILTIN_INCLUDE[]
+    dir = try
+        I = create_interpreter(String[])
+        try
+            rd = CC.GetResourceDir(CC.getHeaderSearchOpts(CC.get_instance(I)))
+            isempty(rd) ? "" : joinpath(rd, "include")
+        finally
+            dispose(I)
+        end
+    catch
+        ""
+    end
+    BUILTIN_INCLUDE[] = dir
+    return dir
+end
+
+"""
+    included_files(headers; args=String[]) -> Set{String}
+
+The normalised paths in `headers` that some header in the set `#include`s.
+
+`detect_headers` uses this to keep only the headers that span a directory. The inclusion
+directives come from clang's own preprocessing record — not a regex over the source — but the
+record stores the *spelling* written in the directive, so a candidate is matched by path suffix.
+That is exact for the case that matters (`#include "libxml/tree.h"` naming a candidate whose
+path ends the same way) and cannot mistake a comment or a disabled `#if` branch for a directive.
+"""
+function included_files(headers::Vector{String}; args::Vector{String}=String[])
+    out = Set{String}()
+    isempty(headers) && return out
+    I = create_interpreter(String["-x", "c", args...])
+    try
+        ci = CC.get_instance(I)
+        pp = CC.getPreprocessor(ci)
+        CC.createPreprocessingRecord(pp)
+        CC.parse(I, join(("#include \"$h\"" for h in headers), '\n') * "\n")
+        rec = CC.getPreprocessingRecord(pp)
+        CC.is_null_handle(rec) && return out
+        # The umbrella's OWN `#include` lines are inclusion directives like any other, so
+        # counting them marks every candidate as included-by-something and detection returns
+        # nothing. They are identified by what they spell: the umbrella writes each header's
+        # full path, where a real directive inside a header writes whatever that header wrote.
+        # (Filtering by `isInMainFile` does not work — the umbrella is an incremental input
+        # buffer, not the translation unit's main file.)
+        mine = Set(replace(h, '\\' => '/') for h in headers)
+        spellings = Set{String}()
+        for ent in CC.getPreprocessedEntities(rec)
+            inc = CC.InclusionDirective(ent)
+            CC.is_null_handle(inc) && continue
+            nm = replace(CC.getFileName(inc), '\\' => '/')
+            (isempty(nm) || nm in mine) && continue
+            push!(spellings, nm)
+        end
+        for h in headers
+            p = replace(normpath(h), '\\' => '/')
+            any(s -> endswith(p, s), spellings) && push!(out, normpath(h))
+        end
+    catch err
+        # A directory that does not parse as one umbrella is not a reason to fail detection;
+        # returning nothing included means every candidate is reported, which is the safe way
+        # to be wrong here. It is NOT a reason to be silent, though: this catch swallowed a
+        # misspelled field accessor once, and the only symptom was detection quietly reporting
+        # every header including the ones it should have filtered.
+        @warn "detect_headers: could not determine inclusions; reporting every candidate" err
+    finally
+        dispose(I)
+    end
+    return out
 end
 
 end # module

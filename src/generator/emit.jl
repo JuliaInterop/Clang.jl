@@ -1,5 +1,5 @@
 """
-    CxxCodegen
+    CxxEmit
 
 Emit Julia from extracted facts — the third stage of extract → order → codegen.
 
@@ -16,17 +16,15 @@ Two rules decide the shape of a record:
     accessors, exactly as the current generator does. Blobbing is a fallback, never the
     default (`GENERATORS-REWORK.md` §3.6).
 """
-module CxxCodegen
+module CxxEmit
 
-include(joinpath(@__DIR__, "CxxOrder.jl"))
-include(joinpath(@__DIR__, "CxxMacros.jl"))
-using .CxxOrder
-using .CxxMacros
-using .CxxOrder.CxxFacts
-import .CxxOrder.CxxFacts: Key, Node, TypeRef, RecordFacts, TypedefFacts, EnumFacts,
-                           FunctionFacts, PointerRef, RecordRef, TypedefRef, EnumRef,
-                           ArrayRef, BuiltinRef, FunctionRef, UnknownRef, FieldFacts
-import .CxxOrder: Cut, Ordering
+using ..CxxOrder
+using ..CxxMacros
+using ..CxxFacts
+import ..CxxFacts: Key, Node, TypeRef, RecordFacts, TypedefFacts, EnumFacts,
+                   FunctionFacts, PointerRef, RecordRef, TypedefRef, EnumRef,
+                   ArrayRef, BuiltinRef, FunctionRef, UnknownRef, FieldFacts
+import ..CxxOrder: Cut, Ordering
 
 export generate, Options
 
@@ -137,6 +135,10 @@ function Options(toml::AbstractDict)
         extract_c_comment_style  = string(pick(c, "extract_c_comment_style", "disable")),
         fold_single_line_comment = Bool(pick(c, "fold_single_line_comment", false)),
         show_c_function_prototype = Bool(pick(c, "show_c_function_prototype", false)),
+        # Not a TOML value — a Julia `Function` a caller poked into the options dict beside the
+        # scalars. `gen/generator.jl` and MPI.jl's driver both do this, and it is one of the
+        # signals that the TOML surface is under-expressive (GENERATORS-REWORK.md).
+        callback_documentation   = pick(g, "callback_documentation", nothing),
         add_fptr_methods         = Bool(pick(g, "add_fptr_methods", false)),
         auto_mutability          = Bool(pick(g, "auto_mutability", false)),
         auto_mutability_with_new = Bool(pick(g, "auto_mutability_with_new", true)),
@@ -453,17 +455,56 @@ function emit_accessors(e::Env, n::Node, out::Vector{Expr})
     end
     push!(body.args, :(return getfield(x, f)))
     push!(out, Expr(:function, :(Base.getproperty(x::Ptr{$sym}, f::Symbol)), body))
-    # Read-only accessors make a record inspectable but not usable: filling one in from Julia
-    # needs the write side too. Bit-fields are excluded — `getproperty` hands those back as a
-    # (ptr, shift, width) triple, which no single `unsafe_store!` can service.
-    if any(fl -> fl.bitwidth < 0 && !isempty(String(fl.name)), f.fields)
-        push!(out, :(function Base.setproperty!(x::Ptr{$sym}, f::Symbol, v)
-                         unsafe_store!(getproperty(x, f), v)
-                     end))
-    end
-    isempty(props) ||
-        push!(out, :(Base.propertynames(x::$sym, private::Bool=false) = ($(props...),)))
+    isempty(props) && return
+    # Read-only accessors make a record inspectable but not usable. `getproperty` on a pointer
+    # hands back a `Ptr` for a plain field and a `(ptr, shift, width)` triple for a bit-field,
+    # so both the write side and the by-value read side dispatch on which it got.
+    push!(out, :(function Base.setproperty!(x::Ptr{$sym}, f::Symbol, v)
+                     r = getproperty(x, f)
+                     r isa Ptr ? unsafe_store!(r, v) : _bitfield_store!(r..., v)
+                 end))
+    # By value: `toBitfield(m).a` has to work on the struct the ccall returned, not only on a
+    # pointer into C-owned memory.
+    push!(out, :(function Base.getproperty(x::$sym, f::Symbol)
+                     f === :data && return getfield(x, :data)
+                     r = Ref(x)
+                     GC.@preserve r begin
+                         p = Base.unsafe_convert(Ptr{$sym}, r)
+                         q = getproperty(p, f)
+                         return q isa Ptr ? unsafe_load(q) : _bitfield_load(q...)
+                     end
+                 end))
+    push!(out, :(Base.propertynames(x::$sym, private::Bool=false) = ($(props...),)))
 end
+
+"""
+The bit-field load/store pair, emitted once per file when any record needs it.
+
+A bit-field accessor cannot be a plain `unsafe_load`: the value shares a storage word with its
+neighbours, so reading is shift-and-mask and writing is read-modify-write. Signed bit-fields
+additionally need sign extension — `int d : 3` holding -4 is the bit pattern `0b100`, which
+loads as 4 without it.
+"""
+const BITFIELD_HELPERS = """
+function _bitfield_load(p::Ptr{T}, off::Int, width::Int) where {T}
+    mask = (T(1) << width) - T(1)
+    v = (unsafe_load(p) >> off) & mask
+    if T <: Signed && width > 0 && (v & (T(1) << (width - 1))) != 0
+        v |= ~mask                      # sign-extend
+    end
+    return v
+end
+
+function _bitfield_store!(p::Ptr{T}, off::Int, width::Int, v) where {T}
+    mask = (T(1) << width) - T(1)
+    old = unsafe_load(p)
+    unsafe_store!(p, (old & ~(mask << off)) | (((v % T) & mask) << off))
+end
+"""
+
+"Does any record in this set carry a bit-field?"
+needs_bitfield_helpers(nodes::Vector{Node}) =
+    any(n -> n.facts isa RecordFacts && any(fl -> fl.bitwidth >= 0, n.facts.fields), nodes)
 
 "Is this record on the `add_record_constructors` list (or is the option simply `true`)?"
 wants_constructor(o::Options, sym::Symbol) =
@@ -480,7 +521,9 @@ already knows each field's real offset.
 function emit_constructor(e::Env, n::Node, out::Vector{Expr})
     f = n.facts::RecordFacts
     sym = e.name[n.key]
-    named = [fl for fl in f.fields if !isempty(String(fl.name)) && fl.bitwidth < 0]
+    # Bit-fields ARE included: `ptr.d = d` reaches the bit-field-aware `setproperty!`, and a
+    # constructor that silently dropped them would build a half-initialised record.
+    named = [fl for fl in f.fields if !isempty(String(fl.name))]
     isempty(named) && return
     syms = [safe(Symbol(fl.name)) for fl in named]
     body = Expr(:block, :(ref = Ref{$sym}()),
@@ -502,11 +545,24 @@ The library a function should be `ccall`ed through.
 libraries whose headers were parsed together — which is why a `Node` carries its file.
 """
 function library_for(o::Options, n::Node)
-    isempty(o.library_names) && return o.library_name
-    for (pat, lib) in o.library_names
-        endswith(normpath(n.file), Regex(pat)) && return lib
+    name = o.library_name
+    if !isempty(o.library_names)
+        for (pat, lib) in o.library_names
+            if endswith(normpath(n.file), Regex(pat))
+                name = lib
+                break
+            end
+        end
     end
-    return o.library_name
+    # PARSED as Julia, not turned straight into a Symbol. `libfoo` is an identifier the caller
+    # will bind, but a caller may equally give a quoted path — `"\"/abs/path/libfoo\""` — to
+    # `ccall` a library by location with nothing to bind. `test/test_bitfield.jl` does exactly
+    # that, and `Symbol` on it yields an identifier whose name contains quote marks.
+    return try
+        Meta.parse(name)
+    catch
+        Symbol(name)
+    end
 end
 
 "Collect every symbol a type expression mentions."
@@ -561,7 +617,7 @@ function emit_node(e::Env, n::Node, cuts::Dict{Int,Cut}, out::Vector{Expr}, o::O
         tys  = [jltype(e, t) for (_, t) in f.params]
         ret  = jltype(e, f.ret)
         args = argnames(f, tys, ret)
-        lib = Symbol(library_for(o, n))
+        lib = library_for(o, n)
         # `foo(a::Cint)` instead of `foo(a)`: the ccall converts either way, but the typed form
         # rejects a wrong argument at the call site rather than inside the C library.
         sig = o.is_function_strictly_typed ?
@@ -873,6 +929,7 @@ function generate(nodes::Vector{Node}; options::Options=Options(), io::IO=stdout
     end
     (!o.use_julia_native_enum_type && o.print_using_CEnum) &&
         (println(io, "using CEnum: CEnum, @cenum"); println(io))
+    needs_bitfield_helpers(nodes) && (println(io, BITFIELD_HELPERS); println(io))
     o.wrap_variadic_function && println(io, """
         to_c_type(t::Type) = t
         to_c_type_pairs(va_list) = map(enumerate(to_c_type.(va_list))) do (ind, type)

@@ -9,6 +9,7 @@ include("jllenvs.jl")
 include("file.jl")
 include("generators.jl")
 include("macros.jl")
+include("cxx_macros.jl")
 include("module.jl")
 
 include("test_mpi.jl")

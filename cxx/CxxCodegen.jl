@@ -103,6 +103,28 @@ excluded(o::Options, nm::Symbol) =
     any(r -> (m = match(Regex(r), String(nm)); m !== nothing && m.match == String(nm)),
         o.output_ignorelist)
 
+"""
+Julia keywords that are legal C identifiers.
+
+`struct _xmlParserInput` in libxml2 has a field named `end`. Emitted bare, Julia parses it as
+the block terminator and silently re-reads the rest of the file as something else — the failure
+surfaced 9000 lines later as `TypeError: expected Ptr{UInt8}, got Nothing`, nowhere near the
+cause. Every emitted identifier goes through `safe`.
+"""
+const RESERVED = Set(Symbol.([
+    "baremodule","begin","break","catch","const","continue","do","else","elseif","end","export",
+    "false","finally","for","function","global","if","import","in","isa","let","local","macro",
+    "module","quote","return","struct","true","try","using","where","while","abstract","mutable",
+    "primitive","type","outer","var"]))
+
+"Escape an identifier that would otherwise be a Julia keyword, preserving the C spelling."
+function safe(nm::Symbol)
+    s = String(nm)
+    isempty(s) && return nm
+    (nm in RESERVED || !Base.isidentifier(s)) && return Symbol("var\"", s, "\"")
+    return nm
+end
+
 "Translate a `TypeRef` into a Julia type expression."
 function jltype(e::Env, t::TypeRef)
     if t isa BuiltinRef
@@ -144,6 +166,7 @@ function assign_names(nodes::Vector{Node})
         while id in used
             id = Symbol(String(id), "_")
         end
+        id = safe(id)
         push!(used, id)
         name[n.key] = id
     end
@@ -212,7 +235,7 @@ function emit_record(e::Env, n::Node, cuts::Dict{Int,Cut}, out::Vector{Expr})
     body = Expr(:block)
     for (i, fld) in enumerate(f.fields)
         ty = haskey(cuts, i) ? jltype(e, cuts[i].replacement) : jltype(e, fld.type)
-        push!(body.args, Expr(:(::), Symbol(fld.name), ty))
+        push!(body.args, Expr(:(::), safe(Symbol(fld.name)), ty))
     end
     push!(out, Expr(:struct, false, sym, body))
     # A tier-2 cut erased the field's real type, so give the pointer form back typed.
@@ -236,7 +259,7 @@ function emit_accessors(e::Env, n::Node, out::Vector{Expr})
     props = Symbol[]
     for fld in f.fields
         nm = String(fld.name); isempty(nm) && continue
-        s = Symbol(nm); push!(props, s)
+        s = safe(Symbol(nm)); push!(props, s)
         ty = jltype(e, fld.type)
         if fld.bitwidth >= 0
             d, r = divrem(fld.bitoffset, 8)
@@ -262,7 +285,7 @@ function emit_node(e::Env, n::Node, cuts::Dict{Int,Cut}, out::Vector{Expr}, o::O
         ity = jltype(e, f.integer_type)
         blk = Expr(:block)
         for (nm, v) in f.constants
-            push!(blk.args, Expr(:(=), Symbol(nm), v))
+            push!(blk.args, Expr(:(=), safe(Symbol(nm)), v))
         end
         mac = o.use_julia_native_enum_type ? Symbol("@enum") : Symbol("@cenum")
         push!(out, Expr(:macrocall, mac, nothing, Expr(:(::), sym, ity), blk))
@@ -270,7 +293,7 @@ function emit_node(e::Env, n::Node, cuts::Dict{Int,Cut}, out::Vector{Expr}, o::O
         push!(out, :(const $sym = $(jltype(e, f.underlying))))
     elseif f isa FunctionFacts
         (f.internal && o.skip_static_functions) && return   # `static` has no external symbol
-        args = [Symbol(isempty(String(p)) ? "arg$i" : String(p)) for (i, (p, _)) in enumerate(f.params)]
+        args = [safe(Symbol(isempty(String(p)) ? "arg$i" : String(p))) for (i, (p, _)) in enumerate(f.params)]
         tys  = [jltype(e, t) for (_, t) in f.params]
         ret  = jltype(e, f.ret)
         f.variadic && return                       # needs the va-list machinery; skipped

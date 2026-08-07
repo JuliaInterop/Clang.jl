@@ -123,10 +123,14 @@ function break_edge!(cuts::Vector{Cut}, bykey::Dict{Key,Node}, u::Key, v::Key,
             return i
         end
     end
-    # Tier 2
+    # Tier 2. Pointer-mediation must be judged on the CANONICAL spine, not on whether the
+    # field's top-level type is syntactically a PointerRef -- `deps` already carries that flag
+    # through typedefs and arrays. Testing the top level only is precisely the libclang bug
+    # that makes RemoveCircularReference abort on libxml2 (ORDERING-DESIGN.md §2.0); it is easy
+    # to reproduce by accident.
     for (i, fld) in enumerate(n.facts.fields)
         (u, i) in suppressed && continue
-        (fld.type isa PointerRef && mentions(fld.type, v)) || continue
+        any(((k, viaptr),) -> k == v && viaptr, CxxFacts.deps(fld.type)) || continue
         push!(cuts, Cut(u, i, PointerRef(BuiltinRef(:void)), 2,
               "field `$(fld.name)` degraded to Ptr{Cvoid}; needs a typed accessor"))
         return i
@@ -145,12 +149,30 @@ function order_nodes(nodes::Vector{Node})
     pos = Dict{Key,Int}(n.key => i for (i, n) in enumerate(nodes))
     state = Dict{Key,Int}(n.key => UNSEEN for n in nodes)
     cuts = Cut[]
-    # a cut suppresses one edge: (node, field) -> true
     suppressed = Set{Tuple{Key,Int}}()
+    # A cut REPLACES a field's type; it does not delete the field. Substituting
+    # `xmlSchemaTypePtr` yields `Ptr{xmlSchemaType}`, which still depends on `xmlSchemaType` --
+    # so the field's remaining dependencies must keep constraining the order. Suppressing the
+    # whole field instead let libxml2 emit a reference to a type ordered later.
+    applied = Dict{Tuple{Key,Int},TypeRef}()
 
     edges = Dict{Key,Vector{Tuple{Key,Bool,Int}}}(n.key => order_edges(n) for n in nodes)
-    live(u) = [(k, p, fi) for (k, p, fi) in edges[u]
-               if haskey(bykey, k) && k != u && (u, fi) ∉ suppressed]
+    function live(u)
+        out = Tuple{Key,Bool,Int}[]
+        for (k, p, fi) in edges[u]
+            haskey(applied, (u, fi)) && continue      # replaced: recomputed below
+            (haskey(bykey, k) && k != u) || continue
+            push!(out, (k, p, fi))
+        end
+        for ((n_, fi), t) in applied
+            n_ == u || continue
+            for (k, p) in CxxFacts.deps(t)
+                (haskey(bykey, k) && k != u) || continue
+                push!(out, (k, p, fi))
+            end
+        end
+        return out
+    end
 
     order = Key[]
     for root in nodes
@@ -188,6 +210,7 @@ function order_nodes(nodes::Vector{Node})
                                      join((string(bykey[p].id) for p in path), " -> ") *
                                      " -> " * string(bykey[v].id))
                     push!(suppressed, (cut_at, fi))
+                    applied[(cut_at, fi)] = last(cuts).replacement
                     if cut_at == u
                         iter[end] = 1            # re-scan u with the edge gone
                     else

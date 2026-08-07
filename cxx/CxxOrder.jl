@@ -89,6 +89,34 @@ function desugar_typedef(bykey::Dict{Key,Node}, t::TypeRef, k::Key)
     return t
 end
 
+"""
+Can `t` reach declaration `v`, and does every route cross a pointer?
+
+`deps` is deliberately shallow — it reports an edge *to* a typedef node, never through it,
+because the ordering graph needs the typedef itself as a vertex. But pointer-mediation is a
+property of the canonical spine, and a field typed `xmlSchemaTypePtr` is pointer-mediated even
+though its top-level `TypedefRef` says nothing about that. This walks through typedef nodes to
+answer it, which is what tier 2 must ask before declaring a cycle unbreakable.
+"""
+function reaches_via_pointer(bykey::Dict{Key,Node}, t::TypeRef, v::Key,
+                             viaptr::Bool=false, seen::Set{Key}=Set{Key}())
+    if t isa PointerRef
+        return reaches_via_pointer(bykey, t.pointee, v, true, seen)
+    elseif t isa ArrayRef
+        return reaches_via_pointer(bykey, t.elem, v, viaptr, seen)
+    elseif t isa RecordRef || t isa EnumRef
+        return t.key == v && viaptr
+    elseif t isa TypedefRef
+        t.key == v && return viaptr
+        t.key in seen && return false
+        push!(seen, t.key)
+        n = get(bykey, t.key, nothing)
+        (n !== nothing && n.facts isa TypedefFacts) || return false
+        return reaches_via_pointer(bykey, n.facts.underlying, v, viaptr, seen)
+    end
+    return false
+end
+
 "Does `t` still mention `k` after desugaring? (i.e. did the substitution actually help?)"
 mentions(t::TypeRef, k::Key) = any(p -> first(p) == k, CxxFacts.deps(t))
 
@@ -106,7 +134,7 @@ Tier 2 — opaque placeholder. Only when no typedef sits on the path: degrade a 
 field to `Ptr{Cvoid}`, which needs a typed accessor emitted afterwards.
 """
 function break_edge!(cuts::Vector{Cut}, bykey::Dict{Key,Node}, u::Key, v::Key,
-                     suppressed::Set{Tuple{Key,Int}})
+                     suppressed::Set{Tuple{Key,Int}}, hard::Set{Tuple{Key,Int}})
     n = bykey[u]
     n.facts isa RecordFacts || return 0
     # Tier 1
@@ -129,8 +157,11 @@ function break_edge!(cuts::Vector{Cut}, bykey::Dict{Key,Node}, u::Key, v::Key,
     # that makes RemoveCircularReference abort on libxml2 (ORDERING-DESIGN.md §2.0); it is easy
     # to reproduce by accident.
     for (i, fld) in enumerate(n.facts.fields)
-        (u, i) in suppressed && continue
-        any(((k, viaptr),) -> k == v && viaptr, CxxFacts.deps(fld.type)) || continue
+        # NOT `suppressed`: a tier-1 substitution replaces `foo bar` with `Ptr{Foo} bar`, which
+        # can introduce the very edge that must now be cut. Only a field already degraded to
+        # Ptr{Cvoid} is off limits, since there is nothing left to erase.
+        (u, i) in hard && continue
+        reaches_via_pointer(bykey, fld.type, v) || continue
         push!(cuts, Cut(u, i, PointerRef(BuiltinRef(:void)), 2,
               "field `$(fld.name)` degraded to Ptr{Cvoid}; needs a typed accessor"))
         return i
@@ -150,6 +181,7 @@ function order_nodes(nodes::Vector{Node})
     state = Dict{Key,Int}(n.key => UNSEEN for n in nodes)
     cuts = Cut[]
     suppressed = Set{Tuple{Key,Int}}()
+    hard = Set{Tuple{Key,Int}}()   # fields already degraded to Ptr{Cvoid}
     # A cut REPLACES a field's type; it does not delete the field. Substituting
     # `xmlSchemaTypePtr` yields `Ptr{xmlSchemaType}`, which still depends on `xmlSchemaType` --
     # so the field's remaining dependencies must keep constraining the order. Suppressing the
@@ -195,11 +227,11 @@ function order_nodes(nodes::Vector{Node})
                     # degrade (a typedef, as in cycle-detection.h where the cycle is
                     # `typedef B` -> `struct B` -> `typedef B`), so fall back to any record on
                     # the cycle path.
-                    cut_at, fi = u, break_edge!(cuts, bykey, u, v, suppressed)
+                    cut_at, fi = u, break_edge!(cuts, bykey, u, v, suppressed, hard)
                     if fi == 0
                         for (idx, p) in enumerate(path)
                             nxt = idx < length(path) ? path[idx + 1] : v
-                            f2 = break_edge!(cuts, bykey, p, nxt, suppressed)
+                            f2 = break_edge!(cuts, bykey, p, nxt, suppressed, hard)
                             if f2 != 0
                                 cut_at, fi = p, f2
                                 break
@@ -210,6 +242,7 @@ function order_nodes(nodes::Vector{Node})
                                      join((string(bykey[p].id) for p in path), " -> ") *
                                      " -> " * string(bykey[v].id))
                     push!(suppressed, (cut_at, fi))
+                    last(cuts).tier == 2 && push!(hard, (cut_at, fi))
                     applied[(cut_at, fi)] = last(cuts).replacement
                     if cut_at == u
                         iter[end] = 1            # re-scan u with the edge gone

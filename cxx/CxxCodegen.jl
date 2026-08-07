@@ -211,10 +211,47 @@ function blob_set(nodes::Vector{Node})
     return blob
 end
 
-"Does this record need the opaque-bytes fallback rather than a plain struct?"
+"""
+The element type and count for a blobbed record's storage tuple.
+
+`NTuple{N,UInt8}` reproduces clang's *size* but always has alignment 1, and Julia gives a struct
+the maximum alignment of its fields — so every blobbed record came out under-aligned. The
+libclang generator has the same bug and cannot see it: it never calls `getAlignOf`
+(CLAUDE.md, "Layout"), so there is nothing to compare against.
+
+Storing the same bytes as a tuple of a wider unsigned carries the alignment across, because
+Julia's `UInt16`/`UInt32`/`UInt64`/`UInt128` have alignment equal to their size on every platform
+this package supports. C guarantees a record's size is a multiple of its alignment, so the
+division is exact; the `divrem` check is there to degrade rather than emit a wrong size if some
+frontend ever reports otherwise.
+"""
+function blob_storage(f::RecordFacts)
+    size = max(f.size, 1)
+    for (unit, bytes) in ((:UInt128, 16), (:UInt64, 8), (:UInt32, 4), (:UInt16, 2))
+        if f.align >= bytes && size % bytes == 0
+            return unit, size ÷ bytes
+        end
+    end
+    return :UInt8, size
+end
+
+"""
+Does this record need the opaque-bytes fallback rather than a plain struct?
+
+The `unnameable` clause is a safety net, not a feature. `jltype` maps an `UnknownRef` to `Cvoid`
+because there is nothing better to say — but a `Cvoid` field occupies ZERO bytes in Julia, so a
+single unrecognised field type silently shifts every field after it and shrinks the record.
+Falling back to the blob form keeps `size` and every offset exactly right no matter what the
+frontend failed to name, which turns a silent ABI corruption into a merely less readable struct.
+"""
 needs_blob(f::RecordFacts) =
     f.kind === :union || f.packed ||
-    any(fl -> fl.bitwidth >= 0 || isempty(String(fl.name)), f.fields)
+    any(fl -> fl.bitwidth >= 0 || isempty(String(fl.name)) || unnameable(fl.type), f.fields)
+
+"Does this type contain a position we could not name, at a place that occupies storage?"
+unnameable(t::TypeRef, depth::Int=0) =
+    depth <= 8 && (t isa UnknownRef ||
+                   (t isa ArrayRef && unnameable(t.elem, depth + 1)))
 
 """
 Emit a record. `cuts` are the field substitutions the ordering pass decided, applied here — the
@@ -228,7 +265,8 @@ function emit_record(e::Env, n::Node, cuts::Dict{Int,Cut}, out::Vector{Expr})
         return
     end
     if n.key in e.blobbed
-        push!(out, :(struct $sym; data::NTuple{$(max(f.size, 1)),UInt8}; end))
+        unit, count = blob_storage(f)
+        push!(out, :(struct $sym; data::NTuple{$count,$unit}; end))
         emit_accessors(e, n, out)
         return
     end
@@ -276,6 +314,38 @@ function emit_accessors(e::Env, n::Node, out::Vector{Expr})
         push!(out, :(Base.propertynames(x::$sym, private::Bool=false) = ($(props...),)))
 end
 
+"Collect every symbol a type expression mentions."
+function symbols_in!(out::Set{Symbol}, @nospecialize(ex))
+    ex isa Symbol && (push!(out, ex); return out)
+    ex isa Expr && for a in ex.args; symbols_in!(out, a); end
+    return out
+end
+
+"""
+Parameter names for a wrapper, renamed only where they would shadow their own signature.
+
+glib declares `void g_date_to_struct_tm(GDate*, struct tm*)`, and clang gives the second
+parameter the name `tm` — the same name as the struct. Emitted verbatim that is
+`ccall(..., (Ptr{GDate}, Ptr{tm}), date, tm)`, where `Ptr{tm}` now resolves to the *argument*
+rather than the type, and Julia rejects the whole file with "could not evaluate ccall argument
+type". The C name is the readable one, so it is kept unless it actually collides.
+"""
+function argnames(f::FunctionFacts, tys::Vector, ret)
+    used = Set{Symbol}()
+    for t in tys; symbols_in!(used, t); end
+    symbols_in!(used, ret)
+    taken = Set{Symbol}()
+    out = Symbol[]
+    for (i, (p, _)) in enumerate(f.params)
+        a = safe(Symbol(isempty(String(p)) ? "arg$i" : String(p)))
+        while a in used || a in taken
+            a = Symbol(a, "_")
+        end
+        push!(taken, a); push!(out, a)
+    end
+    return out
+end
+
 function emit_node(e::Env, n::Node, cuts::Dict{Int,Cut}, out::Vector{Expr}, o::Options)
     f = n.facts
     sym = e.name[n.key]
@@ -293,9 +363,9 @@ function emit_node(e::Env, n::Node, cuts::Dict{Int,Cut}, out::Vector{Expr}, o::O
         push!(out, :(const $sym = $(jltype(e, f.underlying))))
     elseif f isa FunctionFacts
         (f.internal && o.skip_static_functions) && return   # `static` has no external symbol
-        args = [safe(Symbol(isempty(String(p)) ? "arg$i" : String(p))) for (i, (p, _)) in enumerate(f.params)]
         tys  = [jltype(e, t) for (_, t) in f.params]
         ret  = jltype(e, f.ret)
+        args = argnames(f, tys, ret)
         f.variadic && return                       # needs the va-list machinery; skipped
         call = Expr(:call, sym, args...)
         lib = Symbol(o.library_name)
@@ -311,14 +381,21 @@ function emit_node(e::Env, n::Node, cuts::Dict{Int,Cut}, out::Vector{Expr}, o::O
 end
 
 """
-    generate(headers; args=String[], library=:libclangjl, io=stdout)
+    generate(headers; args=String[], options=Options(), io=stdout)
+    generate(nodes;   options=Options(), io=stdout)
 
 Run extract → order → codegen and write a loadable Julia module body.
+
+The second method takes already-extracted nodes. Extraction is the expensive stage and it holds
+the only clang handles, so a caller that needs the facts as well — the ABI verifier compares
+each emitted type against the `ASTRecordLayout` the facts carry — parses once and emits from the
+same node vector rather than parsing twice and hoping the two agree.
 """
-function generate(headers::Vector{String}; args::Vector{String}=String[],
-                  options::Options=Options(), io::IO=stdout)
+generate(headers::Vector{String}; args::Vector{String}=String[], kw...) =
+    generate(extract(headers; args=args); kw...)
+
+function generate(nodes::Vector{Node}; options::Options=Options(), io::IO=stdout)
     o = options
-    nodes = extract(headers; args=args)
     ord = order_nodes(nodes)
     nm, skip = assign_names(nodes)
     e = Env(Dict(n.key => n for n in nodes), nm, blob_set(nodes), skip)

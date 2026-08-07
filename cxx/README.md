@@ -24,6 +24,18 @@ build and symbols fail at call time:
     julia --project=/tmp/cxxenv cxx/validate_order_libxml2.jl  # ordering at scale
     julia --project=/tmp/cxxenv cxx/validate_e2e.jl            # generate + load + ABI compare
     julia --project=/tmp/cxxenv cxx/validate_options.jl        # each option has an observable effect
+    julia --project=/tmp/cxxenv cxx/validate_abi.jl fixtures libxml2 glib pango
+
+`validate_abi.jl` is the strongest of these and the one to run before claiming anything. The
+others compare against the old generator's recorded output; this one compares every emitted type
+against the `ASTRecordLayout` clang computed for the same declaration — size, alignment and every
+field offset — so it needs no baseline and works on any corpus. It found four ABI-silent defects
+the fixture baseline passed (GENERATORS-REWORK.md, "S-C: done, and what it cost").
+
+Its three checks have each been fault-injected and shown to fail: mapping `int`→`Cshort` trips
+size and alignment, reversing field order trips offsets, and a load failure is reported as a
+finding rather than printed and forgotten — a run that measures nothing must not summarise as a
+run that agreed.
 
 ## Option surface
 

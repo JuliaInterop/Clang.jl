@@ -140,6 +140,50 @@ S-E is the only irreversible step and it must come last — but the reason is na
 earlier draft claimed. It is not that bindings become unregenerable; it is simply that once the
 libclang path is gone there is no fallback if S-C turns up something the fixtures missed.
 
+#### S-C: done, and what it cost
+
+All three corpora now generate, load, and match clang's layout:
+
+| corpus | nodes | records checked | field offsets checked |
+| --- | --- | --- | --- |
+| fixtures (27 headers) | — | 46 | 44 |
+| libxml2 | 2015 | 58 | 684 |
+| glib | 2788 | 65 | 197 |
+| pango | 4349 | 167 | 576 |
+
+The verifier is `cxx/validate_abi.jl`, and it is a different instrument from
+`test/abi_baseline.jl`. The baseline compares against the **old generator's recorded output**,
+which can only certify that we reproduce whatever libclang produced, bugs included — and it is
+silent on any corpus the old generator cannot process, which is exactly the interesting set.
+`validate_abi.jl` compares every emitted type against the `ASTRecordLayout` clang computed for
+that same declaration: `sizeof`, `datatype_alignment`, and every `fieldoffset`. That needs no
+recorded baseline, so it scales to any header set.
+
+It found four defects that every other check passed:
+
+1. **Every blobbed record was under-aligned.** `NTuple{N,UInt8}` reproduces clang's *size* but
+   has alignment 1, and a Julia struct takes the maximum alignment of its fields. Fixed by
+   storing the same bytes as a tuple of a wider unsigned (`blob_storage`). The libclang
+   generator has the identical bug and structurally cannot see it: it never calls `getAlignOf`.
+2. **`_Nullable` silently corrupted layouts.** clang wraps such a pointer in an `AttributedType`,
+   which `typeref` did not unwrap, so the field became `UnknownRef` → `Cvoid` — and a `Cvoid`
+   field is *zero-sized* in Julia. macOS's `FILE` came out 120 bytes instead of 152 with nine
+   fields at the wrong offset. Fixed generically with one `getSingleStepDesugaredType` step,
+   plus a safety net: a record with any unnameable field type now falls back to the blob form,
+   so an unrecognised type can never again shift a layout silently.
+3. **The dependency graph described C, not the Julia being emitted.** `deps` descended into
+   function types, so `xmlDOMWrapAcquireNsFunction` claimed five dependencies for a line that
+   reads `const xmlDOMWrapAcquireNsFunction = Ptr{Cvoid}` — one of which closed a cycle that
+   then could not be broken, because there was no real edge there to cut. Every function type is
+   emitted as `Ptr{Cvoid}`, so it constrains nothing.
+4. **A parameter can shadow its own signature.** glib's `g_date_to_struct_tm(GDate*, struct tm*)`
+   names its second parameter `tm`, giving `ccall(..., (Ptr{GDate}, Ptr{tm}), date, tm)` — Julia
+   rejects the file. Parameters are now renamed only where they actually collide.
+
+Defects 1–3 are ABI-silent: the file loads, every call type-checks, and the memory is wrong.
+Nothing short of comparing against the compiler's own layout would have caught them, which is
+the argument for keeping `validate_abi.jl` as the release gate rather than the baseline.
+
 ---
 
 ## 1. The thesis

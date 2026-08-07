@@ -40,7 +40,20 @@ struct TypedefRef <: TypeRef;  key::Key;                           end
 struct FunctionRef<: TypeRef;  ret::TypeRef; params::Vector{TypeRef}; variadic::Bool; end
 struct UnknownRef <: TypeRef;  spelling::String;                   end
 
-"Every declaration key this type mentions, and whether the reference is pointer-mediated."
+"""
+Every declaration key this type mentions, and whether the reference is pointer-mediated.
+
+The contract is **what codegen will emit**, not what the C type mentions. Anything looser and
+the ordering pass invents constraints that no Julia expression actually has; anything tighter
+and it emits a name before its definition.
+
+Hence the silence on `FunctionRef`: a function type is untyped in the output — every one becomes
+`Ptr{Cvoid}` — so its return and parameter types impose no ordering at all. Descending into them
+made libxml2's `xmlDOMWrapAcquireNsFunction` claim five dependencies for a line that reads
+`const xmlDOMWrapAcquireNsFunction = Ptr{Cvoid}`, one of which closed a cycle that then could not
+be broken, because there was no real edge there to cut. (Function *declarations* are unaffected:
+`deps(::Node)` walks a `FunctionFacts`' own params and return type, which the `ccall` does name.)
+"""
 function deps!(out::Vector{Pair{Key,Bool}}, t::TypeRef, viaptr::Bool=false)
     if t isa RecordRef || t isa EnumRef || t isa TypedefRef
         push!(out, t.key => viaptr)
@@ -48,9 +61,6 @@ function deps!(out::Vector{Pair{Key,Bool}}, t::TypeRef, viaptr::Bool=false)
         deps!(out, t.pointee, true)
     elseif t isa ArrayRef
         deps!(out, t.elem, viaptr)      # an array does NOT introduce indirection
-    elseif t isa FunctionRef
-        deps!(out, t.ret, viaptr)
-        for p in t.params; deps!(out, p, viaptr); end
     end
     return out
 end
@@ -148,7 +158,7 @@ mutable struct Ctx
 end
 
 "Translate a clang type into a `TypeRef`, registering any declaration it names."
-function typeref(c::Ctx, qt)
+function typeref(c::Ctx, qt, depth::Int=0)
     tp = CC.getTypePtr(qt)
     r = CC.resolve(tp)
     if r isa CC.AbstractBuiltinType
@@ -184,6 +194,20 @@ function typeref(c::Ctx, qt)
     if !CC.is_null_handle(td)
         d = CC.resolve(td)
         return d isa CC.AbstractEnumDecl ? EnumRef(visit(c, d)) : RecordRef(visit(c, d))
+    end
+    # Sugar we do not name explicitly: `AttributedType` (`_Nullable`, `__attribute__`),
+    # `MacroQualifiedType`, `ParenType`, `AdjustedType`/`DecayedType`. One desugaring step
+    # covers all of them and any kind clang adds later, which matters because the failure is
+    # silent and non-local: an unrecognised type became `UnknownRef` -> `Cvoid`, and a `Cvoid`
+    # field is ZERO-SIZED in Julia. macOS's `FILE` has four `_Nullable` function pointers, so
+    # `__sFILE` came out 120 bytes instead of 152 and every field after the first one was at the
+    # wrong offset. Nothing downstream could have caught that; only comparing against clang's
+    # own ASTRecordLayout did.
+    if depth < 8
+        ds = try CC.getSingleStepDesugaredType(qt, c.ctx) catch; nothing end
+        if ds !== nothing && CC.getTypePtr(ds).ptr != tp.ptr
+            return typeref(c, ds, depth + 1)
+        end
     end
     return UnknownRef(CC.getAsString(qt))
 end

@@ -149,6 +149,55 @@ let R = dirname(@__DIR__), doch = joinpath(R, "test", "include", "documentation.
     check("fold_single_line_comment", occursin("\"\"\"One line.\"\"\"", String(take!(fold))))
 end
 
+# --- add_fptr_methods, show_c_function_prototype, callback_documentation, auto_mutability ---
+check("no fptr method by default", !occursin("fn_keep(x, fptr)", base))
+check("add_fptr_methods adds one",
+      (s = gen(add_fptr_methods=true);
+       occursin("function fn_keep(x, fptr)", s) && occursin("ccall(fptr,", s)))
+check("add_fptr_methods under @ccall",
+      occursin("(\$fptr)(", gen(add_fptr_methods=true, use_ccall_macro=true)))
+
+check("no prototype by default", !occursin("### Prototype", base))
+check("show_c_function_prototype",
+      (s = gen(show_c_function_prototype=true);
+       occursin("### Prototype", s) && occursin("int fn_keep(int x);", s)))
+
+check("callback_documentation rewrites the docstring",
+      occursin("\"\"\"CB:fn_keep\"\"\"",
+               gen(callback_documentation=(n, l) -> ["CB:$(n.id)"],
+                   fold_single_line_comment=true)))
+
+# `make` takes `struct Opaque *` but its only parameter is that pointer, so nothing pins it;
+# `Plain` is never a parameter at all. Neither should stay immutable under auto_mutability.
+let mh = joinpath(d, "mut.h")
+    write(mh, """
+    struct Pinned { int a; };
+    struct Loose { double d; };
+    int use_pinned(struct Pinned *p, int n);
+    int use_loose(struct Loose f);
+    """)
+    b1 = IOBuffer(); CxxCodegen.generate([mh]; io=b1, options=CxxCodegen.Options())
+    check("no mutable structs by default", !occursin("mutable struct", String(take!(b1))))
+    b2 = IOBuffer()
+    CxxCodegen.generate([mh]; io=b2, options=CxxCodegen.Options(auto_mutability=true))
+    s = String(take!(b2))
+    # Pointer + integer is the array-and-length shape; those must stay immutable.
+    check("auto_mutability keeps pointer+int immutable", occursin("struct Pinned", s) &&
+                                                         !occursin("mutable struct Pinned", s))
+    check("auto_mutability promotes the rest", occursin("mutable struct Loose", s))
+    check("auto_mutability_with_new adds a constructor", occursin("Loose(d) = new(d)", s))
+    b3 = IOBuffer()
+    CxxCodegen.generate([mh]; io=b3,
+                        options=CxxCodegen.Options(auto_mutability=true,
+                                                   auto_mutability_ignorelist=["Loose"]))
+    check("auto_mutability_ignorelist", !occursin("mutable struct Loose", String(take!(b3))))
+    b4 = IOBuffer()
+    CxxCodegen.generate([mh]; io=b4,
+                        options=CxxCodegen.Options(auto_mutability=true,
+                                                   auto_mutability_includelist=["Pinned"]))
+    check("auto_mutability_includelist", occursin("mutable struct Pinned", String(take!(b4))))
+end
+
 # --- the api/common split ---
 let api = IOBuffer(), com = IOBuffer()
     CxxCodegen.generate([joinpath(d, "h.h")]; io=com, api_io=api,

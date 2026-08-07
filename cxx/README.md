@@ -40,28 +40,35 @@ run that agreed.
 
 ## Option surface
 
-`Options` honours 24 keys, named to match `generator.toml` so a config maps across unchanged.
+`Options` honours 32 keys, named to match `generator.toml` so a config maps across unchanged.
 `Options(TOML.parsefile(path))` reads them straight out of the `[general]`, `[codegen]` and
 `[codegen.macro]` tables.
 
 - `[general]`: library_name, library_names, module_name, prologue_file_path,
   epilogue_file_path, jll_pkg_name, jll_pkg_extra, export_symbol_prefixes, output_ignorelist,
-  generate_isystem_symbols, use_julia_native_enum_type, print_using_CEnum
+  generate_isystem_symbols, use_julia_native_enum_type, print_using_CEnum, add_fptr_methods,
+  auto_mutability, auto_mutability_with_new, auto_mutability_includelist,
+  auto_mutability_ignorelist
 - `[codegen]`: skip_static_functions, use_ccall_macro, wrap_variadic_function, use_julia_bool,
   is_function_strictly_typed, opaque_as_mutable_struct, add_record_constructors,
-  field_access_method_list
+  field_access_method_list, extract_c_comment_style, fold_single_line_comment,
+  show_c_function_prototype
 - `[codegen.macro]`: macro_mode, add_comment_for_skipped_macro
-- doc comments: extract_c_comment_style ("disable" | "raw" | "doxygen"), fold_single_line_comment
+- Julia-only (no TOML spelling): `callback_documentation`, a `(node, lines) -> lines` hook
 
-`validate_options.jl` asserts each one has an observable effect — 41 checks. Note what it does
+`validate_options.jl` asserts each one has an observable effect — 53 checks. Note what it does
 *not* do: every option is checked in isolation, so no pair is known to compose.
+
+`auto_mutability` reproduces the existing heuristic exactly: a record stays immutable only when
+some function takes it **by pointer** while also taking an integer — the pointer-and-length
+shape, where the caller wants an array and an immutable struct is what makes that work.
+Everything else becomes a `mutable struct`, since `Ref` on one gives C a stable address. Over
+resolved `TypeRef`s that rule is a direct question about each parameter; the libclang pass
+spells it over cursors and `node.adj` indices.
 
 The api/common split is `generate(...; api_io=...)`: function wrappers there, everything else
 (macros included) to `io`, and neither file gets a module wrapper, `using CEnum`, prologue or
 epilogue -- matching the existing FunctionPrinter/CommonPrinter pair.
-
-Still unimplemented: `auto_mutability`, `add_fptr_methods`, `show_c_function_prototype`,
-`callback_documentation`. See GENERATORS-REWORK.md §0.1.
 
 `"doxygen"` renders the commands that carry structure — `\param`, `\return`, `\note`, `\bug`
 and friends — into Markdown sections and bullet lists. It is a much smaller renderer than

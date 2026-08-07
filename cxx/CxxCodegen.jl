@@ -56,7 +56,9 @@ struct Env
     blobbed::Set{Key}
     skip::Set{Key}              # mapped to a Julia builtin; emit nothing for these
     opts::Any                   # ::Options — declared below, so untyped here
+    mutable::Set{Key}           # records `auto_mutability` promotes to `mutable struct`
 end
+Env(bykey, name, blobbed, skip, opts) = Env(bykey, name, blobbed, skip, opts, Set{Key}())
 
 """
 The subset of the TOML option surface this emitter honours.
@@ -89,6 +91,14 @@ Base.@kwdef struct Options
     library_names::Dict{String,String} = Dict{String,String}()
     extract_c_comment_style::String = "disable"   # "disable" | "raw" | "doxygen"
     fold_single_line_comment::Bool  = false
+    show_c_function_prototype::Bool = false
+    add_fptr_methods::Bool          = false
+    auto_mutability::Bool           = false
+    auto_mutability_with_new::Bool  = true
+    auto_mutability_includelist::Vector{String} = String[]
+    auto_mutability_ignorelist::Vector{String}  = String[]
+    "A `node -> Vector{String} -> Vector{String}` hook over the formatted docstring lines."
+    callback_documentation::Any     = nothing
 end
 
 "Read the `[general]`/`[codegen]` tables of a parsed `generator.toml` into `Options`."
@@ -126,6 +136,17 @@ function Options(toml::AbstractDict)
                                                "macro_mode", "basic")),
         extract_c_comment_style  = string(pick(c, "extract_c_comment_style", "disable")),
         fold_single_line_comment = Bool(pick(c, "fold_single_line_comment", false)),
+        show_c_function_prototype = Bool(pick(c, "show_c_function_prototype", false)),
+        add_fptr_methods         = Bool(pick(g, "add_fptr_methods", false)),
+        auto_mutability          = Bool(pick(g, "auto_mutability", false)),
+        auto_mutability_with_new = Bool(pick(g, "auto_mutability_with_new", true)),
+        # Both lists carry a silent legacy alias, kept because downstream configs still use it.
+        auto_mutability_includelist =
+            String.(pick(g, "auto_mutability_includelist",
+                         pick(g, "auto_mutability_whitelist", String[]))),
+        auto_mutability_ignorelist =
+            String.(pick(g, "auto_mutability_ignorelist",
+                         pick(g, "auto_mutability_blacklist", String[]))),
         add_comment_for_skipped_macro =
             Bool(pick(get(c, "macro", Dict{String,Any}()),
                       "add_comment_for_skipped_macro", true)))
@@ -300,6 +321,62 @@ unnameable(t::TypeRef, depth::Int=0) =
     depth <= 8 && (t isa UnknownRef ||
                    (t isa ArrayRef && unnameable(t.elem, depth + 1)))
 
+"The record a type ultimately names, following pointers and typedefs; 0 if it names none."
+function leaf_record(bykey::Dict{Key,Node}, t::TypeRef, depth::Int=0)
+    depth > 8 && return Key(0)
+    t isa PointerRef && return leaf_record(bykey, t.pointee, depth + 1)
+    t isa ArrayRef && return leaf_record(bykey, t.elem, depth + 1)
+    t isa RecordRef && return t.key
+    if t isa TypedefRef
+        n = get(bykey, t.key, nothing)
+        n !== nothing && n.facts isa TypedefFacts &&
+            return leaf_record(bykey, n.facts.underlying, depth + 1)
+    end
+    return Key(0)
+end
+
+is_integerish(t::TypeRef) = t isa BuiltinRef &&
+    t.name in (:char, :schar, :uchar, :short, :ushort, :int, :uint, :long, :ulong,
+               :longlong, :ulonglong, :int128, :uint128, :bool)
+
+"""
+Records `auto_mutability` should emit as `mutable struct`, by the existing pass's criterion.
+
+A record stays immutable exactly when some function takes it **by pointer** while also taking an
+integer — the pointer+length shape, where the caller wants an array of them and an immutable
+struct is what makes that work. Otherwise a mutable struct is friendlier, since `Ref` on it
+gives a stable address to hand to C.
+
+The libclang pass spells this over cursors and `node.adj` indices; with resolved `TypeRef`s the
+same rule is a direct question about each parameter's leaf type.
+"""
+function mutable_set(nodes::Vector{Node}, o::Options)
+    bykey = Dict(n.key => n for n in nodes)
+    recs = Set{Key}(n.key for n in nodes if n.facts isa RecordFacts && n.facts.complete)
+    # "Pinned" covers all three of the pass's reset conditions at once: a record never taken as
+    # a parameter, or never taken by pointer, or never taken by pointer beside an integer, is
+    # simply absent from this set.
+    pinned = Set{Key}()
+    for n in nodes
+        f = n.facts
+        f isa FunctionFacts || continue
+        any(is_integerish(t) for (_, t) in f.params) || continue
+        for (_, t) in f.params
+            t isa PointerRef || continue
+            k = leaf_record(bykey, t)
+            k in recs && push!(pinned, k)
+        end
+    end
+    out = Set{Key}()
+    for n in nodes
+        n.key in recs || continue
+        nm = String(n.id)
+        nm in o.auto_mutability_ignorelist && continue   # the ignorelist always wins
+        (nm in o.auto_mutability_includelist || n.key ∉ pinned) && push!(out, n.key)
+    end
+    return out
+end
+
 """
 Emit a record. `cuts` are the field substitutions the ordering pass decided, applied here — the
 single place a degraded field is realised, so the cut and the emitted type cannot disagree.
@@ -327,7 +404,15 @@ function emit_record(e::Env, n::Node, cuts::Dict{Int,Cut}, out::Vector{Expr})
         ty = haskey(cuts, i) ? jltype(e, cuts[i].replacement) : jltype(e, fld.type)
         push!(body.args, Expr(:(::), safe(Symbol(fld.name)), ty))
     end
-    push!(out, Expr(:struct, false, sym, body))
+    mut = n.key in e.mutable
+    # A mutable struct has no implicit all-field constructor unless one is written, so
+    # `auto_mutability_with_new` adds it back; without it the type cannot be built from Julia.
+    if mut && o.auto_mutability_with_new && !isempty(f.fields)
+        fsyms = [safe(Symbol(fl.name)) for fl in f.fields]
+        push!(body.args, Expr(:(=), Expr(:call, sym, fsyms...),
+                              Expr(:call, :new, fsyms...)))
+    end
+    push!(out, Expr(:struct, mut, sym, body))
     if String(sym) in o.field_access_method_list
         # A plain struct already has field access by value; this adds the POINTER accessors, so
         # a `Ptr{T}` into C-owned memory can be read and written field-wise without a copy.
@@ -497,15 +582,23 @@ function emit_node(e::Env, n::Node, cuts::Dict{Int,Cut}, out::Vector{Expr}, o::O
                                  Expr(:block, Meta.quot(inner)))))
             return
         end
-        call = Expr(:call, sym, sig...)
-        body = if o.use_ccall_macro
-            pairs = [Expr(:(::), a, t) for (a, t) in zip(args, tys)]
-            Expr(:macrocall, Symbol("@ccall"), nothing,
-                 Expr(:(::), Expr(:call, Expr(:., lib, QuoteNode(sym)), pairs...), ret))
-        else
-            :(ccall(($(QuoteNode(sym)), $lib), $ret, ($(tys...),), $(args...)))
+        pairs = [Expr(:(::), a, t) for (a, t) in zip(args, tys)]
+        # `target === nothing` means the usual `(:name, lib)` pair; anything else is an
+        # expression naming an already-resolved address.
+        function mkbody(target)
+            if o.use_ccall_macro
+                callee = target === nothing ? Expr(:., lib, QuoteNode(sym)) : Expr(:$, target)
+                return Expr(:macrocall, Symbol("@ccall"), nothing,
+                            Expr(:(::), Expr(:call, callee, pairs...), ret))
+            end
+            callee = target === nothing ? :(($(QuoteNode(sym)), $lib)) : target
+            return :(ccall($callee, $ret, ($(tys...),), $(args...)))
         end
-        push!(out, Expr(:function, call, Expr(:block, body)))
+        push!(out, Expr(:function, Expr(:call, sym, sig...), Expr(:block, mkbody(nothing))))
+        # An extra method taking the resolved symbol address, for callers that dlopen the
+        # library themselves rather than naming it at compile time.
+        o.add_fptr_methods && push!(out,
+            Expr(:function, Expr(:call, sym, sig..., :fptr), Expr(:block, mkbody(:fptr))))
     end
 end
 
@@ -595,6 +688,64 @@ end
 "`\$` and `\\` are interpolation and escape inside a Julia string; so is `\"` before `\"\"`."
 const DOC_ESCAPE = r"""(\$|\\|"(?=""))"""
 escape_doc(line) = replace(line, DOC_ESCAPE => s"\\\1")
+
+"""
+The C declaration, reconstructed from facts, for `show_c_function_prototype`.
+
+Spelled from the same `TypeRef`s codegen uses, so it describes what was actually wrapped rather
+than re-reading the header — which is the point of showing it at all.
+"""
+function c_prototype(e::Env, n::Node)
+    f = n.facts::FunctionFacts
+    ps = [string(c_spelling(e, t), isempty(String(p)) ? "" : " " * String(p)) for (p, t) in f.params]
+    f.variadic && push!(ps, "...")
+    isempty(ps) && push!(ps, "void")
+    return string(c_spelling(e, f.ret), " ", n.id, "(", join(ps, ", "), ");")
+end
+
+const C_BUILTIN = Dict(:void=>"void", :bool=>"_Bool", :char=>"char", :schar=>"signed char",
+                       :uchar=>"unsigned char", :short=>"short", :ushort=>"unsigned short",
+                       :int=>"int", :uint=>"unsigned int", :long=>"long",
+                       :ulong=>"unsigned long", :longlong=>"long long",
+                       :ulonglong=>"unsigned long long", :float=>"float", :double=>"double",
+                       :longdouble=>"long double", :int128=>"__int128",
+                       :uint128=>"unsigned __int128", :wchar=>"wchar_t",
+                       :char16=>"char16_t", :char32=>"char32_t")
+
+function c_spelling(e::Env, t::TypeRef, depth::Int=0)
+    depth > 8 && return "..."
+    t isa BuiltinRef && return get(C_BUILTIN, t.name, "int")
+    t isa PointerRef && return c_spelling(e, t.pointee, depth + 1) * " *"
+    t isa ArrayRef && return c_spelling(e, t.elem, depth + 1) * (t.len < 0 ? "[]" : "[$(t.len)]")
+    t isa FunctionRef && return c_spelling(e, t.ret, depth + 1) * " (*)(...)"
+    t isa UnknownRef && return t.spelling
+    if t isa RecordRef || t isa EnumRef || t isa TypedefRef
+        n = get(e.bykey, t.key, nothing)
+        n === nothing && return "void"
+        n.facts isa RecordFacts && return string(n.facts.kind, " ", n.id)
+        n.facts isa EnumFacts && return "enum $(n.id)"
+        return String(n.id)
+    end
+    return "void"
+end
+
+"""
+The full docstring for a node: comment, then the C prototype, then the user's callback.
+
+The callback runs **last** and sees everything, so it can rewrite or replace the whole thing —
+which is what `gen/generator.jl` uses it for. It also runs when no comment was extracted, so a
+callback can supply documentation the header never had.
+"""
+function docfor(e::Env, n::Node, o::Options)
+    lines = o.extract_c_comment_style == "disable" ? String[] :
+            format_doc(n.doc, o.extract_c_comment_style)
+    if o.show_c_function_prototype && n.facts isa FunctionFacts
+        isempty(lines) || push!(lines, "")
+        append!(lines, ["### Prototype", "```c", c_prototype(e, n), "```"])
+    end
+    o.callback_documentation === nothing && return lines
+    return collect(String, o.callback_documentation(n, lines))
+end
 
 "Write a docstring immediately before the definition it documents."
 function print_doc(io::IO, lines::Vector{String}, o::Options)
@@ -699,7 +850,8 @@ function generate(nodes::Vector{Node}; options::Options=Options(), io::IO=stdout
     o = options
     ord = order_nodes(nodes)
     nm, skip = assign_names(nodes)
-    e = Env(Dict(n.key => n for n in nodes), nm, blob_set(nodes), skip, o)
+    e = Env(Dict(n.key => n for n in nodes), nm, blob_set(nodes), skip, o,
+            o.auto_mutability ? mutable_set(nodes, o) : Set{Key}())
     bycut = Dict{Key,Dict{Int,Cut}}()
     for c in ord.cuts
         get!(Dict{Int,Cut}, bycut, c.node)[c.field] = c
@@ -748,8 +900,7 @@ function generate(nodes::Vector{Node}; options::Options=Options(), io::IO=stdout
         for (i, ex) in enumerate(out)
             # The docstring goes on the node's FIRST expression — the definition itself. The
             # accessors and constructors that follow are machinery, not separate API.
-            i == 1 && o.extract_c_comment_style != "disable" &&
-                print_doc(dest, format_doc(n.doc, o.extract_c_comment_style), o)
+            i == 1 && print_doc(dest, docfor(e, n, o), o)
             println(dest, string(ex)); println(dest)
             emitted += 1
         end

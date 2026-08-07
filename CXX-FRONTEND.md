@@ -1,39 +1,23 @@
-# cxx/ — the ClangCompiler-backed generator
+# The ClangCompiler-backed frontend
 
-Staging area for the new pipeline. These modules depend only on ClangCompiler and are tested by
-standalone scripts, because ClangCompiler and Clang.jl cannot share a process until libclang is
-removed from `src/` (GENERATORS-REWORK.md §3.4).
+Now `src/generator/`, and the only frontend there is.
 
-    CxxFacts.jl    extract   — one reachability walk over the AST -> nodes of FACTS + edges
-    CxxOrder.jl    order     — emission order + a cut set (edge and degraded field, together)
-    CxxCodegen.jl  codegen   — facts -> Julia
-    CxxMacros.jl   macros    — clang parses each macro body; the typed AST is translated
+    facts.jl    CxxFacts    extract  — one reachability walk over the AST -> nodes of FACTS
+    order.jl    CxxOrder    order    — emission order + a cut set (edge and degraded field, together)
+    emit.jl     CxxEmit     emit     — facts -> Julia
+    macros.jl   CxxMacros   macros   — clang parses each macro body; the typed AST is translated
 
-## Running the validators
+## Running the tests
 
-Needs an environment with ClangCompiler **and** CEnum, carrying ClangCompiler's
-`LocalPreferences.toml` — without it the released `libclangex_jll` loads instead of the local
-build and symbols fail at call time:
+    julia --project -e 'using Pkg; Pkg.test()'
 
-    mkdir -p /tmp/cxxenv && cd /tmp/cxxenv
-    julia --project=. -e 'using Pkg; Pkg.develop(path="/path/to/ClangCompiler"); Pkg.add("CEnum")'
-    cp /path/to/ClangCompiler/LocalPreferences.toml .
+`test/abi.jl` is the strongest check and the one to run before claiming anything. The others
+compare against expected output; this one compares every emitted type against the
+`ASTRecordLayout` clang computed for the same declaration — size, alignment and every field
+offset — so it needs no baseline and works on any corpus. It found four ABI-silent defects that
+the old fixture baseline passed (GENERATORS-REWORK.md, "S-C: done, and what it cost").
 
-    julia --project=/tmp/cxxenv cxx/validate_facts.jl          # extraction vs the ABI baseline
-    julia --project=/tmp/cxxenv cxx/validate_order.jl          # ordering on the cycle fixtures
-    julia --project=/tmp/cxxenv cxx/validate_order_libxml2.jl  # ordering at scale
-    julia --project=/tmp/cxxenv cxx/validate_e2e.jl            # generate + load + ABI compare
-    julia --project=/tmp/cxxenv cxx/validate_options.jl        # each option has an observable effect
-    julia --project=/tmp/cxxenv cxx/validate_abi.jl fixtures libxml2 glib pango
-    julia --project=/tmp/cxxenv cxx/validate_macros.jl        # macro values vs C semantics
-
-`validate_abi.jl` is the strongest of these and the one to run before claiming anything. The
-others compare against the old generator's recorded output; this one compares every emitted type
-against the `ASTRecordLayout` clang computed for the same declaration — size, alignment and every
-field offset — so it needs no baseline and works on any corpus. It found four ABI-silent defects
-the fixture baseline passed (GENERATORS-REWORK.md, "S-C: done, and what it cost").
-
-Its three checks have each been fault-injected and shown to fail: mapping `int`→`Cshort` trips
+Its three checks have each been fault-injected and shown to fail: mapping `int`->`Cshort` trips
 size and alignment, reversing field order trips offsets, and a load failure is reported as a
 finding rather than printed and forgotten — a run that measures nothing must not summarise as a
 run that agreed.

@@ -1,6 +1,6 @@
-# Clang API Reference
+# API Reference
 
 ```@autodocs
-Modules = [Clang]
+Modules = [Clang, Clang.Generators]
 Order   = [:constant, :function, :type]
 ```

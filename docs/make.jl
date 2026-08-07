@@ -1,5 +1,5 @@
 using Clang
-using Clang.LibClang
+using Clang.Generators
 using Documenter
 import Changelog
 
@@ -12,7 +12,7 @@ Changelog.generate(
 )
 
 makedocs(;
-    modules=[Clang, Clang.LibClang],
+    modules=[Clang, Clang.Generators],
     repo=Remotes.GitHub("JuliaInterop", "Clang.jl"),
     sitename="Clang.jl",
     format=Documenter.HTML(;
@@ -24,9 +24,7 @@ makedocs(;
     pages=[
         "Introduction" => "index.md",
         "Generator Tutorial" => "generator.md",
-        "LibClang Tutorial" => "tutorial.md",
-        "LibClang Wrapper API Reference" => "libclang.md",
-        "Clang API Reference" => "api.md",
+        "API Reference" => "api.md",
         "Changelog" => "generated_changelog.md"
     ],
     warnonly=:missing_docs

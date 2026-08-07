@@ -15,11 +15,11 @@ The general workflow of wrapping a JLL package is as follows.
 A generator context consists of a list of headers, a list of compiler flags, and generator options. The example below creates a typical context and runs the generator.
 ```julia
 using Clang.Generators
-using Clang.LibClang.Clang_unified_jll
+using SomeLibrary_jll          # the JLL whose headers you are wrapping
 
 cd(@__DIR__)
 
-include_dir = normpath(Clang_unified_jll.artifact_dir, "include")
+include_dir = normpath(SomeLibrary_jll.artifact_dir, "include")
 
 # wrapper generator options
 options = load_options(joinpath(@__DIR__, "generator.toml"))
@@ -28,8 +28,8 @@ options = load_options(joinpath(@__DIR__, "generator.toml"))
 args = get_default_args()
 push!(args, "-I$include_dir")
 
-# only wrap libclang headers in include/clang-c
-header_dir = joinpath(include_dir, "clang-c")
+# only wrap the headers in one subdirectory
+header_dir = joinpath(include_dir, "somelibrary")
 headers = [joinpath(header_dir, header) for header in readdir(header_dir) if endswith(header, ".h")]
 
 # create context
@@ -48,31 +48,40 @@ You also need an options file `generator.toml` that to make this script work, yo
 The C header may contain some symbols that are not correctly handled by Clang.jl or may need manual wrapping. For example, julia provides `tm` as `Libc.TmStruct`, so you may not want to map it to a new struct. As a workaround, you can skip these symbols. After that, if this symbol is needed, you can add it back in the prologue. Prologue is specified by the `prologue_file_path` option.
 
 * Add the symbol to `output_ignorelist` to avoid it from being wrapped.
-* If the symbol is in system headers and causes Clang.jl to error before printing, apart from posting an issue, write `@add_def symbol_name` before generating to suppress it from being wrapped.
+* Well-known system typedefs that Julia already names (`uint32_t`, `size_t`, `time_t`, …) are
+  mapped to their Julia counterparts automatically and never emitted, so they need no handling.
+  This replaces the old `@add_def` macro, which no longer exists.
 
-### Rewrite expressions before printing
-You can also modify the generated wrapped before it is printed. Clang.jl separates the building process into generating and printing processes. You can run these two processes separately and rewrite the expressions before printing.
+### Rewrite declarations before printing
+You can modify what will be generated before it is printed. Clang.jl separates the build into an
+extraction stage and a printing stage, so you can run them separately and rewrite in between.
+
+`ctx.nodes` is a plain `Vector{Node}` of *facts* about each declaration — its name, its fields
+with their offsets and types, its source file — not Julia expressions and not a graph. A
+rewriter is therefore ordinary `filter`/`map` work:
+
 ```julia
-# build without printing so we can do custom rewriting
+# extract without printing so we can rewrite
 build!(ctx, BUILDSTAGE_NO_PRINTING)
 
-# custom rewriter
-function rewrite!(e::Expr)
-end
+# drop everything from a header we do not want to wrap
+filter!(n -> !occursin("internal", n.file), ctx.nodes)
 
-function rewrite!(dag::ExprDAG)
-    for node in get_nodes(dag)
-        for expr in get_exprs(node)
-            rewrite!(expr)
-        end
-    end
+# rename a declaration
+ctx.nodes = map(ctx.nodes) do n
+    String(n.id) == "old_name" || return n
+    return Node(n.key, :new_name, n.facts, n.file, n.line, n.system,
+                n.anonymous, n.typedef_name, n.doc)
 end
-
-rewrite!(ctx.dag)
 
 # print
 build!(ctx, BUILDSTAGE_PRINTING_ONLY)
 ```
+
+!!! note "Changed in the ClangCompiler rework"
+    This used to walk `ctx.dag`, an expression DAG whose edges were integer indices into its own
+    node vector, so inserting or reordering nodes invalidated every edge. `ctx.nodes` has no
+    edges to invalidate — ordering is recomputed from the facts at printing time.
 
 ### Multi-platform configuration
 Some headers may contain system-dependent symbols such as `long` or `char`, or system-independent symbols may be resolved to system-dependent ones. For example, `time_t` is usually just a 64-bit unsigned integer, but implementations may conditionally implement it as `long` or `long long`, which is not portable. You can skip these symbols and add them back manually as in [Skipping specific symbols](@ref). If the differences are too large to be manually fixed, you can generate wrappers for each platform as in [LibClang.jl](https://github.com/Gnimuc/LibClang.jl/blob/v0.61.0/gen/generator.jl).
@@ -80,7 +89,9 @@ Some headers may contain system-dependent symbols such as `long` or `char`, or s
 ## Variadic Function
 With the help of `@ccall` macro, variadic C functions can be called from Julia. For example, `@ccall printf("%d\n"::Cstring; 123::Cint)::Cint` can be used to call the C function `printf`. Note that those arguments after the semicolon `;` are variadic arguments.
 
-If `wrap_variadic_function` in `codegen` section of options is set to `true`, `Clang.jl` will generate wrappers for variadic C functions. For example, `printf` will be wrapped as follows.
+If `wrap_variadic_function` in the `codegen` section of options is set to `true`, `Clang.jl` will
+generate wrappers for variadic C functions. It is off by default, in which case a variadic
+function is not wrapped at all. For example, `printf` will be wrapped as follows.
 
 ```julia
 @generated function printf(fmt, va_list...)

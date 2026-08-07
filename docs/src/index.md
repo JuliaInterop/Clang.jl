@@ -1,9 +1,16 @@
 # Clang
-This package provides a Julia language wrapper for libclang: the stable, C-exported
-interface to the LLVM Clang compiler. The [libclang API documentation](http://clang.llvm.org/doxygen/group__CINDEX.html)
-provides background on the functionality available through libclang, and thus
-through the Julia wrapper. The repository also hosts related tools built
-on top of libclang functionality.
+This package generates Julia bindings for C libraries from their header files. It is built on
+Clang's C++ API through [ClangCompiler.jl](https://github.com/JuliaInterop/ClangCompiler.jl), so
+record layouts, canonical declarations and macro definitions come from the compiler itself
+rather than being reconstructed.
+
+!!! warning "libclang was removed"
+    Up to and including v0.19, this package also shipped a libclang binding — `Clang.LibClang`,
+    `CLCursor`, `CLType`, `parse_headers`, `children`, `spelling` and an object layer of some
+    300 cursor types. That is gone. libclang and clang-cpp both register LLVM's global
+    command-line options statically, so no process can load both, and the generator needs the
+    C++ side. Code that used Clang.jl to **walk an AST** rather than to generate bindings should
+    pin `Clang@0.19` or use ClangCompiler.jl directly.
 
 ## Installation
 Now, the package provides an out-of-box installation experience on Linux, macOS and Windows. You
@@ -12,28 +19,7 @@ could simply install it by running:
 pkg> add Clang
 ```
 
-If you want to run the tests to check that everything is working the usual `]
-test` command will work. If you're making changes to the package you can also
-use [ReTest.jl](https://juliatesting.github.io/ReTest.jl/stable/) and
-[TestEnv.jl](https://github.com/JuliaTesting/TestEnv.jl) to run the tests (or a
-selection) iteratively:
-```julia
-# One-liner to keep in your shell history
-julia> using TestEnv; TestEnv.activate(); import ReTest, Clang; ReTest.load(Clang)
-
-# Run all the tests. This will be slow the first time because ReTest needs to
-# start the worker process for running the tests.
-julia> ClangTests.runtests()
-
-# Run a selection of the tests
-julia> ClangTests.runtests("comments")
-```
-
-We need to load the `ClangTests` module with `ReTest.load(Clang)` because that
-will take care of tracking all the `include`'ed test files if Revise is already
-loaded. This way the tests will be tracked by Revise just like regular package
-code and the worker process used for running the tests will be kept around,
-which is a much faster workflow than running `] test`.
+To run the tests, use the usual `] test` command.
 
 ## C-bindings generator
 The package includes a generator to create Julia wrappers for C libraries from a collection of header files. The following declarations are currently supported:
@@ -43,29 +29,29 @@ The package includes a generator to create Julia wrappers for C libraries from a
 - enum: translated to [`Enum`](https://docs.julialang.org/en/v1/base/base/#Base.Enums.Enum) or [`CEnum`](https://github.com/JuliaInterop/CEnum.jl)
 - union: translated to Julia struct
 - typedef: translated to Julia typealias to underlying intrinsic type
-- macro: limited support
-- bitfield: experimental support
+- macro: object-like macros are parsed as C by clang and translated from the typed AST
+- bitfield: supported, with generated accessors
 
-The following example wraps `include/clang-c/*.h` from `Clang_unified_jll` and prints the wrapper to `LibClang.jl`.
+The following example wraps a JLL package's headers and prints the wrapper to `LibFoo.jl`.
 
 First write a configuration script `generator.toml`.
 ```toml
 [general]
-library_name = "libclang"
-output_file_path = "./LibClang.jl"
-module_name = "LibClang"
-jll_pkg_name = "Clang_unified_jll"
-export_symbol_prefixes = ["CX", "clang_"]
+library_name = "libfoo"
+output_file_path = "./LibFoo.jl"
+module_name = "LibFoo"
+jll_pkg_name = "Foo_jll"
+export_symbol_prefixes = ["FOO_", "foo_"]
 ```
 Then load the configurations and generate a wrapper.
 ```julia
 using Clang.Generators
-using Clang.LibClang.Clang_unified_jll
+using Foo_jll
 
 cd(@__DIR__)
 
-include_dir = normpath(Clang_unified_jll.artifact_dir, "include")
-clang_dir = joinpath(include_dir, "clang-c")
+include_dir = normpath(Foo_jll.artifact_dir, "include")
+header_dir = joinpath(include_dir, "foo")
 
 # wrapper generator options
 options = load_options(joinpath(@__DIR__, "generator.toml"))
@@ -74,9 +60,9 @@ options = load_options(joinpath(@__DIR__, "generator.toml"))
 args = get_default_args()
 push!(args, "-I$include_dir")
 
-headers = [joinpath(clang_dir, header) for header in readdir(clang_dir) if endswith(header, ".h")]
-# there is also an experimental `detect_headers` function for auto-detecting top-level headers in the directory
-# headers = detect_headers(clang_dir, args)
+headers = [joinpath(header_dir, h) for h in readdir(header_dir) if endswith(h, ".h")]
+# there is also a `detect_headers` function for auto-detecting top-level headers in a directory
+# headers = detect_headers(header_dir, args)
 
 # create context
 ctx = create_context(headers, args, options)
@@ -89,11 +75,8 @@ build!(ctx)
 
 !!! note "Compatibility"
     
-    The generator above is introduced in Clang.jl 0.14. If you are working with older versions of Clang.jl, check [older versions of documentation](https://juliainterop.github.io/Clang.jl/v0.12/)
+    The generator above is introduced in Clang.jl 0.14. If you are working with older versions
+    of Clang.jl, check [older versions of documentation](https://juliainterop.github.io/Clang.jl/v0.12/).
+    The libclang object layer was removed after v0.19 — see the warning at the top.
 
 
-## LibClang
-LibClang is a thin wrapper over libclang. It's one-to-one mapped to the libclang APIs.
-By `using Clang.LibClang`, all of the `CX`/`clang_`-prefixed libclang APIs are imported into the
-current namespace, with which you could build up your own tools from scratch. If you are
-unfamiliar with the Clang AST, a good starting point is the [Introduction to the Clang AST](http://clang.llvm.org/docs/IntroductionToTheClangAST.html).

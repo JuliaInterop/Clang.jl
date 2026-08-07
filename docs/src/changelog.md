@@ -3,6 +3,39 @@
 This documents notable changes in Clang.jl. The format is based on [Keep a
 Changelog](https://keepachangelog.com).
 
+## Unreleased
+
+### Changed
+
+- **The generator now runs on Clang's C++ API** through ClangCompiler.jl. The 21-pass pipeline
+  over a mutable expression DAG is replaced by three stages over plain data — extract, order,
+  emit. Most of those passes existed only to reconstruct, by name and source location, what
+  libclang could not express; parsing all headers into one translation unit and keying on
+  `getCanonicalDecl` answers those questions directly.
+- `ctx.nodes`, a plain `Vector{Node}` of facts, replaces `ctx.dag` for rewriters. The two-stage
+  `BUILDSTAGE_NO_PRINTING` / `BUILDSTAGE_PRINTING_ONLY` workflow is unchanged.
+
+### Removed
+
+- **The libclang binding.** `Clang.LibClang`, `CLCursor`, `CLType`, `parse_headers`, `children`,
+  `spelling`, `@add_def` and the rest of the object layer are gone, along with `lib/16…21/`.
+  libclang and clang-cpp both register LLVM's global command-line options statically, so no
+  process can load both, and the generator needs the C++ side. Code that walked an AST rather
+  than generating bindings should pin `Clang@0.19` or use ClangCompiler.jl directly.
+- Objective-C support, pending ClangCompiler#49.
+
+### Fixed
+
+- Blobbed records were under-aligned: `NTuple{N,UInt8}` reproduces clang's size but always has
+  alignment 1. They now use a tuple of a wider unsigned.
+- `_Nullable` pointers and cvr-qualified builtins (`const int`, `unsigned const int`) were not
+  recognised and became `Cvoid`, which is *zero-sized* in Julia — silently shifting every
+  following field. macOS `FILE` came out 120 bytes instead of 152.
+- Macro casts to a pointer, negative constants, and unsigned folds. Issues #510 and #382 now
+  produce the values a C compiler gives.
+- A parameter whose name collides with a type in its own signature (glib's
+  `g_date_to_struct_tm(GDate*, struct tm*)`).
+
 ## [v0.19.3] - 2026-03-03
 
 ### Changed
@@ -30,8 +63,8 @@ Changelog](https://keepachangelog.com).
   ([5a1cc29](https://github.com/JuliaInterop/Clang.jl/commit/5a1cc29c154ed925f01e59dfd705cbf8042158e4)).
 - Added bindings for Clang 17/18/19, which should allow compatibility with Julia
   1.12 and 1.13 ([#494], [#503], [#526]).
-- Added [`TranslationUnit(::Function)`](@ref),
-  [`parse_header(::Function)`](@ref), and [`parse_headers(::Function)`](@ref) to
+- Added `TranslationUnit(::Function)`,
+  `parse_header(::Function)`, and `parse_headers(::Function)` to
   help with using Clang.jl in a memory-safe way ([#545]).
 - Added initial support for generating bindings for ObjectiveC code, currently
   limited to interfaces and protocols ([#505], [#519], [#522], [#524], [#527]).

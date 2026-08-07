@@ -128,13 +128,18 @@ downstream generator scripts set, not from ClangCompiler's ten keys, which now g
 
 #### Sequence
 
-| step | gate |
-| --- | --- |
-| S-A | option surface, prioritised by what downstream `.toml` files actually set | `test/abi_baseline.jl` stays green |
-| S-B | wire `CxxMacros` into `generate` | `test/macros.jl`; the #510/#382 `@test_broken`s should flip to passing |
-| S-C | third-party corpora — libxml2, glib, pango — generate **and load** | broader than the fixture corpus |
+| step | state | gate |
+| --- | --- | --- |
+| S-A | **done** — 32 keys | `validate_options.jl`, 53 checks; `test/abi_baseline.jl` green |
+| S-B | **done** | `validate_macros.jl`, 25 checks, including both `@test_broken`s |
+| S-C | **done** — libxml2, glib, pango | `validate_abi.jl`: 341 records, 1517 field offsets vs clang |
 | S-D | switch `src/` to the new frontend | full suite green |
 | S-E | delete `src/cursor.jl`, `src/type.jl`, `cltypes.jl`, `lib/16…21/`, `gen/`, and the 44 libclang exports | major version bump |
+
+Unimplemented from the ~45-key surface, all deliberately: `output_exclusivelist`,
+`function_argument_conflict_symbols` (subsumed — `argnames` renames on real collision, not from
+a list), `union_single_constructor`, `link_enum_alias`, `no_audit`, and the `[general.log]`
+sub-table of 23 per-pass booleans, which has no meaning once there are no passes.
 
 S-E is the only irreversible step and it must come last — but the reason is narrower than the
 earlier draft claimed. It is not that bindings become unregenerable; it is simply that once the
@@ -146,7 +151,7 @@ All three corpora now generate, load, and match clang's layout:
 
 | corpus | nodes | records checked | field offsets checked |
 | --- | --- | --- | --- |
-| fixtures (27 headers) | — | 46 | 44 |
+| synthetic + fixtures (27 headers) | — | 51 | 60 |
 | libxml2 | 2015 | 58 | 684 |
 | glib | 2788 | 65 | 197 |
 | pango | 4349 | 167 | 576 |
@@ -218,6 +223,25 @@ Translation rates: libxml2 132/207, glib 268/629, pango 370/1214. The remainder 
 two buckets that are correct to skip — availability/attribute macros that are not C expressions
 at all (695 in pango), and macros that expand to a function call (165), which cannot be a `const`
 without calling the library at load time.
+
+#### What S-D still has to absorb
+
+The new backend is not a drop-in for `Generators`: it has no `Context`, no `ExprDAG`, no pass
+vector, and no `BUILDSTAGE_*` split. Three things in the existing suite pin that architecture
+rather than the output, and will have to be re-expressed rather than kept:
+
+- **Node markers at fixed DAG positions** — `ctx.dag.nodes[6]`, `nodes[end]`, `nodes[end-1]` in
+  the `#529`/`#535`/`#536` testsets. There is no `dag.nodes` to index; these become assertions
+  about the emitted text or the loaded module.
+- **The two-stage rewriter workflow** — `BUILDSTAGE_NO_PRINTING`, hand-edit the DAG, then
+  `BUILDSTAGE_PRINTING_ONLY` ([docs/src/generator.md](docs/src/generator.md)). `gen/generator.jl`
+  and ClangCompiler's driver both rely on it. The replacement is a hook over the node vector
+  between `extract` and `generate` — the nodes are plain data, so a rewriter is `map`, not a
+  DAG surgery.
+- **`Audit` as a hard failure** — `enum.h` pins `@test_throws Exception build!(ctx)`.
+
+Not architecture, but also outstanding: **Objective-C**, blocked on ClangCompiler#49, and the
+`test/generators.jl` self-hosting testset, which loses its subject entirely once `lib/` is gone.
 
 ---
 

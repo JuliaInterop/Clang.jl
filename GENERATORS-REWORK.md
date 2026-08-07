@@ -1,8 +1,9 @@
 # Reworking `Generators` on Clang's C++ API
 
-**Status**: design settled, implementation not started. Nothing in `src/` has changed yet.
-All four decisions in §9 are resolved; §9's appendix lists the six ClangCompiler filings, none
-of which block Phase 0–2.
+**Status**: design settled; the macro slice is implemented (see
+[MACRO-HANDLING.md](MACRO-HANDLING.md)). §9's decisions are resolved **except decision 1, which
+measurement overturned** — a package extension is impossible (§3.4), so the frontend-independent
+core must be split into its own package instead.
 **Companion**: [CLAUDE.md](CLAUDE.md) describes the pipeline as it stands today.
 
 ---

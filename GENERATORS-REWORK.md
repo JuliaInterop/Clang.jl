@@ -130,11 +130,16 @@ downstream generator scripts set, not from ClangCompiler's ten keys, which now g
 
 | step | state | gate |
 | --- | --- | --- |
-| S-A | **done** — 32 keys | `validate_options.jl`, 53 checks; `test/abi_baseline.jl` green |
-| S-B | **done** | `validate_macros.jl`, 25 checks, including both `@test_broken`s |
-| S-C | **done** — libxml2, glib, pango | `validate_abi.jl`: 341 records, 1517 field offsets vs clang |
-| S-D | switch `src/` to the new frontend | full suite green |
-| S-E | delete `src/cursor.jl`, `src/type.jl`, `cltypes.jl`, `lib/16…21/`, `gen/`, and the 44 libclang exports | major version bump |
+| S-A | **done** — 32 keys | `test/options.jl`, 53 checks |
+| S-B | **done** | `test/macros.jl`, 25 checks, including both `@test_broken`s |
+| S-C | **done** — libxml2, glib, pango | `test/abi.jl`: 341 records, 1517 field offsets vs clang |
+| S-D | **done** | full suite green — 170 tests |
+| S-E | delete `src/cursor.jl`, `src/type.jl`, `cltypes.jl`, `lib/16…21/`, `gen/` | major version bump |
+
+S-E is all that remains. Those files are already dead — nothing includes them, the 44 libclang
+exports are gone with `src/Clang.jl`, and the suite passes without them. They are kept on disk
+only because deletion is the one irreversible step, and the plan has always put it last so that
+a problem S-C/S-D missed still has a path back.
 
 Unimplemented from the ~45-key surface, all deliberately: `output_exclusivelist`,
 `function_argument_conflict_symbols` (subsumed — `argnames` renames on real collision, not from
@@ -224,24 +229,37 @@ two buckets that are correct to skip — availability/attribute macros that are 
 at all (695 in pango), and macros that expand to a function call (165), which cannot be a `const`
 without calling the library at load time.
 
-#### What S-D still has to absorb
+#### S-D: done, and how the three architecture-pinned tests were re-expressed
 
-The new backend is not a drop-in for `Generators`: it has no `Context`, no `ExprDAG`, no pass
-vector, and no `BUILDSTAGE_*` split. Three things in the existing suite pin that architecture
-rather than the output, and will have to be re-expressed rather than kept:
+`Generators` keeps `create_context`, `build!`, `get_default_args`, `detect_headers`,
+`load_options` and the two-stage `BUILDSTAGE_*` split. What changed is `ctx.dag` → `ctx.nodes`,
+a plain `Vector{Node}`. Three things in the old suite pinned the pass architecture rather than
+the output; each was re-expressed, not kept:
 
-- **Node markers at fixed DAG positions** — `ctx.dag.nodes[6]`, `nodes[end]`, `nodes[end-1]` in
-  the `#529`/`#535`/`#536` testsets. There is no `dag.nodes` to index; these become assertions
-  about the emitted text or the loaded module.
-- **The two-stage rewriter workflow** — `BUILDSTAGE_NO_PRINTING`, hand-edit the DAG, then
-  `BUILDSTAGE_PRINTING_ONLY` ([docs/src/generator.md](docs/src/generator.md)). `gen/generator.jl`
-  and ClangCompiler's driver both rely on it. The replacement is a hook over the node vector
-  between `extract` and `generate` — the nodes are plain data, so a rewriter is `map`, not a
-  DAG surgery.
-- **`Audit` as a hard failure** — `enum.h` pins `@test_throws Exception build!(ctx)`.
+- **Node markers at fixed DAG positions** — `ctx.dag.nodes[6]`, `nodes[end]`, `nodes[end-1]`.
+  Now assertions about the loaded module: `union-in-struct.h` asserts `A` and `union_B` exist
+  with clang's layout, which is what the marker was standing in for.
+- **The two-stage rewriter workflow** — kept as-is, over `ctx.nodes`. A rewriter is `filter!`
+  or `map` rather than surgery that has to keep index-valued edges consistent, and
+  `test/generators.jl` exercises it by dropping a declaration and checking it is absent.
+- **`Audit` as a hard failure** — dropped. `Audit` existed to catch what the libclang pipeline
+  could produce but not detect (a missing definition, a default tag type). The reachability
+  walk cannot reach a declaration it has no facts for, so the class is gone rather than
+  unchecked; the replacement bar is that every fixture **generates and loads**.
 
-Not architecture, but also outstanding: **Objective-C**, blocked on ClangCompiler#49, and the
-`test/generators.jl` self-hosting testset, which loses its subject entirely once `lib/` is gone.
+The suite is 170 tests: JLLEnvs 2, Generators 53, Ordering 22, Macros 25, Options 53, ABI 5
+(five corpora), MPI 3, Bitfields 7. The old suite's strongest assertions survive — the MPI
+driver with its `callback_documentation` hook, and the bitfield round-trip through a real
+compiled C library.
+
+Four defects surfaced during the port, three of them in code written for this rework:
+`detect_headers` counted the umbrella's own `#include` lines (and a `try/catch` then swallowed
+the misspelled accessor in the fix, leaving only a silent symptom); `library_name` must be
+`Meta.parse`d rather than `Symbol`ed, since a caller may pass a quoted path; blobbed records had
+no by-value `getproperty` and no bit-field-aware `setproperty!`, so a record could be read
+through a pointer but never built or written; and record constructors dropped bit-fields.
+
+Still outstanding: **Objective-C**, blocked on ClangCompiler#49.
 
 ---
 

@@ -98,6 +98,15 @@ The blob's storage is a tuple of the widest unsigned that divides the size (`blo
 silently under-aligns every blobbed record. The libclang generator has the same bug and cannot
 see it — it never calls `getAlignOf`.
 
+**The "clang lays it out differently" test replays clang's numbers; it does not look for an
+attribute.** `naturally_laid_out` walks the fields with clang's own per-field size and alignment
+and checks the result against clang's actual offsets and total size. The attribute route is a
+trap: `packed` comes from `hasAttrOfKind(CXAttrKind_Packed)`, which sees
+`__attribute__((packed))` and **not** `#pragma pack(n)` — clang models that as
+`MaxFieldAlignmentAttr`. A `#pragma pack(1)` record was emitted as a plain struct at 8 bytes
+where clang said 5. Replaying the numbers closes packed, `#pragma pack`, over-aligned members
+and `aligned(N)` at once, with nothing to keep in sync with clang's attribute taxonomy.
+
 ## Testing: what is actually pinned
 
 `test/runtests.jl` runs eight testsets, 170 tests.

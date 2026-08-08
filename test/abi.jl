@@ -195,6 +195,16 @@ CORPORA["synthetic"] = () -> begin
     struct FnPtr { int (*cb)(struct FnPtr *, const char *); int n; };
     // arrays, including a multidimensional one
     struct Arrs { char a[7]; int m[3][4]; double *pd[2]; };
+    // `#pragma pack(n)` -- clang models this as MaxFieldAlignmentAttr, NOT the Packed attr, so
+    // an attribute-based check misses it entirely and the record is emitted as a plain struct
+    // with Julia's natural layout: 8 bytes where clang says 5, second field at 4 not 1.
+    #pragma pack(1)
+    struct Packed1 { char a; int b; double c; };
+    #pragma pack(2)
+    struct Packed2 { char a; int b; };
+    #pragma pack()
+    // over-aligned: the record's alignment exceeds its most-aligned member
+    struct OverAligned { int a; } __attribute__((aligned(16)));
     // an enum with an explicitly non-int underlying type
     enum Wide { W_LO = 0, W_HI = 0x7fffffffffffffffLL };
     struct HasEnum { enum Wide w; char pad; };

@@ -75,6 +75,11 @@ struct FieldFacts
     type::TypeRef
     bitoffset::Int        # BITS, from ASTRecordLayout — addresses unnamed fields too
     bitwidth::Int         # -1 when not a bit-field
+    # Size and alignment of the field's own TYPE, as clang computes them. Together with
+    # `bitoffset` these are what let codegen ask "is this record laid out naturally?" without
+    # knowing anything about attributes — see `naturally_laid_out`.
+    size::Int             # bytes; -1 when clang cannot say (e.g. a flexible array member)
+    align::Int            # bytes; -1 likewise
 end
 
 abstract type DeclFacts end
@@ -282,8 +287,12 @@ function extract_facts(c::Ctx, d)
         flds = FieldFacts[]
         for f in CC.getFields(def)
             bw = CC.isBitField(f) ? Int(CC.getBitWidthValue(f, c.ctx)) : -1
-            push!(flds, FieldFacts(Symbol(sname(f)), typeref(c, CC.getType(f)),
-                                   Int(CC.getFieldOffset(lay, CC.getFieldIndex(f))), bw))
+            qt = CC.getType(f)
+            fsz = try Int(CC.getTypeSizeInChars(c.ctx, qt)) catch; -1 end
+            fal = try Int(CC.getTypeAlignInChars(c.ctx, qt)) catch; -1 end
+            push!(flds, FieldFacts(Symbol(sname(f)), typeref(c, qt),
+                                   Int(CC.getFieldOffset(lay, CC.getFieldIndex(f))), bw,
+                                   fsz, fal))
         end
         packed = try CC.hasAttrOfKind(def, CC.LibClangEx.CXAttrKind_Packed) catch; false end
         return RecordFacts(kind, flds, Int(CC.getSize(lay)), Int(CC.getAlignment(lay)), true, packed)

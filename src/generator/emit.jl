@@ -315,8 +315,40 @@ Falling back to the blob form keeps `size` and every offset exactly right no mat
 frontend failed to name, which turns a silent ABI corruption into a merely less readable struct.
 """
 needs_blob(f::RecordFacts) =
-    f.kind === :union || f.packed ||
+    f.kind === :union || f.packed || !naturally_laid_out(f) ||
     any(fl -> fl.bitwidth >= 0 || isempty(String(fl.name)) || unnameable(fl.type), f.fields)
+
+"""
+Would Julia's own layout rules reproduce the layout clang computed?
+
+This asks clang's numbers rather than looking for an attribute, and that distinction is the
+whole point. `packed` comes from `hasAttrOfKind(CXAttrKind_Packed)`, which sees
+`__attribute__((packed))` and **does not see `#pragma pack(n)`** — clang models the latter as
+`MaxFieldAlignmentAttr` (ClangCompiler#45). A `#pragma pack(1)` record therefore looked ordinary,
+was emitted as a plain struct, and came out 8 bytes where clang said 5, with the second field at
+offset 4 instead of 1. Silent, and no corpus in the suite happened to contain one.
+
+Replaying clang's own per-field size and alignment closes the whole class at once — packed,
+`#pragma pack`, over-aligned members, `aligned(N)` on the record — with no attribute lookup and
+nothing to keep in sync with clang's attribute taxonomy.
+"""
+function naturally_laid_out(f::RecordFacts)
+    f.complete || return true            # nothing to reproduce
+    off = 0
+    maxalign = 1
+    for fl in f.fields
+        fl.bitwidth < 0 || return false                    # bit-fields: never natural
+        (fl.size >= 0 && fl.align > 0) || return false     # clang could not say; be safe
+        maxalign = max(maxalign, fl.align)
+        off = cld(off, fl.align) * fl.align                # Julia aligns each field up
+        (fl.bitoffset % 8 == 0 && fl.bitoffset ÷ 8 == off) || return false
+        off += fl.size
+    end
+    # A record whose own alignment differs from its most-aligned member -- `aligned(N)`, or a
+    # pragma that lowered it -- is not expressible either.
+    f.align == maxalign || return false
+    return f.size == cld(off, maxalign) * maxalign
+end
 
 "Does this type contain a position we could not name, at a place that occupies storage?"
 unnameable(t::TypeRef, depth::Int=0) =

@@ -51,6 +51,7 @@ include("emit.jl")
 using .CxxEmit
 
 export create_context, build!, get_default_args, detect_headers, load_options
+export JLL_ENV_TRIPLES, get_pkg_include_dir
 export BUILDSTAGE_ALL, BUILDSTAGE_NO_PRINTING, BUILDSTAGE_PRINTING_ONLY
 export Context, Options
 # the data model, for rewriters
@@ -147,8 +148,59 @@ end
 
 # ------------------------------------------------------------------------------------------
 # Toolchain arguments
+#
+# The GCC-shard machinery lives in `ClangCompiler.JLLEnvs`, which is that package's INTERNAL
+# module — deliberately so, and it is treated as stable rather than as public API. What follows
+# is Clang.jl's own public surface over it: a trampoline, so downstream generator scripts depend
+# on names this package promises rather than on another package's internals. If `JLLEnvs` ever
+# moves or is renamed, only these few lines change and no caller notices.
 # ------------------------------------------------------------------------------------------
 const GCC_MIN_VER = v"4.8.5"
+
+"""
+    JLL_ENV_TRIPLES
+
+Every cross-compilation target Clang.jl can generate for — the shards `get_default_args` draws
+its `-isystem` paths from.
+
+This is the list a multi-platform generator script loops over when a header's output is
+system-dependent (a `long` that is 32-bit on one target and 64 on another, a conditionally
+defined `time_t`):
+
+```julia
+for triple in JLL_ENV_TRIPLES
+    args = get_default_args(triple)
+    push!(args, "-I" * get_pkg_include_dir(Foo_jll, triple))
+    build!(create_context(headers, args, options))
+end
+```
+"""
+const JLL_ENV_TRIPLES = JLLEnvs.JLL_ENV_TRIPLES
+
+"""
+    get_pkg_include_dir(jll::Module, triple::AbstractString) -> String
+
+Where `jll`'s headers live **for `triple`**. This is what makes per-platform generation
+possible: `Foo_jll.artifact_dir` gives the *host* build, which is the wrong headers for every
+target but one.
+
+Returns `""` when `jll` ships no artifact for `triple`. The path is **not** guaranteed to exist
+even when non-empty — a JLL may ship an artifact with no `include/` in it — so check before
+using it. `triple` must be one of [`JLL_ENV_TRIPLES`].
+"""
+function get_pkg_include_dir(jll::Module, triple::AbstractString)
+    t = String(triple)
+    # Upstream throws `Unknown OS: <triple>` from deep inside a platform parse, which is a poor
+    # error for a public entry point. Fail at the boundary, naming the valid set.
+    t in JLL_ENV_TRIPLES ||
+        throw(ArgumentError("unsupported triple $(repr(t)); see Clang.Generators.JLL_ENV_TRIPLES"))
+    return JLLEnvs.get_pkg_include_dir(jll, t)
+end
+
+# NOT trampolined: `get_environment_info`. Its `version` defaults to `GCC_MIN_VER`, which is
+# wrong for targets whose only shard is newer — `get_environment_info("aarch64-apple-darwin20")`
+# throws `KeyError` because that shard is `v11.0.0-iains`. Promising it as public API would mean
+# promising a version-lookup rule we do not own. Reach `Clang.JLLEnvs` directly if you need it.
 
 function get_triple()
     is_libc_musl = occursin("musl", Base.MACHINE)

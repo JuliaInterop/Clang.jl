@@ -51,7 +51,32 @@ which is what lets the last two be tested without a compiler.
 | `src/generator/emit.jl` | `CxxEmit` | **emit** — facts → Julia |
 | `src/generator/macros.jl` | `CxxMacros` | each `#define` probed as C; the typed AST is translated |
 | `src/generator/Generators.jl` | `Generators` | the public API: `create_context`, `build!`, … |
-| — | `JLLEnvs` | **ClangCompiler's**, re-exported as `Clang.JLLEnvs`: shard artifacts → `-isystem` flags and `--target` |
+| — | `JLLEnvs` | **ClangCompiler's internal module**, reached through a trampoline — see below |
+
+### The platform trampoline
+
+The GCC-shard machinery is `ClangCompiler.JLLEnvs`, which is *internal to that package* and
+deliberately not public API. It is treated as stable. Clang.jl does not re-export it as its own
+surface; it exposes a trampoline — `JLL_ENV_TRIPLES` and `get_pkg_include_dir` — so downstream
+generator scripts depend on names this package promises. If `JLLEnvs` moves, only those lines
+change.
+
+Keep the trampoline **smaller than what is available**, and only promise what is true. Two
+things were learned by writing it wrong first:
+
+- `get_environment_info` is deliberately *not* trampolined. Its `version` defaults to
+  `GCC_MIN_VER`, which is wrong for any target whose only shard is newer —
+  `get_environment_info("aarch64-apple-darwin20")` throws `KeyError`. Promising it would mean
+  promising a version-lookup rule we do not own.
+- `get_pkg_include_dir` returns where headers *would* be, not a directory that exists: a JLL can
+  ship an artifact with no `include/`, and `CMake_jll`'s linux build does. It validates the
+  triple at the boundary, because upstream otherwise fails with `Unknown OS` from inside a
+  platform parse.
+
+`test/jllenvs.jl` exercises the trampoline rather than `JLLEnvs` directly — testing the
+implementation would pass while the public surface was broken. It also avoids calling
+`get_default_args` for all 14 triples: that materialises a GCC bootstrap shard each, and took
+2m32s here with them already cached.
 
 ### The data model
 

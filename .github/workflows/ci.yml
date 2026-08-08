@@ -13,8 +13,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # ClangCompiler pins the LLVM Julia itself is built against and requires Julia 1.12,
+        # so 1.11 is gone. 32-bit x86 is gone with it: libclangex ships no i686 build.
         version:
-          - '1.11'
+          - '1.12'
           - '1'
           - 'pre'
           - 'nightly'
@@ -24,10 +26,6 @@ jobs:
           - windows-latest
         arch:
           - x64
-          - x86
-        exclude:
-          - os: macOS-latest
-            arch: x86
         include:
           - os: macOS-latest
             arch: aarch64
@@ -37,13 +35,6 @@ jobs:
             version: nightly
     steps:
       - uses: actions/checkout@v7
-
-      # gcc-multilib is needed to build 32bit binaries for the bitfield tests
-      - if: runner.os == 'Linux'
-        uses: awalsh128/cache-apt-pkgs-action@v1
-        with:
-          packages: gcc-multilib
-          version: 1.0
 
       - uses: julia-actions/setup-julia@latest
         with:

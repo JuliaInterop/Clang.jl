@@ -1,6 +1,14 @@
+# ClangCompiler is listed even though the tests reach it through `Clang.Generators`. Its
+# `JLLShim.__init__` calls `Preferences.has_preference("ClangCompiler", "libclangex")`, which
+# resolves the package BY NAME in the active load path — and `Pkg.test` builds a temp
+# environment where an indirect dependency is not top-level, so the lookup throws
+# `Cannot resolve package 'ClangCompiler' in load path` before a single test runs. Naming it
+# here makes it top-level in that environment. (The underlying fix belongs in ClangCompiler:
+# `@has_preference` or the UUID form would not depend on the load path at all.)
 [deps]
 CEnum = "fa961155-64e5-5f13-b03f-caf6b980ea82"
 CMake_jll = "3f4e10e2-61f2-5801-8945-23b9d642d0e6"
+ClangCompiler = "06fc9500-c033-43bc-8ca2-e20da63309d9"
 Libdl = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
 REPL = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
 TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"

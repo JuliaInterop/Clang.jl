@@ -492,10 +492,11 @@ follow S1. S4 is additive. S5 is opt-in.
 
 ## 8. For review
 
-1. **Is `dag.order` acceptable as public surface?** `get_nodes(dag)` currently returns nodes in
-   *emission* order and is the documented rewrite hook (`test/rewriter.jl`, `gen/generator.jl`).
-   After S1 it returns source order. Either `get_nodes` changes meaning, or it keeps emission
-   order via `dag.order` and a new accessor exposes source order. This is a public-API decision.
+1. ~~**Is `dag.order` acceptable as public surface?**~~ **Resolved by the rework.** There is no
+   `dag` and no `get_nodes`. `ctx.nodes` is the rewrite hook and it is in *source* order;
+   emission order is recomputed from the facts inside `build!`, so the two never have to be
+   reconciled in public API. (`test/rewriter.jl` and `gen/generator.jl`, named here as the
+   consumers, no longer exist.)
 2. **Is the `__JL_Ctag_N` renumbering in S3 acceptable?** It is a one-time churn of every
    generated file that uses `use_deterministic_symbol`.
 3. **Bands default off — agreed?** §3.5 argues yes on layout-stability grounds, which costs the

@@ -134,21 +134,44 @@ downstream generator scripts set, not from ClangCompiler's ten keys, which now g
 | S-B | **done** | `test/macros.jl`, 25 checks, including both `@test_broken`s |
 | S-C | **done** — libxml2, glib, pango | `test/abi.jl`: 341 records, 1517 field offsets vs clang |
 | S-D | **done** | full suite green — 170 tests |
-| S-E | delete `src/cursor.jl`, `src/type.jl`, `cltypes.jl`, `lib/16…21/`, `gen/` | major version bump |
+| S-E | **done** — v0.20.0 | six-lens reference audit, 94 findings, 0 blockers; suite 170/170 after |
 
-S-E is all that remains. Those files are already dead — nothing includes them, the 44 libclang
-exports are gone with `src/Clang.jl`, and the suite passes without them. They are kept on disk
-only because deletion is the one irreversible step, and the plan has always put it last so that
-a problem S-C/S-D missed still has a path back.
+**The sequence is complete.** S-E removed `lib/16…21/` (45,605 generated lines), `gen/`, the
+eleven `src/` object-layer files, and `test/test.toml`, the config the deleted self-hosting
+testset used.
 
 Unimplemented from the ~45-key surface, all deliberately: `output_exclusivelist`,
 `function_argument_conflict_symbols` (subsumed — `argnames` renames on real collision, not from
 a list), `union_single_constructor`, `link_enum_alias`, `no_audit`, and the `[general.log]`
 sub-table of 23 per-pass booleans, which has no meaning once there are no passes.
 
-S-E is the only irreversible step and it must come last — but the reason is narrower than the
-earlier draft claimed. It is not that bindings become unregenerable; it is simply that once the
-libclang path is gone there is no fallback if S-C turns up something the fixtures missed.
+S-E was the only irreversible step and it came last — the reason being narrower than the earlier
+draft claimed. Not that bindings become unregenerable; simply that once the libclang path is gone
+there is no fallback if S-C turned up something the fixtures missed. It did not.
+
+#### S-E: what the audit checked before deleting
+
+Six independent reference sweeps, each blind to the others: Julia source (`include`, `using`, and
+every symbol the targets define); build and CI config; prose; the test suite and its fixtures; a
+**symbol-level set difference** built by construction rather than by grep — 2,086 defined names
+against 1,049 referenced ones, which is the only lens that can catch a collision on a name as
+generic as `name`, `kind`, `file` or `fields`; and an empirical load check. Every claim that
+deletion would break something was then handed to a separate agent told to refute it.
+
+94 references found, **0 blockers**. The 20-name symbol intersection resolved entirely to
+*independent definitions in the new code* — `UnknownRef.spelling`, `RecordFacts.file`,
+`RecordFacts.fields` — not calls into the object layer.
+
+The strongest evidence was a differential: the three groups were physically moved out of the
+tree, the suite run, the groups moved back, the suite run again. The two logs are byte-identical
+apart from a `dlopen` handle address. Deleting them is observationally null.
+
+Two things the deletion made possible rather than merely permitted:
+
+- **`CEnum` left `[deps]`.** Its only real importer was `src/cltypes.jl`. Surviving code never
+  imports CEnum — it only *writes the string* `using CEnum: CEnum, @cenum` into generated
+  output, which is the caller's `using` in the caller's environment.
+- **`Downloads`** was already a dependency with zero uses anywhere in the repository.
 
 #### S-C: done, and what it cost
 

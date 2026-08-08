@@ -153,9 +153,11 @@ command-line options, so loading the second aborts with `Option 'sanitizer-early
 registered more than once!`, in either order. This is why the C++ frontend could not be a package
 extension and why the libclang layer had to go rather than stay alongside.
 
-Left on disk, unreferenced, pending deletion (S-E): `lib/16…21/`, `gen/`, and the `src/` object
-layer (`cursor.jl`, `type.jl`, `cltypes.jl`, `trans_unit.jl`, …). They are dead code — nothing
-includes them — kept only because deletion is the one irreversible step.
+The libclang layer is **gone from the tree**, not merely unreferenced: `lib/16…21/` (45,605
+generated lines), `gen/`, and the eleven `src/` object-layer files (`cursor.jl`, `type.jl`,
+`cltypes.jl`, `trans_unit.jl`, …). If you are looking for `CLCursor`, `parse_headers` or
+`@add_def`, they were removed in v0.20 — `git log -- src/cursor.jl` still has them, and
+`Clang@0.19` is the last release that shipped them.
 
 Objective-C is unsupported, blocked on ClangCompiler#49.
 

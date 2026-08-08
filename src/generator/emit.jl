@@ -136,7 +136,7 @@ function Options(toml::AbstractDict)
         fold_single_line_comment = Bool(pick(c, "fold_single_line_comment", false)),
         show_c_function_prototype = Bool(pick(c, "show_c_function_prototype", false)),
         # Not a TOML value — a Julia `Function` a caller poked into the options dict beside the
-        # scalars. `gen/generator.jl` and MPI.jl's driver both do this, and it is one of the
+        # scalars. MPI.jl's driver does this (see `test/test_mpi.jl`), and it is one of the
         # signals that the TOML surface is under-expressive (GENERATORS-REWORK.md).
         callback_documentation   = pick(g, "callback_documentation", nothing),
         add_fptr_methods         = Bool(pick(g, "add_fptr_methods", false)),
@@ -788,9 +788,9 @@ end
 """
 The full docstring for a node: comment, then the C prototype, then the user's callback.
 
-The callback runs **last** and sees everything, so it can rewrite or replace the whole thing —
-which is what `gen/generator.jl` uses it for. It also runs when no comment was extracted, so a
-callback can supply documentation the header never had.
+The callback runs **last** and sees everything, so it can rewrite or replace the whole thing.
+It also runs when no comment was extracted, so a callback can supply documentation the header
+never had — which is what MPI.jl's driver uses it for.
 """
 function docfor(e::Env, n::Node, o::Options)
     lines = o.extract_c_comment_style == "disable" ? String[] :

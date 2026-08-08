@@ -42,7 +42,9 @@ You can also use the experimental `detect_headers` function to automatically det
 ```julia
 headers = detect_headers(header_dir, args)
 ```
-You also need an options file `generator.toml` that to make this script work, you can refer to [this toml file](https://github.com/JuliaInterop/Clang.jl/blob/master/gen/generator.toml) for a reference.
+You also need an options file `generator.toml` for this script to work. See
+[CXX-FRONTEND.md](https://github.com/JuliaInterop/Clang.jl/blob/master/CXX-FRONTEND.md) for every
+key the generator honours and which table each one lives in.
 
 ### Skipping specific symbols
 The C header may contain some symbols that are not correctly handled by Clang.jl or may need manual wrapping. For example, julia provides `tm` as `Libc.TmStruct`, so you may not want to map it to a new struct. As a workaround, you can skip these symbols. After that, if this symbol is needed, you can add it back in the prologue. Prologue is specified by the `prologue_file_path` option.

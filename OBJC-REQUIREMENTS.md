@@ -1,5 +1,12 @@
 # What Objective-C support needs from ClangCompiler
 
+> **Status: satisfied and implemented.** ClangCompiler PR #52 shipped every accessor below
+> (several under clang's own names — `protocol_size`/`prop_size` rather than `getNum*`, and the
+> selector getters return `String` directly), plus `create_parser(language=:objc)`, which this
+> list did not anticipate needing. Clang.jl now extracts `ObjCInterfaceFacts`/`ObjCProtocolFacts`
+> and emits `@objcwrapper`/`@objcproperties`; the testset in `test/generators.jl` restores the
+> pre-rework assertions. Kept for the record of what was asked and why.
+
 Objective-C is the one capability this branch dropped outright, and the only merge blocker that
 is not in this repo. It is gated on
 [ClangCompiler#49](https://github.com/Gnimuc/ClangCompiler.jl/issues/49) — `clang/AST/DeclObjC.h`

@@ -23,7 +23,8 @@ using ..CxxMacros
 using ..CxxFacts
 import ..CxxFacts: Key, Node, TypeRef, RecordFacts, TypedefFacts, EnumFacts,
                    FunctionFacts, PointerRef, RecordRef, TypedefRef, EnumRef,
-                   ArrayRef, BuiltinRef, FunctionRef, UnknownRef, FieldFacts
+                   ArrayRef, BuiltinRef, FunctionRef, UnknownRef, FieldFacts,
+                   ObjCRef, ObjCInterfaceFacts, ObjCProtocolFacts, ObjCPropertyFacts
 import ..CxxOrder: Cut, Ordering
 
 export generate, Options
@@ -34,6 +35,13 @@ const JL = Dict(:void=>:Cvoid, :bool=>:Bool, :char=>:Cchar, :schar=>:Int8, :ucha
                 :ulonglong=>:Culonglong, :float=>:Float32, :double=>:Float64,
                 :longdouble=>:Float64, :int128=>:Int128, :uint128=>:UInt128,
                 :wchar=>:Cwchar_t, :char16=>:UInt16, :char32=>:UInt32, :unknown=>:Cvoid)
+
+"""
+Objective-C roots ObjectiveC.jl already defines. Emitting a wrapper for one would clash with
+`ObjectiveC.NSObject`; skipping it while keeping the NAME is what lets `Leaf <: NSObject`
+resolve — the same role `SYSTEM_TYPEDEFS` plays for `uint32_t`.
+"""
+const OBJC_ROOTS = Set([:NSObject])
 
 """
 Well-known system typedefs that Julia already names. Mapping them directly means a header
@@ -213,6 +221,10 @@ function jltype(e::Env, t::TypeRef)
         return get(e.name, t.key, :Cvoid)
     elseif t isa FunctionRef
         return :(Ptr{Cvoid})
+    elseif t isa ObjCRef
+        # An ObjC object pointer inside a C position (a struct field, a ccall argument) is just
+        # a pointer; the typed `id{...}` spelling only exists inside @objcproperties.
+        return :(Ptr{Cvoid})
     end
     return :Cvoid
 end
@@ -227,6 +239,10 @@ function assign_names(nodes::Vector{Node})
         # A system typedef Julia already names resolves to that name and is never emitted.
         if n.system && n.facts isa TypedefFacts && haskey(SYSTEM_TYPEDEFS, n.id)
             name[n.key] = SYSTEM_TYPEDEFS[n.id]; push!(skip, n.key); continue
+        end
+        # Likewise an ObjC root: `NSObject` is ObjectiveC.jl's, so wrappers subtype it by name.
+        if n.facts isa ObjCInterfaceFacts && n.id in OBJC_ROOTS
+            name[n.key] = n.id; push!(skip, n.key); continue
         end
         id = n.id
         if isempty(String(id))
@@ -691,6 +707,63 @@ function emit_node(e::Env, n::Node, cuts::Dict{Int,Cut}, out::Vector{Expr}, o::O
 end
 
 # ------------------------------------------------------------------------------------------
+# Objective-C: @objcwrapper / @objcproperties (ObjectiveC.jl's macros)
+# ------------------------------------------------------------------------------------------
+"`macos(v\"100.11.0\")` — the availability clause ObjectiveC.jl's macros take."
+avail_clause(av) = "availability = $(av[1])(v\"$(av[2])\")"
+
+"The property-position spelling of a type: `id`/`id{Name}` for object pointers, Julia otherwise."
+function objc_type_str(e::Env, t::TypeRef)
+    t isa ObjCRef || return string(jltype(e, t))
+    t.interface != 0 && return "id{$(e.name[t.interface])}"
+    isempty(t.protocols) && return "id"
+    return "id{$(e.name[first(t.protocols)])}"
+end
+
+"""
+The `@objcwrapper` line for an interface or protocol.
+
+The supertype is the superclass (interfaces) or the first inherited protocol (protocols), and
+`NSObject` — ObjectiveC.jl's own — when there is neither. `immutable = true` throughout, as the
+old generator emitted: these wrap object POINTERS, whose fields never change from Julia.
+"""
+function objc_wrapper_line(e::Env, n::Node)
+    f = n.facts
+    sup = if f isa ObjCInterfaceFacts && f.superclass != 0
+        e.name[f.superclass]
+    elseif f isa ObjCProtocolFacts && !isempty(f.protocols)
+        e.name[first(f.protocols)]
+    else
+        :NSObject
+    end
+    av = f.avail === nothing ? "" : avail_clause(f.avail) * " "
+    return "@objcwrapper immutable = true $(av)$(e.name[n.key]) <: $sup"
+end
+
+"""
+The `@objcproperties` block, or `""` when the container declares none.
+
+`@autoproperty` is readonly by default in ObjectiveC.jl, so a `readwrite` property must spell
+its setter — always, since clang defaults a setter selector even on readonly properties, where
+it must NOT be spelled. The getter is spelled only when it differs from the property name.
+"""
+function objc_properties_block(e::Env, n::Node)
+    props = n.facts.properties
+    isempty(props) && return ""
+    io = IOBuffer()
+    println(io, "@objcproperties ", e.name[n.key], " begin")
+    for pr in props
+        parts = ["@autoproperty $(pr.name)::$(objc_type_str(e, pr.type))"]
+        pr.getter == String(pr.name) || push!(parts, "getter = $(pr.getter)")
+        pr.readonly || push!(parts, "setter = $(pr.setter)")
+        pr.avail === nothing || push!(parts, avail_clause(pr.avail))
+        println(io, "    ", join(parts, " "))
+    end
+    print(io, "end")
+    return String(take!(io))
+end
+
+# ------------------------------------------------------------------------------------------
 # Doc comments
 # ------------------------------------------------------------------------------------------
 """
@@ -975,12 +1048,26 @@ function generate(nodes::Vector{Node}; options::Options=Options(), io::IO=stdout
     emitted = 0
     bound = Set{Symbol}()          # names this file actually defines, for the macro guards
     renames = Dict{Symbol,Symbol}()
+    objc_blocks = String[]         # every @objcwrapper precedes any @objcproperties — see deps
     for k in ord.order
         n = e.bykey[k]
         isempty(String(n.id)) || (renames[n.id] = e.name[k])
         k in e.skip && continue                          # a system typedef Julia already names
         (n.system && !o.generate_isystem_symbols) && continue
         excluded(o, e.name[k]) && continue
+        if n.facts isa ObjCInterfaceFacts || n.facts isa ObjCProtocolFacts
+            # Wrappers are ordered by their supertype/protocol edges, which the language keeps
+            # acyclic. Property blocks are held back until every wrapper exists, because
+            # properties may reference interfaces MUTUALLY (delegate patterns) — the reason
+            # property types are deliberately not ordering dependencies in `CxxFacts.deps`.
+            print_doc(io, docfor(e, n, o), o)
+            println(io, objc_wrapper_line(e, n)); println(io)
+            blk = objc_properties_block(e, n)
+            isempty(blk) || push!(objc_blocks, blk)
+            push!(bound, unescape_name(e.name[k]))
+            emitted += 1
+            continue
+        end
         out = Expr[]
         emit_node(e, n, get(bycut, k, Dict{Int,Cut}()), out, o)
         isempty(out) || push!(bound, unescape_name(e.name[k]))
@@ -993,6 +1080,13 @@ function generate(nodes::Vector{Node}; options::Options=Options(), io::IO=stdout
             println(dest, string(ex)); println(dest)
             emitted += 1
         end
+    end
+
+    # Property blocks after EVERY wrapper: an `id{Name}` inside `@objcproperties` needs `Name`
+    # bound, and mutual property references make per-node interleaving unorderable.
+    for blk in objc_blocks
+        println(io, blk); println(io)
+        emitted += 1
     end
 
     # Macros last. Nothing declared can refer to a macro — clang expands them before anything

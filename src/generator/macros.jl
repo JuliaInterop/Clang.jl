@@ -183,9 +183,16 @@ function translate_expr(@nospecialize(e), ctx)
         return ty == "float" ? Expr(:call, :Float32, d) : d
 
     elseif r isa CC.AbstractStringLiteral
-        # getString ABORTS on a wide/UTF-16/UTF-32 literal (clang asserts getCharByteWidth()==1).
-        CC.getCharByteWidth(r) == 1 || throw(Untranslatable("wide string literal"))
-        return CC.getString(r)
+        w = Int(CC.getCharByteWidth(r))
+        # A narrow literal is the string. A wide/UTF-16/UTF-32 one used to be SKIPPED, because
+        # `getString` asserts a byte width of 1 (upstream aborts; the wrapper now throws).
+        # `getBytes` reads the same arena bytes at any width, so `L"string"` (#357) becomes a
+        # Julia string too — the useful value of the macro is its text, and the encoding is a
+        # property of the C type (`wchar_t*`), which a `const` cannot carry anyway.
+        w == 1 && return CC.getString(r)
+        raw = codeunits(CC.getBytes(r))
+        units = w == 2 ? reinterpret(UInt16, raw) : reinterpret(UInt32, raw)
+        return transcode(String, collect(units))
 
     elseif r isa CC.AbstractCharacterLiteral
         # Unlike `IntegerLiteral::getValue`, this returns the code point directly rather than an
@@ -355,13 +362,18 @@ parseable in a translation unit where the headers' typedefs are visible.
 """
 function translate_macros(headers::Vector{String}, args::Vector{String}=String[];
                           include_system::Bool=false, is_cxx::Bool=false)
-    # See `CxxFacts.extract` for why `-x c` is both required and the cause of the parse failure.
-    flags = is_cxx ? copy(args) : String["-x", "c", args...]
+    language = is_cxx ? :cxx : :c
     umbrella = join(("#include \"$h\"" for h in headers), '\n') * "\n"
 
     # --- pass 1: which macros are there? ---
     names = Symbol[]
-    I1 = CC.create_interpreter(flags; is_cxx)
+    I1 = CC.create_parser(copy(args); language)
+    # A silent buffer, deliberately: header problems are `extract`'s to report (it warns with
+    # the messages attached), and pass 2's probes MISPARSE BY DESIGN — clang refusing a probe is
+    # how a non-expression macro is detected — so rendering those errors would print one scary
+    # diagnostic per skipped macro.
+    buf1 = CC.TextDiagnosticBuffer()
+    CC.setClient(CC.getDiagnostics(CC.get_instance(I1)), buf1, false)
     try
         pp = CC.getPreprocessor(CC.get_instance(I1))
         CC.createPreprocessingRecord(pp)
@@ -372,6 +384,9 @@ function translate_macros(headers::Vector{String}, args::Vector{String}=String[]
             push!(names, nm)
         end
     finally
+        de1 = CC.getDiagnostics(CC.get_instance(I1))
+        CC.setClient(de1, CC.TextDiagnosticPrinter(CC.getDiagnosticOptions(de1)), true)
+        CC.dispose(buf1)
         CC.dispose(I1)
     end
     isempty(names) && return Union{MacroTranslated,MacroSkipped}[]
@@ -379,9 +394,14 @@ function translate_macros(headers::Vector{String}, args::Vector{String}=String[]
     # --- pass 2: headers AND probes, one parse ---
     probes = join(("__auto_type $PROBE_PREFIX$i = ($(names[i]));" for i in eachindex(names)), '\n')
     results = Union{MacroTranslated,MacroSkipped}[]
-    I2 = CC.create_interpreter(flags; is_cxx)
+    I2 = CC.create_parser(copy(args); language)
+    buf2 = CC.TextDiagnosticBuffer()
+    CC.setClient(CC.getDiagnostics(CC.get_instance(I2)), buf2, false)
     try
         ctx = CC.get_ast_context(I2)
+        # The probes ride in the SAME increment as the headers — they must, since a typedef from
+        # an earlier increment would be visible (the driver keeps one unit), but this also keeps
+        # every probe inside one end-of-TU boundary.
         CC.parse(I2, umbrella * probes * "\n")
         CC.setTraversalScope(ctx, [CC.getTranslationUnitDecl(ctx)])
         typedefs = typedef_bindings(ctx)
@@ -434,6 +454,9 @@ function translate_macros(headers::Vector{String}, args::Vector{String}=String[]
             push!(results, MacroTranslated(nm, ex, ctype, folded))
         end
     finally
+        de2 = CC.getDiagnostics(CC.get_instance(I2))
+        CC.setClient(de2, CC.TextDiagnosticPrinter(CC.getDiagnosticOptions(de2)), true)
+        CC.dispose(buf2)
         CC.dispose(I2)
     end
     return results

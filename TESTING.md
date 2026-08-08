@@ -12,9 +12,20 @@ resolution fails with `ClangCompiler [06fc9500] has no known versions!`.
 
 ```julia
 using Pkg
-Pkg.add(url="https://github.com/Gnimuc/ClangCompiler.jl")
+Pkg.add(url="https://github.com/Gnimuc/ClangCompiler.jl", rev="claude/issues-39-51")  # PR #52
 Pkg.add(url="https://github.com/JuliaInterop/Clang.jl", rev="claude/generators-clang-cpp-api-02c8e6")
 ```
+
+**Until `libclangex_jll` is bumped past 0.4, a local native build is also required** — the
+released binary lacks the symbols ClangCompiler #52 added (the incremental parse driver and the
+Objective-C surface, both of which this branch now uses):
+
+```julia
+run(`julia --project=ClangCompiler/deps ClangCompiler/deps/build_local.jl`)
+```
+
+That writes a `LocalPreferences.toml` telling ClangCompiler to load the local build. Once the
+jll is released, this step disappears.
 
 Do this in the environment your generator script already uses — the usual `gen/Project.toml`,
 not your package's own environment. Clang.jl is a build-time tool; the generated `.jl` file has
@@ -49,10 +60,18 @@ build!(ctx, BUILDSTAGE_PRINTING_ONLY)
 
 ## Known gaps
 
-- **Objective-C is unsupported**, blocked on
-  [ClangCompiler#49](https://github.com/Gnimuc/ClangCompiler.jl/issues/49). This is the main
-  reason the branch is not merge-ready; [OBJC-REQUIREMENTS.md](OBJC-REQUIREMENTS.md) lists the
-  exact accessors needed to restore parity.
+- **Objective-C is supported again** (ClangCompiler #52 supplied the surface;
+  [OBJC-REQUIREMENTS.md](OBJC-REQUIREMENTS.md) was the mapping): `@objcwrapper` /
+  `@objcproperties` output with supertypes, protocol conformance, availability, and
+  explicit getters/setters, requested the historical way — `push!(args, "-x", "objective-c")`.
+  The output *text* is tested; loading it needs ObjectiveC.jl in your own environment.
+  ObjC **generics** remain unsupported, as they were before (`NSArray<T> *` assertions were
+  `broken=true` from the day they were written).
+- Wide string literal macros (`#define SL L"…"`, issue #357) now translate instead of being
+  skipped.
+- A header set that does not parse cleanly now produces **one warning with the clang messages
+  attached** instead of a stream of stderr noise — and the messages are real: the parse-failure
+  signal was unusable before ClangCompiler #52.
 - Unimplemented `generator.toml` keys: `output_exclusivelist`, `union_single_constructor`,
   `link_enum_alias`, `no_audit`, the `[general.log]` sub-table, and
   `function_argument_conflict_symbols` (subsumed — parameters are renamed on real collision

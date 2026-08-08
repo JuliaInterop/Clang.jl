@@ -54,8 +54,11 @@ if m !== nothing
     mcheck("GUINTBIG_MAX not emitted", !has(m, :GUINTBIG_MAX))
     # #389: `#define foo foo` beside `int foo(void);` must not become `const foo = foo`.
     mcheck("foo is the function, not a const", has(m, :foo))
-    # #357: a wide string literal aborts clang's getString(); it must be skipped, not crashed on.
-    mcheck("SL (wide literal) skipped", !has(m, :SL))
+    # #357: `L"string"` used to be SKIPPED, because clang's getString asserts a byte width of 1
+    # and the release library aborts on it. ClangCompiler's getBytes reads the same arena bytes
+    # at any width, so the macro now translates — the useful value is the text, and the wide
+    # encoding is a property of the C type (`wchar_t*`), which a `const` could not carry anyway.
+    mcheck("SL (wide literal) translates", has(m, :SL) && val(m, :SL) == "string")
 end
 
 println("── large-integer-literals.h: C11 6.4.4.1p5 ──")

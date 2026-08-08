@@ -18,12 +18,13 @@ re-query the AST, which is what makes the ordering and codegen stages frontend-i
 module CxxFacts
 
 import ClangCompiler as CC
-using ClangCompiler: create_interpreter, dispose
+using ClangCompiler: create_interpreter, create_parser, dispose
 
 export extract, Node, RecordFacts, EnumFacts, TypedefFacts, FunctionFacts, FieldFacts
 export builtin_include_dir, included_files
 export TypeRef, BuiltinRef, PointerRef, ArrayRef, RecordRef, EnumRef, TypedefRef,
-       FunctionRef, UnknownRef, deps, Key
+       FunctionRef, UnknownRef, ObjCRef, deps, Key
+export ObjCInterfaceFacts, ObjCProtocolFacts, ObjCPropertyFacts
 
 const Key = UInt   # a clang decl identity; stable for the life of one ASTContext
 
@@ -40,6 +41,9 @@ struct EnumRef    <: TypeRef;  key::Key;                           end
 struct TypedefRef <: TypeRef;  key::Key;                           end
 struct FunctionRef<: TypeRef;  ret::TypeRef; params::Vector{TypeRef}; variadic::Bool; end
 struct UnknownRef <: TypeRef;  spelling::String;                   end
+# An Objective-C object pointer: `Root *`, `id<Proto>`, or plain `id`. `interface` is 0 for a
+# plain or protocol-qualified `id`; ObjectiveC.jl spells all three as `id`/`id{Name}`.
+struct ObjCRef    <: TypeRef;  interface::Key; protocols::Vector{Key}; end
 
 """
 Every declaration key this type mentions, and whether the reference is pointer-mediated.
@@ -110,6 +114,35 @@ struct FunctionFacts <: DeclFacts
 end
 
 """
+One `@property`. `getter`/`setter` are the SELECTOR spellings clang reports — the setter is
+defaulted even on a `readonly` property (`"setCount:"` for `count`), so readonly-ness comes
+from `readonly`, never from an empty setter (ClangCompiler documents the same trap).
+"""
+struct ObjCPropertyFacts
+    name::Symbol
+    type::TypeRef
+    getter::String
+    setter::String                # trailing `:` stripped
+    readonly::Bool
+    avail::Union{Nothing,Tuple{String,VersionNumber}}   # (platform, introduced)
+end
+
+"An `@interface`. `superclass` is 0 for a root class."
+struct ObjCInterfaceFacts <: DeclFacts
+    superclass::Key
+    protocols::Vector{Key}
+    properties::Vector{ObjCPropertyFacts}
+    avail::Union{Nothing,Tuple{String,VersionNumber}}
+end
+
+"An `@protocol`. `protocols` are the ones it inherits."
+struct ObjCProtocolFacts <: DeclFacts
+    protocols::Vector{Key}
+    properties::Vector{ObjCPropertyFacts}
+    avail::Union{Nothing,Tuple{String,VersionNumber}}
+end
+
+"""
 One declaration. `key` is clang's identity — the stable key the ordering pass needs
 (`ORDERING-DESIGN.md` §3.2b) — so nothing is invalidated by insertion or reordering.
 """
@@ -138,6 +171,15 @@ function deps(n::Node)
         for (_, t) in f.params; deps!(out, t); end
     elseif f isa EnumFacts
         deps!(out, f.integer_type)
+    elseif f isa ObjCInterfaceFacts
+        # ONLY the wrapper edges — superclass and protocol conformances — which the language
+        # keeps acyclic. Property types are deliberately not dependencies: mutual references
+        # through properties (delegate patterns) are routine and legal, so emission puts every
+        # `@objcwrapper` before any `@objcproperties` block instead of ordering by them.
+        f.superclass == 0 || push!(out, f.superclass => false)
+        for k in f.protocols; push!(out, k => false); end
+    elseif f isa ObjCProtocolFacts
+        for k in f.protocols; push!(out, k => false); end
     end
     return out
 end
@@ -204,7 +246,13 @@ function typeref(c::Ctx, qt, depth::Int=0)
     # spells `__list::__pthread_internal_list` where the source wrote `__pthread_list_t` —
     # ABI-identical, but it discards the name the header chose, and readability is an
     # acceptance criterion here (GENERATORS-REWORK.md §5.7).
-    if r isa CC.AbstractTypedefType
+    if r isa CC.AbstractObjCObjectPointerType
+        idecl = CC.getInterfaceDecl(r)
+        iface = CC.is_null_handle(idecl) ? Key(0) : visit(c, CC.resolve(idecl))
+        protos = Key[visit(c, CC.resolve(CC.getProtocol(r, i)))
+                     for i in 0:(Int(CC.getNumProtocols(r)) - 1)]
+        return ObjCRef(iface, protos)
+    elseif r isa CC.AbstractTypedefType
         return TypedefRef(visit(c, CC.resolve(CC.getDecl(r))))
     elseif r isa CC.AbstractElaboratedType
         return typeref(c, CC.getNamedType(r))    # `struct Foo` / `enum Bar` keyword sugar
@@ -241,7 +289,8 @@ it directly: `getCanonicalDecl` maps every redeclaration to the same representat
 """
 function canonical(d)
     (d isa CC.AbstractTagDecl || d isa CC.AbstractTypedefNameDecl ||
-     d isa CC.AbstractFunctionDecl) || return d
+     d isa CC.AbstractFunctionDecl || d isa CC.AbstractObjCInterfaceDecl ||
+     d isa CC.AbstractObjCProtocolDecl) || return d
     cd = CC.getCanonicalDecl(d)
     return CC.is_null_handle(cd) ? d : CC.resolve(cd)
 end
@@ -278,8 +327,48 @@ function visit(c::Ctx, d)::Key
     return k
 end
 
+"The `(platform, introduced)` of an AvailabilityAttr on `d`, or `nothing`."
+function availability_of(d)
+    for i in 0:(Int(CC.getNumAttrs(d)) - 1)
+        a = CC.resolve(CC.getAttr(d, i))
+        a isa CC.AbstractAvailabilityAttr || continue
+        intro = CC.getIntroduced(a)
+        intro === nothing && continue
+        return (String(CC.getName(CC.getPlatform(a))), VersionNumber(intro...))
+    end
+    return nothing
+end
+
+"Every `@property` of an ObjC container, in declaration order."
+function objc_properties(c::Ctx, d)
+    props = ObjCPropertyFacts[]
+    for i in 0:(Int(CC.prop_size(d)) - 1)
+        pd = CC.getProperty(d, i)
+        setter = String(CC.getSetterName(pd))
+        endswith(setter, ":") && (setter = chop(setter))
+        push!(props, ObjCPropertyFacts(Symbol(CC.getName(pd)), typeref(c, CC.getType(pd)),
+                                       String(CC.getGetterName(pd)), setter,
+                                       CC.isReadOnly(pd), availability_of(pd)))
+    end
+    return props
+end
+
 function extract_facts(c::Ctx, d)
-    if d isa CC.AbstractRecordDecl
+    if d isa CC.AbstractObjCInterfaceDecl
+        CC.hasDefinition(d) && (d = CC.getDefinition(d))
+        sup = CC.getSuperClass(d)
+        supkey = CC.is_null_handle(sup) ? Key(0) : visit(c, CC.resolve(sup))
+        protos = Key[visit(c, CC.resolve(CC.getProtocol(d, i)))
+                     for i in 0:(Int(CC.protocol_size(d)) - 1)]
+        return ObjCInterfaceFacts(supkey, protos, objc_properties(c, d), availability_of(d))
+
+    elseif d isa CC.AbstractObjCProtocolDecl
+        CC.hasDefinition(d) && (d = CC.getDefinition(d))
+        protos = Key[visit(c, CC.resolve(CC.getProtocol(d, i)))
+                     for i in 0:(Int(CC.protocol_size(d)) - 1)]
+        return ObjCProtocolFacts(protos, objc_properties(c, d), availability_of(d))
+
+    elseif d isa CC.AbstractRecordDecl
         def = CC.definition(d)
         kind = CC.isUnion(d) ? :union : :struct
         def === nothing && return RecordFacts(kind, FieldFacts[], -1, -1, false, false)
@@ -333,58 +422,79 @@ is source order for top-level declarations — the starting point the ordering p
 little as possible (`ORDERING-DESIGN.md` §3).
 """
 function extract(headers::Vector{String}; args::Vector{String}=String[], is_cxx::Bool=false,
-                 comments::Bool=false)
-    # `-x c` is REQUIRED and it is also the reason every parse reports failure. `is_cxx=false`
-    # only omits `-xc++`; the interpreter underneath is still built by `CreateCpp`, so without
-    # `-x c` a C header is parsed as C++ — `enum X : uint32_t` (C23) then hits a hard error and
-    # clang's IncrementalParser SEGFAULTS on the recovery path (test/include/elaborateEnum.h).
-    #
-    # But `create_interpreter` prepends ClangCompiler's own default args before ours, so `-x c`
-    # necessarily lands mid-command-line, where it breaks `<stdint.h>`:
-    # `unknown type name '__builtin_va_list'`. clang recovers and the facts it does produce are
-    # correct — 1517 field offsets match — but declarations behind the failure are lost, and the
-    # null-PTU parse signal is permanently red, which is why `warn_if_parse_failed` is defined
-    # and NOT called. Fixing this needs a real C mode upstream; see OBJC-REQUIREMENTS.md's
-    # sibling note in GENERATORS-REWORK.md.
-    flags = is_cxx ? copy(args) : String["-x", "c", args...]
-    I = create_interpreter(flags; is_cxx)
+                 language::Symbol=is_cxx ? :cxx : :c, comments::Bool=false)
+    # `create_parser` is a REAL language mode, which `create_interpreter` never had: clang's
+    # `Interpreter` starts a new `TranslationUnitDecl` per increment and C name lookup does not
+    # cross the chain, so C mode there could not even include `<stdint.h>`, and parsing C as
+    # C++ segfaults on `enum X : uint32_t` (test/include/elaborateEnum.h). The driver parses
+    # one unit in one increment, so neither failure class exists — and its per-increment
+    # diagnostic state is what finally makes the parse-failure signal below trustworthy.
+    P = create_parser(copy(args); language)
+    # Diagnostics go to a buffer rather than the default stderr printer: a failed include is
+    # OUR warning to raise (with the messages attached), not console noise the caller cannot
+    # act on. The engine does not own the buffer; it is disposed after being detached.
+    de = CC.getDiagnostics(CC.get_instance(P))
+    buf = CC.TextDiagnosticBuffer()
+    CC.setClient(de, buf, false)
     try
-        ci = CC.get_instance(I)
-        ctx = CC.get_ast_context(I)
+        ci = CC.get_instance(P)
+        ctx = CC.get_ast_context(P)
         umbrella = join(("#include \"$h\"" for h in headers), '\n') * "\n"
-        CC.parse(I, umbrella)   # see above: the PTU is always null while `-x c` is needed
+        # ONE increment on purpose. End-of-TU semantics run at every increment boundary
+        # (tentative definitions complete, incomplete arrays get their provisional type), so
+        # splitting headers across calls would change what C means.
+        CC.parse(P, umbrella)
+        warn_if_parse_failed(de, buf, headers)
         CC.setTraversalScope(ctx, [CC.getTranslationUnitDecl(ctx)])
-        c = Ctx(I, ctx, CC.getSourceManager(ci), Node[], Dict{Key,Int}(), comments)
+        c = Ctx(P, ctx, CC.getSourceManager(ci), Node[], Dict{Key,Int}(), comments)
         for d in CC.decls_in(CC.castToDeclContext(CC.getTranslationUnitDecl(ctx)))
             (d isa CC.AbstractRecordDecl || d isa CC.AbstractEnumDecl ||
-             d isa CC.AbstractTypedefNameDecl || d isa CC.AbstractFunctionDecl) || continue
-            CC.isInSystemHeader(c.sm, CC.getBeginLoc(d)) && continue
+             d isa CC.AbstractTypedefNameDecl || d isa CC.AbstractFunctionDecl ||
+             d isa CC.AbstractObjCInterfaceDecl || d isa CC.AbstractObjCProtocolDecl) || continue
+            loc = CC.getBeginLoc(d)
+            CC.isInSystemHeader(c.sm, loc) && continue
+            # Target builtins are TU-scope typedefs with no header: `__builtin_va_list` and
+            # the SVE `__SV*_t` family sit in the builtin buffer, and `__int128_t` /
+            # `__NSConstantString` are Sema-created with an INVALID location. The interpreter
+            # hid all of them by accident — each increment was a NEW TranslationUnitDecl and
+            # the builtins lived in the first — while the driver keeps one unit, so they must
+            # be filtered like any predefine.
+            CC.isInvalid(loc) && continue
+            (CC.isWrittenInBuiltinFile(c.sm, loc) ||
+             CC.isWrittenInCommandLineFile(c.sm, loc)) && continue
             visit(c, d)
         end
         return c.nodes
     finally
-        dispose(I)
+        CC.setClient(de, CC.TextDiagnosticPrinter(CC.getDiagnosticOptions(de)), true)
+        dispose(buf)
+        dispose(P)
     end
 end
 
 """
 Warn when clang did not parse the umbrella cleanly.
 
-A failed parse is **not** empty: clang soft-resets and the declarations it did manage to build
-persist and are perfectly usable. pango produces 4349 nodes whose every record matches clang's
-layout while `hb.h` cannot be found at all. So failing hard here would reject working output.
+A failed parse is **not** empty: the declarations clang did manage to build persist and are
+perfectly usable — pango produces 4349 nodes whose every record matches clang's layout while
+`hb.h` cannot be found at all. So failing hard here would reject working output.
 
 But saying nothing is worse. A forgotten `-I` silently yields a binding missing whatever lived
-behind the missing header, and nothing downstream can tell — the nodes that *are* there look
-exactly like a complete run. The null `PartialTranslationUnit` is the signal that separates the
-two; diagnostic counters do not, because the soft reset clears them before the failure is
-reported.
+behind the failed include, and nothing downstream can tell — the nodes that *are* there look
+exactly like a complete run. `create_parser` starts each increment from a clean diagnostic
+engine, so `hasErrorOccurred` genuinely answers for THIS parse — the signal the interpreter
+path never had (its soft reset cleared the counters before the failure was reported).
 """
-function warn_if_parse_failed(ptu, headers::Vector{String})
-    CC.is_null_handle(ptu) || return
+function warn_if_parse_failed(de, buf, headers::Vector{String})
+    (CC.hasErrorOccurred(de) || CC.hasFatalErrorOccurred(de)) || return
+    lvl = CC.CXTextDiagnosticBuffer_Error
+    n = Int(Base.size(buf, lvl))
+    msgs = [CC.getMessage(buf, lvl, i) for i in 0:(min(n, 5) - 1)]
+    n > 5 && push!(msgs, "… and $(n - 5) more")
     @warn """clang did not parse these headers cleanly; the generated output may be INCOMPLETE.
-             Declarations behind the failure are missing, and everything else is still correct,
-             so this cannot be detected downstream. A missing `-I` is the usual cause.""" headers
+             Declarations behind a failed include are missing, and everything else is still
+             correct, so this cannot be detected downstream. A missing `-I` is the usual
+             cause.""" headers errors = msgs
     return
 end
 
@@ -432,7 +542,7 @@ path ends the same way) and cannot mistake a comment or a disabled `#if` branch 
 function included_files(headers::Vector{String}; args::Vector{String}=String[])
     out = Set{String}()
     isempty(headers) && return out
-    I = create_interpreter(String["-x", "c", args...])
+    I = create_parser(copy(args); language=:c)
     try
         ci = CC.get_instance(I)
         pp = CC.getPreprocessor(ci)

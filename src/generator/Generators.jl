@@ -120,9 +120,16 @@ rewritten; `BUILDSTAGE_PRINTING_ONLY` emits whatever `ctx.nodes` now holds.
 """
 function build!(ctx::Context, stage::Int=BUILDSTAGE_ALL)
     if stage == BUILDSTAGE_ALL || stage == BUILDSTAGE_NO_PRINTING
-        ctx.nodes = CxxFacts.extract(ctx.headers; args=ctx.args,
+        # The historical way to ask for Objective-C is `push!(args, "-x", "objective-c")`, so
+        # honour that spelling. The flag itself is inert downstream — `create_parser` appends
+        # its own `-x` after the caller's, from `language` — this only routes the request.
+        language = "objective-c++" in ctx.args ? :objcxx :
+                   "objective-c" in ctx.args   ? :objc   : :c
+        ctx.nodes = CxxFacts.extract(ctx.headers; args=ctx.args, language,
                                      comments=ctx.opts.extract_c_comment_style != "disable")
-        ctx.macros = ctx.opts.macro_mode == "disable" ? Any[] :
+        # No macro translation in ObjC mode: the probe technique is C-expression-shaped, and
+        # ObjC headers' macros are overwhelmingly availability/attribute spellings.
+        ctx.macros = (ctx.opts.macro_mode == "disable" || language != :c) ? Any[] :
                      Vector{Any}(CxxMacros.translate_macros(ctx.headers, ctx.args))
     end
     if stage == BUILDSTAGE_ALL || stage == BUILDSTAGE_PRINTING_ONLY

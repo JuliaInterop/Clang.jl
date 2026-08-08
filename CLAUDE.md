@@ -134,7 +134,7 @@ and `aligned(N)` at once, with nothing to keep in sync with clang's attribute ta
 
 ## Testing: what is actually pinned
 
-`test/runtests.jl` runs eight testsets, 170 tests.
+`test/runtests.jl` runs eight testsets, 209 tests.
 
 - **`test/abi.jl` is the strongest and the one to run before claiming anything.** It compares
   every emitted type against the `ASTRecordLayout` clang computed for that same declaration —
@@ -221,7 +221,22 @@ Two things not to "simplify" further:
   trades a maintained fork for a coupling to an internal submodule. That is the better trade —
   a fork of artifact hashes rots silently — but it should be marked public upstream.
 
-Objective-C is unsupported, blocked on ClangCompiler#49.
+Objective-C is supported: interfaces and protocols extract to `ObjCInterfaceFacts`/
+`ObjCProtocolFacts` and emit as ObjectiveC.jl's `@objcwrapper`/`@objcproperties`. Three rules
+worth knowing: property types are deliberately NOT ordering dependencies (mutual references
+through properties are legal, so every wrapper is emitted before any property block); `NSObject`
+is never emitted (`OBJC_ROOTS` — it is ObjectiveC.jl's, referenced by name); and extraction
+pins nothing about the runtime — callers pass `-fobjc-runtime=macosx` per ClangCompiler's
+guidance, since only Darwin defaults to the non-fragile ABI.
+
+**The frontend is `create_parser`, not `create_interpreter`** (ClangCompiler #52). That is what
+makes C mode real (`<stdint.h>` parses; `-x c` never appears), the parse-failure signal
+trustworthy (`warn_if_parse_failed` fires on `hasErrorOccurred`, with messages attached, and is
+actually called now), and `:objc` possible at all. Extraction parses the umbrella in ONE
+increment on purpose — end-of-TU semantics run per increment, so splitting headers across calls
+would change what C means. Builtin TU-scope typedefs (`__builtin_va_list`, `__int128_t`, the SVE
+family) are filtered by location class; the interpreter hid them by accident, the driver keeps
+one unit so they must be skipped explicitly.
 
 ## Conventions
 

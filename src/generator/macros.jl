@@ -355,6 +355,7 @@ parseable in a translation unit where the headers' typedefs are visible.
 """
 function translate_macros(headers::Vector{String}, args::Vector{String}=String[];
                           include_system::Bool=false, is_cxx::Bool=false)
+    # See `CxxFacts.extract` for why `-x c` is both required and the cause of the parse failure.
     flags = is_cxx ? copy(args) : String["-x", "c", args...]
     umbrella = join(("#include \"$h\"" for h in headers), '\n') * "\n"
 

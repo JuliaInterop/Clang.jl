@@ -334,13 +334,25 @@ little as possible (`ORDERING-DESIGN.md` §3).
 """
 function extract(headers::Vector{String}; args::Vector{String}=String[], is_cxx::Bool=false,
                  comments::Bool=false)
+    # `-x c` is REQUIRED and it is also the reason every parse reports failure. `is_cxx=false`
+    # only omits `-xc++`; the interpreter underneath is still built by `CreateCpp`, so without
+    # `-x c` a C header is parsed as C++ — `enum X : uint32_t` (C23) then hits a hard error and
+    # clang's IncrementalParser SEGFAULTS on the recovery path (test/include/elaborateEnum.h).
+    #
+    # But `create_interpreter` prepends ClangCompiler's own default args before ours, so `-x c`
+    # necessarily lands mid-command-line, where it breaks `<stdint.h>`:
+    # `unknown type name '__builtin_va_list'`. clang recovers and the facts it does produce are
+    # correct — 1517 field offsets match — but declarations behind the failure are lost, and the
+    # null-PTU parse signal is permanently red, which is why `warn_if_parse_failed` is defined
+    # and NOT called. Fixing this needs a real C mode upstream; see OBJC-REQUIREMENTS.md's
+    # sibling note in GENERATORS-REWORK.md.
     flags = is_cxx ? copy(args) : String["-x", "c", args...]
     I = create_interpreter(flags; is_cxx)
     try
         ci = CC.get_instance(I)
         ctx = CC.get_ast_context(I)
         umbrella = join(("#include \"$h\"" for h in headers), '\n') * "\n"
-        CC.parse(I, umbrella)
+        CC.parse(I, umbrella)   # see above: the PTU is always null while `-x c` is needed
         CC.setTraversalScope(ctx, [CC.getTranslationUnitDecl(ctx)])
         c = Ctx(I, ctx, CC.getSourceManager(ci), Node[], Dict{Key,Int}(), comments)
         for d in CC.decls_in(CC.castToDeclContext(CC.getTranslationUnitDecl(ctx)))
@@ -353,6 +365,27 @@ function extract(headers::Vector{String}; args::Vector{String}=String[], is_cxx:
     finally
         dispose(I)
     end
+end
+
+"""
+Warn when clang did not parse the umbrella cleanly.
+
+A failed parse is **not** empty: clang soft-resets and the declarations it did manage to build
+persist and are perfectly usable. pango produces 4349 nodes whose every record matches clang's
+layout while `hb.h` cannot be found at all. So failing hard here would reject working output.
+
+But saying nothing is worse. A forgotten `-I` silently yields a binding missing whatever lived
+behind the missing header, and nothing downstream can tell — the nodes that *are* there look
+exactly like a complete run. The null `PartialTranslationUnit` is the signal that separates the
+two; diagnostic counters do not, because the soft reset clears them before the failure is
+reported.
+"""
+function warn_if_parse_failed(ptu, headers::Vector{String})
+    CC.is_null_handle(ptu) || return
+    @warn """clang did not parse these headers cleanly; the generated output may be INCOMPLETE.
+             Declarations behind the failure are missing, and everything else is still correct,
+             so this cannot be detected downstream. A missing `-I` is the usual cause.""" headers
+    return
 end
 
 # ------------------------------------------------------------------------------------------

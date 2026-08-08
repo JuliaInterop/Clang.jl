@@ -170,6 +170,28 @@ with `ClangCompiler [06fc9500] has no known versions!`. The two-step install in
 [TESTING.md](TESTING.md) works, but it is friction on exactly the people whose feedback is
 wanted. Registering ClangCompiler would remove it.
 
+#### There is no real C mode, and it costs a parse
+
+`create_interpreter(args; is_cxx=false)` does not give a C interpreter. It only omits `-xc++`;
+the interpreter underneath is built by `CreateCpp`, so a C header without `-x c` is parsed as
+C++ — and `test/include/elaborateEnum.h`'s `enum X : uint32_t` (C23) then hits a hard error and
+**segfaults clang's `IncrementalParser` on the recovery path**. So `-x c` is required.
+
+But `create_interpreter` prepends ClangCompiler's own default args before the caller's, so
+`-x c` necessarily lands mid-command-line, and there it breaks `<stdint.h>`:
+
+    unknown type name '__builtin_va_list'
+
+Verified by bisection — `ours, no -x c` parses cleanly, `ours + -x c` fails, and the same pair
+holds for ClangCompiler's own default args, so it is the flag's *position*, not its content or
+ours. clang recovers well enough that everything it does produce is correct (1517 field offsets
+match), but declarations behind the failure are silently lost, and the null-`PartialTranslationUnit`
+signal is permanently red — which is why `CxxFacts.warn_if_parse_failed` exists and is
+deliberately **not called**: it would fire on 30 of ~35 fixtures and train users to ignore it.
+
+The fix is upstream: either a genuine C mode (`is_c`, or `CreateC`), or control over where the
+caller's args land relative to the defaults. Until then this is a known, bounded cost.
+
 Two other upstream items gate a merge rather than testing: **ObjC**
 ([ClangCompiler#49](https://github.com/Gnimuc/ClangCompiler.jl/issues/49)) and the by-name
 `has_preference` in `JLLShim.__init__` that breaks `Pkg.test` for indirect dependents.

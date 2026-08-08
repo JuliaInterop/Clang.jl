@@ -51,7 +51,8 @@ build!(ctx, BUILDSTAGE_PRINTING_ONLY)
 
 - **Objective-C is unsupported**, blocked on
   [ClangCompiler#49](https://github.com/Gnimuc/ClangCompiler.jl/issues/49). This is the main
-  reason the branch is not merge-ready.
+  reason the branch is not merge-ready; [OBJC-REQUIREMENTS.md](OBJC-REQUIREMENTS.md) lists the
+  exact accessors needed to restore parity.
 - Unimplemented `generator.toml` keys: `output_exclusivelist`, `union_single_constructor`,
   `link_enum_alias`, `no_audit`, the `[general.log]` sub-table, and
   `function_argument_conflict_symbols` (subsumed — parameters are renamed on real collision

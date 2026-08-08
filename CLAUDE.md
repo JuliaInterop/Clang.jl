@@ -29,7 +29,8 @@ There is no formatter configuration and nothing in CI runs one; match the surrou
 ### Running one test file
 
 Test files are not self-contained — they rely on the test environment (`Test`, `TOML`,
-`CMake_jll`, `CEnum`, `REPL` are in `test/Project.toml`, not the main project). Use TestEnv:
+`CMake_jll`, `CEnum`, `REPL`, `ClangCompiler` are in `test/Project.toml`, not the main project).
+Use TestEnv:
 
 ```bash
 julia --project -e 'using TestEnv; TestEnv.activate(); include("test/abi.jl")'
@@ -120,6 +121,15 @@ see it — it never calls `getAlignOf`.
 
 An assertion on anything the *runner* decides — pointer width, `Clong`, path separators — is
 invisible locally and red on CI.
+
+**`ClangCompiler` is a test dependency on purpose.** Nothing under `test/` imports it directly —
+it is reached through `Clang.Generators`. But `ClangCompiler.JLLShim.__init__` calls
+`Preferences.has_preference("ClangCompiler", "libclangex")`, which resolves the package **by name
+in the active load path**, and `Pkg.test` builds a temp environment where an indirect dependency
+is not top-level. Drop the entry and `Pkg.test()` dies with `Cannot resolve package
+'ClangCompiler' in load path` before a single test runs — verified by removing it. The real fix
+is upstream (`@has_preference`, or the UUID form, consults no load path); until then the entry
+stays.
 
 ## The option contract
 

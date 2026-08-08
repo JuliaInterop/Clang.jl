@@ -134,7 +134,7 @@ downstream generator scripts set, not from ClangCompiler's ten keys, which now g
 | S-B | **done** | `test/macros.jl`, 25 checks, including both `@test_broken`s |
 | S-C | **done** — libxml2, glib, pango | `test/abi.jl`: 341 records, 1517 field offsets vs clang |
 | S-D | **done** | full suite green — 170 tests |
-| S-E | **done** — v0.20.0 | six-lens reference audit, 94 findings, 0 blockers; suite 170/170 after |
+| S-E | **done** — v0.20.0 | six-lens audit, 94 findings, 0 blockers; `Pkg.test()` 170/170 |
 
 **The sequence is complete.** S-E removed `lib/16…21/` (45,605 generated lines), `gen/`, the
 eleven `src/` object-layer files, and `test/test.toml`, the config the deleted self-hosting
@@ -172,6 +172,24 @@ Two things the deletion made possible rather than merely permitted:
   imports CEnum — it only *writes the string* `using CEnum: CEnum, @cenum` into generated
   output, which is the caller's `using` in the caller's environment.
 - **`Downloads`** was already a dependency with zero uses anywhere in the repository.
+
+#### The CI path, and one upstream bug
+
+`Pkg.test()` — what CI actually runs, and a different path from `include("test/runtests.jl")` —
+was failing before a single test executed:
+
+    ERROR: InitError: ArgumentError: Cannot resolve package 'ClangCompiler' in load path
+
+`ClangCompiler.JLLShim.__init__` (`src/jllshim.jl:13`) calls
+`Preferences.has_preference("ClangCompiler", "libclangex")`. That overload resolves the package
+**by name in the active load path**, and `Pkg.test` builds a temp environment in which an
+indirect dependency is not top-level. Naming `ClangCompiler` in `test/Project.toml` makes it
+top-level and fixes it here; removing the entry reproduces the error exactly. **The real fix
+belongs upstream** — `@has_preference` or the `UUID` overload consults no load path at all —
+and the bug hits any package that depends on ClangCompiler indirectly.
+
+With that fixed and `libclangex_jll` at v0.4.0, `Pkg.test()` passes 170/170 against the
+*released* jll, with no `LocalPreferences.toml` override. That is the configuration CI runs.
 
 #### S-C: done, and what it cost
 

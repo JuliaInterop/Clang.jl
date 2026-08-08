@@ -140,6 +140,40 @@ downstream generator scripts set, not from ClangCompiler's ten keys, which now g
 eleven `src/` object-layer files, and `test/test.toml`, the config the deleted self-hosting
 testset used.
 
+#### Living alongside `master`
+
+This work is a long-lived branch for public testing, not a merge queued behind a date. Two
+things make that cheaper than a parallel branch usually is, and one thing makes it harder.
+
+**Merging `master` in is mostly mechanical.** Almost every change `master` will make lands in a
+file this branch deleted — `src/generator/passes.jl`, `codegen.jl`, the object layer, `lib/`.
+Git reports those as delete/modify conflicts and they all resolve the same way, *stay deleted*;
+none needs a semantic merge. The discipline is:
+
+| path | resolution |
+| --- | --- |
+| `src/generator/*.jl` (old passes), `src/*.jl` (object layer), `lib/`, `gen/` | keep deleted |
+| `test/include/*.h` | **take master's** — see below |
+| `docs/`, `README.md`, `.github/`, `Project.toml` | normal merge |
+
+**A new fixture on `master` is free coverage here.** Every header in `test/include/` is picked
+up automatically by `test/generators.jl` (which generates *and loads* each one) and by
+`test/abi.jl`'s `fixtures` corpus (which checks every emitted type against clang's layout). So a
+regression header added to `master` for a bug report becomes a test on this branch by being
+copied across — nothing else to write.
+
+Prefer **merge over rebase**. Testers pin a revision; rebasing invalidates what they pinned.
+
+**What makes it harder: public testing is currently blocked on registration.** `ClangCompiler`
+is not in the General registry, so `Pkg.add(url=…, rev=…)` against this branch fails outright
+with `ClangCompiler [06fc9500] has no known versions!`. The two-step install in
+[TESTING.md](TESTING.md) works, but it is friction on exactly the people whose feedback is
+wanted. Registering ClangCompiler would remove it.
+
+Two other upstream items gate a merge rather than testing: **ObjC**
+([ClangCompiler#49](https://github.com/Gnimuc/ClangCompiler.jl/issues/49)) and the by-name
+`has_preference` in `JLLShim.__init__` that breaks `Pkg.test` for indirect dependents.
+
 Unimplemented from the ~45-key surface, all deliberately: `output_exclusivelist`,
 `function_argument_conflict_symbols` (subsumed — `argnames` renames on real collision, not from
 a list), `union_single_constructor`, `link_enum_alias`, `no_audit`, and the `[general.log]`

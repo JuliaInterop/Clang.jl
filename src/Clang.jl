@@ -25,8 +25,11 @@ generate bindings should pin `Clang@0.19` or move to ClangCompiler.jl directly.
 """
 module Clang
 
-include("platform/JLLEnvs.jl")
-using .JLLEnvs
+# The GCC-shard environment comes from ClangCompiler rather than a copy here. Both packages
+# carried the same `platform/` directory and the same 262-entry `Artifacts.toml`; the only
+# difference that had accumulated was comma spacing in `system.jl`. Re-exported so `Clang.JLLEnvs`
+# keeps resolving.
+using ClangCompiler: JLLEnvs
 
 include("generator/Generators.jl")
 using .Generators

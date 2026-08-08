@@ -39,8 +39,7 @@ module Generators
 
 using TOML
 
-using ..JLLEnvs
-using ..JLLEnvs: get_system_dirs, triple2target
+using ClangCompiler: JLLEnvs
 
 include("facts.jl")
 using .CxxFacts
@@ -202,8 +201,8 @@ function get_default_args(triple=get_triple(); is_cxx=false, version=GCC_MIN_VER
         push!(args, "--target=$(JLLEnvs.target(env.platform))")
         return args
     else
-        args = ["-isystem" * dir for dir in get_system_dirs(triple)]
-        push!(args, "--target=$(triple2target(triple))")
+        args = ["-isystem" * dir for dir in JLLEnvs.get_system_dirs(triple)]
+        push!(args, "--target=$(JLLEnvs.triple2target(triple))")
         return args
     end
 end

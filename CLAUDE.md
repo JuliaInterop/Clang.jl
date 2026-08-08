@@ -51,7 +51,7 @@ which is what lets the last two be tested without a compiler.
 | `src/generator/emit.jl` | `CxxEmit` | **emit** — facts → Julia |
 | `src/generator/macros.jl` | `CxxMacros` | each `#define` probed as C; the typed AST is translated |
 | `src/generator/Generators.jl` | `Generators` | the public API: `create_context`, `build!`, … |
-| `src/platform/JLLEnvs.jl` | `JLLEnvs` | cross-compilation shard artifacts → `-isystem` flags and `--target` |
+| — | `JLLEnvs` | **ClangCompiler's**, re-exported as `Clang.JLLEnvs`: shard artifacts → `-isystem` flags and `--target` |
 
 ### The data model
 
@@ -168,6 +168,24 @@ generated lines), `gen/`, and the eleven `src/` object-layer files (`cursor.jl`,
 `cltypes.jl`, `trans_unit.jl`, …). If you are looking for `CLCursor`, `parse_headers` or
 `@add_def`, they were removed in v0.20 — `git log -- src/cursor.jl` still has them, and
 `Clang@0.19` is the last release that shipped them.
+
+### The platform environment is ClangCompiler's, not ours
+
+`src/platform/` used to be a 436-line fork of ClangCompiler's `src/platform/`, beside a
+byte-identical 137 KB `Artifacts.toml` (262 GCC shard entries). The only drift that had
+accumulated in a year was comma spacing in `system.jl`. Both are gone; `Clang.JLLEnvs` is
+`ClangCompiler.JLLEnvs`.
+
+Two things not to "simplify" further:
+
+- **`Generators.get_default_args` is ours and must stay.** ClangCompiler exports a function of
+  the same name that is *not* a drop-in: it defaults to `is_cxx=true`, takes `triple` as a
+  keyword rather than positionally, and appends `-nostdinc++ -nostdlib++ -nostdinc -nostdlib
+  -xc++`. Swapping them would silently reparse every downstream generator run as C++ with the
+  system include paths stripped.
+- **`JLLEnvs` is not in `names(ClangCompiler)`.** It is reachable but undocumented, so this
+  trades a maintained fork for a coupling to an internal submodule. That is the better trade —
+  a fork of artifact hashes rots silently — but it should be marked public upstream.
 
 Objective-C is unsupported, blocked on ClangCompiler#49.
 

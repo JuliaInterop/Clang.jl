@@ -27,6 +27,12 @@ using REPL
     @testset "ABI" begin
         include("abi.jl")
     end
+    # The multi-platform workflow: target facts must come from the TARGET's shard, not the
+    # host's — both the ABI half and the header-provenance half. Skips per-triple where the
+    # shard is not on disk.
+    @testset "Cross-target" begin
+        include("cross.jl")
+    end
     @testset "MPI" begin
         include("test_mpi.jl")
     end

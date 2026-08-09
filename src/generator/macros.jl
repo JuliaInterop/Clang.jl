@@ -35,6 +35,7 @@ invisible to the parser later, so `(INT)x` would not parse in a follow-up.
 module CxxMacros
 
 import ClangCompiler as CC
+using ..CxxFacts: CxxFacts
 
 export translate_macros, MacroTranslated, MacroSkipped
 
@@ -367,7 +368,7 @@ function translate_macros(headers::Vector{String}, args::Vector{String}=String[]
 
     # --- pass 1: which macros are there? ---
     names = Symbol[]
-    I1 = CC.create_parser(copy(args); language)
+    I1 = CxxFacts.parser_for(args, language)
     # A silent buffer, deliberately: header problems are `extract`'s to report (it warns with
     # the messages attached), and pass 2's probes MISPARSE BY DESIGN — clang refusing a probe is
     # how a non-expression macro is detected — so rendering those errors would print one scary
@@ -394,7 +395,7 @@ function translate_macros(headers::Vector{String}, args::Vector{String}=String[]
     # --- pass 2: headers AND probes, one parse ---
     probes = join(("__auto_type $PROBE_PREFIX$i = ($(names[i]));" for i in eachindex(names)), '\n')
     results = Union{MacroTranslated,MacroSkipped}[]
-    I2 = CC.create_parser(copy(args); language)
+    I2 = CxxFacts.parser_for(args, language)
     buf2 = CC.TextDiagnosticBuffer()
     CC.setClient(CC.getDiagnostics(CC.get_instance(I2)), buf2, false)
     try

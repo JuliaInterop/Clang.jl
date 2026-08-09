@@ -134,7 +134,7 @@ and `aligned(N)` at once, with nothing to keep in sync with clang's attribute ta
 
 ## Testing: what is actually pinned
 
-`test/runtests.jl` runs eight testsets, 209 tests.
+`test/runtests.jl` runs nine testsets, 218 tests.
 
 - **`test/abi.jl` is the strongest and the one to run before claiming anything.** It compares
   every emitted type against the `ASTRecordLayout` clang computed for that same declaration —
@@ -149,6 +149,13 @@ and `aligned(N)` at once, with nothing to keep in sync with clang's attribute ta
   #382, which were `@test_broken` for the token-based translator.
 - `test/options.jl` — each of the 32 options has an observable effect. **Each is checked in
   isolation, so no pair is known to compose.**
+- `test/cross.jl` — cross-target extraction for the triples whose GCC shard is on disk (skips
+  loudly otherwise; materialising one downloads hundreds of MB). Two discriminators per triple,
+  because two different failures hide here: `long`/pointer/`wchar_t` prove the target **ABI**
+  (clang's TargetInfo — right even when everything else is wrong), and `uint_fast32_t` proves
+  **header provenance** (8 bytes in linux-gnu's stdint.h, 4 in darwin's — the witness that
+  caught `create_parser`'s host defaults winning the include search). Fault-injected: with the
+  shard-triple pass disabled, linux-gnu reads `[8,8,4,4]` against expected `[8,8,4,8]`.
 - `test/test_bitfield.jl` — CMake-builds `test/bitfield/bitfield.c` and round-trips a bitfield
   struct through the real compiled library. Swallows failures with a `@warn` unless `ENV["CI"]`
   is set, so run it with `CI=true` when you care.

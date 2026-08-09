@@ -198,6 +198,49 @@ const BUILTIN = Dict(
 
 sname(d) = CC.is_null_handle(CC.getIdentifier(d)) ? "" : CC.getName(d)
 
+# ------------------------------------------------------------------------------------------
+# Which parser to build for a flag set
+# ------------------------------------------------------------------------------------------
+"Reverse of `JLLEnvs.JLL_ENV_CLANG_TARGETS_MAPPING` (clang target -> shard triple), lazily."
+const CLANG_TARGET_TO_SHARD = Dict{String,String}()
+
+"""
+The GCC-shard triple a flag set targets, or `nothing` for the host.
+
+`create_parser` prepends its DEFAULT environment's `-isystem` set before the caller's flags, so
+for a cross triple the host's headers won the include search: the target ABI was right (the
+caller's `--target` still applied) but every typedef resolved through the wrong platform's
+headers — `uint_fast32_t` came out 4 bytes for `x86_64-linux-gnu` (darwin host's `uint32_t`)
+instead of 8 (linux's `unsigned long`). Recovering the shard triple from the caller's own
+`--target` and handing it to `create_parser(; triple)` makes the defaults the TARGET'S, so no
+host directory is searched at all.
+"""
+function shard_triple_for(args::Vector{String})
+    i = findlast(a -> startswith(a, "--target="), args)
+    i === nothing && return nothing
+    if isempty(CLANG_TARGET_TO_SHARD)
+        for (k, v) in CC.JLLEnvs.JLL_ENV_CLANG_TARGETS_MAPPING
+            CLANG_TARGET_TO_SHARD[v] = k
+        end
+    end
+    return get(CLANG_TARGET_TO_SHARD, args[i][(length("--target=") + 1):end], nothing)
+end
+
+"""
+    parser_for(args, language) -> IncrementalParser
+
+`create_parser`, with the shard triple recovered from the caller's `--target` so the default
+include set matches the target. The darwin shard ships only under its own GCC version — the
+same special case `test/jllenvs.jl` documents — and an unmapped or absent `--target` falls back
+to the host defaults, which is what `create_parser` would have done anyway.
+"""
+function parser_for(args::Vector{String}, language::Symbol)
+    t = shard_triple_for(args)
+    t === nothing && return create_parser(copy(args); language)
+    ver = startswith(t, "aarch64-apple-darwin") ? v"11.0.0-iains" : CC.JLLEnvs.GCC_MIN_VER
+    return create_parser(copy(args); language, triple=t, version=ver)
+end
+
 mutable struct Ctx
     interp
     ctx
@@ -429,7 +472,7 @@ function extract(headers::Vector{String}; args::Vector{String}=String[], is_cxx:
     # C++ segfaults on `enum X : uint32_t` (test/include/elaborateEnum.h). The driver parses
     # one unit in one increment, so neither failure class exists — and its per-increment
     # diagnostic state is what finally makes the parse-failure signal below trustworthy.
-    P = create_parser(copy(args); language)
+    P = parser_for(args, language)
     # Diagnostics go to a buffer rather than the default stderr printer: a failed include is
     # OUR warning to raise (with the messages attached), not console noise the caller cannot
     # act on. The engine does not own the buffer; it is disposed after being detached.
@@ -542,7 +585,7 @@ path ends the same way) and cannot mistake a comment or a disabled `#if` branch 
 function included_files(headers::Vector{String}; args::Vector{String}=String[])
     out = Set{String}()
     isempty(headers) && return out
-    I = create_parser(copy(args); language=:c)
+    I = parser_for(args, :c)
     try
         ci = CC.get_instance(I)
         pp = CC.getPreprocessor(ci)

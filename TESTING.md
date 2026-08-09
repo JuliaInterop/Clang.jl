@@ -77,6 +77,9 @@ build!(ctx, BUILDSTAGE_PRINTING_ONLY)
   `function_argument_conflict_symbols` (subsumed — parameters are renamed on real collision
   rather than from a list).
 - Every option is tested in isolation, so **no pair of options is known to compose**.
+- Cross-target generation is verified for `x86_64-linux-gnu`, `x86_64-w64-mingw32` and
+  `i686-linux-musl`: both the target ABI and — the part that was silently wrong until now —
+  that typedefs resolve through the **target's** headers rather than the host's.
 - `"doxygen"` comment rendering carries the same information as before but is not
   character-identical to the old pass.
 

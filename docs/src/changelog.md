@@ -22,7 +22,11 @@ Changelog](https://keepachangelog.com).
   libclang and clang-cpp both register LLVM's global command-line options statically, so no
   process can load both, and the generator needs the C++ side. Code that walked an AST rather
   than generating bindings should pin `Clang@0.19` or use ClangCompiler.jl directly.
-- Objective-C support, pending ClangCompiler#49.
+- Objective-C support was removed with the libclang layer, then restored on ClangCompiler's
+  C++ surface (ClangCompiler#49/#52): `@objcwrapper`/`@objcproperties` output with supertypes,
+  protocol conformance, availability, and explicit getters/setters. ObjC generics remain
+  unsupported, as they always were. Wide string literal macros (#357) now translate instead of
+  being skipped.
 
 ### Fixed
 

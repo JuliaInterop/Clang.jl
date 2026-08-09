@@ -218,7 +218,9 @@ CORPORA["fixtures"] = () -> begin
     all = Finding[]
     for f in sort!(readdir(joinpath(R, "test", "include")))
         endswith(f, ".h") || continue
-        f == "objectiveC.h" && continue          # ObjC is out of scope until ClangCompiler#49
+        # ObjC output is ObjectiveC.jl macros: it has no C ABI to check and does not load
+        # without that package. Its coverage is the text testset in test/generators.jl.
+        f == "objectiveC.h" && continue
         args = get_default_args()
         f in needs_sys && push!(args, "-isystem" * joinpath(R, "test", "sys"))
         print("  ", rpad(f, 32))

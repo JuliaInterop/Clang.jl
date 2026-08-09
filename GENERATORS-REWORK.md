@@ -46,6 +46,7 @@ change in both packages is a two-step release.
    `fields`, … — are public surface today. Anyone using Clang.jl *as a libclang binding* rather
    than as a generator is broken by this. It is a major version bump.
 4. **Objective-C stops working** until [ClangCompiler#49](https://github.com/Gnimuc/ClangCompiler.jl/issues/49).
+   *(Resolved: ClangCompiler#52 shipped the surface and Clang.jl now uses it — see OBJC-REQUIREMENTS.md.)*
    `clang/AST/DeclObjC.h` is unwrapped in full — no ObjC `Decl` carriers exist at all, and
    `src/clang/DeclKindMap.jl:3` says so. The macOS-only ObjC testset must be disabled in the
    interim.
@@ -192,7 +193,7 @@ deliberately **not called**: it would fire on 30 of ~35 fixtures and train users
 The fix is upstream: either a genuine C mode (`is_c`, or `CreateC`), or control over where the
 caller's args land relative to the defaults. Until then this is a known, bounded cost.
 
-Two other upstream items gate a merge rather than testing: **ObjC**
+One upstream item used to gate a merge and no longer does: **ObjC**
 ([ClangCompiler#49](https://github.com/Gnimuc/ClangCompiler.jl/issues/49)) and the by-name
 `has_preference` in `JLLShim.__init__` that breaks `Pkg.test` for indirect dependents.
 
@@ -356,7 +357,8 @@ the misspelled accessor in the fix, leaving only a silent symptom); `library_nam
 no by-value `getproperty` and no bit-field-aware `setproperty!`, so a record could be read
 through a pointer but never built or written; and record constructors dropped bit-fields.
 
-Still outstanding: **Objective-C**, blocked on ClangCompiler#49.
+Objective-C: **done**, on ClangCompiler#52's surface (extraction in `facts.jl`, emission in
+`emit.jl`, the restored testset in `test/generators.jl`).
 
 ---
 

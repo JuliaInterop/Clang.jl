@@ -311,9 +311,10 @@ function _emit_getproperty_ptr!(body, root_cursor, cursor, options)
         offset = getOffsetOf(getCursorType(root_cursor), n)
         if isBitField(field_cursor)
             w = getFieldDeclBitWidth(field_cursor)
-            @assert w <= 32 # Bit fields should not be larger than int(32 bits)
-            d, r = divrem(offset, 32)
-            ex = :(f === $(QuoteNode(fsym)) && return (Ptr{$ty}(x + $(4d)), $r, $w))
+            s = getSizeOf(fty)
+            @assert w <= (s * 8) "Bit fields should not be larger than $ty ($(s)) $n:$w"
+            d, r = divrem(offset, s * 8)
+            ex = :(f === $(QuoteNode(fsym)) && return (Ptr{$ty}(x + $(d*s)), $r, $w))
         else
             d = offset ÷ 8
             ex = :(f === $(QuoteNode(fsym)) && return Ptr{$ty}(x + $d))

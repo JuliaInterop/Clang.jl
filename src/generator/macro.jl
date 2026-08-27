@@ -134,7 +134,26 @@ function normalize_literal(text)
     end
 end
 
-normalize_punctuation(text) = text == "/" ? "÷" : text == "^" ? "⊻" : text
+# C's `/` does integer division for integer operands and float division for
+# floats.  Julia's `÷` always does integer division. We use the `⧷` operator for
+# convenience to replace the existing `/` infix operator.
+const CDIV_DEFINITION = """
+# C-compatible division operator: integer division for integer types, float division for float types
+⧷(x::T, y::T) where {T <: Integer} = div(x, y)
+⧷(x::T, y::T) where {T <: AbstractFloat} = x / y
+⧷(x, y) = (⧷)(promote(x, y)...)
+"""
+
+function normalize_punctuation(dag::ExprDAG, text)
+    if text == "/"
+        push!(dag.prologue_defs, CDIV_DEFINITION)
+        return "⧷"
+    elseif text == "^"
+        return "⊻"
+    else
+        return text
+    end
+end
 
 is_literal(tok::CLToken) = tok.kind == CXToken_Literal
 is_identifier(tok::CLToken) = tok.kind == CXToken_Identifier
@@ -170,7 +189,7 @@ function tweak_exprs(dag::ExprDAG, toks::Vector)
             i += 1
         elseif is_punctuation(tok)
             if !isempty(tok.text)
-                push!(new_toks, Punctuation(DUMMY_TOKEN, CXToken_Punctuation, normalize_punctuation(tok.text)))
+                push!(new_toks, Punctuation(DUMMY_TOKEN, CXToken_Punctuation, normalize_punctuation(dag, tok.text)))
             end
             i += 1
         elseif is_keyword(tok)

@@ -3,6 +3,13 @@
 This documents notable changes in Clang.jl. The format is based on [Keep a
 Changelog](https://keepachangelog.com).
 
+## Unreleased
+
+### Added
+
+- Added proper support for divisions in C macros for integer and floating point
+  values ([#567]).
+
 ## [v0.19.3] - 2026-03-03
 
 ### Changed

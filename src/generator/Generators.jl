@@ -5,7 +5,7 @@ using TOML
 using ..Clang
 using ..Clang.LibClang
 using ..Clang:
-    LLVM_LIBDIR,
+    LLVM_INCLUDE,
     isBitField,
     isCursorDefinition,
     isMacroBuiltin,

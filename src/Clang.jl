@@ -41,6 +41,8 @@ include("string.jl")
 include("file.jl")
 export CLFile, name, unique_id, get_filename
 
+include("signals.jl")
+
 include("index.jl")
 export Index
 
@@ -84,12 +86,21 @@ end
 const LLVM_VERSION = match(r"[0-9]+.[0-9]+.[0-9]+", version()).match
 const LLVM_DIR = normpath(joinpath(dirname(LibClang.Clang_unified_jll.libclang_path), ".."))
 const LLVM_LIBDIR = joinpath(LLVM_DIR, "lib")
-const LLVM_INCLUDE = joinpath(LLVM_LIBDIR, "clang", LLVM_VERSION, "include")
+const LLVM_INCLUDE = joinpath(LLVM_LIBDIR, "clang", string(VersionNumber(LLVM_VERSION).major), "include")
 const CLANG_INCLUDE = LLVM_INCLUDE
 
 export LLVM_VERSION, LLVM_LIBDIR, LLVM_INCLUDE, CLANG_INCLUDE
 
 include("generator/Generators.jl")
 using .Generators
+
+function __init__()
+    try
+        preregister_llvm_signal_handlers()
+    catch ex
+        @warn "Could not pre-register LLVM's signal handlers, this can \
+               cause segfaults when running Julia with multiple threads." exception=(ex, catch_backtrace())
+    end
+end
 
 end

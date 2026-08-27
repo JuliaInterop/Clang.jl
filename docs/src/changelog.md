@@ -3,11 +3,19 @@
 This documents notable changes in Clang.jl. The format is based on [Keep a
 Changelog](https://keepachangelog.com).
 
+## [v0.19.4] - 2026-07-30
+
+### Fixed
+- LLVM's signal handlers are now disabled automatically, they previously
+  overwrote Julia's signal handlers which could cause segfaults when using
+  Clang.jl in a process with multiple threads ([#577]).
+- Fixed the value of `Clang.LLVM_INCLUDE` and `Clang.CLANG_INCLUDE` ([#577]).
+
 ## [v0.19.3] - 2026-03-03
 
 ### Changed
 
-- Switch to Clang_unified_jll.jl for improved compatibility ([#563]).
+- Switch to `Clang_unified_jll.jl` for improved compatibility ([#563]).
 
 ## [v0.19.2] - 2026-02-25
 

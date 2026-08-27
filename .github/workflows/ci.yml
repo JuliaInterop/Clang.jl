@@ -40,10 +40,7 @@ jobs:
 
       # gcc-multilib is needed to build 32bit binaries for the bitfield tests
       - if: runner.os == 'Linux'
-        uses: awalsh128/cache-apt-pkgs-action@v1
-        with:
-          packages: gcc-multilib
-          version: 1.0
+        run: sudo apt-get update && sudo apt-get install -y gcc-multilib
 
       - uses: julia-actions/setup-julia@latest
         with:
@@ -51,6 +48,8 @@ jobs:
           arch: ${{ matrix.arch }}
       - uses: julia-actions/cache@v3
       - uses: julia-actions/julia-runtest@latest
+        env:
+          JULIA_NUM_THREADS: '4,4'
       - uses: julia-actions/julia-processcoverage@latest
       - uses: codecov/codecov-action@v7
         with:

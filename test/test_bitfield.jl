@@ -32,6 +32,10 @@ end
 function check_build()
     m = LibBitField.Mirror(10, 1.5, 1e6, -4, 7, 3)
     LibBitField.toBitfield(Ref(m))
+    mw = LibBitField.MirrorWide(0xfff, 0x000fffffffffffff)
+    LibBitField.toBitfieldWide(Ref(mw))
+    mz = LibBitField.MirrorZero(5, 9, 17, 1023)
+    LibBitField.toBitfieldZero(Ref(mz))
 end
 
 function build_libbitfield()
@@ -74,6 +78,10 @@ end
 function test_libbitfield()
     bf = Ref(LibBitField.BitField(Int8(10), 1.5, Int32(1e6), Int32(-4), Int32(7), UInt32(3)))
     m = Ref(LibBitField.Mirror(10, 1.5, 1e6, -4, 7, 3))
+    bfw = Ref(LibBitField.BitFieldWide(UInt64(0xfff), UInt64(0x000fffffffffffff)))
+    mw = Ref(LibBitField.MirrorWide(UInt64(0xfff), UInt64(0x000fffffffffffff)))
+    bfz = Ref(LibBitField.BitFieldZero(UInt32(5), UInt32(9), UInt32(17), UInt32(1023)))
+    mz = Ref(LibBitField.MirrorZero(UInt32(5), UInt32(9), UInt32(17), UInt32(1023)))
     GC.@preserve bf m begin
         pbf = Ptr{LibBitField.BitField}(pointer_from_objref(bf))
         pm = Ptr{LibBitField.Mirror}(pointer_from_objref(m))
@@ -84,6 +92,37 @@ function test_libbitfield()
         @test LibBitField.toBitfield(m).d == bf[].d
         @test LibBitField.toBitfield(m).e == bf[].e
         @test LibBitField.toBitfield(m).f == bf[].f
+    end
+    GC.@preserve bfw mw begin
+        pbfw = Ptr{LibBitField.BitFieldWide}(pointer_from_objref(bfw))
+        @test LibBitField.toMirrorWide(bfw) == mw[]
+        @test LibBitField.toBitfieldWide(mw).a == bfw[].a
+        @test LibBitField.toBitfieldWide(mw).b == bfw[].b
+        pbfw.a = UInt64(0xabc)
+        pbfw.b = UInt64(0x000123456789abcd)
+        @test LibBitField.toMirrorWide(bfw) == LibBitField.MirrorWide(0xabc, 0x000123456789abcd)
+    end
+    GC.@preserve bfz mz begin
+        pbfz = Ptr{LibBitField.BitFieldZero}(pointer_from_objref(bfz))
+        @test LibBitField.toMirrorZero(bfz) == mz[]
+        @test LibBitField.toBitfieldZero(mz).a == bfz[].a
+        @test LibBitField.toBitfieldZero(mz).b == bfz[].b
+        @test LibBitField.toBitfieldZero(mz).c == bfz[].c
+        @test LibBitField.toBitfieldZero(mz).d == bfz[].d
+        pbfz.a = UInt32(6)
+        pbfz.b = UInt32(10)
+        pbfz.c = UInt32(19)
+        pbfz.d = UInt32(513)
+        @test LibBitField.toMirrorZero(bfz) == LibBitField.MirrorZero(6, 10, 19, 513)
+    end
+    bytes = fill(UInt8(0xa5), 17)
+    value = UInt64(0x0123456789abcdef)
+    GC.@preserve bytes begin
+        ptr = pointer(bytes) + 1
+        LibBitField.set_bits!(ptr, 7, 64, value)
+        @test LibBitField.get_bits(ptr, 7, 64) == value
+        @test all(==(0xa5), bytes[1:1])
+        @test all(==(0xa5), bytes[11:end])
     end
 end
 

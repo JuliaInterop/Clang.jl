@@ -328,7 +328,7 @@ function emit_getproperty_ptr!(dag, node, options)
     signature = Expr(:call, :(Base.getproperty), :(x::Ptr{$sym}), :(f::Symbol))
     body = Expr(:block)
     _emit_getproperty_ptr!(body, node.cursor, node.cursor, options)
-    push!(body.args, :(return getfield(x, f)))
+    push!(body.args, :(throw(ArgumentError("$f is not a member of $(eltype(x))"))))
     getproperty_expr = Expr(:function, signature, body)
     push!(node.exprs, getproperty_expr)
     return dag

@@ -531,6 +531,16 @@ function emit_constructor!(dag, node::ExprNode{<:StructLayout}, options)
 
     func = Expr(:function, Expr(:call, sym, (:($fsym::$ty) for (fsym, ty) in zip(fsyms, tys))...), body)
     push!(node.exprs, func)
+
+    # A second method without the annotations. A record that gets the layout treatment
+    # loses the default constructor a field-wise struct would have had, and that one
+    # converted its arguments, so code passing an `Integer` where the field is a
+    # `UInt32` -- or an enum where the field is its integer type -- stops compiling the
+    # moment a struct starts containing a union. The body stores through
+    # `Base.unsafe_store!`, which converts, so the conversion is the same one the
+    # default constructor did.
+    untyped = Expr(:function, Expr(:call, sym, fsyms...), copy(body))
+    push!(node.exprs, untyped)
 end
 
 function extract_fields(cursor::CLCursor)

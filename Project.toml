@@ -10,7 +10,7 @@ Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 
 [compat]
-CEnum = "0.4, 0.5"
+CEnum = "0.4, 0.5, 1.0"
 Clang_unified_jll = "0.1"
 Downloads = "1.4"
 TOML = "1.0"
